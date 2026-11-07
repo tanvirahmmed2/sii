@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -48,18 +46,15 @@ export default function TeacherListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
 
-  // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [teacherToDelete, setTeacherToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Quick View Modal
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [resendingId, setResendingId] = useState(null);
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -73,7 +68,6 @@ export default function TeacherListPage() {
     }
   }, []);
 
-  // Fetch designations & departments for filter dropdowns
   useEffect(() => {
     async function loadFilterOptions() {
       if (!domain) return;
@@ -97,7 +91,6 @@ export default function TeacherListPage() {
     loadFilterOptions();
   }, [domain]);
 
-  // Fetch teachers roster
   const fetchTeachers = useCallback(async () => {
     if (!domain) return;
     try {
@@ -133,7 +126,6 @@ export default function TeacherListPage() {
     fetchTeachers();
   }, [fetchTeachers]);
 
-  // Teacher Profile Quick View
   const handleOpenView = async (teacher) => {
     setViewModalOpen(true);
     setLoadingDetails(true);
@@ -152,7 +144,6 @@ export default function TeacherListPage() {
     }
   };
 
-  // Confirm delete
   const confirmDelete = (teacher) => {
     setTeacherToDelete(teacher);
     setDeleteModalOpen(true);
@@ -182,7 +173,6 @@ export default function TeacherListPage() {
     }
   };
 
-  // Resend verification link
   const handleResendVerification = async (teacherId) => {
     if (!teacherId || !domain) return;
     try {
@@ -208,7 +198,6 @@ export default function TeacherListPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -222,7 +211,6 @@ export default function TeacherListPage() {
         </div>
       )}
 
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -269,9 +257,7 @@ export default function TeacherListPage() {
         </div>
       </div>
 
-      {/* Main Interactive Workstation Area */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative w-full">
@@ -351,7 +337,6 @@ export default function TeacherListPage() {
           </div>
         </div>
 
-        {/* High-Density Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -388,7 +373,6 @@ export default function TeacherListPage() {
               ) : (
                 teachers.map((teacher) => (
                   <tr key={teacher.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    {/* Teacher Profile */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2.5">
                         {teacher.photo_url ? (
@@ -420,7 +404,6 @@ export default function TeacherListPage() {
                       </div>
                     </td>
 
-                    {/* Department */}
                     <td className="px-3 py-2">
                       {teacher.department_name ? (
                         <div className="flex flex-col">
@@ -438,7 +421,6 @@ export default function TeacherListPage() {
                       )}
                     </td>
 
-                    {/* Designation */}
                     <td className="px-3 py-2">
                       {teacher.designation_title ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
@@ -449,7 +431,6 @@ export default function TeacherListPage() {
                       )}
                     </td>
 
-                    {/* Contact */}
                     <td className="px-3 py-2">
                       <p className="text-slate-900 dark:text-white flex items-center gap-1">
                         <FiMail className="w-3 h-3 text-slate-400 shrink-0" />
@@ -461,7 +442,6 @@ export default function TeacherListPage() {
                       </p>
                     </td>
 
-                    {/* Joining & Salary */}
                     <td className="px-3 py-2">
                       <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
                         {teacher.joining_date ? new Date(teacher.joining_date).toLocaleDateString() : 'N/A'}
@@ -471,7 +451,6 @@ export default function TeacherListPage() {
                       </p>
                     </td>
 
-                    {/* Qualifications count */}
                     <td className="px-3 py-2 text-center">
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
                         <FiAward className="w-3 h-3" />
@@ -479,7 +458,6 @@ export default function TeacherListPage() {
                       </span>
                     </td>
 
-                    {/* Status */}
                     <td className="px-3 py-2 text-center">
                       {teacher.is_active ? (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
@@ -499,7 +477,6 @@ export default function TeacherListPage() {
                       )}
                     </td>
 
-                    {/* Actions */}
                     <td className="px-3 py-2 text-right space-x-1">
                       {!teacher.is_registered && (
                         <button
@@ -540,7 +517,6 @@ export default function TeacherListPage() {
           </table>
         </div>
 
-        {/* Micro Pagination Footer */}
         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
           <span>
             Showing {teachers.length} of {pagination.total} teachers
@@ -569,7 +545,6 @@ export default function TeacherListPage() {
         </div>
       </div>
 
-      {/* Quick View Profile Modal */}
       {viewModalOpen && selectedTeacher && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-5 space-y-4 animate-in fade-in zoom-in-95">
@@ -592,7 +567,6 @@ export default function TeacherListPage() {
               </div>
             ) : (
               <div className="space-y-4 text-xs">
-                {/* Pending Verification Banner */}
                 {!selectedTeacher.is_registered && (
                   <div className="flex items-center justify-between p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
                     <div>
@@ -616,7 +590,6 @@ export default function TeacherListPage() {
                   </div>
                 )}
 
-                {/* Header Profile Info */}
                 <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700">
                   {selectedTeacher.photo_url ? (
                     <img
@@ -650,7 +623,6 @@ export default function TeacherListPage() {
                   </div>
                 </div>
 
-                {/* Address info */}
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700">
                   <div>
                     <span className="font-semibold text-slate-700 dark:text-slate-300">Present Address:</span>
@@ -662,7 +634,6 @@ export default function TeacherListPage() {
                   </div>
                 </div>
 
-                {/* Qualifications Section */}
                 <div>
                   <h5 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
                     <FiAward className="w-3.5 h-3.5 text-purple-600" />
@@ -688,7 +659,6 @@ export default function TeacherListPage() {
                   )}
                 </div>
 
-                {/* Assigned Routine/Subjects */}
                 {selectedTeacher.subjects && selectedTeacher.subjects.length > 0 && (
                   <div>
                     <h5 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
@@ -727,7 +697,6 @@ export default function TeacherListPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && teacherToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95">

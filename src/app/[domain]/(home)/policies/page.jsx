@@ -92,7 +92,6 @@ export default function TenantPoliciesPage() {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -112,7 +111,6 @@ export default function TenantPoliciesPage() {
           </p>
         </motion.div>
 
-        {/* Search */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,7 +135,6 @@ export default function TenantPoliciesPage() {
           )}
         </motion.div>
 
-        {/* Content */}
         {loading ? (
           <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center flex items-center justify-center">
             <div className="loader loader-md" />
@@ -217,7 +214,6 @@ export default function TenantPoliciesPage() {
           </div>
         )}
 
-        {/* Inquiries */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
@@ -41,11 +39,9 @@ function TeacherUpdateContent() {
 
   const fileInputRef = useRef(null);
 
-  // All teachers list (for selector if no id given)
   const [allTeachers, setAllTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(initialTeacherId);
 
-  // Designations, Departments & Payroll scales
   const [designations, setDesignations] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
@@ -56,7 +52,6 @@ function TeacherUpdateContent() {
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [resendingVerification, setResendingVerification] = useState(false);
 
-  // Form data
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -80,7 +75,6 @@ function TeacherUpdateContent() {
     is_registered: false
   });
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -94,7 +88,6 @@ function TeacherUpdateContent() {
     }
   }, []);
 
-  // Fetch designations, departments & payroll scales
   useEffect(() => {
     async function loadData() {
       if (!domain) return;
@@ -126,7 +119,6 @@ function TeacherUpdateContent() {
     loadData();
   }, [domain]);
 
-  // Fetch teachers roster for selector
   useEffect(() => {
     async function loadTeachers() {
       if (!domain) return;
@@ -146,7 +138,6 @@ function TeacherUpdateContent() {
     loadTeachers();
   }, [domain, selectedTeacherId]);
 
-  // Fetch single teacher data
   const loadTeacherDetails = useCallback(async (tId) => {
     if (!domain || !tId) return;
     try {
@@ -202,7 +193,6 @@ function TeacherUpdateContent() {
     }));
   };
 
-  // Photo select (client-side preview only, no remote upload until submit)
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -232,7 +222,6 @@ function TeacherUpdateContent() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Resend verification link
   const handleResendVerification = async () => {
     if (!formData.id || !domain) return;
     try {
@@ -256,7 +245,6 @@ function TeacherUpdateContent() {
     }
   };
 
-  // Submit update
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -286,7 +274,7 @@ function TeacherUpdateContent() {
         else if (key === 'payroll_id') {
           putData.append('payroll_id', formData.payroll_id ? Number(formData.payroll_id) : '');
         }
-        else if (key === 'salary') { /* Handled via connected payroll scale */ }
+        else if (key === 'salary') {  }
         else if (formData[key] !== null && formData[key] !== undefined) putData.append(key, formData[key]);
       });
 
@@ -317,7 +305,6 @@ function TeacherUpdateContent() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -331,7 +318,6 @@ function TeacherUpdateContent() {
         </div>
       )}
 
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
@@ -351,7 +337,6 @@ function TeacherUpdateContent() {
           </p>
         </div>
 
-        {/* Quick links & selector */}
         <div className="flex flex-wrap items-center gap-2">
           {allTeachers.length > 0 && (
             <select
@@ -394,7 +379,6 @@ function TeacherUpdateContent() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Pending Email Verification Banner */}
           {formData.id && !formData.is_registered && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs">
               <div>
@@ -418,7 +402,6 @@ function TeacherUpdateContent() {
             </div>
           )}
 
-          {/* Section 1: Personal & Contact */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
               <FiUser className="w-4 h-4 text-blue-600" />
@@ -426,7 +409,6 @@ function TeacherUpdateContent() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Photo Box */}
               <div className="md:col-span-1 flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/40 text-center">
                 {formData.photo_url ? (
                   <div className="relative group w-32 h-32 rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-sm">
@@ -470,7 +452,6 @@ function TeacherUpdateContent() {
                 </button>
               </div>
 
-              {/* Input Fields */}
               <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -602,7 +583,6 @@ function TeacherUpdateContent() {
               </div>
             </div>
 
-            {/* Addresses */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
@@ -634,7 +614,6 @@ function TeacherUpdateContent() {
             </div>
           </div>
 
-          {/* Section 2: Institutional & Designation Details */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
               <FiAward className="w-4 h-4 text-emerald-600" />
@@ -748,7 +727,6 @@ function TeacherUpdateContent() {
               </div>
             </div>
 
-            {/* Connected Payroll Scale Details Breakdown */}
             {(() => {
               const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
               if (!selectedPayroll) return null;
@@ -812,7 +790,6 @@ function TeacherUpdateContent() {
             })()}
         </div>
 
-          {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
             <Link
               href={`/${domain}/staff-panel/teacher-list`}

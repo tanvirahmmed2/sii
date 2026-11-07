@@ -35,7 +35,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
   const [loadingLists, setLoadingLists] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load initial dropdown data (classes, class-subjects, days)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,7 +53,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
           const list = classSubjectsData.paylod?.assignments || [];
           setClassSubjects(list);
           
-          // Match routine subject assignment
           const currentClassId = routine.class_id ? routine.class_id.toString() : '';
           const currentSubjectId = routine.subject_id ? routine.subject_id.toString() : '';
           if (currentClassId) {
@@ -82,7 +80,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
     fetchData();
   }, [routine]);
 
-  // Fetch sections and filter class-subjects when classId changes
   useEffect(() => {
     if (!classId) {
       setSections([]);
@@ -101,11 +98,9 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
     };
     fetchSections();
 
-    // Filter class-subjects
     const filtered = classSubjects.filter(cs => String(cs.class_id) === String(classId));
     setFilteredClassSubjects(filtered);
 
-    // If changing the class, reset the selected subject mapping
     if (String(routine.class_id) !== String(classId)) {
       setClassSubjectId('');
     }
@@ -170,7 +165,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-          {/* Day of Week */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Day of Week
@@ -191,7 +185,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
             </select>
           </div>
 
-          {/* Class selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiLayers className="text-slate-400" /> Class
@@ -212,7 +205,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
             </select>
           </div>
 
-          {/* Section selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiLayers className="text-slate-400" /> Section (Optional)
@@ -232,7 +224,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
             </select>
           </div>
 
-          {/* Subject selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiBook className="text-slate-400" /> Subject
@@ -255,7 +246,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Start Time */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Start Time *
@@ -270,7 +260,6 @@ const RoutineEditForm = ({ routine, onSuccess, onCancel }) => {
             />
           </div>
 
-          {/* Finish Time */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Finish Time *

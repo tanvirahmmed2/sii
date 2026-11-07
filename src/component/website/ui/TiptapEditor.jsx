@@ -46,7 +46,6 @@ export default function TiptapEditor({
     content: value || '',
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
-      // If it's just an empty paragraph `<p></p>`, treat as empty string
       const isEmpty = editor.isEmpty;
       if (onChange) {
         onChange(isEmpty ? '' : html);
@@ -60,7 +59,6 @@ export default function TiptapEditor({
     },
   });
 
-  // Keep internal content in sync when external `value` changes (e.g. form reset or initial load)
   useEffect(() => {
     if (!editor) return;
     const currentHtml = editor.getHTML();
@@ -85,9 +83,7 @@ export default function TiptapEditor({
     <div
       className={`tiptap-container bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden focus-within:border-secondary focus-within:bg-white dark:focus-within:bg-slate-800 transition-all shadow-xs ${className}`}
     >
-      {/* Editor Toolbar */}
       <div className="bg-slate-100/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 px-2 py-1.5 flex flex-wrap items-center gap-1">
-        {/* Headings */}
         <button
           type="button"
           onClick={() => editor.chain().focus().setParagraph().run()}
@@ -129,7 +125,6 @@ export default function TiptapEditor({
 
         <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
 
-        {/* Text formatting */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -188,7 +183,6 @@ export default function TiptapEditor({
 
         <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
 
-        {/* Lists & Blocks */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -243,7 +237,6 @@ export default function TiptapEditor({
 
         <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
 
-        {/* Undo / Redo / Clear */}
         <button
           type="button"
           onClick={() => editor.chain().focus().undo().run()}
@@ -274,7 +267,6 @@ export default function TiptapEditor({
         </button>
       </div>
 
-      {/* Editor Content Body with Embedded Styling */}
       <div className="tiptap-content" style={{ minHeight }}>
         <EditorContent editor={editor} />
       </div>

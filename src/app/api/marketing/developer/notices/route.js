@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: List all notices (All developers)
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'notices');
@@ -38,9 +35,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create notice
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'notices');

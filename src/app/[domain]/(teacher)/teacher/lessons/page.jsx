@@ -85,7 +85,6 @@ const LessonsPageContent = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800 mb-2">Lesson Planner</h1>

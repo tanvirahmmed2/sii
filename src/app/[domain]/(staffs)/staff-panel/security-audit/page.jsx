@@ -12,17 +12,15 @@ export default function SecurityAuditStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('audit'); // audit | keys | webhooks | jobs
+  const [activeTab, setActiveTab] = useState('audit'); 
   const [data, setData] = useState({ audit_logs: [], api_keys: [], webhook_events: [], background_jobs: [] });
 
-  // Key Modal
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
   const [keyName, setKeyName] = useState('');
   const [newSecretKey, setNewSecretKey] = useState('');
   const [submittingKey, setSubmittingKey] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Diff inspection modal
   const [selectedLog, setSelectedLog] = useState(null);
 
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/security-audit'), [getApiEndpoint]);
@@ -120,7 +118,6 @@ export default function SecurityAuditStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -151,7 +148,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('audit')}
@@ -195,7 +191,6 @@ export default function SecurityAuditStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Audit Log */}
       {activeTab === 'audit' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -248,7 +243,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: API Keys */}
       {activeTab === 'keys' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -285,7 +279,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Webhooks */}
       {activeTab === 'webhooks' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -327,7 +320,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       )}
 
-      {/* Tab 4: Background Jobs */}
       {activeTab === 'jobs' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -378,7 +370,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       )}
 
-      {/* Generate API Key Modal */}
       {isKeyModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -438,7 +429,6 @@ export default function SecurityAuditStaffPage() {
         </div>
       )}
 
-      {/* View Diff Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-xl max-h-[85vh] overflow-y-auto">

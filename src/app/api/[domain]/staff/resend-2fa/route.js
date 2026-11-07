@@ -50,10 +50,8 @@ export async function POST(request, context) {
       );
     }
 
-    // Rate limiting: 60s cooldown check
     if (staff.two_factor_expires) {
       const remainingMs = new Date(staff.two_factor_expires).getTime() - Date.now();
-      // If code was generated less than 60s ago (expiry was set to 10 mins = 600s, so remaining > 540s)
       if (remainingMs > 9 * 60 * 1000) {
         return NextResponse.json({
           success: false,

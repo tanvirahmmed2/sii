@@ -506,7 +506,7 @@ CREATE TABLE IF NOT EXISTS payments (
     transaction_id VARCHAR(100) UNIQUE NOT NULL,
     amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
     currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-    payment_method VARCHAR(100) NOT NULL DEFAULT 'Paddle',
+    payment_method VARCHAR(100) NOT NULL DEFAULT 'surjopay',
     payment_gateway VARCHAR(100),
     gateway_fee DECIMAL(10, 2) DEFAULT 0.00 CHECK (gateway_fee >= 0.00),
     gateway_response JSONB,

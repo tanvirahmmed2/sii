@@ -117,7 +117,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Admin ID is required.' }, { status: 400 });
     }
 
-    // --- UPDATE DEVELOPER MODULE PERMISSIONS ---
     if (action === 'update_permissions') {
       const { permissions } = body;
       if (permissions && typeof permissions === 'object') {
@@ -151,7 +150,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'Developer module permissions updated successfully.' });
     }
 
-    // --- CHANGE / UPDATE ROLE (COMPATIBILITY) ---
     if (action === 'change_role' || action === 'update_role') {
       return NextResponse.json({
         success: true,
@@ -159,7 +157,6 @@ export async function POST(request) {
       });
     }
 
-    // --- TOGGLE / UPDATE ACTIVE STATUS ---
     if (action === 'toggle_status' || action === 'update_status') {
       let nextActive = is_active;
       if (nextActive === undefined) {
@@ -170,7 +167,6 @@ export async function POST(request) {
         nextActive = !currentRes.rows[0].is_active;
       }
 
-      // If turning inactive, check guard
       if (nextActive === false) {
         const guard = await checkLastActiveAdminGuard(targetId, true);
         if (guard) {
@@ -204,7 +200,6 @@ export async function POST(request) {
       });
     }
 
-    // --- GENERIC UPDATE ---
     const updateData = { ...body };
     delete updateData.action;
     delete updateData.id;

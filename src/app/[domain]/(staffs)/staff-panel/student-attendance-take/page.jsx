@@ -129,7 +129,6 @@ export default function StudentAttendanceTakePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Take Student Daily Attendance
@@ -139,7 +138,6 @@ export default function StudentAttendanceTakePage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -150,7 +148,6 @@ export default function StudentAttendanceTakePage() {
         description="Select session, class, section, and date to take attendance"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📅"
@@ -159,9 +156,7 @@ export default function StudentAttendanceTakePage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Attendance KPI & Batch Actions */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* KPI Counter badges */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-semibold text-slate-900 dark:text-white">
                 Date: {attendanceDate}
@@ -180,7 +175,6 @@ export default function StudentAttendanceTakePage() {
               </span>
             </div>
 
-            {/* Quick Batch Set */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -207,7 +201,6 @@ export default function StudentAttendanceTakePage() {
             </div>
           </div>
 
-          {/* Roll Call Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             {attendanceRecords.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400">

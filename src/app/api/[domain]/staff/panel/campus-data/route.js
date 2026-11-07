@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all campus data for this website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -71,7 +70,6 @@ export async function GET(request, context) {
   }
 }
 
-// Helper to parse multipart/form-data or json
 async function parseCampusDataRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -95,7 +93,6 @@ async function parseCampusDataRequest(request) {
   return { body, imageFile };
 }
 
-// POST: Create new campus data record
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -123,7 +120,6 @@ export async function POST(request, context) {
 
     const staffId = auth.staffSession?.staff_id || auth.staffSession?.id || null;
 
-    // STEP 1: CREATE IN DATABASE FIRST
     const insertResult = await queryDb(
       `INSERT INTO website_campus_data (
         website_id, title, subtitle, description, location, map_url, image, image_id, order_no, is_active, created_by_staff_id
@@ -146,7 +142,6 @@ export async function POST(request, context) {
 
     const createdRecord = insertResult.rows[0];
 
-    // STEP 2: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/campus`);
@@ -176,7 +171,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update existing campus data record
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -200,14 +194,12 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Campus data ID is required for update.' }, { status: 400 });
     }
 
-    // Retrieve previous record to clean up old Cloudinary image if replaced
     const existingResult = await queryDb(
       `SELECT image_id FROM website_campus_data WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
     );
     const oldImageId = existingResult.rows[0]?.image_id;
 
-    // STEP 1: UPDATE IN DATABASE FIRST
     const updateResult = await queryDb(
       `UPDATE website_campus_data
        SET title = COALESCE($1, title),
@@ -243,7 +235,6 @@ export async function PUT(request, context) {
 
     let updatedCampus = updateResult.rows[0];
 
-    // STEP 2: IF NEW FILE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/campus`);
@@ -281,7 +272,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete a campus record
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

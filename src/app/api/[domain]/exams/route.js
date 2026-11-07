@@ -41,14 +41,12 @@ export async function GET(request, context) {
       whereClause += ` AND e.status = $${params.length}`;
     }
 
-    // Total count query
     const countRes = await queryDb(
       `SELECT COUNT(*)::int AS total FROM website_exams e ${whereClause}`,
       params
     );
     const total = countRes.rows[0]?.total || 0;
 
-    // Data query
     const dataQuery = `
       SELECT e.*,
              c.name AS class_name,

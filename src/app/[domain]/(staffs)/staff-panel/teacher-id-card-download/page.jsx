@@ -9,7 +9,6 @@ import { FiSave, FiList, FiTrash2, FiSearch, FiRefreshCw } from 'react-icons/fi'
 export default function TeacherIdCardDownloadPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'generate' or 'archive'
   const [activeTab, setActiveTab] = useState('generate');
 
   const [loading, setLoading] = useState(false);
@@ -20,17 +19,15 @@ export default function TeacherIdCardDownloadPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Archive state
   const [issuedCards, setIssuedCards] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveStatus, setArchiveStatus] = useState('all');
 
-  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+  const [cardSideView, setCardSideView] = useState('both'); 
   const cardFrontRefs = useRef({});
   const cardBackRefs = useRef({});
 
-  // Fetch teachers & active template
   useEffect(() => {
     async function initData() {
       setLoading(true);
@@ -58,7 +55,6 @@ export default function TeacherIdCardDownloadPage() {
     initData();
   }, [getApiEndpoint]);
 
-  // Fetch issued faculty cards from website_teacher_ids
   const fetchIssuedArchive = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -100,7 +96,6 @@ export default function TeacherIdCardDownloadPage() {
     );
   };
 
-  // Issue & persist cards in database website_teacher_ids
   const handleIssueAndSave = async () => {
     if (selectedIds.length === 0) {
       toast.error('Please select at least one teacher.');
@@ -134,7 +129,6 @@ export default function TeacherIdCardDownloadPage() {
     }
   };
 
-  // Compile card HTML with all comprehensive faculty data points
   const compileTeacherCard = (teacher) => {
     if (!activeTemplate) return null;
     let frontHtml = activeTemplate.html_content || '';
@@ -142,7 +136,6 @@ export default function TeacherIdCardDownloadPage() {
     const css = activeTemplate.css_content || '';
 
     const replacements = {
-      // Identity & Academic
       '{{teacher_name}}': teacher.name || teacher.teacher_name || 'Faculty Member',
       '{{name}}': teacher.name || teacher.teacher_name || 'Faculty Member',
       '{{designation}}': teacher.designation_name || teacher.designation || 'Lecturer',
@@ -158,7 +151,6 @@ export default function TeacherIdCardDownloadPage() {
       '{{barcode}}': `*TCH${teacher.id}*`,
       '{{qr_code}}': website?.domain ? `https://${website.domain}/verify/TCH-${teacher.id}` : `https://alpha.edu/verify/TCH-${teacher.id}`,
 
-      // Personal Details
       '{{gender}}': teacher.gender || '—',
       '{{blood_group}}': teacher.blood_group || 'O+',
       '{{date_of_birth}}': teacher.date_of_birth ? new Date(teacher.date_of_birth).toLocaleDateString() : '—',
@@ -167,18 +159,15 @@ export default function TeacherIdCardDownloadPage() {
       '{{teacher_photo}}': teacher.photo_url || teacher.image || teacher.teacher_photo_url || '/default-avatar.png',
       '{{photo_url}}': teacher.photo_url || teacher.image || teacher.teacher_photo_url || '/default-avatar.png',
 
-      // Contact Info
       '{{email}}': teacher.email || '—',
       '{{phone}}': teacher.phone || teacher.number || '+880 1800-112233',
       '{{number}}': teacher.number || teacher.phone || '+880 1800-112233',
       '{{emergency_contact}}': teacher.emergency_contact || teacher.phone || website?.phone || '+880 1800-998877',
 
-      // Addresses
       '{{address}}': teacher.address || '—',
       '{{present_address}}': teacher.address || '—',
       '{{permanent_address}}': teacher.permanent_address || teacher.address || '—',
 
-      // Institutional
       '{{institution_name}}': website?.name || 'Educational Institution',
       '{{school_name}}': website?.name || 'Educational Institution',
       '{{institution_logo}}': website?.logo_url || '/school-logo.png',
@@ -202,7 +191,6 @@ export default function TeacherIdCardDownloadPage() {
     return { frontHtml, backHtml, css };
   };
 
-  // Export single card as JPEG (Front, Back, or Both)
   const handleDownloadSingleJpeg = async (teacher) => {
     const frontEl = cardFrontRefs.current[teacher.id];
     const backEl = cardBackRefs.current[teacher.id];
@@ -223,7 +211,6 @@ export default function TeacherIdCardDownloadPage() {
     }
   };
 
-  // Export single card as PDF (Front, Back, or 2-page Both)
   const handleDownloadSinglePdf = async (teacher) => {
     const frontEl = cardFrontRefs.current[teacher.id];
     const backEl = cardBackRefs.current[teacher.id];
@@ -248,7 +235,6 @@ export default function TeacherIdCardDownloadPage() {
     }
   };
 
-  // Batch Export selected cards as PDF
   const handleBatchPdfDownload = async () => {
     let targetElements = [];
 
@@ -314,7 +300,6 @@ export default function TeacherIdCardDownloadPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 print:hidden">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -326,7 +311,6 @@ export default function TeacherIdCardDownloadPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -362,7 +346,6 @@ export default function TeacherIdCardDownloadPage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED FACULTY REGISTRY ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -477,9 +460,7 @@ export default function TeacherIdCardDownloadPage() {
           </div>
         </div>
       ) : (
-        /* ================= GENERATE FACULTY CARDS ================= */
         <div className="space-y-4">
-          {/* Action Toolbar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
             <div className="flex items-center gap-2">
               <input
@@ -495,7 +476,6 @@ export default function TeacherIdCardDownloadPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {/* Card Side Toggle */}
               <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
                 <button
                   type="button"
@@ -558,7 +538,6 @@ export default function TeacherIdCardDownloadPage() {
             </div>
           </div>
 
-          {/* Cards Grid */}
           <div className={`grid grid-cols-1 ${cardSideView === 'both' ? 'md:grid-cols-2 xl:grid-cols-2' : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-4 print:grid-cols-2`}>
             {selectedTeachers.map((t) => {
               const cardData = compileTeacherCard(t);
@@ -574,7 +553,6 @@ export default function TeacherIdCardDownloadPage() {
                     {cardData ? (
                       <>
                         <style dangerouslySetInnerHTML={{ __html: cardData.css }} />
-                        {/* FRONT SIDE */}
                         {(cardSideView === 'both' || cardSideView === 'front') && (
                           <div className="flex flex-col items-center gap-1.5">
                             {cardSideView === 'both' && (
@@ -601,7 +579,6 @@ export default function TeacherIdCardDownloadPage() {
                           </div>
                         )}
 
-                        {/* BACK SIDE */}
                         {(cardSideView === 'both' || cardSideView === 'back') && (
                           <div className="flex flex-col items-center gap-1.5">
                             {cardSideView === 'both' && (

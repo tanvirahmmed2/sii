@@ -34,12 +34,8 @@ export const SITE_ADDRESS = 'Tech Innovation District, 100 Enterprise Way, Suite
 export const COMPANY_NAME = 'EduCraft Technologies Inc.';
 export const COMPANY_URL = process.env.COMPANY_URL || 'https://educraft.io';
 
-// Base URL configured in .env (e.g. 'localhost:3000' or 'educraft.io' or 'https://educraft.io')
 export const BASE_URL = cleanEnv(process.env.BASE_URL) || 'localhost:3000';
 
-/**
- * Normalizes and extracts base domain (with port if present, e.g. 'localhost:3000' or 'educraft.io')
- */
 export const extractBaseDomain = (url = '') => {
   const target = cleanEnv(url) || cleanEnv(BASE_URL) || 'localhost:3000';
   try {
@@ -52,42 +48,96 @@ export const extractBaseDomain = (url = '') => {
   }
 };
 
-// Configured base domain (host:port, e.g. 'localhost:3000' or 'educraft.io')
 export const BASE_DOMAIN = extractBaseDomain(BASE_URL);
 
-// Base hostname without port (e.g. 'localhost' or 'educraft.io')
 export const BASE_HOST = BASE_DOMAIN.split(':')[0].toLowerCase();
 
-/**
- * Returns the fully qualified base URL for the main website.
- * Directly uses BASE_URL from .env / secret.js.
- */
+export const getBaseProtocol = (request = null) => {
+  const raw = cleanEnv(BASE_URL) || '';
+  if (raw.startsWith('https://')) return 'https';
+  if (raw.startsWith('http://')) return 'http';
+
+  const forwardedProto = request?.headers?.get?.('x-forwarded-proto');
+  if (forwardedProto) {
+    return forwardedProto.split(',')[0].trim().toLowerCase();
+  }
+
+  if (typeof window !== 'undefined' && window.location?.protocol) {
+    return window.location.protocol.replace(':', '').toLowerCase();
+  }
+
+  const hostNoPort = BASE_HOST.toLowerCase();
+  if (
+    hostNoPort === 'localhost' ||
+    hostNoPort === '127.0.0.1' ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(hostNoPort) ||
+    BASE_DOMAIN.includes(':')
+  ) {
+    return 'http';
+  }
+
+  return 'https';
+};
+
 export const getBaseUrl = (request = null) => {
-  const raw = String(BASE_URL).trim();
-  if (raw.startsWith('http://') || raw.startsWith('https://')) {
-    return raw.replace(/\/+$/, '');
-  }
-
-  // Determine protocol: if localhost/127.0.0.1 => http, otherwise https or request proto
-  let proto = 'https';
-  if (BASE_HOST === 'localhost' || BASE_HOST === '127.0.0.1') {
-    proto = 'http';
-  } else if (request?.headers?.get?.('x-forwarded-proto')) {
-    proto = request.headers.get('x-forwarded-proto');
-  } else if (typeof window !== 'undefined' && window.location?.protocol) {
-    proto = window.location.protocol.replace(':', '');
-  }
-
-  return `${proto}://${raw.replace(/\/+$/, '')}`;
+  const proto = getBaseProtocol(request);
+  return `${proto}://${BASE_DOMAIN}`;
 };
 
 export const getBaseDomain = (request = null) => BASE_DOMAIN;
 
-/**
- * Extracts tenant identifier (subdomain or custom domain) from incoming request or host.
- * Returns null if the request is on the main SaaS platform.
- * Subdomain is fetched by matching subdomain.base_url.
- */
+export const getSubdomainUrl = (subdomain, request = null) => {
+  if (!subdomain) return getBaseUrl(request);
+  const cleanSub = String(subdomain).trim().toLowerCase().replace(/\..*$/, '');
+  const proto = getBaseProtocol(request);
+  return `${proto}://${cleanSub}.${BASE_DOMAIN}`;
+};
+
+export const getCustomDomainUrl = (customDomain, request = null) => {
+  if (!customDomain) return getBaseUrl(request);
+  const clean = String(customDomain).trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  let proto = 'https';
+  if (clean.includes('localhost') || /^\d+\.\d+\.\d+\.\d+/.test(clean) || clean.includes(':')) {
+    proto = 'http';
+  } else if (request?.headers?.get?.('x-forwarded-proto')) {
+    proto = request.headers.get('x-forwarded-proto').split(',')[0].trim().toLowerCase();
+  }
+  return `${proto}://${clean}`;
+};
+
+export const getWebsiteUrl = (website, request = null) => {
+  if (!website) return getBaseUrl(request);
+
+  if (typeof website === 'string') {
+    const clean = website.trim();
+    if (!clean) return getBaseUrl(request);
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return clean.replace(/\/+$/, '');
+    }
+    if (clean.includes('.') && !clean.endsWith(`.${BASE_DOMAIN}`) && !clean.endsWith(`.${BASE_HOST}`)) {
+      return getCustomDomainUrl(clean, request);
+    }
+    const cleanSub = clean.replace(`.${BASE_DOMAIN}`, '').replace(`.${BASE_HOST}`, '').split('.')[0];
+    return getSubdomainUrl(cleanSub, request);
+  }
+
+  const rawCustom = (website.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  const isCustomVerified = website.custom_domain_verified === true || website.custom_domain_verified === 'true';
+  const hasSub = Boolean((website.subdomain || website.slug || '').trim());
+
+  if (rawCustom && (isCustomVerified || !hasSub)) {
+    return getCustomDomainUrl(rawCustom, request);
+  }
+
+  const rawSub = (website.subdomain || website.slug || '').trim().toLowerCase();
+  if (rawSub) {
+    const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
+    return getSubdomainUrl(cleanSub, request);
+  }
+
+  return getBaseUrl(request);
+};
+
 export const getWebsiteDomain = (request) => {
   if (!request) return null;
 
@@ -105,15 +155,12 @@ export const getWebsiteDomain = (request) => {
 
   if (!rawHost) return null;
 
-  // Split multiple comma-separated proxy hosts
   const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
-  const cleanHost = cleanHostWithPort.split(':')[0]; // strip port
+  const cleanHost = cleanHostWithPort.split(':')[0]; 
 
   const baseDomain = BASE_DOMAIN.toLowerCase();
   const baseHost = BASE_HOST.toLowerCase();
 
-  // 1. MAIN WEBSITE:
-  // If host directly matches baseDomain, baseHost, www.baseHost, or localhost/127.0.0.1 => MAIN WEBSITE
   if (
     !cleanHost ||
     cleanHost === baseHost ||
@@ -124,33 +171,31 @@ export const getWebsiteDomain = (request) => {
     return null;
   }
 
-  // 2. SUBDOMAIN: fetched by subdomain.base_url
-  // Check against full baseDomain with port (e.g. afit.localhost:3000 -> afit)
   if (baseDomain && cleanHostWithPort.endsWith(`.${baseDomain}`)) {
-    const sub = cleanHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    let sub = cleanHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') {
       return sub;
     }
   }
 
-  // Check against baseHost without port (e.g. afit.localhost or afit.educraft.io -> afit)
   if (baseHost && cleanHost.endsWith(`.${baseHost}`)) {
-    const sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
+    let sub = cleanHost.slice(0, -(baseHost.length + 1)).trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') {
       return sub;
     }
   }
 
-  // Also support .localhost when base_url is localhost
   if (cleanHost.endsWith('.localhost')) {
-    const sub = cleanHost.replace('.localhost', '').trim();
+    let sub = cleanHost.replace('.localhost', '').trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') {
       return sub;
     }
   }
 
-  // 3. STANDALONE CUSTOM DOMAIN (e.g. oxfordschool.edu.bd)
-  return cleanHost;
+  return cleanHost.replace(/^www\./, '');
 };
 
 export const DEVELOPER_TOKEN = 'hiesci-dev';
@@ -161,7 +206,6 @@ export const OFFICER_TOKEN = 'hiesci-officer';
 export const STUDENT_TOKEN = 'hiesci-student';
 export const LIVE_CHAT_TOKEN = 'hiesci-live';
 
-// Meta Graph API (Facebook Messenger, Instagram Direct & WhatsApp Cloud API)
 export const META_APP_ID = process.env.META_APP_ID || '';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';
 export const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN || '';
@@ -172,17 +216,22 @@ export const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID || '';
 export const META_WABA_ID = process.env.META_WABA_ID || '';
 export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'sii_meta_secure_verify_token_2026';
 
-// Paddle Payment Gateway
+export const SHURJOPAY_ENGINE_URL = process.env.SHURJOPAY_ENGINE_URL || 'https://engine.shurjopayment.com';
+export const SHURJOPAY_USERNAME = process.env.SHURJOPAY_USERNAME || '';
+export const SHURJOPAY_PASSWORD = process.env.SHURJOPAY_PASSWORD || '';
+export const SHURJOPAY_PREFIX = process.env.SHURJOPAY_PREFIX || 'SII';
+export const SHURJOPAY_RETURN_URL = process.env.SHURJOPAY_RETURN_URL || '';
+export const SHURJOPAY_CANCEL_URL = process.env.SHURJOPAY_CANCEL_URL || '';
+
+export const PAYPAL_API_URL = process.env.PAYPAL_API_URL || 'https://api-m.paypal.com';
+export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
+export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
+export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
+
 export const PADDLE_API_KEY = process.env.PADDLE_API_KEY || '';
 export const PADDLE_ENVIRONMENT = process.env.PADDLE_ENVIRONMENT || 'sandbox';
 export const PADDLE_CLIENT_TOKEN = process.env.PADDLE_CLIENT_TOKEN || '';
 export const PADDLE_WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET || '';
 
-// bKash Payment Gateway
-export const BKASH_BASE_URL = process.env.BKASH_BASE_URL || 'https://tokenized.sandbox.bka.sh/v1.2.0-beta';
-export const BKASH_APP_KEY = process.env.BKASH_APP_KEY || '';
-export const BKASH_APP_SECRET = process.env.BKASH_APP_SECRET || '';
-export const BKASH_USERNAME = process.env.BKASH_USERNAME || '';
-export const BKASH_PASSWORD = process.env.BKASH_PASSWORD || '';
-export const BKASH_CALLBACK_URL = process.env.BKASH_CALLBACK_URL || '';
+export const CRON_SECRET = process.env.CRON_SECRET || '';
 export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');

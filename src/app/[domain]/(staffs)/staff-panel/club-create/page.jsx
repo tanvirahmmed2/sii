@@ -23,7 +23,6 @@ export default function ClubCreatePage() {
   const [teachers, setTeachers] = useState([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // Form Fields
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [customCategory, setCustomCategory] = useState('');
@@ -149,7 +148,6 @@ export default function ClubCreatePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>
@@ -163,7 +161,6 @@ export default function ClubCreatePage() {
         </div>
       )}
 
-      {/* Header with Navigation Link */}
       <div className="w-full flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Register New Club</h2>
@@ -179,11 +176,9 @@ export default function ClubCreatePage() {
         </Link>
       </div>
 
-      {/* Main Full-Width Form Card */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 sm:p-5 shadow-2xs">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Club Name */}
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Club Name *
@@ -198,7 +193,6 @@ export default function ClubCreatePage() {
               />
             </div>
 
-            {/* Category Dropdown */}
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Category *
@@ -237,7 +231,6 @@ export default function ClubCreatePage() {
               )}
             </div>
 
-            {/* Moderator Teacher Assignment */}
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Assigned Moderator (Faculty)
@@ -259,7 +252,6 @@ export default function ClubCreatePage() {
               </p>
             </div>
 
-            {/* Logo Upload / URL */}
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Club Logo / Emblem
@@ -289,7 +281,6 @@ export default function ClubCreatePage() {
             </div>
           </div>
 
-          {/* Description */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
@@ -305,7 +296,6 @@ export default function ClubCreatePage() {
             />
           </div>
 
-          {/* Chat Box & Status Options */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-start gap-2.5 p-3 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
               <input
@@ -344,7 +334,6 @@ export default function ClubCreatePage() {
             </div>
           </div>
 
-          {/* Submit Actions */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Link
               href={`/${domain}/staff-panel/club-list`}

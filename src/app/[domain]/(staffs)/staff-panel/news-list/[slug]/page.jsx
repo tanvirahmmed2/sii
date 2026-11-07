@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +6,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { FiTrash2 } from 'react-icons/fi';
 
-// Dynamically import TiptapEditor to avoid SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -38,7 +35,6 @@ export default function UpdateNewsPage() {
   const [saving, setSaving] = useState(false);
   const [newsId, setNewsId] = useState(null);
 
-  // Form Fields (NO slug shown or edited in frontend)
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('General');
   const [publishedDate, setPublishedDate] = useState('');
@@ -46,15 +42,12 @@ export default function UpdateNewsPage() {
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
 
-  // Multi-image gallery state
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
-  // Delete State
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -106,7 +99,6 @@ export default function UpdateNewsPage() {
     }
   }, [domain, slug, fetchNewsData]);
 
-  // Upload more photos to news images directly
   const handleUploadPhotos = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -293,7 +285,6 @@ export default function UpdateNewsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alerts */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
           <span>{toastMessage}</span>
@@ -305,7 +296,6 @@ export default function UpdateNewsPage() {
         </div>
       )}
 
-      {/* Top Header & Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
           href={`/${domain}/staff-panel/news-list`}
@@ -324,9 +314,7 @@ export default function UpdateNewsPage() {
         </button>
       </div>
 
-      {/* Main Update Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
-        {/* Header */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
           <h1 className="text-sm font-semibold text-slate-900 dark:text-white">
             Update News Article
@@ -337,7 +325,6 @@ export default function UpdateNewsPage() {
         </div>
 
         <form onSubmit={handleSave} className="p-4 space-y-4">
-          {/* Headline Title */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Headline Title <span className="text-secondary">*</span>
@@ -383,7 +370,6 @@ export default function UpdateNewsPage() {
             </div>
           </div>
 
-          {/* Integrated Multi-Image Gallery Manager */}
           <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div>
@@ -469,7 +455,6 @@ export default function UpdateNewsPage() {
             )}
           </div>
 
-          {/* Tiptap Rich Text Editor for Summary */}
           <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -485,7 +470,6 @@ export default function UpdateNewsPage() {
             />
           </div>
 
-          {/* Tiptap Rich Text Editor for Full Content */}
           <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -501,7 +485,6 @@ export default function UpdateNewsPage() {
             />
           </div>
 
-          {/* Published Status Toggle */}
           <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
@@ -515,7 +498,6 @@ export default function UpdateNewsPage() {
             </label>
           </div>
 
-          {/* Save Action Bar */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
             <Link
               href={`/${domain}/staff-panel/news-list`}
@@ -538,7 +520,6 @@ export default function UpdateNewsPage() {
         </form>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md w-full max-w-md shadow-2xl p-5 space-y-4 animate-scale-up">

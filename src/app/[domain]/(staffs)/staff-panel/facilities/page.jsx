@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
@@ -9,7 +8,6 @@ import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to avoid SSR hydration issues
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -37,27 +35,22 @@ const FACILITY_CATEGORIES = [
 export default function FacilitiesStaffPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+  const [statusFilter, setStatusFilter] = useState('all'); 
 
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [modalMode, setModalMode] = useState('create'); 
   const [editingItem, setEditingItem] = useState(null);
 
-  // Delete modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formFacilityType, setFormFacilityType] = useState('Campus Facility');
   const [formIcon, setFormIcon] = useState('');
@@ -70,10 +63,8 @@ export default function FacilitiesStaffPage() {
 
   const fileInputRef = useRef(null);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/facilities'), [getApiEndpoint]);
 
-  // Fetch data
   const fetchFacilities = useCallback(
     async (showToast = false) => {
       if (!apiEndpoint) return;
@@ -107,7 +98,6 @@ export default function FacilitiesStaffPage() {
     };
   }, [fetchFacilities]);
 
-  // Open Create Modal
   const openCreateModal = () => {
     setModalMode('create');
     setEditingItem(null);
@@ -124,7 +114,6 @@ export default function FacilitiesStaffPage() {
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingItem(item);
@@ -141,7 +130,6 @@ export default function FacilitiesStaffPage() {
     setIsModalOpen(true);
   };
 
-  // Handle Image Selection
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -161,7 +149,6 @@ export default function FacilitiesStaffPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Handle Form Submit
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -215,7 +202,6 @@ export default function FacilitiesStaffPage() {
     }
   };
 
-  // Toggle Status
   const handleToggleStatus = async (item) => {
     try {
       const formData = new FormData();
@@ -247,7 +233,6 @@ export default function FacilitiesStaffPage() {
     }
   };
 
-  // Delete Action
   const handleDeleteClick = (item) => {
     setItemToDelete(item);
     setDeleteConfirmOpen(true);
@@ -274,7 +259,6 @@ export default function FacilitiesStaffPage() {
     }
   };
 
-  // Filtered List
   const filteredFacilities = useMemo(() => {
     return facilities.filter((item) => {
       if (statusFilter === 'active' && !item.is_active) return false;
@@ -295,7 +279,6 @@ export default function FacilitiesStaffPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -326,7 +309,6 @@ export default function FacilitiesStaffPage() {
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="sm:col-span-6">
           <input
@@ -366,7 +348,6 @@ export default function FacilitiesStaffPage() {
         </div>
       </div>
 
-      {/* Content Table */}
       {loading ? (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-12 flex flex-col items-center justify-center gap-2">
           <Loader />
@@ -506,7 +487,6 @@ export default function FacilitiesStaffPage() {
         </div>
       )}
 
-      {/* Modal: Create / Edit */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
           <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden my-8">
@@ -570,7 +550,6 @@ export default function FacilitiesStaffPage() {
                 </div>
               </div>
 
-              {/* Photo Upload */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Facility Photo (Optional)
@@ -620,7 +599,6 @@ export default function FacilitiesStaffPage() {
                 />
               </div>
 
-              {/* Description (Tiptap) */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Facility Description (Rich Text Editor) *
@@ -677,7 +655,6 @@ export default function FacilitiesStaffPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-5 shadow-xl space-y-3">

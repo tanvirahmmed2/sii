@@ -17,7 +17,7 @@ export default function FaqsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [openIndex, setOpenIndex] = useState(0); // First item open by default
+  const [openIndex, setOpenIndex] = useState(0); 
 
   const fetchPublishedFaqs = async () => {
     setLoading(true);
@@ -77,7 +77,6 @@ export default function FaqsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50/60 pb-24">
-      {/* Hero Header */}
       <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
         <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto text-center relative z-10 space-y-4">
@@ -89,7 +88,6 @@ export default function FaqsPage() {
             Everything you need to know about building, launching, and managing your portfolio websites, custom domains, and creator tools.
           </p>
 
-          {/* Search Bar */}
           <div className="pt-6 max-w-xl mx-auto">
             <div className="relative">
               <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" />
@@ -114,7 +112,6 @@ export default function FaqsPage() {
         </div>
       </section>
 
-      {/* Main FAQs Accordion Section */}
       <section className="w-full px-4 lg:px-8 pt-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-200">
           <div>
@@ -150,13 +147,11 @@ export default function FaqsPage() {
           </div>
         )}
 
-        {/* Loading State */}
         {loading ? (
           <div className="max-w-4xl mx-auto pt-8">
             <LoadingScreen fullScreen={false} label="Loading FAQs..." />
           </div>
         ) : filteredFaqs.length === 0 ? (
-          /* Empty State */
           <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mx-auto mb-4">
               <BiHelpCircle />
@@ -180,7 +175,6 @@ export default function FaqsPage() {
             )}
           </div>
         ) : (
-          /* Accordion List */
           <div className="max-w-4xl mx-auto space-y-4 pt-8">
             {filteredFaqs.map((faq, index) => {
               const isOpen = openIndex === index;
@@ -225,7 +219,6 @@ export default function FaqsPage() {
         )}
       </section>
 
-      {/* Creator & Support Call To Action */}
       <section className="w-full px-4 lg:px-8 mt-20">
         <div className="bg-linear-to-r from-slate-900 to-slate-950 rounded-3xl p-8 sm:p-12 text-white border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl text-center md:text-left">

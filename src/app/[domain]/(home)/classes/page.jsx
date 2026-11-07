@@ -135,7 +135,6 @@ const ClassesPage = () => {
         </div>
       )}
 
-      {/* Institutional Grading Scale Standard */}
       <GradingScaleTable
         title="Curriculum Grading System"
         subtitle="Overview of letter grades, mark range thresholds (%), and GPA points applied across all academic classes."

@@ -9,13 +9,11 @@ export default function OfficerProfilePage() {
   const [officer, setOfficer] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Form states
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [bio, setBio] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password update states
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -50,7 +48,6 @@ export default function OfficerProfilePage() {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      // Update officer personal details
       const endpoint = getApiEndpoint('staff/panel/officers');
       const res = await fetch(endpoint, {
         method: 'PUT',
@@ -79,7 +76,6 @@ export default function OfficerProfilePage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Title */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-base font-semibold text-slate-900 dark:text-white">
           Officer Profile & Security Workstation
@@ -99,7 +95,6 @@ export default function OfficerProfilePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left Column: Official Identity Overview */}
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -158,7 +153,6 @@ export default function OfficerProfilePage() {
             </div>
           </div>
 
-          {/* Right Column: Update Contact & Bio */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs space-y-4">
               <div>
@@ -228,7 +222,6 @@ export default function OfficerProfilePage() {
               </form>
             </div>
 
-            {/* Granted Modules Summary */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs space-y-3">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Authorized Package Modules Matrix

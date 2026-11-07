@@ -1,8 +1,5 @@
 import { queryDb } from './db.js';
 
-/**
- * Returns current month identifier in YYYY-MM format (e.g. '2026-11')
- */
 export function getCurrentYearMonth(date = new Date()) {
   const d = date instanceof Date ? date : new Date(date);
   const year = d.getFullYear();
@@ -10,12 +7,6 @@ export function getCurrentYearMonth(date = new Date()) {
   return `${year}-${month}`;
 }
 
-/**
- * Fetches the active package limits and current monthly email & SMS usage for a tenant website.
- *
- * @param {string|number} websiteId
- * @returns {Promise<Object>}
- */
 export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
   if (!websiteId) {
     return {
@@ -35,7 +26,6 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
 
   const yearMonth = getCurrentYearMonth();
 
-  // 1. Resolve package limits via active subscription
   let monthlyMail = 1000;
   let monthlySms = 200;
   let packageName = 'Standard Academy';
@@ -58,7 +48,6 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
       monthlySms = pkgRes.rows[0].monthly_sms ?? 200;
       packageName = pkgRes.rows[0].package_name || packageName;
     } else {
-      // Fallback: check creator's active subscription
       const creatorSubRes = await queryDb(`
         SELECT p.id AS package_id, p.name AS package_name,
                COALESCE(p.monthly_mail, 1000)::int AS monthly_mail,
@@ -81,7 +70,6 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
     console.warn(`[UsageLimiter] Error resolving package limits for website ${websiteId}:`, err.message);
   }
 
-  // 2. Fetch current monthly usage
   let mailCount = 0;
   let smsCount = 0;
 
@@ -116,14 +104,6 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
   };
 }
 
-/**
- * Checks email quota and atomically increments the monthly mail counter.
- * Throws an Error if the monthly package quota has been exhausted.
- *
- * @param {string|number} websiteId
- * @param {number} [count=1]
- * @returns {Promise<Object>}
- */
 export async function checkAndIncrementMailUsage(websiteId, count = 1) {
   if (!websiteId) {
     return { allowed: true, unmetered: true };
@@ -165,14 +145,6 @@ export async function checkAndIncrementMailUsage(websiteId, count = 1) {
   };
 }
 
-/**
- * Checks SMS quota and atomically increments the monthly SMS counter.
- * Throws an Error if the monthly package quota has been exhausted.
- *
- * @param {string|number} websiteId
- * @param {number} [count=1]
- * @returns {Promise<Object>}
- */
 export async function checkAndIncrementSmsUsage(websiteId, count = 1) {
   if (!websiteId) {
     return { allowed: true, unmetered: true };

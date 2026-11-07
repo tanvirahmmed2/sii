@@ -32,7 +32,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
   const fabricCanvasRef = useRef(null);
   const fabricRef = useRef(null);
 
-  // Dual-sided state: 'front' or 'back'
   const [activeSide, setActiveSide] = useState('front');
   const [activeTab, setActiveTab] = useState('elements');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -45,13 +44,11 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
   const [tagSearch, setTagSearch] = useState('');
   const [selectedTagCategory, setSelectedTagCategory] = useState('all');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 86);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 54);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
 
-  // Both sides vector JSON storage
   const [frontData, setFrontData] = useState(() => {
     if (initialTemplate?.fabric_data && typeof initialTemplate.fabric_data === 'object' && initialTemplate.fabric_data.objects?.length > 0) {
       return initialTemplate.fabric_data;
@@ -66,14 +63,12 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     return generateStarterFabricBackJSON('teacher_id');
   });
 
-  // Cached SVGs for instant dual export
   const [frontSvg, setFrontSvg] = useState(initialTemplate?.html_content || '');
   const [backSvg, setBackSvg] = useState(initialTemplate?.html_back_content || '');
 
   const [templateName, setTemplateName] = useState(initialTemplate?.name || 'Executive Faculty ID Card');
   const [description, setDescription] = useState(initialTemplate?.description || '');
 
-  // Undo / Redo history
   const historyRef = useRef([]);
   const historyIndexRef = useRef(-1);
   const isHistoryActionRef = useRef(false);
@@ -119,7 +114,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     handleDimensionChange(dimHeight, dimWidth, dimUnit);
   };
 
-  // Switch between Front & Back side
   const handleSwitchSide = (side) => {
     if (side === activeSide) return;
     const canvas = fabricCanvasRef.current;
@@ -148,7 +142,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     canvas.clear();
     canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
 
-    // Reset history for the side
     historyRef.current = [];
     historyIndexRef.current = -1;
 
@@ -258,7 +251,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     };
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -283,7 +275,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedObject]);
 
-  // Undo / Redo
   const undo = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || historyIndexRef.current <= 0) return;
@@ -312,7 +303,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     });
   };
 
-  // ================= ALIGNMENT TOOLS =================
   const alignLeft = () => {
     if (!selectedObject || !fabricCanvasRef.current) return;
     selectedObject.set('left', 10);
@@ -371,7 +361,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     saveHistoryState();
   };
 
-  // ================= ADVANCED OBJECT TOOLS =================
   const duplicateSelected = () => {
     const canvas = fabricCanvasRef.current;
     if (!selectedObject || !canvas) return;
@@ -473,7 +462,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     saveHistoryState();
   };
 
-  // ================= SHAPES TOOL PALETTE =================
   const addRectangle = (rounded = false) => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -596,7 +584,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     toast.success('Added Pill Badge');
   };
 
-  // Standard Faculty Back Layout
   const loadStandardTeacherBackLayout = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -721,7 +708,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     saveHistoryState();
   };
 
-  // Add Front Elements
   const addHeading = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -807,7 +793,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
     toast.success(`Added ${tag.label}`);
   };
 
-  // ================= SAVE BOTH SIDES =================
   const handleSave = async () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -825,7 +810,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
       let finalFrontSvg = activeSide === 'front' ? activeSvg : frontSvg;
       let finalBackSvg = activeSide === 'back' ? activeSvg : backSvg;
 
-      // If one side's SVG is missing, render offscreen to guarantee full vector exports
       if (!finalFrontSvg && finalFrontData && fabric) {
         const offCanvas = new fabric.StaticCanvas(null, { width: canvas.width, height: canvas.height });
         await new Promise((res) => {
@@ -876,7 +860,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
         if (!d.success) throw new Error(d.error || 'Failed to save template');
       }
 
-      // Update state caches
       if (activeSide === 'front') {
         setFrontData(finalFrontData);
         setFrontSvg(finalFrontSvg);
@@ -898,7 +881,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
 
   return (
     <div className="w-full h-screen flex flex-col bg-slate-950 text-slate-100 font-sans select-none overflow-hidden">
-      {/* Top Header */}
       <header className="min-h-12 border-b border-slate-800 bg-slate-900 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 z-30 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <a
@@ -919,7 +901,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </div>
 
-        {/* Dual-Sided Switcher */}
         <div className="flex items-center bg-slate-950 p-0.5 rounded border border-slate-800 text-xs">
           <button
             type="button"
@@ -941,7 +922,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </button>
         </div>
 
-        {/* Undo/Redo & Zoom & Save */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <div className="hidden sm:flex items-center bg-slate-950 rounded border border-slate-800 text-xs">
             <button
@@ -963,7 +943,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
             </button>
           </div>
 
-          {/* Zoom controls */}
           <div className="flex items-center bg-slate-950 rounded border border-slate-800 text-[11px] p-0.5">
             <button
               type="button"
@@ -993,7 +972,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
         </div>
       </header>
 
-      {/* Manual Dimensions & Alignment Bar */}
       <div className="min-h-9 bg-slate-900/80 border-b border-slate-800 px-3 py-1 flex items-center justify-between text-xs text-slate-400 shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <span className="text-[11px] font-semibold text-slate-300">Size:</span>
@@ -1038,7 +1016,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </button>
         </div>
 
-        {/* Alignment quick toolbar */}
         <div className="flex items-center gap-1 shrink-0">
           <span className="text-[10px] uppercase font-semibold text-slate-500">Align:</span>
           <button
@@ -1114,7 +1091,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Elements & Shapes Sidebar */}
         <aside className={`w-full lg:w-64 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0 ${mobileView === 'tools' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="flex border-b border-slate-800 text-[11px] font-medium bg-slate-950/60">
             <button
@@ -1156,7 +1132,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 text-xs space-y-4">
-            {/* Elements Tab */}
             {activeTab === 'elements' && (
               <div className="space-y-4">
                 {activeSide === 'front' ? (
@@ -1207,7 +1182,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Shapes Tab */}
             {activeTab === 'shapes' && (
               <div className="space-y-3">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block">
@@ -1282,7 +1256,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Merge Tags Tab */}
             {activeTab === 'tags' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1294,7 +1267,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                   </span>
                 </div>
 
-                {/* Field Search */}
                 <div>
                   <input
                     type="text"
@@ -1305,7 +1277,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                   />
                 </div>
 
-                {/* Category Chips */}
                 <div className="flex flex-wrap gap-1">
                   {DATA_CATEGORIES.filter(c => c.id !== 'guardian').map((cat) => (
                     <button
@@ -1323,7 +1294,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                   ))}
                 </div>
 
-                {/* Filtered Fields List */}
                 <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
                   {COMPREHENSIVE_TEACHER_TAGS.filter((tag) => {
                     const matchesCat = selectedTagCategory === 'all' || tag.category === selectedTagCategory;
@@ -1371,7 +1341,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Layers Tab */}
             {activeTab === 'layers' && (
               <div className="space-y-2">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block">
@@ -1409,7 +1378,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </aside>
 
-        {/* Center Workspace */}
         <main
           className={`flex-1 min-w-0 bg-slate-950 flex flex-col items-center justify-center p-3 sm:p-6 overflow-auto relative ${mobileView === 'canvas' ? 'flex' : 'hidden lg:flex'}`}
           style={{
@@ -1443,7 +1411,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </main>
 
-        {/* Right Inspector & Advance Tools */}
         <aside className={`w-full lg:w-64 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0 text-xs p-3 space-y-4 overflow-y-auto ${mobileView === 'inspector' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="border-b border-slate-800 pb-2 flex items-center justify-between">
             <span className="font-semibold text-slate-200 block">Object Inspector</span>
@@ -1454,7 +1421,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
 
           {selectedObject ? (
             <div className="space-y-4">
-              {/* Quick Actions */}
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
@@ -1490,7 +1456,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                 </button>
               </div>
 
-              {/* Layer Stacking */}
               <div className="space-y-1.5 pt-2 border-t border-slate-800">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Layer Stacking</span>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1525,7 +1490,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                 </div>
               </div>
 
-              {/* Typography controls */}
               {(selectedObject.type === 'i-text' || selectedObject.type === 'text') && (
                 <div className="space-y-3 pt-2 border-t border-slate-800">
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block">Typography</span>
@@ -1603,7 +1567,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                 </div>
               )}
 
-              {/* Color & Stroke */}
               {selectedObject.type !== 'i-text' && selectedObject.type !== 'text' && (
                 <div className="space-y-3 pt-2 border-t border-slate-800">
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block">Colors &amp; Border</span>
@@ -1662,7 +1625,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                 </div>
               )}
 
-              {/* Opacity slider */}
               <div className="pt-2 border-t border-slate-800 space-y-1">
                 <div className="flex items-center justify-between text-[10px] text-slate-400">
                   <span>Opacity</span>
@@ -1678,7 +1640,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
                 />
               </div>
 
-              {/* Delete button */}
               <div className="pt-2 border-t border-slate-800">
                 <button
                   type="button"
@@ -1693,7 +1654,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
             <p className="text-[11px] text-slate-500 italic">Click any element on canvas to modify properties.</p>
           )}
 
-          {/* Canvas Background Color */}
           <div className="pt-3 border-t border-slate-800 space-y-2">
             <span className="text-[10px] uppercase font-semibold text-slate-400 block">Canvas Background</span>
             <input
@@ -1710,7 +1670,6 @@ export default function TeacherIdStudio({ initialTemplate, onSave, onExitUrl = '
         </aside>
       </div>
 
-      {/* Mobile Navigation Tab Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

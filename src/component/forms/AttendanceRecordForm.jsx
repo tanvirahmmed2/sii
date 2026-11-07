@@ -30,7 +30,6 @@ const AttendanceRecordForm = () => {
 
   const [students, setStudents] = useState([]);
 
-  // On date change: derive day name + fetch teacher's scheduled slots
   useEffect(() => {
     if (!date) {
       setDayName('');
@@ -142,7 +141,6 @@ const AttendanceRecordForm = () => {
     );
   };
 
-  // Mark all as a given status at once
   const markAll = (status) => {
     setStudents((prev) => prev.map((s) => ({ ...s, status })));
     toast.success(`All students marked as ${status}.`);
@@ -197,9 +195,7 @@ const AttendanceRecordForm = () => {
 
   return (
     <div className="flex flex-col gap-8 w-full">
-      {/* Step 1 + 2: Date & Slot */}
       <div className="bg-white border border-slate-100 rounded-3xl p-6 flex flex-col md:flex-row items-end gap-4">
-        {/* Date */}
         <div className="w-full md:w-52 flex flex-col gap-2">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
             <FiCalendar className="text-xs" /> Step 1 — Pick Date
@@ -212,7 +208,6 @@ const AttendanceRecordForm = () => {
           />
         </div>
 
-        {/* Day badge */}
         {dayName && (
           <div className="flex items-center gap-2 px-4 py-3 bg-primary-light border border-primary-light rounded-2xl shrink-0">
             <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Day</span>
@@ -220,7 +215,6 @@ const AttendanceRecordForm = () => {
           </div>
         )}
 
-        {/* Period Slot */}
         <div className="flex-1 w-full flex flex-col gap-2">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
             <FiClock className="text-xs" /> Step 2 — Select Period
@@ -251,7 +245,6 @@ const AttendanceRecordForm = () => {
           )}
         </div>
 
-        {/* Load Button */}
         <button
           onClick={handleLoadSheet}
           disabled={!selectedSlot || loadingStudents}
@@ -268,7 +261,6 @@ const AttendanceRecordForm = () => {
         </button>
       </div>
 
-      {/* Selected slot info */}
       {selectedSlot && (
         <div className="flex flex-wrap gap-2.5 -mt-4">
           <span className="px-3 py-1.5 bg-primary-light text-primary text-[11px] font-bold rounded-xl border border-primary-light">
@@ -287,7 +279,6 @@ const AttendanceRecordForm = () => {
         </div>
       )}
 
-      {/* Save Result Banner */}
       {saveResult?.success && (
         <div className="flex items-start gap-3 p-4 bg-primary-light border border-primary-light rounded-2xl">
           <FiCheckCircle className="text-primary text-xl shrink-0 mt-0.5" />
@@ -304,7 +295,6 @@ const AttendanceRecordForm = () => {
         </div>
       )}
 
-      {/* Attendance Table or Empty State */}
       {students.length === 0 ? (
         <div className="bg-white border border-slate-100 rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[260px]">
           <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 mb-4">
@@ -318,7 +308,6 @@ const AttendanceRecordForm = () => {
         </div>
       ) : (
         <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-8 flex flex-col gap-6">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-4 gap-4 flex-wrap">
             <div>
               <h2 className="text-base font-bold text-slate-800">
@@ -337,7 +326,6 @@ const AttendanceRecordForm = () => {
               </div>
             </div>
 
-            {/* Bulk actions + Save */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mark all:</span>
               {['Present', 'Absent', 'Late'].map((s) => (
@@ -366,7 +354,6 @@ const AttendanceRecordForm = () => {
             </div>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -432,7 +419,6 @@ const AttendanceRecordForm = () => {
             </table>
           </div>
 
-          {/* Bottom Save */}
           <div className="flex justify-end pt-2 border-t border-slate-100">
             <button
               onClick={handleSaveAttendance}

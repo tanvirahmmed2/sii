@@ -19,7 +19,6 @@ async function generateUniqueSlug(name, excludeId = null) {
   }
 }
 
-// Fetch package helper with home and control modules
 async function fetchFullPackageBySlugOrId(slugOrId) {
   const res = await queryDb(
     `SELECT p.*,
@@ -104,7 +103,6 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
     }
 
-    // Count subscribers / active subscriptions
     let subscriptionsCount = 0;
     try {
       const subRes = await queryDb(
@@ -274,7 +272,6 @@ export async function PUT(request, { params }) {
       ]
     );
 
-    // Synchronize package_home_modules
     if (data.home_module_ids !== undefined || data.home_modules !== undefined) {
       let homeIds = [];
       if (Array.isArray(data.home_module_ids)) {
@@ -296,7 +293,6 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Synchronize package_control_modules
     if (data.control_module_ids !== undefined || data.control_modules !== undefined) {
       let controlIds = [];
       if (Array.isArray(data.control_module_ids)) {

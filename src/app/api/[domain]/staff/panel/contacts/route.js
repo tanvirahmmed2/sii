@@ -74,7 +74,6 @@ async function verifyContactsStaffAccess(request, context, action = 'view') {
   return { website, staffSession, allowed: true, permissions };
 }
 
-// GET: List contacts with filters, stats, and staff permissions
 export async function GET(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'view');
@@ -135,7 +134,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(query, params);
 
-    // Summary statistics
     const statsRes = await queryDb(
       `SELECT 
         COUNT(*)::int AS total_count,
@@ -161,7 +159,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a contact inquiry (manual entry or internal logging)
 export async function POST(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'create');
@@ -200,7 +197,6 @@ export async function POST(request, context) {
   }
 }
 
-// PATCH: Update contact status or toggle star
 export async function PATCH(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'edit');
@@ -261,7 +257,6 @@ export async function PATCH(request, context) {
   }
 }
 
-// DELETE: Delete contact inquiry
 export async function DELETE(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'delete');

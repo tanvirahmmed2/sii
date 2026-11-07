@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load audit logs, API keys, webhook deliveries, and background jobs
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -35,7 +34,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Audit Logs (Recent 50 changes)
     const auditRes = await queryDb(
       `SELECT * FROM website_audit_logs 
        WHERE website_id = $1 
@@ -44,7 +42,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 2. API Keys
     const keysRes = await queryDb(
       `SELECT id, website_id, name, key_prefix, permissions, is_active, expires_at, last_used_at, created_at
        FROM website_api_keys 
@@ -53,7 +50,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 3. Webhook Events (Recent 40)
     const webhooksRes = await queryDb(
       `SELECT * FROM website_webhook_events 
        WHERE website_id = $1 
@@ -62,7 +58,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 4. Background Jobs (Recent 40)
     const jobsRes = await queryDb(
       `SELECT * FROM website_background_jobs 
        WHERE website_id = $1 
@@ -84,7 +79,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create API key or trigger job retry
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -100,7 +94,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Key name is required' }, { status: 400 });
       }
 
-      // Generate secret key
       const rawSecret = `sii_${crypto.randomBytes(24).toString('hex')}`;
       const keyPrefix = rawSecret.substring(0, 10);
       const keyHash = crypto.createHash('sha256').update(rawSecret).digest('hex');
@@ -112,7 +105,6 @@ export async function POST(request, context) {
         [websiteId, name.trim(), keyHash, keyPrefix, JSON.stringify(permissions || ['read', 'write'])]
       );
 
-      // Return rawSecret ONCE to the user
       return NextResponse.json({
         success: true,
         message: 'API Key generated. Copy the secret now, it will not be shown again.',
@@ -139,7 +131,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Revoke API key
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

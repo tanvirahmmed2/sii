@@ -8,7 +8,6 @@ import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
-
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -47,7 +46,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'No student records found to import.' }, { status: 400 });
     }
 
-    // Pre-fetch academic references for this institution
     const [deptsRes, classesRes, sectionsRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1`, [website.id]),
       queryDb(`SELECT id, name, code, department_id FROM website_classes WHERE website_id = $1`, [website.id]),
@@ -110,7 +108,6 @@ export async function POST(request, context) {
       const row = rawRows[i];
       const rowIdx = i + 1;
 
-      // Extract normalized values from row
       const rawReg = (row.Registration || row['Registration No'] || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
       const deptInput = row.Department || row['Department Name'] || row.department_id || row.department || '';
       const classInput = row.Class || row['Class Code'] || row['Class Name'] || row.class_id || '';
@@ -137,7 +134,6 @@ export async function POST(request, context) {
       const resolvedSessionId = findSessionId(sessionInput) || matchedClass?.session_id || null;
       const resolvedSectionId = findSectionId(sectionInput, resolvedClassId);
 
-      // Check duplicate email across all roles if email was provided
       if (email) {
         const emailAvail = await checkInstitutionEmailAvailability(website.id, email);
         if (!emailAvail.available) {
@@ -147,10 +143,8 @@ export async function POST(request, context) {
         }
       }
 
-
       const regNo = rawReg;
 
-      // Check duplicate registration_no
       const regCheck = await queryDb(
         `SELECT id FROM website_students WHERE website_id = $1 AND registration_no = $2 LIMIT 1`,
         [website.id, regNo]
@@ -189,7 +183,6 @@ export async function POST(request, context) {
 
         const newStudent = insertRes.rows[0];
 
-        // Send setup notification email via Brevo if email is provided
         if (email) {
           try {
             const setupUrl = buildStudentSetupUrl(website, null, request, email);

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, hashPassword, comparePassword } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: View logged-in developer's profile and account details
-// ============================================================================
 export async function GET(request) {
   try {
     const authUser = await getAuthenticatedUser(request);
@@ -33,7 +30,6 @@ export async function GET(request) {
 
     const developer = devRes.rows[0];
 
-    // Fetch active session count
     const sessionRes = await queryDb(
       `SELECT COUNT(*)::int AS active_count
        FROM developer_login_sessions
@@ -42,7 +38,6 @@ export async function GET(request) {
     ).catch(() => ({ rows: [{ active_count: 1 }] }));
     const activeSessions = sessionRes.rows[0]?.active_count || 1;
 
-    // Fetch recent login activities
     const loginRes = await queryDb(
       `SELECT id, status, ip_address, user_agent, failure_reason, login_time, created_at
        FROM developer_login_activities
@@ -68,9 +63,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// PUT: Update logged-in developer's information and credentials
-// ============================================================================
 export async function PUT(request) {
   try {
     const authUser = await getAuthenticatedUser(request);
@@ -84,7 +76,6 @@ export async function PUT(request) {
     const body = await request.json();
     const data = body.data || body;
 
-    // Load current developer record including current password hash
     const currentRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password,
               'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
@@ -100,13 +91,11 @@ export async function PUT(request) {
 
     const currentDev = currentRes.rows[0];
 
-    // 1. Update Name
     const newName = data.name !== undefined ? data.name.trim() : currentDev.name;
     if (!newName) {
       return NextResponse.json({ success: false, error: 'Full name cannot be empty.' }, { status: 400 });
     }
 
-    // 2. Update Email
     const newEmail = data.email !== undefined ? data.email.trim().toLowerCase() : currentDev.email;
     if (!newEmail) {
       return NextResponse.json({ success: false, error: 'Email address cannot be empty.' }, { status: 400 });
@@ -125,13 +114,11 @@ export async function PUT(request) {
       }
     }
 
-    // 3. Update Profile fields
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
 
-    // 4. Update Password (if requested)
     let newPasswordHash = currentDev.password;
     if (data.newPassword && data.newPassword.trim()) {
       const currentPassword = data.currentPassword?.trim();
@@ -160,7 +147,6 @@ export async function PUT(request) {
       newPasswordHash = await hashPassword(data.newPassword.trim());
     }
 
-    // Execute update query
     const updateRes = await queryDb(
       `UPDATE developers
        SET name = $1,
@@ -234,7 +220,6 @@ export async function PUT(request) {
   }
 }
 
-// POST is mapped to PUT for convenience with form submissions
 export async function POST(request) {
   return PUT(request);
 }

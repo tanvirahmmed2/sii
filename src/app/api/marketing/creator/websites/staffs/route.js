@@ -3,14 +3,10 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
-import { getBaseUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
+import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
 
-
-/**
- * Validates that the website belongs to the creator
- */
 async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam) {
   const cId = sessionCreator?.id || creatorIdParam;
   if (!cId || !websiteId) return null;
@@ -24,27 +20,11 @@ async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam)
   return res.rows[0] || null;
 }
 
-/**
- * Constructs the staff verification link to custom domain if exists, or subdomain /auth/access/staff/verify
- */
 function buildStaffVerificationUrl(website, token, request) {
-  // Check if website has a verified custom domain
-  const rawCustom = (website.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom && website.custom_domain_verified) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  // Otherwise route to subdomain.base_url
-  const rawSub = (website.subdomain || website.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-  const baseDomain = BASE_DOMAIN || 'localhost:3000';
-  const protocol = BASE_HOST === 'localhost' || BASE_HOST === '127.0.0.1' ? 'http' : 'https';
-
-  return `${protocol}://${cleanSub}.${baseDomain}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
 }
 
-// GET: Fetch staff roster, module permissions matrix, active session counts, and modules
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -61,7 +41,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
     }
 
-    // 1. Fetch staff members
     const staffsRes = await queryDb(
       `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
               ws.is_active, ws.is_registered, ws.is_two_factor_enabled, ws.grade_id,
@@ -76,7 +55,6 @@ export async function GET(request) {
       [websiteId]
     );
 
-    // 2. Fetch permissions for all staffs of this website
     const permsRes = await queryDb(
       `SELECT wmp.staff_id, cm.slug AS module_slug, COALESCE(wmp.control_module_id, wmp.website_module_id) AS website_module_id,
               wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
@@ -87,7 +65,6 @@ export async function GET(request) {
       [websiteId]
     );
 
-    // 3. Fetch active sessions counts
     const sessionsRes = await queryDb(
       `SELECT staff_id, COUNT(*)::int AS active_sessions
        FROM staff_sessions
@@ -121,7 +98,6 @@ export async function GET(request) {
       activeSessions: sessionCountMap[s.id] || 0,
     }));
 
-    // 4. Fetch website modules allowed for this website by its subscription package
     let modulesRes = await queryDb(
       `SELECT DISTINCT cm.id, cm.name, cm.slug, cm.description, cm.icon, cm.is_active
        FROM website_control_modules cm
@@ -133,7 +109,6 @@ export async function GET(request) {
       [websiteId]
     );
 
-    // If website has no subscribed package yet, provide all active website modules
     if (modulesRes.rows.length === 0) {
       modulesRes = await queryDb(
         `SELECT id, name, slug, description, icon, is_active
@@ -143,7 +118,6 @@ export async function GET(request) {
       );
     }
 
-    // 5. Fetch pay scales
     const payScalesRes = await queryDb(
       `SELECT id, name, basic_salary, allowance
        FROM website_staff_pay_scale
@@ -165,7 +139,6 @@ export async function GET(request) {
   }
 }
 
-// POST: Add new staff member with credentials and module permissions
 export async function POST(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -196,7 +169,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
     }
 
-    // Check email uniqueness across all roles within this website
     const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim());
     if (!emailAvail.available) {
       return NextResponse.json(
@@ -205,9 +177,8 @@ export async function POST(request) {
       );
     }
 
-
     const verificationToken = generateToken(32);
-    const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
     let hashedPassword = null;
     let isRegistered = false;
 
@@ -247,7 +218,6 @@ export async function POST(request) {
 
     const newStaff = insertStaff.rows[0];
 
-    // Insert permissions into website_modules_permissions
     if (permissions && typeof permissions === 'object') {
       const allModulesRes = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modIdMap = {};
@@ -287,7 +257,6 @@ export async function POST(request) {
       }
     }
 
-    // Send verification email to the staff email (to custom domain if exists, or subdomain)
     const setupUrl = buildStaffVerificationUrl(website, verificationToken, request);
 
     let emailSent = false;
@@ -334,7 +303,6 @@ export async function POST(request) {
   }
 }
 
-// PUT: Update staff profile, toggle active status, update permissions matrix, or revoke sessions
 export async function PUT(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -370,7 +338,6 @@ export async function PUT(request) {
       }
       const staff = updStaff.rows[0];
 
-      // Send verification link to custom domain if exists, or subdomain
       const setupUrl = buildStaffVerificationUrl(website, newToken, request);
 
       let emailSent = false;
@@ -508,7 +475,6 @@ export async function PUT(request) {
       return NextResponse.json({ success: true, message: 'Password reset successfully.' });
     }
 
-    // Default: update_profile
     const { name, email, number, address, gradeId, bio } = body;
     if (email && email.trim()) {
       const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim(), {
@@ -557,7 +523,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE: Delete staff member
 export async function DELETE(request) {
   try {
     const sessionCreator = await getCreatorSession(request);

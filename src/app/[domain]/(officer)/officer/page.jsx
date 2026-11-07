@@ -33,7 +33,6 @@ export default function OfficerDashboardPage() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Welcome Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -68,7 +67,6 @@ export default function OfficerDashboardPage() {
         </div>
       </div>
 
-      {/* KPI Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -119,7 +117,6 @@ export default function OfficerDashboardPage() {
         </div>
       </div>
 
-      {/* Granted Modules Cards Grid */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs space-y-4">
         <div>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -193,7 +190,6 @@ export default function OfficerDashboardPage() {
         )}
       </div>
 
-      {/* Fast Operational Tasks */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs space-y-3">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
           Officer Responsibilities & Policy Notes

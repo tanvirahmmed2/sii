@@ -15,7 +15,6 @@ export default function StudentAddressInfoPage() {
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Edit Modal State
   const [editingStudent, setEditingStudent] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -61,7 +60,6 @@ export default function StudentAddressInfoPage() {
   const openEditModal = async (student) => {
     setEditingStudent(student);
     try {
-      // Fetch full address detail for this student
       const res = await fetch(getApiEndpoint(`staff/panel/students?id=${student.id}`));
       const data = await res.json();
       const addr = data.payload?.address || {};
@@ -126,7 +124,6 @@ export default function StudentAddressInfoPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Student Address Directory
@@ -136,7 +133,6 @@ export default function StudentAddressInfoPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -145,7 +141,6 @@ export default function StudentAddressInfoPage() {
         description="Select session, class, and section to view residence records"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📍"
@@ -154,7 +149,6 @@ export default function StudentAddressInfoPage() {
         />
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-          {/* Active Filter Bar & Search */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -183,7 +177,6 @@ export default function StudentAddressInfoPage() {
             </div>
           </div>
 
-          {/* IN-PAGE EDIT ADDRESS FORM */}
           {editingStudent && (
             <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

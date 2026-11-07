@@ -20,7 +20,7 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { payment_id, fee_type = 'Education Fee', payment_method = 'bkash', account_number = '', transaction_id = '' } = body;
+    const { payment_id, fee_type = 'Education Fee', payment_method = 'surjopay', account_number = '', transaction_id = '' } = body;
 
     if (!payment_id) {
       return NextResponse.json({ success: false, error: 'payment_id is required.' }, { status: 400 });
@@ -33,9 +33,8 @@ export async function POST(request, context) {
       ? String(transaction_id).trim()
       : `TXN-${(payment_method || 'ONLINE').toUpperCase()}-${Date.now().toString().slice(-8)}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
-    // Verify gateway account if specified
     let targetAccountId = null;
-    let gwCode = payment_method || 'bkash';
+    let gwCode = payment_method || 'surjopay';
     if (body.gateway_account_id) {
       const accRes = await queryDb(
         `SELECT id, gateway_code, currency, environment FROM website_payment_gateway_accounts WHERE id = $1 AND website_id = $2 AND is_active = TRUE`,
@@ -48,7 +47,6 @@ export async function POST(request, context) {
     }
 
     if (isExamFee) {
-      // Handle Exam Fee payment
       const examPayCheck = await queryDb(
         `SELECT * FROM website_exam_fee_payments 
          WHERE id = $1 AND student_id = $2 AND website_id = $3`,
@@ -76,7 +74,6 @@ export async function POST(request, context) {
         [totalAmount, gwCode, txnId, cleanPaymentId, website.id]
       );
 
-      // Record in website_payment_transactions ledger
       try {
         await queryDb(`
           INSERT INTO website_payment_transactions (
@@ -106,7 +103,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Handle Education Fee payment
     const eduPayCheck = await queryDb(
       `SELECT * FROM website_education_fee_payments 
        WHERE id = $1 AND student_id = $2 AND website_id = $3`,
@@ -139,7 +135,6 @@ export async function POST(request, context) {
       [totalAmount, gwCode, txnId, account_number ? String(account_number).slice(-4) : 'N/A', cleanPaymentId, website.id]
     );
 
-    // Record in website_payment_transactions ledger
     try {
       await queryDb(`
         INSERT INTO website_payment_transactions (

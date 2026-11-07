@@ -15,7 +15,6 @@ export default function EducationFeesPayPage() {
   const [data, setData] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Modal State
   const [activeInvoice, setActiveInvoice] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
@@ -60,7 +59,6 @@ export default function EducationFeesPayPage() {
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10">
         
-        {/* 1. Header & Navigation */}
         <div className="flex flex-col items-start gap-2 border-b border-slate-200 dark:border-slate-800 pb-8">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Link
@@ -92,7 +90,6 @@ export default function EducationFeesPayPage() {
           </div>
         </div>
 
-        {/* Search Input Form Card */}
         <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-5 shadow-xs">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-primary block mb-1">
@@ -121,12 +118,10 @@ export default function EducationFeesPayPage() {
           </form>
         </div>
 
-        {/* 2. Dues Results */}
         {hasSearched && (
           <div className="w-full space-y-6">
             {data?.student ? (
               <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
-                {/* Profile Card Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                   <div>
                     <div className="text-[10px] uppercase font-semibold text-primary block mb-1">Enrolled Student</div>
@@ -150,7 +145,6 @@ export default function EducationFeesPayPage() {
                   </div>
                 </div>
 
-                {/* Invoices Table */}
                 {(!data.dues?.education || data.dues.education.length === 0) ? (
                   <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400 space-y-1 font-light">
                     <div className="font-serif text-lg text-slate-900 dark:text-white font-normal">All Tuition Cleared</div>
@@ -226,7 +220,6 @@ export default function EducationFeesPayPage() {
         )}
       </div>
 
-      {/* 3. Checkout Modal */}
       <UniversalGatewayCheckout
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}

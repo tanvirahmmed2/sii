@@ -10,7 +10,7 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('logs'); // 'logs' | 'subjects'
+  const [activeTab, setActiveTab] = useState('logs'); 
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -40,7 +40,6 @@ const AttendancePage = () => {
 
   const rate = total > 0 ? Math.round(((present + late) / total) * 100) : 100;
 
-  // Subject-wise stats
   const subjectStats = useMemo(() => {
     const map = {};
     history.forEach((row) => {
@@ -74,7 +73,6 @@ const AttendancePage = () => {
     });
   }, [history]);
 
-  // Filter history rows
   const filteredHistory = useMemo(() => {
     return history.filter((row) => {
       const matchStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter.toLowerCase();
@@ -118,7 +116,6 @@ const AttendancePage = () => {
 
   return (
     <div className="w-full space-y-4 pb-8">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -141,7 +138,6 @@ const AttendancePage = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((kpi, idx) => (
           <div
@@ -165,9 +161,7 @@ const AttendancePage = () => {
         ))}
       </div>
 
-      {/* Main Content Card */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
-        {/* Tab Controls & Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -218,7 +212,6 @@ const AttendancePage = () => {
           )}
         </div>
 
-        {/* Tab 1: Daily Attendance Logs Table */}
         {activeTab === 'logs' && (
           <div>
             {filteredHistory.length === 0 ? (
@@ -294,7 +287,6 @@ const AttendancePage = () => {
           </div>
         )}
 
-        {/* Tab 2: Subject-Wise Breakdown */}
         {activeTab === 'subjects' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">

@@ -8,18 +8,16 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
     ? '/api/library/student-circulation'
     : '/api/library/teacher-circulation';
 
-  const [activeTab, setActiveTab] = useState(defaultTab); // 'all' | 'issued' | 'overdue' | 'returned'
+  const [activeTab, setActiveTab] = useState(defaultTab); 
   const [issues, setIssues] = useState([]);
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Issue Modal
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
   const [targetList, setTargetList] = useState([]);
@@ -36,18 +34,15 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
   });
   const [remarks, setRemarks] = useState('');
 
-  // Return Modal
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [currentIssueForReturn, setCurrentIssueForReturn] = useState(null);
   const [fineAmount, setFineAmount] = useState('0.00');
   const [fineStatus, setFineStatus] = useState('none');
   const [conditionNote, setConditionNote] = useState('');
 
-  // Delete State
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load Issues
   const loadCirculation = useCallback(async () => {
     setLoading(true);
     try {
@@ -82,7 +77,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
     return issues.slice(start, start + pageSize);
   }, [issues, currentPage, pageSize]);
 
-  // Autocomplete Target Search
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchTargets = async () => {
@@ -99,7 +93,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
     return () => clearTimeout(timer);
   }, [targetSearch, issueModalOpen, isStudent]);
 
-  // Autocomplete Book Search (In-Stock Only)
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchBooks = async () => {
@@ -130,7 +123,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
   const handleOpenReturnModal = (issue) => {
     setCurrentIssueForReturn(issue);
     const overdueDays = issue.days_overdue || 0;
-    // Suggest fine: $5 / 5 BDT per overdue day if overdue
     const suggestedFine = overdueDays > 0 ? (overdueDays * 5).toFixed(2) : '0.00';
     setFineAmount(suggestedFine);
     setFineStatus(overdueDays > 0 ? 'pending' : 'none');
@@ -245,7 +237,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -296,7 +287,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
         </div>
       </div>
 
-      {/* Feedback Banner */}
       {feedback && (
         <div
           className={`p-3 rounded text-xs border flex items-center justify-between ${
@@ -315,9 +305,7 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
         </div>
       )}
 
-      {/* Main Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -360,7 +348,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
           </div>
         </div>
 
-        {/* High-Density Circulation Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -491,7 +478,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
           </table>
         </div>
 
-        {/* Pagination Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
           <div>
             Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
@@ -532,7 +518,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
         </div>
       </div>
 
-      {/* Issue Book Modal */}
       {issueModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-lg w-full p-4 shadow-lg space-y-3 my-8">
@@ -549,7 +534,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
             </div>
 
             <form onSubmit={handleSubmitIssue} className="space-y-3">
-              {/* Target Autocomplete */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Step 1: Select {isStudent ? 'Student' : 'Faculty Member'} *
@@ -610,7 +594,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                 )}
               </div>
 
-              {/* Book Autocomplete */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Step 2: Select Available Book Title *
@@ -670,7 +653,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
                 )}
               </div>
 
-              {/* Due Date & Remarks */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -727,7 +709,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
         </div>
       )}
 
-      {/* Return Book Modal */}
       {returnModalOpen && currentIssueForReturn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-4 shadow-lg space-y-3">
@@ -834,7 +815,6 @@ export default function LibraryCirculationWorkstation({ targetType = 'student', 
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-lg space-y-3">

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { uploadImage } from 'src/lib/database/cloudinary';
 
-// GET SINGLE TICKET & CONVERSATION THREAD (Creator)
 export async function GET(request, context) {
   try {
     const params = await context?.params;
@@ -35,7 +34,6 @@ export async function GET(request, context) {
 
     const ticket = ticketRes.rows[0];
 
-    // Fetch messages
     const messagesRes = await queryDb(`
       SELECT 
         m.id,
@@ -52,7 +50,6 @@ export async function GET(request, context) {
       ORDER BY m.created_at ASC
     `, [ticket.id]);
 
-    // Fetch images linked to messages of this ticket
     const imagesRes = await queryDb(`
       SELECT si.* 
       FROM support_images si 
@@ -84,7 +81,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST MESSAGE TO TICKET THREAD (Creator)
 export async function POST(request, context) {
   try {
     const params = await context?.params;
@@ -148,7 +144,6 @@ export async function POST(request, context) {
       imageId = uploadRes.publicId;
     }
 
-    // Insert message into thread (sender_type must be lowercase 'creator' to satisfy DB constraint)
     const msgRes = await queryDb(`
       INSERT INTO support_messages (support_id, sender_type, sender_id, message)
       VALUES ($1, 'creator', $2, $3)
@@ -157,7 +152,6 @@ export async function POST(request, context) {
 
     const newMsg = msgRes.rows[0];
 
-    // Optional image attachment saved to support_images
     let attachedImages = [];
     if (imageUrl) {
       const imgRes = await queryDb(`
@@ -178,7 +172,6 @@ export async function POST(request, context) {
       attachedImages = imgRes.rows || [];
     }
 
-    // Reopen ticket if closed/resolved and update timestamps
     const updateRes = await queryDb(`
       UPDATE supports
       SET updated_at = CURRENT_TIMESTAMP,

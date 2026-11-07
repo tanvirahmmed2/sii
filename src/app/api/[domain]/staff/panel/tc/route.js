@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 
-// GET: List issued Transfer Certificates with joined student metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -51,7 +50,6 @@ export async function GET(request, context) {
       LEFT JOIN website_student_tc_templates tpl ON tc.template_id = tpl.id
     `;
 
-    // Single TC fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE tc.website_id = $1 AND tc.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -60,7 +58,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { tc: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['tc.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -130,7 +127,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Issue new Transfer Certificate & record exit
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -168,7 +164,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Reason for leaving is required.' }, { status: 400 });
     }
 
-    // Verify student exists and belongs to tenant
     const stuRes = await client.query(
       `SELECT s.id, s.class_id, s.section_id, s.session_id, s.registration_no,
               COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS stu_admission_date, c.name AS class_name
@@ -189,7 +184,6 @@ export async function POST(request, context) {
 
     await client.query('BEGIN');
 
-    // 1. Insert into website_student_tcs
     const tcRes = await client.query(
       `INSERT INTO website_student_tcs (
           website_id, student_id, tc_number, template_id,
@@ -239,7 +233,6 @@ export async function POST(request, context) {
 
     const tc = tcRes.rows[0];
 
-    // 2. Automatically record in website_student_exits
     await client.query(
       `INSERT INTO website_student_exits (
           website_id, student_id, exit_type, exit_date,
@@ -264,7 +257,6 @@ export async function POST(request, context) {
       ]
     );
 
-    // 3. Mark student as inactive (departed)
     await client.query(
       `UPDATE website_students
        SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
@@ -288,7 +280,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update TC details or status
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'update');
@@ -333,7 +324,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Cancel/delete a transfer certificate
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'delete');

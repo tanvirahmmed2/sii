@@ -14,8 +14,7 @@ export default function ManagementLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Active ledger tab & pagination
-  const [activeLedgerTab, setActiveLedgerTab] = useState('student'); // 'student' | 'teacher'
+  const [activeLedgerTab, setActiveLedgerTab] = useState('student'); 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +76,6 @@ export default function ManagementLibraryPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -102,7 +100,6 @@ export default function ManagementLibraryPage() {
         </div>
       )}
 
-      {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Catalog Titles</p>
@@ -153,7 +150,6 @@ export default function ManagementLibraryPage() {
         </div>
       </div>
 
-      {/* Operational Desks Grid */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs space-y-3">
         <h2 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
           Dedicated Workstation Desks
@@ -265,7 +261,6 @@ export default function ManagementLibraryPage() {
         </div>
       </div>
 
-      {/* Circulation Ledger */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
@@ -408,7 +403,6 @@ export default function ManagementLibraryPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
           <div>
             Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}

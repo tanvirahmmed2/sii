@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth.js';
 
-// GET: Moderator assignments, available teachers, chat status, and club members
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -14,7 +13,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const clubId = searchParams.get('club_id');
 
-    // 1. Fetch all clubs with moderator info and chat status
     const clubsRes = await queryDb(
       `SELECT c.id, c.website_id, c.name, c.category, c.logo_url, c.is_active,
               c.moderator_teacher_id,
@@ -39,7 +37,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // 2. Fetch all teachers for dropdown
     const teachersRes = await queryDb(
       `SELECT t.id, t.name, t.email, t.number, t.photo_url, des.title AS designation
        FROM website_teachers t
@@ -49,7 +46,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // 3. Fetch students for quick-member assignment dropdown
     const studentsRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -88,7 +84,6 @@ export async function GET(request, context) {
         );
         selectedClubMembers = membersRes.rows;
 
-        // Fetch recent chat messages for this club if chat box exists
         const msgsRes = await queryDb(
           `SELECT m.* 
            FROM website_club_chat_messages m
@@ -115,7 +110,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Handle assign moderator, create chat box, toggle chat box, or add member with chat access
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -127,9 +121,6 @@ export async function POST(request, context) {
     const body = await request.json().catch(() => ({}));
     const action = body.action || 'assign_moderator';
 
-    // ---------------------------------------------------------
-    // ACTION 1: Assign teacher as moderator to club
-    // ---------------------------------------------------------
     if (action === 'assign_moderator') {
       const clubId = parseInt(body.club_id, 10);
       const teacherId = body.teacher_id ? parseInt(body.teacher_id, 10) : null;
@@ -138,7 +129,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Valid Club ID is required.' }, { status: 400 });
       }
 
-      // Verify club belongs to this website
       const clubCheck = await queryDb(
         `SELECT id, name, moderator_teacher_id FROM website_clubs WHERE id = $1 AND website_id = $2 LIMIT 1`,
         [clubId, website.id]
@@ -147,7 +137,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Club not found.' }, { status: 404 });
       }
 
-      // If teacherId provided, verify teacher belongs to website
       let teacherName = 'None';
       if (teacherId) {
         const teacherCheck = await queryDb(
@@ -167,7 +156,6 @@ export async function POST(request, context) {
         [teacherId, clubId, website.id]
       );
 
-      // Also update chat room creator if chat exists
       if (teacherId) {
         await queryDb(
           `UPDATE website_club_chats 
@@ -185,9 +173,6 @@ export async function POST(request, context) {
       });
     }
 
-    // ---------------------------------------------------------
-    // ACTION 2: Create Chat Box for club
-    // ---------------------------------------------------------
     if (action === 'create_chat_box') {
       const clubId = parseInt(body.club_id, 10);
       if (!clubId || isNaN(clubId)) {
@@ -207,7 +192,6 @@ export async function POST(request, context) {
       const description = body.description?.trim() || `Official collaboration and live chat room for ${club.name}`;
       const teacherId = club.moderator_teacher_id || null;
 
-      // Upsert into website_club_chats
       const chatRes = await queryDb(
         `INSERT INTO website_club_chats (website_id, club_id, title, description, is_active, created_by_teacher_id)
          VALUES ($1, $2, $3, $4, TRUE, $5)
@@ -221,7 +205,6 @@ export async function POST(request, context) {
         [website.id, clubId, chatTitle, description, teacherId]
       );
 
-      // Update club table flag
       await queryDb(
         `UPDATE website_clubs
          SET has_chat_box = TRUE, chat_box_title = $1, chat_box_status = 'active', updated_at = CURRENT_TIMESTAMP
@@ -229,7 +212,6 @@ export async function POST(request, context) {
         [chatTitle, clubId, website.id]
       );
 
-      // Add a system welcome message
       await queryDb(
         `INSERT INTO website_club_chat_messages (
            website_id, club_id, chat_id, sender_type, sender_id, sender_name, message
@@ -244,9 +226,6 @@ export async function POST(request, context) {
       });
     }
 
-    // ---------------------------------------------------------
-    // ACTION 3: Toggle Chat Box Active / Inactive
-    // ---------------------------------------------------------
     if (action === 'toggle_chat_box') {
       const clubId = parseInt(body.club_id, 10);
       const isActive = body.is_active === true || body.is_active === 'true' || body.is_active === 1;
@@ -275,9 +254,6 @@ export async function POST(request, context) {
       });
     }
 
-    // ---------------------------------------------------------
-    // ACTION 4: Add member with chat access
-    // ---------------------------------------------------------
     if (action === 'add_member') {
       const clubId = parseInt(body.club_id, 10);
       const studentId = parseInt(body.student_id, 10);
@@ -289,7 +265,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Both Club ID and Student ID are required.' }, { status: 400 });
       }
 
-      // Verify club and student belong to website
       const clubRes = await queryDb(
         `SELECT id, name FROM website_clubs WHERE id = $1 AND website_id = $2 LIMIT 1`,
         [clubId, website.id]
@@ -331,9 +306,6 @@ export async function POST(request, context) {
       });
     }
 
-    // ---------------------------------------------------------
-    // ACTION 5: Toggle chat access for existing member
-    // ---------------------------------------------------------
     if (action === 'toggle_member_chat') {
       const memberId = parseInt(body.member_id, 10);
       const canAccessChat = body.can_access_chat === true || body.can_access_chat === 'true';

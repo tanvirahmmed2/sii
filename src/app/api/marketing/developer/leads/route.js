@@ -15,7 +15,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE LEAD
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'leads');
@@ -37,7 +36,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE LEAD
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'leads');
@@ -63,7 +61,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE LEAD
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'leads');

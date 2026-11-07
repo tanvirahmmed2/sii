@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Aggregated public gallery images across events, news, awards, and club news
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -15,7 +14,6 @@ export async function GET(request, context) {
 
     const { searchParams } = new URL(request.url);
 
-    // Pagination params
     const pageParam = parseInt(searchParams.get('page') || '1', 10);
     const page = !isNaN(pageParam) && pageParam > 0 ? pageParam : 1;
 
@@ -24,14 +22,11 @@ export async function GET(request, context) {
 
     const offset = (page - 1) * limit;
 
-    // Optional category / table filter ('all', 'events', 'news', 'awards', 'club-news')
     const filterTable = searchParams.get('table') || searchParams.get('category');
     const cleanFilter = filterTable ? filterTable.toLowerCase().trim() : 'all';
 
-    // Build the query fragments
     const fragments = [];
 
-    // 1. Events images
     if (cleanFilter === 'all' || cleanFilter === 'events') {
       fragments.push(`
         SELECT 
@@ -49,7 +44,6 @@ export async function GET(request, context) {
       `);
     }
 
-    // 2. News images
     if (cleanFilter === 'all' || cleanFilter === 'news') {
       fragments.push(`
         SELECT 
@@ -68,7 +62,6 @@ export async function GET(request, context) {
       `);
     }
 
-    // 3. Awards images
     if (cleanFilter === 'all' || cleanFilter === 'awards' || cleanFilter === 'recognitions') {
       fragments.push(`
         SELECT 
@@ -87,7 +80,6 @@ export async function GET(request, context) {
       `);
     }
 
-    // 4. Club News images
     if (cleanFilter === 'all' || cleanFilter === 'club-news' || cleanFilter === 'club_news' || cleanFilter === 'clubs') {
       fragments.push(`
         SELECT 
@@ -122,7 +114,6 @@ export async function GET(request, context) {
 
     const unionSql = fragments.join(' UNION ALL ');
 
-    // Count total matching images
     const countSql = `
       WITH combined_gallery AS (
         ${unionSql}
@@ -133,7 +124,6 @@ export async function GET(request, context) {
     const total = countRes.rows[0]?.total || 0;
     const totalPages = Math.ceil(total / limit);
 
-    // Query paginated items
     const dataSql = `
       WITH combined_gallery AS (
         ${unionSql}

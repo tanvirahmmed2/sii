@@ -30,12 +30,10 @@ export default function FeesEducationConfigurePage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFee, setEditingFee] = useState(null);
   const [formData, setFormData] = useState({
@@ -214,7 +212,6 @@ export default function FeesEducationConfigurePage() {
     }
   };
 
-  // Filtered List
   const filteredFees = fees.filter((f) => {
     const matchSearch =
       !searchTerm ||
@@ -226,7 +223,6 @@ export default function FeesEducationConfigurePage() {
     return matchSearch && matchClass && matchStatus;
   });
 
-  // KPI calculations
   const totalConfigs = fees.length;
   const activeConfigs = fees.filter((f) => f.status === 'active').length;
   const totalClassesConfigured = new Set(fees.map((f) => f.class_id)).size;
@@ -235,7 +231,6 @@ export default function FeesEducationConfigurePage() {
 
   return (
     <div className="w-full space-y-6 pb-10">
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-4 rounded-2xl flex items-center justify-between text-sm shadow-xs transition-all ${
@@ -254,7 +249,6 @@ export default function FeesEducationConfigurePage() {
         </div>
       )}
 
-      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -277,7 +271,6 @@ export default function FeesEducationConfigurePage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-2xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Fee Tariffs</p>
@@ -320,9 +313,7 @@ export default function FeesEducationConfigurePage() {
         </div>
       </div>
 
-      {/* Main Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-        {/* Controls Toolbar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -369,7 +360,6 @@ export default function FeesEducationConfigurePage() {
           </div>
         </div>
 
-        {/* Table Area */}
         {loading ? (
           <TenantLoader fullScreen={false} />
         ) : filteredFees.length === 0 ? (
@@ -463,7 +453,6 @@ export default function FeesEducationConfigurePage() {
         )}
       </div>
 
-      {/* Modal: Create or Edit Fee Configuration */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">

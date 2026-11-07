@@ -3,9 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { uploadImage } from 'src/lib/database/cloudinary.js';
 
-/**
- * GET: Retrieves applicant information, fee payment status, and existing media for candidate
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -82,10 +79,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST: Uploads candidate photo (300x300 strict) and signature (150x50 strict) to Cloudinary,
- * records into website_admission_applicant_images, and updates applicant status to 'completed'.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -118,7 +111,6 @@ export async function POST(request, context) {
 
     const appId = parseInt(applicantId, 10);
 
-    // 1. Verify applicant and ensure payment clearance in website_admission_fee_payments
     const appRes = await queryDb(
       `SELECT a.id, a.status, a.applicant_name, a.application_no,
               COALESCE(p.payment_status, 'unpaid') AS payment_status
@@ -136,7 +128,6 @@ export async function POST(request, context) {
 
     const applicant = appRes.rows[0];
 
-    // Strictly enforce payment clearance
     if (applicant.payment_status !== 'paid') {
       return NextResponse.json({
         success: false,
@@ -144,7 +135,6 @@ export async function POST(request, context) {
       }, { status: 403 });
     }
 
-    // 2. Upload to Cloudinary
     let photoUrl = photoData;
     let photoPublicId = null;
     let signatureUrl = signatureData;
@@ -162,7 +152,6 @@ export async function POST(request, context) {
       signaturePublicId = cloudSig.public_id || null;
     }
 
-    // 3. Upsert into website_admission_applicant_images
     await queryDb(`
       INSERT INTO website_admission_applicant_images (
         website_id, applicant_id, photo_url, photo_public_id, signature_url, signature_public_id, uploaded_at
@@ -186,7 +175,6 @@ export async function POST(request, context) {
       signaturePublicId
     ]);
 
-    // 4. Check circular type and generate exam_roll if admission is exam based
     const admRes = await queryDb(
       `SELECT a.id, a.selection_method, a.exam_date,
               ex.exam_date AS admission_exam_date, ex.admit_publish_date, ex.venue
@@ -210,7 +198,6 @@ export async function POST(request, context) {
       generatedExamRoll = `${currentYear}${completedSeq}`;
     }
 
-    // 5. Update website_admission_applicants status to 'completed' and set exam_roll
     await queryDb(`
       UPDATE website_admission_applicants
       SET status = 'completed',

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// PATCH: Update candidate application status and reviewer notes
-// ============================================================================
 export async function PATCH(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -74,9 +71,6 @@ export async function PATCH(request, context) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete a candidate application
-// ============================================================================
 export async function DELETE(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');

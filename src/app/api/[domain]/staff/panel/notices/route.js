@@ -6,21 +6,12 @@ import { getOfficerSession, hasOfficerModulePermission } from 'src/lib/middlewar
 import { getCreatorSession } from 'src/lib/middleware/creator.js';
 import { uploadPdf, deletePdf } from 'src/lib/database/cloudinary.js';
 
-/**
- * Robust Route Guard for Control Panel Notices
- * Allows:
- * 1. Authenticated Staff with 'notices' module permission
- * 2. Authenticated Officer with 'notices' module permission
- * 3. Authenticated Tenant Website Creator
- * Rejects unauthorized users, wrong tenant attempts, or missing module allowance.
- */
 async function verifyNoticeControlAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Verify tenant subscription package allowance for 'notices'
   const hasAllowance = await hasTenantModuleAllowance(website, 'notices');
   if (!hasAllowance) {
     return {
@@ -31,7 +22,6 @@ async function verifyNoticeControlAccess(request, context, action = 'view') {
     };
   }
 
-  // 2. Check Staff Session
   try {
     const staffSession = await getStaffSession(request);
     if (staffSession) {
@@ -65,7 +55,6 @@ async function verifyNoticeControlAccess(request, context, action = 'view') {
     console.warn('[Notices Guard] Staff check note:', err?.message);
   }
 
-  // 3. Check Officer Session
   try {
     const officerSession = await getOfficerSession(request);
     if (officerSession) {
@@ -99,7 +88,6 @@ async function verifyNoticeControlAccess(request, context, action = 'view') {
     console.warn('[Notices Guard] Officer check note:', err?.message);
   }
 
-  // 4. Check Creator Session (Website Owner)
   try {
     const creatorSession = await getCreatorSession(request);
     if (creatorSession) {
@@ -135,9 +123,6 @@ function slugify(text) {
   return base || `notice-${Date.now()}`;
 }
 
-/**
- * Parses both multipart/form-data (with file upload) and application/json requests
- */
 async function parseNoticeRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   if (contentType.includes('multipart/form-data')) {
@@ -155,9 +140,6 @@ async function parseNoticeRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// ============================================================================
-// GET: List all notices for this tenant website (with search, category, status)
-// ============================================================================
 export async function GET(request, context) {
   try {
     const auth = await verifyNoticeControlAccess(request, context, 'view');
@@ -229,9 +211,6 @@ export async function GET(request, context) {
   }
 }
 
-// ============================================================================
-// POST: Create a new notice (supports PDF upload to Cloudinary + Drive URL)
-// ============================================================================
 export async function POST(request, context) {
   try {
     const auth = await verifyNoticeControlAccess(request, context, 'create');
@@ -263,9 +242,7 @@ export async function POST(request, context) {
     let finalFileSize = 0;
     let finalDriveUrl = drive_url ? String(drive_url).trim() : null;
 
-    // Handle Cloudinary PDF Upload
     if (pdfFile && typeof pdfFile === 'object' && pdfFile.size > 0) {
-      // Validate file size (max 25MB)
       const MAX_SIZE = 25 * 1024 * 1024;
       if (pdfFile.size > MAX_SIZE) {
         return NextResponse.json(
@@ -301,7 +278,6 @@ export async function POST(request, context) {
 
     let finalSlug = slugify(title);
 
-    // Verify unique slug for this website, append suffix if exists
     const slugExists = await queryDb(
       `SELECT id FROM website_notices WHERE website_id = $1 AND slug = $2 LIMIT 1`,
       [auth.website.id, finalSlug]
@@ -348,9 +324,6 @@ export async function POST(request, context) {
   }
 }
 
-// ============================================================================
-// PUT: Update an existing notice (supports replacing PDF in Cloudinary)
-// ============================================================================
 export async function PUT(request, context) {
   try {
     const auth = await verifyNoticeControlAccess(request, context, 'edit');
@@ -378,7 +351,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Notice ID is required for update.' }, { status: 400 });
     }
 
-    // Verify existence within tenant
     const existingRes = await queryDb(
       `SELECT * FROM website_notices WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
@@ -396,7 +368,6 @@ export async function PUT(request, context) {
     let finalFileSize = existingNotice.file_size;
     let finalDriveUrl = drive_url !== undefined ? (drive_url ? String(drive_url).trim() : null) : existingNotice.drive_url;
 
-    // Handle Remove PDF flag
     if (remove_pdf === true || remove_pdf === 'true') {
       if (existingNotice.pdf_id) {
         await deletePdf(existingNotice.pdf_id).catch((err) =>
@@ -412,7 +383,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Handle New PDF Upload
     if (pdfFile && typeof pdfFile === 'object' && pdfFile.size > 0) {
       const MAX_SIZE = 25 * 1024 * 1024;
       if (pdfFile.size > MAX_SIZE) {
@@ -426,7 +396,6 @@ export async function PUT(request, context) {
         const folder = `school_${auth.website.id}/notices`;
         const uploadResult = await uploadPdf(pdfFile, folder);
 
-        // Delete previous Cloudinary asset if replaced
         if (existingNotice.pdf_id && existingNotice.pdf_id !== uploadResult.publicId) {
           await deletePdf(existingNotice.pdf_id).catch((err) =>
             console.warn('[Cloudinary Delete Old PDF Note]:', err?.message)
@@ -514,9 +483,6 @@ export async function PUT(request, context) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete a notice & clean up Cloudinary PDF asset
-// ============================================================================
 export async function DELETE(request, context) {
   try {
     const auth = await verifyNoticeControlAccess(request, context, 'delete');
@@ -544,7 +510,6 @@ export async function DELETE(request, context) {
 
     const existingNotice = existingRes.rows[0];
 
-    // Delete PDF file from Cloudinary if stored
     if (existingNotice.pdf_id) {
       await deletePdf(existingNotice.pdf_id).catch((err) =>
         console.warn('[Cloudinary PDF Cleanup on Delete Note]:', err?.message)

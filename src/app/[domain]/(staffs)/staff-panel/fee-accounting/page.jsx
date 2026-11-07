@@ -12,10 +12,9 @@ export default function FeeAccountingStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('invoices'); // invoices | heads | structures | refunds
+  const [activeTab, setActiveTab] = useState('invoices'); 
   const [data, setData] = useState({ fee_heads: [], fee_structures: [], invoices: [], refund_requests: [], wallet_summary: {} });
 
-  // Fee Head Modal
   const [isHeadModalOpen, setIsHeadModalOpen] = useState(false);
   const [headName, setHeadName] = useState('');
   const [headCode, setHeadCode] = useState('');
@@ -23,7 +22,6 @@ export default function FeeAccountingStaffPage() {
   const [headTaxable, setHeadTaxable] = useState(false);
   const [submittingHead, setSubmittingHead] = useState(false);
 
-  // Fee Structure Modal
   const [isStructureModalOpen, setIsStructureModalOpen] = useState(false);
   const [structHeadId, setStructHeadId] = useState('');
   const [structAmount, setStructAmount] = useState('');
@@ -133,7 +131,6 @@ export default function FeeAccountingStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -160,7 +157,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
@@ -201,7 +197,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('invoices')}
@@ -235,7 +230,6 @@ export default function FeeAccountingStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Student Invoices */}
       {activeTab === 'invoices' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -294,7 +288,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Fee Heads */}
       {activeTab === 'heads' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -334,7 +327,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Pricing Structures */}
       {activeTab === 'structures' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -367,7 +359,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       )}
 
-      {/* Create Fee Head Modal */}
       {isHeadModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -430,7 +421,6 @@ export default function FeeAccountingStaffPage() {
         </div>
       )}
 
-      {/* Create Fee Structure Modal */}
       {isStructureModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

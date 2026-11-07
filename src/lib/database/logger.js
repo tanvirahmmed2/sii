@@ -1,15 +1,5 @@
 import { query } from './db.js';
 
-/**
- * Records a user login event into the login_logs database table.
- * @param {Object} params
- * @param {number|string} [params.userId]
- * @param {string} params.userType - 'admin', 'teacher', 'student', 'staff'
- * @param {string} [params.name]
- * @param {string} [params.email]
- * @param {Request} [params.req] - Next.js Request object to extract IP and User-Agent
- * @param {string} [params.status='success'] - 'success' or 'failed'
- */
 export async function recordLoginLog({ userType, name = 'User', email = '', req = null, status = 'success' }) {
   try {
     let ipAddress = '127.0.0.1';
@@ -38,16 +28,6 @@ export async function recordLoginLog({ userType, name = 'User', email = '', req 
   }
 }
 
-/**
- * Records a system creation activity into the activity_logs database table.
- * @param {Object} params
- * @param {string} [params.userType='admin'] - 'admin', 'teacher', 'staff', 'system'
- * @param {string} [params.userName='Administrator']
- * @param {string} params.action - e.g. 'CREATE_ADMIN', 'CREATE_TEACHER', 'CREATE_CLASS', etc.
- * @param {string} params.entityType - 'admin', 'teacher', 'staff', 'admission', 'circular', 'news', 'club', 'class', 'section', 'subject', 'club_news', 'notice'
- * @param {number|string} [params.entityId]
- * @param {string} [params.details]
- */
 export async function recordActivityLog({
   userType = 'admin',
   userName = 'Administrator',

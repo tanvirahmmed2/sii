@@ -10,7 +10,7 @@ export default function AdminBlogsPage() {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTab, setFilterTab] = useState('ALL'); // 'ALL' | 'PUBLISHED' | 'DRAFTS'
+  const [filterTab, setFilterTab] = useState('ALL'); 
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
@@ -110,7 +110,6 @@ export default function AdminBlogsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-2">
@@ -159,7 +158,6 @@ export default function AdminBlogsPage() {
         </div>
       )}
 
-      {/* Filter and Search Bar */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
@@ -220,7 +218,6 @@ export default function AdminBlogsPage() {
           </div>
         </div>
 
-        {/* Table View */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

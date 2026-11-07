@@ -37,7 +37,6 @@ const AwardCard = ({ award, recognition, item, href, className = '' }) => {
         className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-primary/10 hover:border-primary/50 transition-all duration-300 flex flex-col justify-between overflow-hidden h-full ${className}`}
       >
         <div className="flex-1 flex flex-col">
-          {/* Trophy / Certificate Image Banner */}
           <div className="w-full aspect-[4/3] bg-gradient-to-br from-slate-100 to-slate-200/80 dark:from-slate-800/80 dark:to-slate-900 relative overflow-hidden flex items-center justify-center p-3 border-b border-slate-100 dark:border-slate-800/80">
             {coverImage ? (
               <Image
@@ -57,7 +56,6 @@ const AwardCard = ({ award, recognition, item, href, className = '' }) => {
               </div>
             )}
 
-            {/* Year Pill overlay */}
             {year && (
               <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-slate-100 shadow-xs border border-slate-200/60 dark:border-slate-700/60 flex items-center gap-1">
                 <FiCalendar className="text-[10px] text-primary" />
@@ -66,7 +64,6 @@ const AwardCard = ({ award, recognition, item, href, className = '' }) => {
             )}
           </div>
 
-          {/* Details Body */}
           <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -95,7 +92,6 @@ const AwardCard = ({ award, recognition, item, href, className = '' }) => {
           </div>
         </div>
 
-        {/* Footer Action */}
         <div className="px-4 sm:px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-xs font-semibold text-primary group-hover:bg-primary/5 transition-colors">
           <span>View Award Citation</span>
           <FiArrowRight className="text-xs group-hover:translate-x-1 transition-transform duration-200" />

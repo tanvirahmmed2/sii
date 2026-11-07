@@ -3,11 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { generateToken } from 'src/lib/utils/random';
 
-/**
- * API Route: /api/creator/subscriptions
- * Dedicated to the `subscription` table.
- */
-
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -23,7 +18,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    // Auto-sync any completed purchases without a subscription row
     await queryDb(
       `INSERT INTO subscriptions (creator_id, package_id, purchase_id, status, billing_cycle, current_period_start, current_period_end)
        SELECT pu.creator_id, pu.package_id, pu.id, 'active', pu.billing_cycle, COALESCE(pu.period_start, pu.created_at), COALESCE(pu.period_end, pu.created_at + INTERVAL '30 days')
@@ -34,7 +28,6 @@ export async function GET(request) {
       [creatorId]
     ).catch(() => {});
 
-    // Fetch all subscriptions for creator joined with packages, purchases, and websites
     const subsRes = await queryDb(
       `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.website_id, s.status,
               s.current_period_start, s.current_period_end,
@@ -138,7 +131,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // Direct purchase subscription action
   if (action === 'purchase_subscription' || action === 'purchase') {
     const packageId = Number(body.packageId);
     const paymentMethod = body.paymentMethod || 'Paddle';
@@ -159,7 +151,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
     const purchaseCode = generateToken(12);
 
-    // 1. Insert into purchases table
     const puRes = await queryDb(
       `INSERT INTO purchases (creator_id, package_id, purchase_code, billing_cycle, base_amount, total_amount, status, period_start, period_end, notes)
        VALUES ($1, $2, $3, $4, $5, $5, 'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ${durationInterval}, $6)
@@ -168,7 +159,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     );
     const purchase = puRes.rows[0];
 
-    // 2. Insert into payments table
     const transactionId = generateToken(12);
     const payRes = await queryDb(
       `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
@@ -177,7 +167,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       [purchase.id, creatorId, transactionId, baseAmount, paymentMethod]
     );
 
-    // 3. Insert into subscriptions table
     const subRes = await queryDb(
       `INSERT INTO subscriptions (
          creator_id, package_id, purchase_id, status, billing_cycle,
@@ -188,7 +177,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       [creatorId, packageId, purchase.id, billingCycle]
     );
 
-    // 4. Clear creator's wishlist upon successful package purchase
     await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]).catch(() => {});
 
     return NextResponse.json({
@@ -205,7 +193,6 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     });
   }
 
-  // Cancel active subscription
   if (action === 'cancel') {
     const subId = Number(body.subscriptionId || body.id);
     const res = await queryDb(

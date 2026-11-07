@@ -34,7 +34,6 @@ export async function POST(request, context) {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // Look up officer under this website
     const officerRes = await queryDb(
       `SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
               wo.designation, wo.password, wo.is_active, wo.is_registered,
@@ -69,7 +68,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Two-Factor Authentication Check
     if (officer.is_two_factor_enabled) {
       const otpCode = crypto.randomInt(100000, 1000000).toString();
 
@@ -111,7 +109,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Generate JWT token
     const token = generateToken({
       id: officer.id,
       email: officer.email,
@@ -120,7 +117,6 @@ export async function POST(request, context) {
       role: 'officer',
     });
 
-    // Create active session in website_officer_login_sessions
     await createOfficerSession({
       websiteId: website.id,
       officerId: officer.id,

@@ -154,7 +154,6 @@ export default function CandidateUploadPage() {
     );
   }
 
-  // Payment clearance enforcement
   if (applicant.payment_status !== 'paid') {
     return (
       <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 px-4 sm:px-6 lg:px-8 space-y-6">
@@ -200,7 +199,6 @@ export default function CandidateUploadPage() {
     );
   }
 
-  // Final Confirmed Application Slip / Admit Card
   if (submitted) {
     return (
       <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 px-4 sm:px-6 lg:px-8 space-y-6">
@@ -228,7 +226,6 @@ export default function CandidateUploadPage() {
             </button>
           </div>
 
-          {/* Identification Details */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 text-xs">
             <div className="flex flex-col items-center justify-center p-3 border border-slate-200/80 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
               {imagePreview ? (
@@ -297,7 +294,6 @@ export default function CandidateUploadPage() {
     );
   }
 
-  // Upload Form
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 px-4 sm:px-6 lg:px-8 space-y-6">
       <div className="w-full max-w-3xl mx-auto bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
@@ -321,7 +317,6 @@ export default function CandidateUploadPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-1">
-          {/* Photo Upload: 300x300 */}
           <div className="p-5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-900 dark:text-white">
@@ -357,7 +352,6 @@ export default function CandidateUploadPage() {
             </div>
           </div>
 
-          {/* Signature Upload: 150x50 */}
           <div className="p-5 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-900 dark:text-white">
@@ -393,7 +387,6 @@ export default function CandidateUploadPage() {
             </div>
           </div>
 
-          {/* Submit Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200/80 dark:border-slate-800">
             <Link
               href="/admission"

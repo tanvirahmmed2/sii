@@ -13,7 +13,6 @@ function generateSlug(text) {
     .replace(/(^-|-$)/g, '');
 }
 
-// GET: List templates from separate task tables with category & search filters
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'templates');
@@ -26,7 +25,6 @@ export async function GET(request) {
     const search = searchParams.get('search')?.trim();
     const id = searchParams.get('id');
 
-    // If specific task/category requested
     const targetTask = resolveTaskConfig(category);
 
     if (id && targetTask) {
@@ -49,7 +47,6 @@ export async function GET(request) {
       return NextResponse.json({ success: true, record: res.rows[0] });
     }
 
-    // Single template lookup without task specified - check all task tables
     if (id && !targetTask) {
       for (const t of ALL_TASKS) {
         const r = await queryDb(
@@ -70,7 +67,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Template not found' }, { status: 404 });
     }
 
-    // Filter by specific task table
     if (targetTask) {
       const conditions = [];
       const params = [];
@@ -101,7 +97,6 @@ export async function GET(request) {
       });
     }
 
-    // Multi-task catalog overview (all separate tables queried)
     const allRecords = [];
     const counts = {};
 
@@ -143,7 +138,6 @@ export async function GET(request) {
   }
 }
 
-// POST: Create a new template in its dedicated task table
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'templates');
@@ -167,7 +161,6 @@ export async function POST(request) {
     let slug = generateSlug(body.slug || name);
     if (!slug) slug = `tpl-${Date.now()}`;
 
-    // Ensure slug uniqueness in this task table
     const slugCheck = await queryDb(
       `SELECT id FROM ${targetTask.systemTable} WHERE slug = $1 LIMIT 1`,
       [slug]
@@ -181,7 +174,6 @@ export async function POST(request) {
     const dimensionHeight = Number(body.dimension_height || targetTask.defaultHeight);
     const dimensionUnit = body.dimension_unit || (targetTask.category === 'poster' ? 'px' : 'mm');
 
-    // Use provided Fabric data or fallback to task starter JSON
     const starterJSON = generateStarterFabricJSON(targetTask.key);
     const fabricData = body.fabric_data || starterJSON;
     const fabricBackData = body.fabric_back_data || (targetTask.category.includes('id_card') ? { version: '5.3.0', background: '#ffffff', objects: [] } : {});

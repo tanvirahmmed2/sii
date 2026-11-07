@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { generateToken } from 'src/lib/utils/random';
 
-// GET: Retrieve live chat sessions or a specific conversation for permitted developer
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'live-chats');
@@ -14,7 +13,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chatId') || searchParams.get('id');
 
-    // 1. Single Chat Session Details
     if (chatId) {
       const chatRes = await queryDb(
         `SELECT lc.*,
@@ -33,7 +31,6 @@ export async function GET(request) {
         return NextResponse.json({ success: false, error: 'Chat session not found' }, { status: 404 });
       }
 
-      // Mark unread visitor messages as read since permitted developer is viewing
       await queryDb(
         `UPDATE live_chat_messages 
          SET is_read = TRUE, read_at = CURRENT_TIMESTAMP 
@@ -41,7 +38,6 @@ export async function GET(request) {
         [chat.id]
       ).catch(() => {});
 
-      // Fetch messages for this chat
       const msgRes = await queryDb(
         `SELECT id, chat_id, sender_type, sender_id, sender_name, message, is_read, read_at, created_at 
          FROM live_chat_messages 
@@ -50,7 +46,6 @@ export async function GET(request) {
         [chat.id]
       );
 
-      // Fetch list of active permitted developers for re-assignment
       const devRes = await queryDb(
         `SELECT d.id, d.name, d.email, d.designation, d.avatar_url, COALESCE(d.designation, 'Developer') as role_name 
          FROM developers d 
@@ -67,7 +62,6 @@ export async function GET(request) {
       });
     }
 
-    // 2. List all live chat sessions with preview and unread counters
     const res = await queryDb(
       `SELECT lc.*,
               d.name AS assigned_developer_name,
@@ -94,7 +88,6 @@ export async function GET(request) {
   }
 }
 
-// POST: Permitted developer sends reply or creates chat record
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'live-chats');
@@ -106,7 +99,6 @@ export async function POST(request) {
     const data = body.data || body;
     const action = body.action || data.action;
 
-    // Handle creating a new chat session from developer form
     if (action === 'create_record' && (!body.table || body.table === 'live_chats')) {
       const visitorName = (data.visitor_name || '').trim();
       const visitorEmail = (data.visitor_email || '').trim().toLowerCase() || null;
@@ -128,7 +120,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, record: newChatRes.rows[0] });
     }
 
-    // Handle creating a message from developer form
     if (action === 'create_record' && body.table === 'live_chat_messages') {
       const chatId = Number(data.chat_id);
       const message = (data.message || '').trim();
@@ -159,7 +150,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, record: msgRes.rows[0] });
     }
 
-    // Standard Staff Reply from Live Chat Workspace
     const chatId = Number(data.chat_id || data.chatId);
     const message = (data.message || '').trim();
 
@@ -167,7 +157,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Chat ID and message are required.' }, { status: 400 });
     }
 
-    // Check if chat is closed
     const chatCheck = await queryDb('SELECT id, status FROM live_chats WHERE id = $1 LIMIT 1', [chatId]);
     if (chatCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Chat session not found' }, { status: 404 });
@@ -189,7 +178,6 @@ export async function POST(request) {
       [chatId, staffId, staffName, message]
     );
 
-    // Automatically set status to ACTIVE and assign to the replying developer if not yet assigned
     await queryDb(
       `UPDATE live_chats 
        SET updated_at = CURRENT_TIMESTAMP, 
@@ -210,7 +198,6 @@ export async function POST(request) {
   }
 }
 
-// PUT: Permitted developer updates chat status or assigns developer
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'live-chats');
@@ -275,7 +262,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE: Permitted developer deletes live chat session
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'live-chats');

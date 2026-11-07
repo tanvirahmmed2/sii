@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server.js';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Single notice by slug or ID
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -50,7 +49,6 @@ export async function GET(request, context) {
 
     const notice = result.rows[0];
 
-    // Increment views count asynchronously
     queryDb(`UPDATE website_notices SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1`, [notice.id]).catch(() => {});
 
     return NextResponse.json({

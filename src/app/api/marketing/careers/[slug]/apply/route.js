@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { uploadToCloudinary } from 'src/lib/database/cloudinary';
 
-// ============================================================================
-// POST: Submit job application for a career post
-// ============================================================================
 export async function POST(request, context) {
   try {
 
@@ -17,7 +14,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 1. Find the career post
     const careerRes = await queryDb(
       `SELECT id, title, is_published, deadline FROM career WHERE slug = $1 LIMIT 1`,
       [slug]
@@ -32,7 +28,6 @@ export async function POST(request, context) {
 
     const career = careerRes.rows[0];
 
-    // Check deadline if applicable
     if (career.deadline && new Date(career.deadline) < new Date()) {
       return NextResponse.json(
         { success: false, error: 'The application deadline for this position has passed.' },
@@ -40,7 +35,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 2. Parse request (handles multipart/form-data or application/json)
     const contentType = request.headers.get('content-type') || '';
     let applicantName = '';
     let applicantEmail = '';
@@ -63,7 +57,6 @@ export async function POST(request, context) {
       const directResumeUrl = (formData.get('resume_url') || '').toString().trim();
 
       if (resumeFile && typeof resumeFile === 'object' && resumeFile.size > 0) {
-        // Upload resume file to Cloudinary
         try {
           const uploadResult = await uploadToCloudinary(resumeFile, 'portfoliobuilder/resumes');
           if (uploadResult && uploadResult.url) {
@@ -90,7 +83,6 @@ export async function POST(request, context) {
       coverLetter = (body.cover_letter || '').toString().trim();
     }
 
-    // Validation
     if (!applicantName) {
       return NextResponse.json(
         { success: false, error: 'Full name is required.' },
@@ -112,7 +104,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 3. Save application into career_application table
     const insertRes = await queryDb(
       `
       INSERT INTO career_application (

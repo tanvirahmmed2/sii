@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: List tasks (All developers) + developer options for assignment
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'tasks');
@@ -42,7 +39,6 @@ export async function GET(request) {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Try developer_tasks from schema.psql first, fallback to tasks
     let tasksRes = await queryDb(`
       SELECT 
         dt.id,
@@ -93,7 +89,6 @@ export async function GET(request) {
       `, values).catch(() => ({ rows: [] }));
     }
 
-    // List of active developers for assignee dropdown
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name 
       FROM developers d 
@@ -117,9 +112,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new task
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'tasks');
@@ -143,7 +135,6 @@ export async function POST(request) {
     const normPriority = (priority || 'medium').toLowerCase();
     const normStatus = (status || 'todo').toLowerCase();
 
-    // Try inserting into developer_tasks first
     let taskRes = await queryDb(
       `INSERT INTO developer_tasks (title, description, status, priority, developer_id, due_date)
        VALUES ($1, $2, $3, $4, $5, $6)
@@ -157,7 +148,6 @@ export async function POST(request) {
         due_date ? new Date(due_date) : null,
       ]
     ).catch(async () => {
-      // Fallback to tasks table if developer_tasks not present
       return await queryDb(
         `INSERT INTO tasks (title, description, status, priority, assigned_to_developer_id, created_by_developer_id, due_date)
          VALUES ($1, $2, $3, $4, $5, $6, $7)

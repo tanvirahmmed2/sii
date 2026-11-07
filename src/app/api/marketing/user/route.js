@@ -57,7 +57,6 @@ export async function POST(request) {
     const body = await request.json();
     const { action } = body;
 
-    // 1. Visitor Book Appointment
     if (action === 'book_appointment') {
       const d = body.appointmentData || {};
       const res = await queryDb(
@@ -73,7 +72,6 @@ export async function POST(request) {
           d.notes || '',
         ]
       ).catch(async () => {
-        // Fallback to platform appointments table (Table 24)
         return await queryDb(
           `INSERT INTO appointments (client_name, client_email, appointment_date, time_slot, notes)
            VALUES ($1, $2, $3, $4, $5)
@@ -90,7 +88,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, appointment: res.rows[0] });
     }
 
-    // 2. Visitor Submit Review
     if (action === 'submit_review') {
       const d = body.reviewData || {};
       const res = await queryDb(
@@ -106,7 +103,6 @@ export async function POST(request) {
           d.reviewText || d.comment || d.text || '',
         ]
       ).catch(async () => {
-        // Fallback to platform reviews table (Table 19)
         return await queryDb(
           `INSERT INTO reviews (author_name, author_email, rating, title, content, is_approved)
            VALUES ($1, $2, $3, $4, $5, FALSE)
@@ -123,7 +119,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, review: res.rows[0] });
     }
 
-    // 3. User Submit Problem Report (inserts into contacts table Table 18)
     if (action === 'submit_report') {
       const d = body.reportData || {};
       const res = await queryDb(

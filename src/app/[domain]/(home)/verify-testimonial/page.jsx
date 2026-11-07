@@ -41,7 +41,6 @@ export default function VerifyTestimonialPage() {
     <div className="w-full min-h-[75vh] py-10 md:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
       <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -62,7 +61,6 @@ export default function VerifyTestimonialPage() {
           </p>
         </motion.div>
 
-        {/* Search Input Box */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -101,7 +99,6 @@ export default function VerifyTestimonialPage() {
           </form>
         </motion.div>
 
-        {/* Error Output */}
         {searched && errorMsg && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -113,7 +110,6 @@ export default function VerifyTestimonialPage() {
           </motion.div>
         )}
 
-        {/* Verification Result Card */}
         {result && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}

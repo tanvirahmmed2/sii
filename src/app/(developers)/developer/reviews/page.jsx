@@ -155,7 +155,6 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -189,7 +188,6 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      {/* Action Notification */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
@@ -208,7 +206,6 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      {/* KPI Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setStatusFilter('ALL')}
@@ -259,7 +256,6 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
@@ -288,7 +284,6 @@ export default function AdminReviewsPage() {
         </span>
       </div>
 
-      {/* Reviews List */}
       <div className="space-y-3">
         {loading && reviews.length === 0 ? (
           <LoadingScreen fullScreen={false} label="Loading reviews for moderation..." />
@@ -313,7 +308,6 @@ export default function AdminReviewsPage() {
                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col md:flex-row md:items-start justify-between gap-4"
               >
                 <div className="space-y-2 flex-1 min-w-0">
-                  {/* Top metadata row */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                       ★ {ratingNum}/5
@@ -349,7 +343,6 @@ export default function AdminReviewsPage() {
                     )}
                   </div>
 
-                  {/* Title & Comment */}
                   {rev.title && (
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {rev.title}
@@ -360,7 +353,6 @@ export default function AdminReviewsPage() {
                     &ldquo;{rev.review_text || rev.comment}&rdquo;
                   </p>
 
-                  {/* Creator Info Footer */}
                   <div className="flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 pt-1 flex-wrap">
                     <div>
                       <span>
@@ -384,7 +376,6 @@ export default function AdminReviewsPage() {
                   </div>
                 </div>
 
-                {/* Moderation Controls */}
                 <div className="flex items-center gap-2 self-end md:self-start shrink-0 pt-2 md:pt-0 flex-wrap">
                   {canModerate ? (
                     <>

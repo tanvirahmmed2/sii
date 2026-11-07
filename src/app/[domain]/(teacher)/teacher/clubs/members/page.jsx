@@ -5,7 +5,6 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiUsers, FiTrash2, FiSearch, FiAlertCircle, FiUserPlus, FiShield } from 'react-icons/fi';
 
-
 const TeacherClubMembersPage = () => {
   const [loading, setLoading] = useState(true);
   const [isClubAdmin, setIsClubAdmin] = useState(false);
@@ -13,14 +12,12 @@ const TeacherClubMembersPage = () => {
   const [students, setStudents] = useState([]);
   const [selectedClubId, setSelectedClubId] = useState('');
 
-  // Add member form state
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const [memberDesignation, setMemberDesignation] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
-  // Table filter state
   const [filterQuery, setFilterQuery] = useState('');
 
   useEffect(() => {
@@ -51,7 +48,6 @@ const TeacherClubMembersPage = () => {
 
   const currentClub = clubs.find(c => String(c.id) === String(selectedClubId));
 
-  // Add Student to Club
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedStudentId || !selectedClubId) {
@@ -80,7 +76,6 @@ const TeacherClubMembersPage = () => {
     }
   };
 
-  // Update Member Role
   const handleRoleChange = async (studentId, newRole, currentDesig) => {
     try {
       const res = await axios.post('/api/teacher/clubs', {
@@ -97,7 +92,6 @@ const TeacherClubMembersPage = () => {
     }
   };
 
-  // Remove Member
   const handleRemoveMember = async (studentId) => {
     if (!confirm('Remove this student from the club?')) return;
     try {
@@ -144,7 +138,6 @@ const TeacherClubMembersPage = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Page Header */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{currentClub?.name || 'Club Admin'}</h1>
@@ -168,7 +161,6 @@ const TeacherClubMembersPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Add Student Form */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -236,7 +228,6 @@ const TeacherClubMembersPage = () => {
           </form>
         </div>
 
-        {/* Member Roster List */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
             <div>
@@ -257,7 +248,6 @@ const TeacherClubMembersPage = () => {
             </div>
           </div>
 
-          {/* Members Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>

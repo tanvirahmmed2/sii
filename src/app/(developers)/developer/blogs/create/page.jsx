@@ -17,7 +17,6 @@ export default function CreateBlogPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Breadcrumbs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
@@ -48,7 +47,6 @@ export default function CreateBlogPage() {
         </Link>
       </div>
 
-      {/* Direct Create Form */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <BlogForm
           blog={null}

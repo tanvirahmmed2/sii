@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyResidenceStaffAccess } from 'src/lib/middleware/residence-auth.js';
 
-// GET: List seats with allocation details
 export async function GET(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'view');
@@ -14,7 +13,7 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const hallId = searchParams.get('hall_id');
     const roomId = searchParams.get('room_id');
-    const status = searchParams.get('status'); // 'available', 'allocated', 'maintenance', 'reserved'
+    const status = searchParams.get('status'); 
 
     const conditions = ['s.website_id = $1'];
     const values = [website.id];
@@ -71,7 +70,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add new seat to room
 export async function POST(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'create');
@@ -93,7 +91,6 @@ export async function POST(request, context) {
 
     const cleanSeatNo = seat_number.trim();
 
-    // Verify room
     const roomRes = await queryDb(
       `SELECT id, hall_id FROM website_hall_rooms WHERE website_id = $1 AND id = $2 LIMIT 1`,
       [website.id, room_id]
@@ -104,7 +101,6 @@ export async function POST(request, context) {
 
     const hallId = roomRes.rows[0].hall_id;
 
-    // Check duplicate seat_number in room
     const dupCheck = await queryDb(
       `SELECT id FROM website_hall_room_seats WHERE room_id = $1 AND LOWER(seat_number) = LOWER($2) LIMIT 1`,
       [room_id, cleanSeatNo]
@@ -133,7 +129,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update seat status
 export async function PUT(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'update');
@@ -157,7 +152,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Seat not found.' }, { status: 404 });
     }
 
-    // If changing seat status away from 'allocated', verify if there's an active allocation
     if (status && status !== 'allocated' && seatCheck.rows[0].status === 'allocated') {
       const activeAlloc = await queryDb(
         `SELECT id FROM website_hall_seat_allocations WHERE website_id = $1 AND seat_id = $2 AND status = 'active' LIMIT 1`,
@@ -199,7 +193,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete seat
 export async function DELETE(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'delete');

@@ -57,7 +57,6 @@ export default function CreatorSettingsPage() {
   const [passErr, setPassErr] = useState('');
   const [tfaMsg, setTfaMsg] = useState('');
 
-  // Active Sessions State
   const [sessionsList, setSessionsList] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [revokingSessionId, setRevokingSessionId] = useState(null);
@@ -246,7 +245,6 @@ export default function CreatorSettingsPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <h1 className="text-base font-semibold text-slate-900">Security & Login Sessions</h1>
         <p className="text-slate-500 text-xs mt-0.5">
@@ -265,7 +263,6 @@ export default function CreatorSettingsPage() {
         </div>
       )}
 
-      {/* 1. ACTIVE SESSIONS TABLE */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <div>
@@ -347,7 +344,6 @@ export default function CreatorSettingsPage() {
         )}
       </div>
 
-      {/* 2. CHANGE PASSWORD */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="border-b border-slate-100 pb-2">
           <h2 className="text-sm font-semibold text-slate-900">Change Password</h2>
@@ -419,7 +415,6 @@ export default function CreatorSettingsPage() {
         </form>
       </div>
 
-      {/* 3. TWO FACTOR AUTH */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
           <div>

@@ -11,21 +11,17 @@ export default function PayHomePage() {
   const params = useParams();
   const domain = params?.domain || '';
 
-  // Search State
   const [identifier, setIdentifier] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searching, setSearching] = useState(false);
   const [lookupResult, setLookupResult] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Active Payment Modal State
   const [activeInvoice, setActiveInvoice] = useState(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  // Available Gateways from API
   const [availableGateways, setAvailableGateways] = useState([]);
 
-  // Category Hubs Data
   const categories = [
     {
       title: 'Education & Tuition Fees',
@@ -53,7 +49,6 @@ export default function PayHomePage() {
     }
   ];
 
-  // Perform Lookup
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     if (!identifier.trim()) {
@@ -111,7 +106,6 @@ export default function PayHomePage() {
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10">
         
-        {/* 1. Header & Unified Lookup Workstation */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -129,7 +123,6 @@ export default function PayHomePage() {
           </p>
         </motion.div>
 
-        {/* Search Engine Workstation Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -153,7 +146,6 @@ export default function PayHomePage() {
             </div>
           </div>
 
-          {/* Search Engine Form */}
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-center gap-3">
             <input
               type="text"
@@ -198,12 +190,10 @@ export default function PayHomePage() {
           </div>
         </motion.div>
 
-        {/* 2. Dues Search Results (When Looked Up) */}
         {hasSearched && (
           <div className="w-full space-y-6">
             {lookupResult ? (
               <>
-                {/* Record Summary KPI */}
                 <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                     <div>
@@ -247,7 +237,6 @@ export default function PayHomePage() {
                     </div>
                   </div>
 
-                  {/* Invoices Table */}
                   {allDues.length === 0 ? (
                     <div className="py-8 text-center text-sm text-slate-500 dark:text-slate-400 space-y-1 font-light">
                       <div className="font-serif text-lg text-slate-900 dark:text-white font-normal">All Dues Cleared</div>
@@ -326,7 +315,6 @@ export default function PayHomePage() {
           </div>
         )}
 
-        {/* 3. Category Hubs Grid */}
         <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
             <div>
@@ -367,7 +355,6 @@ export default function PayHomePage() {
           </div>
         </div>
 
-        {/* 4. Supported Gateways Infrastructure */}
         <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div>
@@ -402,7 +389,6 @@ export default function PayHomePage() {
         </div>
       </div>
 
-      {/* 5. Checkout Modal */}
       <UniversalGatewayCheckout
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}

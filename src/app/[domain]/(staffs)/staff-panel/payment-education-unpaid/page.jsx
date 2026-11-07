@@ -25,11 +25,9 @@ export default function PaymentEducationUnpaidPage() {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
 
-  // Filters
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
 
-  // Collect Modal State
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [collectData, setCollectData] = useState({
@@ -148,7 +146,6 @@ export default function PaymentEducationUnpaidPage() {
 
   return (
     <div className="w-full space-y-6 pb-10">
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-4 rounded-2xl flex items-center justify-between text-sm shadow-xs transition-all ${
@@ -171,7 +168,6 @@ export default function PaymentEducationUnpaidPage() {
         </div>
       )}
 
-      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -199,9 +195,7 @@ export default function PaymentEducationUnpaidPage() {
         </div>
       </div>
 
-      {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-        {/* Controls Toolbar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
           <form onSubmit={handleSearch} className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -237,7 +231,6 @@ export default function PaymentEducationUnpaidPage() {
           </div>
         </div>
 
-        {/* Table Area */}
         {loading ? (
           <div className="py-16 flex justify-center items-center">
             <div className="loader loader-md" />
@@ -320,7 +313,6 @@ export default function PaymentEducationUnpaidPage() {
           </div>
         )}
 
-        {/* Pagination Bar */}
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
             <span className="text-slate-400 font-medium">
@@ -346,7 +338,6 @@ export default function PaymentEducationUnpaidPage() {
         )}
       </div>
 
-      {/* Collect Modal */}
       {collectModalOpen && selectedPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">

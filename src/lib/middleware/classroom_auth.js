@@ -5,17 +5,12 @@ import { getTeacherSession } from 'src/lib/middleware/teacher.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
 import { query } from 'src/lib/database/db.js';
 
-/**
- * Validates staff/officer access to manage classrooms (classes & sessions).
- * Strict Tenant Boundary. Checks tenant subscription allowance and module permissions.
- */
 export async function verifyStaffClassroomAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // Check tenant module allowance
   const hasAllowance = (await hasTenantModuleAllowance(website, 'routine')) || (await hasTenantModuleAllowance(website, 'sis'));
   if (!hasAllowance) {
     return {
@@ -26,7 +21,6 @@ export async function verifyStaffClassroomAccess(request, context, action = 'vie
     };
   }
 
-  // 1. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -63,7 +57,6 @@ export async function verifyStaffClassroomAccess(request, context, action = 'vie
     }
   }
 
-  // 2. Check Officer Session
   const officerSession = await getOfficerSession(request);
   if (officerSession && officerSession.officer) {
     const officer = officerSession.officer;
@@ -101,10 +94,6 @@ export async function verifyStaffClassroomAccess(request, context, action = 'vie
   };
 }
 
-/**
- * Validates teacher access to classrooms, syllabus, assignments, lectures, notes.
- * Enforces tenant boundary and checks if teacher teaches the class.
- */
 export async function verifyTeacherClassroomAccess(request, context, action = 'view', classroomId = null) {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
@@ -138,7 +127,6 @@ export async function verifyTeacherClassroomAccess(request, context, action = 'v
 
     const classroom = crRes.rows[0];
 
-    // Check if teacher is assigned to this class
     const assignmentCheck = await query(
       `SELECT 
          (SELECT COUNT(*) FROM website_teacher_subjects WHERE website_id = $1 AND teacher_id = $2) AS total_subjects_assigned,
@@ -152,7 +140,6 @@ export async function verifyTeacherClassroomAccess(request, context, action = 'v
     const matchingSubjects = parseInt(row.matching_subjects || '0', 10);
     const matchingPeriods = parseInt(row.matching_periods || '0', 10);
 
-    // If teacher has assigned subjects in the school, they must match this class (or period)
     if (totalAssigned > 0 && matchingSubjects === 0 && matchingPeriods === 0) {
       return {
         error: `Forbidden: You are not assigned to teach ${classroom.class_name || 'this class'}.`,
@@ -175,10 +162,6 @@ export async function verifyTeacherClassroomAccess(request, context, action = 'v
   };
 }
 
-/**
- * Validates student access to classrooms, syllabus, assignments, lectures, notes.
- * Enforces that student can only view their own class and session classrooms.
- */
 export async function verifyStudentClassroomAccess(request, context, classroomId = null) {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
@@ -212,7 +195,6 @@ export async function verifyStudentClassroomAccess(request, context, classroomId
 
     const classroom = crRes.rows[0];
 
-    // Check if student belongs to this class and session
     if (
       String(classroom.class_id) !== String(student.class_id) ||
       (classroom.session_id && student.session_id && String(classroom.session_id) !== String(student.session_id))

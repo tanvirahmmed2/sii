@@ -5,16 +5,11 @@ import { hashPassword } from 'src/lib/middleware/students.js';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Registers a selected applicant into website_students and website_student_info
- * and associated addresses, guardians, and media tables.
- */
 export async function enrollSelectedApplicant({ websiteId, circular, applicant, meritPosition }) {
   try {
     const currentYear = new Date().getFullYear();
     const cleanEmail = applicant.email ? applicant.email.toLowerCase().trim() : '';
 
-    // Check if student with this email already exists in website_students for this website
     let studentId = applicant.enrolled_student_id;
 
     if (!studentId && cleanEmail) {
@@ -28,7 +23,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
     }
 
     if (!studentId) {
-      // Generate unique registration_no (without REG prefix) and student_unique_id
       const regSeq = 1000 + parseInt(applicant.id, 10);
       let regNo = `${currentYear}${regSeq}`;
       let counter = 0;
@@ -69,10 +63,8 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
       );
       studentId = newStudentRes.rows[0].id;
 
-      // Temporary hashed password for initial setup
       const initialHashedPassword = await hashPassword(`Student@${applicant.id}!`);
 
-      // Insert modular website_student_info
       const studentInfoData = {
         name: applicant.applicant_name,
         email: cleanEmail || null,
@@ -91,7 +83,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
         [websiteId, studentId, JSON.stringify(studentInfoData)]
       );
 
-      // Insert modular website_student_addresses
       const studentAddrData = {
         ...(applicant.address_data || {})
       };
@@ -105,7 +96,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
         [websiteId, studentId, JSON.stringify(studentAddrData)]
       );
 
-      // Insert modular website_student_guardians
       const studentGuardData = {
         ...(applicant.guardian_data || {})
       };
@@ -119,7 +109,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
         [websiteId, studentId, JSON.stringify(studentGuardData)]
       );
 
-      // Insert picture if available
       if (applicant.photo_url) {
         await queryDb(
           `INSERT INTO website_student_pictures (
@@ -130,7 +119,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
         );
       }
 
-      // Insert signature if available
       if (applicant.signature_url) {
         await queryDb(
           `INSERT INTO website_student_signatures (
@@ -144,7 +132,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
       }
     }
 
-    // Update applicant with enrolled status and student reference
     await queryDb(
       `UPDATE website_admission_applicants
        SET status = 'enrolled',
@@ -162,9 +149,6 @@ export async function enrollSelectedApplicant({ websiteId, circular, applicant, 
   }
 }
 
-/**
- * Helper to auto-publish results for any circular whose result_date has arrived
- */
 export async function autoPublishDueResults(websiteId) {
   try {
     const dueRes = await queryDb(`
@@ -177,7 +161,6 @@ export async function autoPublishDueResults(websiteId) {
     `, [websiteId]);
 
     for (const circ of dueRes.rows) {
-      // 1. Fetch candidates with status = 'selected' or 'accepted'
       const selRes = await queryDb(`
         SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
                a.selection_notes, a.email, a.phone,
@@ -226,7 +209,6 @@ export async function autoPublishDueResults(websiteId) {
           cand.selection_notes || 'Selected in Official Merit Intake'
         ]);
 
-        // Auto-enroll into website_students & website_student_info
         await enrollSelectedApplicant({
           websiteId,
           circular: circ,
@@ -237,7 +219,6 @@ export async function autoPublishDueResults(websiteId) {
         merit++;
       }
 
-      // Mark circular results as published
       await queryDb(`
         UPDATE website_admissions
         SET is_result_published = TRUE,
@@ -251,12 +232,6 @@ export async function autoPublishDueResults(websiteId) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/admissions/results/publish
- * Publishes admission results for accepted/selected students,
- * registers candidates into website_students and website_student_info,
- * and updates circular is_result_published to TRUE.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -274,7 +249,6 @@ export async function POST(request, context) {
 
     const admId = parseInt(admission_id, 10);
 
-    // Verify circular belongs to this website
     const admCheck = await queryDb(`
       SELECT id, title, department_id, class_id, session_id
       FROM website_admissions
@@ -288,7 +262,6 @@ export async function POST(request, context) {
     const circular = admCheck.rows[0];
     const staffId = auth.user?.id || null;
 
-    // 1. Fetch only candidates with status = 'selected', 'accepted', or already 'enrolled'
     const selectedRes = await queryDb(`
       SELECT a.id, a.application_no, a.exam_roll, a.roll_no, a.applicant_name, a.score,
              a.selection_notes, a.email, a.phone,
@@ -316,13 +289,11 @@ export async function POST(request, context) {
       }, { status: 400 });
     }
 
-    // 2. Clear stale results for this circular
     await queryDb(`
       DELETE FROM website_admission_results
       WHERE website_id = $1 AND admission_id = $2
     `, [auth.website.id, admId]);
 
-    // 3. Insert each selected candidate into website_admission_results & auto-enroll into website_students
     let merit = 1;
     let enrolledCount = 0;
     for (const cand of selectedRes.rows) {
@@ -348,7 +319,6 @@ export async function POST(request, context) {
         staffId
       ]);
 
-      // Auto-register candidate into database as students in website_students & website_student_info
       const enrolledStudentId = await enrollSelectedApplicant({
         websiteId: auth.website.id,
         circular,
@@ -363,7 +333,6 @@ export async function POST(request, context) {
       merit++;
     }
 
-    // 4. Mark circular as results published
     await queryDb(`
       UPDATE website_admissions
       SET is_result_published = TRUE,
@@ -385,9 +354,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * GET /api/[domain]/staff/panel/admissions/results/publish?admission_id=...
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -395,7 +361,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    // Trigger auto-publish for any circulars whose result_date has arrived
     await autoPublishDueResults(auth.website.id);
 
     const { searchParams } = new URL(request.url);

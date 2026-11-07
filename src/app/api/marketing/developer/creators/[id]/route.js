@@ -18,7 +18,6 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Invalid Creator ID' }, { status: 400 });
     }
 
-    // 1. Fetch creator profile
     const creatorRes = await queryDb(
       `SELECT id, name, email, phone, country, city, address,
               is_active, email_verified AS is_verified,
@@ -34,7 +33,6 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Creator not found' }, { status: 404 });
     }
 
-    // 2. Parallel queries for subscriptions (purchases), websites, payments, support tickets
     const [subsRes, websitesRes, paymentsRes, ticketsRes] = await Promise.all([
       queryDb(
         `SELECT pu.id, pu.creator_id, pu.website_id, pu.package_id, pu.purchase_code,

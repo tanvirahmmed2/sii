@@ -12,7 +12,7 @@ export async function GET(request, context) {
     const { website } = auth;
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
-    const status = searchParams.get('status') || 'all'; // 'all', 'assigned', 'unassigned', 'active', 'inactive'
+    const status = searchParams.get('status') || 'all'; 
 
     let whereConditions = [`wt.website_id = $1`];
     const params = [website.id];
@@ -100,7 +100,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Teacher ID and Payroll Scale ID are required.' }, { status: 400 });
     }
 
-    // Validate teacher exists
     const teacherCheck = await queryDb(
       `SELECT id, name FROM website_teachers WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [teacherId, website.id]
@@ -109,7 +108,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Teacher not found.' }, { status: 404 });
     }
 
-    // Validate payroll scale exists
     const payrollCheck = await queryDb(
       `SELECT id, title, basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
               provident_fund, tax_deduction, other_deductions
@@ -125,7 +123,6 @@ export async function POST(request, context) {
     const deductions = Number(p.provident_fund) + Number(p.tax_deduction) + Number(p.other_deductions);
     const netSalary = Math.max(0, gross - deductions);
 
-    // Upsert into website_teacher_salaries
     const upsertRes = await queryDb(
       `INSERT INTO website_teacher_salaries (
         website_id, teacher_id, payroll_id, effective_date, status, remarks
@@ -140,7 +137,6 @@ export async function POST(request, context) {
       [website.id, teacherId, payrollId, effectiveDate, status, remarks]
     );
 
-    // Sync legacy salary column in website_teachers
     await queryDb(
       `UPDATE website_teachers SET salary = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
       [netSalary, teacherId, website.id]
@@ -172,7 +168,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, message: 'Teacher ID is required.' }, { status: 400 });
     }
 
-    // Check existing
     const existing = await queryDb(
       `SELECT id, payroll_id FROM website_teacher_salaries WHERE website_id = $1 AND teacher_id = $2 LIMIT 1`,
       [website.id, teacher_id]
@@ -183,7 +178,6 @@ export async function PUT(request, context) {
 
     const targetPayrollId = payroll_id || existing.rows[0].payroll_id;
 
-    // Fetch net salary if payroll changed
     const payrollCheck = await queryDb(
       `SELECT basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
               provident_fund, tax_deduction, other_deductions
@@ -211,7 +205,6 @@ export async function PUT(request, context) {
       [targetPayrollId, status, effective_date, remarks, website.id, teacher_id]
     );
 
-    // Sync legacy salary column in website_teachers
     await queryDb(
       `UPDATE website_teachers SET salary = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
       [netSalary, teacher_id, website.id]
@@ -252,7 +245,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, message: 'Salary assignment not found for this teacher.' }, { status: 404 });
     }
 
-    // Reset legacy salary in website_teachers
     await queryDb(
       `UPDATE website_teachers SET salary = 0.00, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND website_id = $2`,
       [teacherId, website.id]

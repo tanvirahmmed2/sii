@@ -28,7 +28,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE USER
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'users');
@@ -51,7 +50,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE USER STATUS / BAN
 export async function PATCH(request) {
   try {
     const auth = await hasModulePermission(request, 'users');
@@ -78,7 +76,6 @@ export async function PATCH(request) {
   }
 }
 
-// DELETE USER
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'users');

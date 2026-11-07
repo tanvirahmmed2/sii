@@ -105,7 +105,6 @@ function TeacherRecoveryInner() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
         <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
           {website?.name || 'Faculty Security'}

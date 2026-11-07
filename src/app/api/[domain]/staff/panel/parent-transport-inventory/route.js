@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load parents, siblings links, transit routes, vehicles, inventory items, stock
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -34,7 +33,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Parents & Sibling Links
     const parentsRes = await queryDb(
       `SELECT p.*, 
               (SELECT COUNT(*) FROM website_parent_student_links l WHERE l.parent_id = p.id) AS linked_children_count
@@ -44,7 +42,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 2. Transport Routes & Vehicles
     const routesRes = await queryDb(
       `SELECT r.*, 
               (SELECT COUNT(*) FROM website_transport_allocations a WHERE a.route_id = r.id) AS student_passengers
@@ -63,7 +60,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 3. Inventory Items & Current Stock Balance
     const inventoryRes = await queryDb(
       `SELECT i.*, 
               COALESCE(
@@ -89,7 +85,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Register parent, add transit route, add inventory item
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -142,7 +137,6 @@ export async function POST(request, context) {
         [websiteId, name.trim(), item_code || null, category || 'stationery', unit || 'pcs', parseFloat(unit_price || 0), parseInt(min_stock_alert || 5, 10), description || null]
       );
 
-      // Add initial stock if provided
       if (initial_stock && parseInt(initial_stock, 10) > 0) {
         await queryDb(
           `INSERT INTO website_inventory_stocks (website_id, item_id, transaction_type, quantity, unit_cost, notes)
@@ -161,7 +155,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove parent, route, or item
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

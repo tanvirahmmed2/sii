@@ -98,7 +98,6 @@ const HistoryForm = ({ initialData, onSuccess, onCancel, onDelete }) => {
         </p>
       </div>
 
-      {/* Grid: Date & Title */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="flex flex-col gap-1.5 sm:col-span-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
@@ -129,7 +128,6 @@ const HistoryForm = ({ initialData, onSuccess, onCancel, onDelete }) => {
         </div>
       </div>
 
-      {/* Description using TiptapEditor */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
           <FiBookOpen className="text-primary" /> Description Details *
@@ -140,7 +138,6 @@ const HistoryForm = ({ initialData, onSuccess, onCancel, onDelete }) => {
         />
       </div>
 
-      {/* Information (infor) */}
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
           <FiInfo className="text-primary" /> Additional Info / Highlights (infor)
@@ -154,7 +151,6 @@ const HistoryForm = ({ initialData, onSuccess, onCancel, onDelete }) => {
         />
       </div>
 
-      {/* Actions */}
       <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100">
         {onDelete && initialData?.id && (
           <button

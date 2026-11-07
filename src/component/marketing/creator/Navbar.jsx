@@ -32,7 +32,6 @@ export default function CreatorNavbar({
 
   return (
     <nav className="w-full flex flex-row items-center justify-between bg-white px-4 h-12 sticky top-0 z-30 border-b border-slate-200 text-xs">
-      {/* Left: Mobile Toggle & Brand / Website Switcher */}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -115,7 +114,6 @@ export default function CreatorNavbar({
         </div>
       </div>
 
-      {/* Right: Actions & Profile */}
       <div className="flex items-center gap-2">
         {hasActiveSub ? (
           <button
@@ -153,7 +151,6 @@ export default function CreatorNavbar({
           Updates
         </Link>
 
-        {/* Profile Menu */}
         <div className="relative">
           <button
             type="button"

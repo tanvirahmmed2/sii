@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Public list of published careers
-// ============================================================================
 export async function GET(request) {
   try {
 
@@ -72,7 +69,6 @@ export async function GET(request) {
       return { rows: [] };
     });
 
-    // Get distinct active departments for filter pills
     const deptRes = await queryDb(
       `SELECT DISTINCT department FROM career WHERE is_published = TRUE AND department IS NOT NULL ORDER BY department ASC`
     ).catch(() => ({ rows: [] }));

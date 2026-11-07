@@ -12,10 +12,9 @@ export default function LMSCoursesStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('courses'); // courses | live | videos
+  const [activeTab, setActiveTab] = useState('courses'); 
   const [data, setData] = useState({ courses: [], live_classes: [], video_assets: [], classes: [], teachers: [] });
 
-  // Course Modal
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');
   const [courseSlug, setCourseSlug] = useState('');
@@ -24,7 +23,6 @@ export default function LMSCoursesStaffPage() {
   const [coursePublished, setCoursePublished] = useState(true);
   const [submittingCourse, setSubmittingCourse] = useState(false);
 
-  // Live Class Modal
   const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
   const [liveTitle, setLiveTitle] = useState('');
   const [liveProvider, setLiveProvider] = useState('zoom');
@@ -145,7 +143,6 @@ export default function LMSCoursesStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -172,7 +169,6 @@ export default function LMSCoursesStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('courses')}
@@ -206,7 +202,6 @@ export default function LMSCoursesStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Courses */}
       {activeTab === 'courses' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {courses.length === 0 ? (
@@ -249,7 +244,6 @@ export default function LMSCoursesStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Live Classes */}
       {activeTab === 'live' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -311,7 +305,6 @@ export default function LMSCoursesStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Video Streaming Assets */}
       {activeTab === 'videos' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Video Assets & HLS Streaming Streams</h2>
@@ -333,7 +326,6 @@ export default function LMSCoursesStaffPage() {
         </div>
       )}
 
-      {/* Create Course Modal */}
       {isCourseModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -391,7 +383,6 @@ export default function LMSCoursesStaffPage() {
         </div>
       )}
 
-      {/* Schedule Live Modal */}
       {isLiveModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

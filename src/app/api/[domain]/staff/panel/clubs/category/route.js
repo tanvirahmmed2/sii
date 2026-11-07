@@ -29,7 +29,6 @@ async function generateUniqueCategorySlug(websiteId, baseName, excludeId = null)
   }
 }
 
-// GET: List all club categories with club counts
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -83,7 +82,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new club category (Slug auto-generated in API)
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -99,12 +97,10 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Category name is required.' }, { status: 400 });
     }
 
-    // Auto-generate slug in API
     const slug = await generateUniqueCategorySlug(website.id, name);
     const description = body.description?.trim() || null;
     const isActive = body.is_active !== false && body.is_active !== 'false';
 
-    // Check duplicate name for institution
     const existing = await queryDb(
       `SELECT id FROM website_clubs_category 
        WHERE website_id = $1 AND LOWER(name) = LOWER($2)
@@ -134,7 +130,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing club category (Slug auto-updated in API if name changes)
 export async function PUT(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -163,7 +158,6 @@ export async function PUT(request, context) {
     const description = body.description !== undefined ? body.description?.trim() : current.description;
     const isActive = body.is_active !== undefined ? (body.is_active === true || body.is_active === 'true' || body.is_active === 1) : current.is_active;
 
-    // Check duplicate name
     if (name.toLowerCase() !== current.name.toLowerCase()) {
       const dupCheck = await queryDb(
         `SELECT id FROM website_clubs_category 
@@ -176,7 +170,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Auto-update slug in API
     const slug = await generateUniqueCategorySlug(website.id, name, categoryId);
 
     const updated = await queryDb(
@@ -198,7 +191,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a club category
 export async function DELETE(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);

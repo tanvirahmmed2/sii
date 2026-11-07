@@ -11,11 +11,8 @@ import {
   META_WEBHOOK_VERIFY_TOKEN,
 } from 'src/lib/database/secret';
 
-/**
- * Verify Meta webhook signature (X-Hub-Signature-256)
- */
 export function verifyMetaWebhookSignature(rawBody, signature, secret = META_APP_SECRET) {
-  if (!secret) return true; // In development if secret is not set, allow
+  if (!secret) return true; 
   if (!signature) return false;
 
   try {
@@ -34,10 +31,6 @@ export function verifyMetaWebhookSignature(rawBody, signature, secret = META_APP
   }
 }
 
-/**
- * Parse incoming Meta webhook payload into normalized events
- * Supports Facebook Messenger, Instagram Direct, and WhatsApp Cloud API
- */
 export function parseIncomingMetaWebhook(body) {
   try {
     const payload = typeof body === 'string' ? JSON.parse(body) : body;
@@ -46,7 +39,6 @@ export function parseIncomingMetaWebhook(body) {
     const events = [];
 
     for (const entry of payload.entry) {
-      // 1. Facebook Messenger & Instagram Direct (messaging array)
       if (Array.isArray(entry.messaging)) {
         for (const msgItem of entry.messaging) {
           if (msgItem.message && !msgItem.message.is_echo) {
@@ -75,7 +67,6 @@ export function parseIncomingMetaWebhook(body) {
         }
       }
 
-      // 2. WhatsApp Cloud API (changes array)
       if (Array.isArray(entry.changes)) {
         for (const change of entry.changes) {
           const val = change.value;
@@ -129,9 +120,6 @@ export function parseIncomingMetaWebhook(body) {
   }
 }
 
-/**
- * Send an outbound message through the Meta Graph API
- */
 export async function sendPlatformMessage({ platform, recipientId, message, accessToken }) {
   let token = accessToken;
   let endpoint = '';
@@ -202,9 +190,6 @@ export async function sendPlatformMessage({ platform, recipientId, message, acce
 
 import { queryDb } from 'src/lib/database/db';
 
-/**
- * Get Meta API configuration status for each platform
- */
 export function getMetaConfigStatus() {
   const hasFbToken = Boolean(META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN);
   const hasIgToken = Boolean(META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN);
@@ -233,10 +218,6 @@ export function getMetaConfigStatus() {
   };
 }
 
-/**
- * Get Meta API configuration status for a specific website tenant.
- * Strictly uses website_meta table with zero platform root fallback.
- */
 export async function getWebsiteMetaConfig(websiteId) {
   if (!websiteId) {
     return {
@@ -308,10 +289,6 @@ export async function getWebsiteMetaConfig(websiteId) {
   }
 }
 
-/**
- * Send an outbound message through Meta Graph API using website-specific credentials.
- * Strictly uses website_meta table with zero platform root fallback.
- */
 export async function sendWebsiteMetaMessage({ websiteId, platform, recipientId, message }) {
   if (!websiteId) {
     throw new Error('Website tenant ID is required to dispatch Meta platform message.');

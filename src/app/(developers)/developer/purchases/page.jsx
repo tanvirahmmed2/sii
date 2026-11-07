@@ -150,7 +150,6 @@ export default function PurchasesPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -181,7 +180,6 @@ export default function PurchasesPage() {
         </div>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-3.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
           <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Orders</span>
@@ -202,7 +200,6 @@ export default function PurchasesPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -239,7 +236,6 @@ export default function PurchasesPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -368,7 +364,6 @@ export default function PurchasesPage() {
         </div>
       </div>
 
-      {/* Edit Purchase Status Modal */}
       {editingPurchase && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white dark:bg-slate-900 rounded p-4 max-w-md w-full shadow-lg space-y-4 border border-slate-200 dark:border-slate-800">

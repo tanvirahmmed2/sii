@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
@@ -14,7 +13,7 @@ const StudentEventsPage = () => {
   const [actionLoading, setActionLoading] = useState(null);
   const [interestActionLoading, setInterestActionLoading] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'interested' | 'registered'
+  const [activeTab, setActiveTab] = useState('all'); 
 
   useEffect(() => {
     let ignore = false;
@@ -44,7 +43,6 @@ const StudentEventsPage = () => {
     };
   }, [getApiEndpoint]);
 
-  // Toggle Interested
   const handleToggleInterest = async (eventId, isInterested) => {
     setInterestActionLoading(eventId);
     const action = isInterested ? 'uninterest' : 'interest';
@@ -87,7 +85,6 @@ const StudentEventsPage = () => {
     }
   };
 
-  // Toggle RSVP / Registration
   const handleToggleParticipation = async (eventId, isJoined) => {
     setActionLoading(eventId);
     const action = isJoined ? 'leave' : 'join';
@@ -152,7 +149,6 @@ const StudentEventsPage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -178,7 +174,6 @@ const StudentEventsPage = () => {
         </div>
       </div>
 
-      {/* Filter Tabs & Search */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5">
           <button
@@ -216,7 +211,6 @@ const StudentEventsPage = () => {
           </button>
         </div>
 
-        {/* Search Input */}
         <input
           type="text"
           placeholder="Search by title, location, or overview..."
@@ -226,7 +220,6 @@ const StudentEventsPage = () => {
         />
       </div>
 
-      {/* Events Listing */}
       {loading ? (
         <div className="py-12 text-center text-slate-400 text-xs font-medium bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800">
           Loading campus events...
@@ -251,7 +244,6 @@ const StudentEventsPage = () => {
                     : 'border-slate-200 dark:border-slate-800'
                 } overflow-hidden flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors`}
               >
-                {/* Event Image Banner if present */}
                 {item.image && (
                   <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
                     <img
@@ -265,7 +257,6 @@ const StudentEventsPage = () => {
                   </div>
                 )}
 
-                {/* Event Content Details */}
                 <div className="p-4 space-y-2 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
@@ -319,7 +310,6 @@ const StudentEventsPage = () => {
                   </div>
                 </div>
 
-                {/* Actions Strip */}
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <button
                     type="button"

@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -63,7 +62,6 @@ function WorkspaceContent() {
     ? activeSubscriptions
     : subscriptions.filter((s) => s.is_active || ['active', 'completed'].includes(String(s.status || '').toLowerCase()));
 
-  // Create Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(targetSubParam || '');
   const [name, setName] = useState('');
@@ -79,7 +77,6 @@ function WorkspaceContent() {
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
-  // Create Modal Brand Assets (Cloudinary file uploads, NO URLs)
   const [logoPreview, setLogoPreview] = useState('');
   const [logoDataUri, setLogoDataUri] = useState('');
   const createLogoInputRef = useRef(null);
@@ -88,14 +85,12 @@ function WorkspaceContent() {
   const [faviconDataUri, setFaviconDataUri] = useState('');
   const createFaviconInputRef = useRef(null);
 
-  // Realtime Domain Availability State
   const [domainTouched, setDomainTouched] = useState(false);
-  const [domainStatus, setDomainStatus] = useState({ state: 'idle', message: '' }); // 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+  const [domainStatus, setDomainStatus] = useState({ state: 'idle', message: '' }); 
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
 
-  // Auto-select valid subscription with available slots
   useEffect(() => {
     if (activeSubs.length > 0 && !selectedSubscriptionId) {
       const preferred = activeSubs.find((s) => {
@@ -108,7 +103,6 @@ function WorkspaceContent() {
     }
   }, [activeSubs, selectedSubscriptionId]);
 
-  // Edit Modal State
   const [editingWebsite, setEditingWebsite] = useState(null);
   const [editName, setEditName] = useState('');
   const [editContactNumber, setEditContactNumber] = useState('');
@@ -123,7 +117,6 @@ function WorkspaceContent() {
   const [editIsPublished, setEditIsPublished] = useState(true);
   const [editIsMaintenanceMode, setEditIsMaintenanceMode] = useState(false);
 
-  // Edit Modal Brand Assets (Cloudinary file uploads, NO URLs)
   const [editLogoPreview, setEditLogoPreview] = useState('');
   const [editLogoDataUri, setEditLogoDataUri] = useState('');
   const [editRemoveLogo, setEditRemoveLogo] = useState(false);
@@ -142,7 +135,6 @@ function WorkspaceContent() {
   const [deletingId, setDeletingId] = useState(null);
   const [copiedSubdomain, setCopiedSubdomain] = useState(null);
 
-  // Fetch configured Base Domain from API
   useEffect(() => {
     async function fetchConfig() {
       try {
@@ -160,7 +152,6 @@ function WorkspaceContent() {
     }
   }, [creatorId]);
 
-  // Open modal if setup query param is present
   useEffect(() => {
     if (setupParam === 'true') {
       const timer = setTimeout(() => setShowCreateModal(true), 0);
@@ -168,7 +159,6 @@ function WorkspaceContent() {
     }
   }, [setupParam]);
 
-  // Real-time letter-by-letter domain check for creation modal
   useEffect(() => {
     if (!showCreateModal) return;
 
@@ -220,12 +210,11 @@ function WorkspaceContent() {
           message: 'Network error checking domain availability.',
         });
       }
-    }, 220); // 220ms debounce for responsive feedback after every letter
+    }, 220); 
 
     return () => clearTimeout(timeout);
   }, [customDomain, showCreateModal, baseDomain]);
 
-  // Real-time domain check for edit modal
   useEffect(() => {
     if (!editingWebsite) return;
 
@@ -293,7 +282,6 @@ function WorkspaceContent() {
     setEditingWebsite(w);
     setEditName(w.name || '');
 
-    // Extract prefix if full domain is stored
     let domainPrefix = w.slug || w.subdomain || '';
     if (domainPrefix.includes('.')) {
       domainPrefix = domainPrefix.split('.')[0];
@@ -539,7 +527,6 @@ function WorkspaceContent() {
 
   return (
     <div className="w-full space-y-5 text-xs text-slate-800">
-      {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -577,7 +564,6 @@ function WorkspaceContent() {
         </div>
       </div>
 
-      {/* Purchased Subscriptions & Quota Allocations */}
       {activeSubs.length > 0 ? (
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
@@ -631,7 +617,6 @@ function WorkspaceContent() {
                     </span>
                   </div>
 
-                  {/* Progress bar */}
                   <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-1.5 rounded-full transition-all duration-300 ${isFull ? 'bg-amber-500' : 'bg-blue-600'}`}
@@ -639,13 +624,11 @@ function WorkspaceContent() {
                     />
                   </div>
 
-                  {/* Quota details */}
                   <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600 pt-0.5">
                     <div>Teachers: <strong>{sub.max_teachers ? `${sub.max_teachers} Max` : 'Unlimited'}</strong></div>
                     <div>Students: <strong>{sub.max_students ? `${sub.max_students} Max` : 'Unlimited'}</strong></div>
                   </div>
 
-                  {/* Creation button */}
                   <div className="pt-1">
                     {!isFull ? (
                       <button
@@ -689,7 +672,6 @@ function WorkspaceContent() {
         </div>
       )}
 
-      {/* Websites Directory */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
@@ -751,13 +733,14 @@ function WorkspaceContent() {
                   const livePath = `/${cleanSub}`;
                   const fullDomainDisplay = `${cleanSub}.${baseDomain}`;
                   const manageUrl = `/creator/${creatorId}/workspace/${cleanSub}`;
+                  const isDevHost = baseDomain.includes('localhost') || baseDomain.includes('127.0.0.1') || /^\d+\.\d+\.\d+\.\d+/.test(baseDomain) || baseDomain.includes(':');
+                  const tenantProto = isDevHost ? 'http' : 'https';
                   const liveUrl = w.custom_domain && w.custom_domain_verified
                     ? `https://${w.custom_domain}`
-                    : `https://${fullDomainDisplay}`;
+                    : `${tenantProto}://${fullDomainDisplay}`;
 
                   return (
                     <tr key={w.id} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Name & Tagline */}
                       <td className="py-3 px-2">
                         <Link href={manageUrl} className="font-semibold text-slate-900 text-xs flex items-center gap-1.5 hover:text-blue-600">
                           <div className="flex items-center -space-x-1 flex-shrink-0" title={`Primary: ${w.primary_color || '#1e40af'} | Secondary: ${w.secondary_color || '#0ea5e9'}`}>
@@ -786,19 +769,16 @@ function WorkspaceContent() {
                         )}
                       </td>
 
-                      {/* Institution Type */}
                       <td className="py-3 px-2">
                         <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200 capitalize">
                           {w.institution_type || 'School'}
                         </span>
                       </td>
 
-                      {/* EIIN Number */}
                       <td className="py-3 px-2 font-mono text-[11px] text-slate-600">
                         {w.eiin_number || <span className="text-slate-300">—</span>}
                       </td>
 
-                      {/* Subdomain & Custom Domain */}
                       <td className="py-3 px-2 font-mono text-[11px]">
                         <div className="flex items-center gap-1.5">
                           <a
@@ -825,7 +805,6 @@ function WorkspaceContent() {
                           </button>
                         </div>
 
-                        {/* Custom Domain indicator */}
                         {w.custom_domain ? (
                           <div className="mt-1 flex items-center gap-1.5">
                             <span className="text-slate-900 font-semibold text-[10px]">
@@ -851,7 +830,6 @@ function WorkspaceContent() {
                         )}
                       </td>
 
-                      {/* Contact & Address */}
                       <td className="py-3 px-2 text-[11px] text-slate-600">
                         <div className="truncate max-w-[180px]" title={w.contact_email || ''}>
                           {w.contact_email || '—'}
@@ -861,7 +839,6 @@ function WorkspaceContent() {
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="py-3 px-2">
                         <span
                           className={`inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border ${
@@ -879,7 +856,6 @@ function WorkspaceContent() {
                         </span>
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3 px-2 text-right space-x-2 whitespace-nowrap">
                         <Link
                           href={manageUrl}
@@ -920,11 +896,9 @@ function WorkspaceContent() {
         )}
       </div>
 
-      {/* CREATE WEBSITE MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 space-y-4 text-xs text-slate-800 shadow-2xl max-h-[92vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
@@ -943,7 +917,6 @@ function WorkspaceContent() {
               </button>
             </div>
 
-            {/* Error & Success Messages */}
             {createError && (
               <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-medium flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -962,7 +935,6 @@ function WorkspaceContent() {
             )}
 
             <form onSubmit={handleCreateWebsite} className="space-y-4">
-              {/* Field 0: Subscription Package Selector */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Subscription Package <span className="text-rose-500">*</span>
@@ -992,7 +964,6 @@ function WorkspaceContent() {
                   </select>
                 )}
 
-                {/* Display info about the selected package */}
                 {(() => {
                   const currentPlan = activeSubs.find((s) => String(s.id) === String(selectedSubscriptionId));
                   if (!currentPlan) return null;
@@ -1015,7 +986,6 @@ function WorkspaceContent() {
                 })()}
               </div>
 
-              {/* Field 1: Name */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Institution / Website Name <span className="text-rose-500">*</span>
@@ -1030,7 +1000,6 @@ function WorkspaceContent() {
                 />
               </div>
 
-              {/* Field 2: Custom Domain with Realtime letter-by-letter check */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] font-semibold text-slate-700">
@@ -1071,7 +1040,6 @@ function WorkspaceContent() {
                   </span>
                 </div>
 
-                {/* Live letter-by-letter availability badge */}
                 <div className="mt-1.5 flex items-center gap-1.5 text-[11px]">
                   {domainStatus.state === 'checking' && (
                     <div className="flex items-center gap-1.5 text-blue-600 font-medium">
@@ -1112,7 +1080,6 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Field 3: Institution Type */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Institution Type <span className="text-rose-500">*</span>
@@ -1135,7 +1102,6 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Field 4: EEIN & Currency in 2 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -1168,9 +1134,7 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Brand Assets (Logo & Favicon - Uploaded via Cloudinary) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                {/* Logo Image Upload */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Institution Logo (Upload to Cloudinary)
@@ -1194,7 +1158,6 @@ function WorkspaceContent() {
                   <div className="flex items-center gap-2">
                     <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
                       {logoPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-mono">No Logo</span>
@@ -1225,7 +1188,6 @@ function WorkspaceContent() {
                   </div>
                 </div>
 
-                {/* Favicon Image Upload */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Browser Favicon (Upload to Cloudinary)
@@ -1249,7 +1211,6 @@ function WorkspaceContent() {
                   <div className="flex items-center gap-2">
                     <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
                       {faviconPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={faviconPreview} alt="Favicon" className="max-h-full max-w-full object-contain" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-mono">No Icon</span>
@@ -1281,7 +1242,6 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Field 5 & 6: Contact Number & Mail in 2 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -1311,7 +1271,6 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Field 7: Physical Address */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Campus / Institution Address <span className="text-rose-500">*</span>
@@ -1326,7 +1285,6 @@ function WorkspaceContent() {
                 />
               </div>
 
-              {/* Theme & Brand Colors */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
@@ -1369,7 +1327,6 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Maintenance Mode Option */}
               <div className="flex items-center gap-2.5 p-3 rounded-lg bg-amber-50/60 border border-amber-200/80">
                 <input
                   type="checkbox"
@@ -1383,7 +1340,6 @@ function WorkspaceContent() {
                 </label>
               </div>
 
-              {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -1416,7 +1372,6 @@ function WorkspaceContent() {
         </div>
       )}
 
-      {/* EDIT WEBSITE MODAL */}
       {editingWebsite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 space-y-4 text-xs text-slate-800 shadow-2xl max-h-[92vh] overflow-y-auto">
@@ -1522,7 +1477,6 @@ function WorkspaceContent() {
                 </select>
               </div>
 
-              {/* Currency and EIIN Number in 2 columns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -1553,9 +1507,7 @@ function WorkspaceContent() {
                 </div>
               </div>
 
-              {/* Brand Assets (Logo & Favicon - Cloudinary Uploaded) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                {/* Logo Image Upload */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Institution Logo (Upload to Cloudinary)
@@ -1580,7 +1532,6 @@ function WorkspaceContent() {
                   <div className="flex items-center gap-2">
                     <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
                       {editLogoPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={editLogoPreview} alt="Logo" className="max-h-full max-w-full object-contain" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-mono">No Logo</span>
@@ -1612,7 +1563,6 @@ function WorkspaceContent() {
                   </div>
                 </div>
 
-                {/* Favicon Image Upload */}
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Browser Favicon (Upload to Cloudinary)
@@ -1637,7 +1587,6 @@ function WorkspaceContent() {
                   <div className="flex items-center gap-2">
                     <div className="w-12 h-12 rounded border border-slate-300 bg-white flex items-center justify-center p-1 shrink-0 overflow-hidden">
                       {editFaviconPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={editFaviconPreview} alt="Favicon" className="max-h-full max-w-full object-contain" />
                       ) : (
                         <span className="text-[9px] text-slate-400 font-mono">No Icon</span>

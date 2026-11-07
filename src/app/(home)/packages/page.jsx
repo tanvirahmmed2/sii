@@ -32,12 +32,10 @@ export default function PackagesPage() {
   const [loading, setLoading] = useState(true);
   const [creator, setCreator] = useState(null);
 
-  // Creator Wishlist state
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingId, setWishlistLoadingId] = useState(null);
   const [wishlistToast, setWishlistToast] = useState('');
 
-  // Quick Custom Package Inquiry Modal state
   const [showInquiryModal, setShowInquiryModal] = useState(false);
   const [inquiryName, setInquiryName] = useState('');
   const [inquiryEmail, setInquiryEmail] = useState('');
@@ -48,7 +46,6 @@ export default function PackagesPage() {
   const [inquirySuccess, setInquirySuccess] = useState(false);
   const [inquiryError, setInquiryError] = useState('');
 
-  // 1. Fetch available packages
   const fetchPackages = async () => {
     try {
       setLoading(true);
@@ -67,7 +64,6 @@ export default function PackagesPage() {
     }
   };
 
-  // Fetch creator's wishlisted packages
   const fetchWishlist = async () => {
     try {
       const res = await fetch('/api/marketing/creator/wishlist');
@@ -76,14 +72,12 @@ export default function PackagesPage() {
         setWishlistIds(data.package_ids);
       }
     } catch (e) {
-      // Unauthenticated or network error, ignore
     }
   };
 
   useEffect(() => {
     fetchPackages();
 
-    // Check creator session to personalize Creator Support link & wishlist
     fetch('/api/marketing/creator/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,7 +95,6 @@ export default function PackagesPage() {
       .catch(() => setCreator(null));
   }, []);
 
-  // Handle wishlist toggle
   const handleToggleWishlist = async (packageId) => {
     if (!creator) {
       router.push(`/creator/login?redirect=${encodeURIComponent('/packages')}`);
@@ -139,7 +132,6 @@ export default function PackagesPage() {
     }
   };
 
-  // Sort packages from lowest to highest price based on currency and billing cycle
   const sortedPackages = useMemo(() => {
     const getPrice = (pkg) => {
       if (currency === 'BDT') {
@@ -163,7 +155,6 @@ export default function PackagesPage() {
     });
   }, [packages, billingCycle, currency]);
 
-  // Handle custom package inquiry submission
   const handleInquirySubmit = async (e) => {
     e.preventDefault();
     setInquirySubmitting(true);
@@ -172,7 +163,6 @@ export default function PackagesPage() {
 
     try {
       if (creator?.id) {
-        // Submit directly to Creator Support Tickets system
         const res = await fetch('/api/marketing/creator', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -196,7 +186,6 @@ ${inquiryMessage}`,
           setInquiryError(data.error || 'Failed to submit support ticket.');
         }
       } else {
-        // Submit via contact API
         const res = await fetch('/api/marketing/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -228,7 +217,6 @@ ${inquiryMessage}`,
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 max-w-7xl mx-auto relative">
-      {/* Toast Notification for Wishlist */}
       {wishlistToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold animate-fade-in">
           <BiSolidHeart className="text-rose-500 text-base" />
@@ -236,7 +224,6 @@ ${inquiryMessage}`,
         </div>
       )}
 
-      {/* Header Section */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
           <BiRocket className="text-sm" />
@@ -251,9 +238,7 @@ ${inquiryMessage}`,
           Predictable subscription tiers designed for schools, academies, colleges, and training institutes. Every plan includes automated student records, dedicated portal isolation, and instant subdomain provisioning.
         </p>
 
-        {/* Currency & Billing Toggle Controls */}
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-          {/* Currency Switcher */}
           <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex items-center gap-1.5 text-xs font-semibold shadow-xs">
             <button
               type="button"
@@ -279,7 +264,6 @@ ${inquiryMessage}`,
             </button>
           </div>
 
-          {/* Billing Cycle Toggle */}
           <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex items-center gap-2 text-xs font-semibold shadow-xs">
             <button
               type="button"
@@ -310,7 +294,6 @@ ${inquiryMessage}`,
         </div>
       </div>
 
-      {/* Packages Grid */}
       {loading ? (
         <LoadingScreen fullScreen={false} label="Loading subscription packages..." />
       ) : sortedPackages.length === 0 ? (
@@ -349,7 +332,6 @@ ${inquiryMessage}`,
             </button>
           </div>
 
-          {/* Pricing Cards Grid */}
           <div className={`grid gap-8 ${
             sortedPackages.length === 1
               ? 'max-w-md mx-auto grid-cols-1'
@@ -391,7 +373,6 @@ ${inquiryMessage}`,
         </div>
       )}
 
-      {/* Feature Guarantee & Trust Badges */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-slate-200/70 dark:border-slate-800">
         <div className="flex items-start gap-3.5 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 shadow-xs">
           <div className="w-10 h-10 rounded-xl bg-primary/20 text-secondary flex items-center justify-center text-xl shrink-0">
@@ -430,11 +411,7 @@ ${inquiryMessage}`,
         </div>
       </div>
 
-      {/* ------------------------------------------------------------------------ */}
-      {/* CUSTOM PACKAGE & CREATOR SUPPORT CARD (AT THE BOTTOM)                    */}
-      {/* ------------------------------------------------------------------------ */}
       <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-slate-900 to-indigo-950 text-white p-8 sm:p-10 lg:p-12 shadow-2xl border border-indigo-500/20">
-        {/* Ambient background decoration */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-secondary/20 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 -mb-20 w-64 h-64 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
 
@@ -453,7 +430,6 @@ ${inquiryMessage}`,
               Managing a multi-campus school, large university, or district education board? Require custom student capacity, dedicated cloud VPS or on-premise servers, custom tenant modules, or legacy SIS data migration?
             </p>
 
-            {/* Value checklist */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs text-slate-200">
               <div className="flex items-center gap-2">
                 <BiCheckCircle className="text-emerald-400 text-base shrink-0" />
@@ -474,7 +450,6 @@ ${inquiryMessage}`,
             </div>
           </div>
 
-          {/* Action box */}
           <div className="lg:w-80 shrink-0 bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 flex flex-col gap-3.5">
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-white">Creator Support Desk</h3>
@@ -483,7 +458,6 @@ ${inquiryMessage}`,
               </p>
             </div>
 
-            {/* Direct Ticket button */}
             {creator?.id ? (
               <Link
                 href={`/creator/${creator.id}/tickets`}
@@ -503,7 +477,6 @@ ${inquiryMessage}`,
               </button>
             )}
 
-            {/* Secondary button: Contact desk */}
             <Link
               href="/contact?subject=Custom+Institutional+Package+Request"
               className="w-full py-2.5 px-4 rounded-xl font-semibold text-xs bg-white/10 hover:bg-white/20 text-white border border-white/15 flex items-center justify-center gap-2 transition-all cursor-pointer"
@@ -512,7 +485,6 @@ ${inquiryMessage}`,
               <span>Contact via Contact Page</span>
             </Link>
 
-            {/* Direct helpline contacts */}
             <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 text-[11px] text-slate-300">
               {SITE_MAIL && (
                 <div className="flex items-center gap-2 truncate">
@@ -535,9 +507,6 @@ ${inquiryMessage}`,
         </div>
       </div>
 
-      {/* ------------------------------------------------------------------------ */}
-      {/* QUICK CUSTOM PACKAGE INQUIRY MODAL                                       */}
-      {/* ------------------------------------------------------------------------ */}
       {showInquiryModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">

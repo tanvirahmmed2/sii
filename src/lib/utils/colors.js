@@ -1,4 +1,3 @@
-// Utility functions for dynamic tenant color calculations (safe for both Server and Client Components)
 
 export function hexToRgb(hex) {
   if (!hex || typeof hex !== 'string') return null;

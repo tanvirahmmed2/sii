@@ -11,26 +11,22 @@ export default function LibraryTeacherReturnPage() {
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'issued' | 'returned' | 'overdue'
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Return Processing Modal
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [targetIssue, setTargetIssue] = useState(null);
   const [fineAmount, setFineAmount] = useState('0');
-  const [fineStatus, setFineStatus] = useState('none'); // 'none' | 'pending' | 'paid' | 'waived'
+  const [fineStatus, setFineStatus] = useState('none'); 
   const [conditionNote, setConditionNote] = useState('Good condition, verified intact.');
   const [submitting, setSubmitting] = useState(false);
 
-  // Details Modal
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  // Delete Confirmation Modal
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadIssues = useCallback(async () => {
@@ -60,7 +56,6 @@ export default function LibraryTeacherReturnPage() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, pageSize]);
 
-  // Filtering & Pagination
   const filteredIssues = useMemo(() => {
     return issues.filter((iss) => {
       const matchSearch =
@@ -165,7 +160,6 @@ export default function LibraryTeacherReturnPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -184,7 +178,6 @@ export default function LibraryTeacherReturnPage() {
         </button>
       </div>
 
-      {/* Alert Feedback */}
       {feedback && (
         <div
           className={`px-3 py-2 text-xs rounded border flex items-center justify-between ${
@@ -200,7 +193,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -251,7 +243,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded shadow-2xs">
         <div className="flex flex-1 items-center gap-2">
           <div className="relative flex-1 max-w-sm">
@@ -309,7 +300,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       </div>
 
-      {/* Return Records Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
@@ -446,7 +436,6 @@ export default function LibraryTeacherReturnPage() {
           </table>
         </div>
 
-        {/* Pagination Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
           <div>
             Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
@@ -476,7 +465,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       </div>
 
-      {/* Receive / Return Book Modal */}
       {returnModalOpen && targetIssue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -573,7 +561,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       )}
 
-      {/* Return Receipt Details Modal */}
       {detailsModalOpen && selectedRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xs">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl overflow-hidden">
@@ -635,7 +622,6 @@ export default function LibraryTeacherReturnPage() {
         </div>
       )}
 
-      {/* Delete Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xs">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl p-4 text-xs space-y-3">

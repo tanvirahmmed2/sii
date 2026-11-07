@@ -2,15 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * GET /api/[domain]/modules
- * Query tenant website modules across Home Modules, Control Modules, and System Package Modules.
- * Query Parameters:
- *   - type: 'all' (default) | 'home' | 'control' | 'system'
- *   - category: string (optional category filter)
- *   - search: string (optional search term)
- *   - active: boolean ('true' | 'false' | 'all')
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -31,7 +22,6 @@ export async function GET(request, context) {
     let controlModules = [];
     let systemModules = [];
 
-    // Query Home Modules
     if (type === 'all' || type === 'home') {
       let homeSql = 'SELECT * FROM website_home_modules';
       const homeConds = [];
@@ -62,7 +52,6 @@ export async function GET(request, context) {
       homeModules = homeRes.rows || [];
     }
 
-    // Query Control Modules
     if (type === 'all' || type === 'control') {
       let ctrlSql = 'SELECT * FROM website_control_modules';
       const ctrlConds = [];
@@ -93,7 +82,6 @@ export async function GET(request, context) {
       controlModules = ctrlRes.rows || [];
     }
 
-    // Calculate categories and counts
     const homeCategories = Array.from(new Set(homeModules.map((m) => m.category).filter(Boolean)));
     const controlCategories = Array.from(new Set(controlModules.map((m) => m.category).filter(Boolean)));
 
@@ -118,17 +106,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PATCH /api/[domain]/modules
- * Update status or metadata for a home or control module
- * Body:
- *   - type: 'home' | 'control' (required)
- *   - id: number (or slug)
- *   - is_active: boolean
- *   - display_order: number
- *   - description: string
- *   - name: string
- */
 export async function PATCH(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

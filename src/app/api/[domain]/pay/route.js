@@ -5,11 +5,6 @@ import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateway
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay
- * Central query endpoint for /pay home portal.
- * Multi-criteria search across all fee categories.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -21,7 +16,6 @@ export async function GET(request, context) {
     const identifier = (searchParams.get('identifier') || '').trim();
     const type = (searchParams.get('type') || 'all').toLowerCase();
 
-    // Fetch assigned gateways per purpose
     const [eduGateways, examGateways, admGateways, resGateways] = await Promise.all([
       fetchAssignedGatewaysForPurpose(website.id, 'education_fees'),
       fetchAssignedGatewaysForPurpose(website.id, 'exam_fees'),
@@ -36,7 +30,6 @@ export async function GET(request, context) {
       residential_fees: resGateways
     };
 
-    // Determine relevant gateways for the current filter
     let sanitizedGateways;
     if (type === 'admission' || type === 'admission_fees') {
       sanitizedGateways = admGateways;
@@ -47,7 +40,6 @@ export async function GET(request, context) {
     } else if (type === 'residential' || type === 'residential_fees') {
       sanitizedGateways = resGateways;
     } else {
-      // De-duplicate gateways by code for overall tenant display
       const seenCodes = new Set();
       sanitizedGateways = [];
       [...eduGateways, ...examGateways, ...admGateways, ...resGateways].forEach(gw => {
@@ -73,7 +65,6 @@ export async function GET(request, context) {
       });
     }
 
-    // Helper functions for masking sensitive data to prevent scraping leaks
     const maskEmail = (email) => {
       if (!email || typeof email !== 'string') return null;
       const parts = email.split('@');
@@ -91,7 +82,6 @@ export async function GET(request, context) {
       return `${clean.slice(0, 3)}*****${clean.slice(-3)}`;
     };
 
-    // Forward to dues resolution logic
     const studentRes = await queryDb(`
       SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
              COALESCE(s.name, i.data->>'name', 'Student') AS name,
@@ -172,7 +162,6 @@ export async function GET(request, context) {
 
     const dues = { education: [], exam: [], admission: [], residential: [] };
 
-    // 1. Education Dues
     if (student && (type === 'all' || type === 'education')) {
       const eduRes = await queryDb(`
         SELECT id, invoice_no, title, month_name, amount, fine_amount, paid_amount,
@@ -196,7 +185,6 @@ export async function GET(request, context) {
       }));
     }
 
-    // 2. Exam Dues
     if (student && (type === 'all' || type === 'exam')) {
       const examRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.title, p.amount, p.currency, p.payment_status,
@@ -218,7 +206,6 @@ export async function GET(request, context) {
       }));
     }
 
-    // 3. Admission Dues
     if (applicant && (type === 'all' || type === 'admission')) {
       const admFeeRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.amount, p.currency, p.payment_status,
@@ -243,7 +230,6 @@ export async function GET(request, context) {
       }));
     }
 
-    // 4. Residential Dues (using website_hall_fee_payments)
     if (student && (type === 'all' || type === 'residential')) {
       const resFeeRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.title, p.month_name, p.amount, p.fine_amount,

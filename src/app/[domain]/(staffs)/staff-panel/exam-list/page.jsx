@@ -31,7 +31,6 @@ export default function ExamListPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExam, setEditingExam] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +50,6 @@ export default function ExamListPage() {
     description: ''
   });
 
-  // Fetch metadata for dropdowns
   useEffect(() => {
     async function loadMeta() {
       try {
@@ -197,14 +195,12 @@ export default function ExamListPage() {
     }
   };
 
-  // Summary Metrics
   const activeCount = exams.filter(e => e.status === 'current').length;
   const upcomingCount = exams.filter(e => e.status === 'upcoming').length;
   const totalCandidates = exams.reduce((sum, e) => sum + (parseInt(e.candidate_count) || 0), 0);
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Total Examinations</p>
@@ -239,12 +235,9 @@ export default function ExamListPage() {
         </div>
       </div>
 
-      {/* Main Workstation Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-2 flex-1">
-            {/* Search */}
             <div className="relative min-w-[200px] flex-1 max-w-xs">
               <FiSearch className="absolute left-3 top-2.5 text-slate-400 text-xs" />
               <input
@@ -256,7 +249,6 @@ export default function ExamListPage() {
               />
             </div>
 
-            {/* Class Filter */}
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
@@ -268,7 +260,6 @@ export default function ExamListPage() {
               ))}
             </select>
 
-            {/* Session Filter */}
             <select
               value={selectedSession}
               onChange={(e) => setSelectedSession(e.target.value)}
@@ -280,7 +271,6 @@ export default function ExamListPage() {
               ))}
             </select>
 
-            {/* Status Filter */}
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -305,7 +295,6 @@ export default function ExamListPage() {
           </div>
         </div>
 
-        {/* High-Density Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
@@ -413,7 +402,6 @@ export default function ExamListPage() {
           </table>
         </div>
 
-        {/* Micro Pagination Footer */}
         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
           <span>
             Showing {exams.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0} to{' '}
@@ -441,7 +429,6 @@ export default function ExamListPage() {
         </div>
       </div>
 
-      {/* Modal Dialog */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">

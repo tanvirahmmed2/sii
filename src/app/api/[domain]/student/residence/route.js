@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // 1. Fetch available hostels for this institution
     let hostels = [];
     try {
       const hostelsRes = await queryDb(
@@ -44,7 +43,6 @@ export async function GET(request, context) {
       console.error('Error fetching hostels:', err);
     }
 
-    // 2. Fetch student info
     let studentGender = 'Male';
     try {
       const stuRes = await queryDb(
@@ -59,7 +57,6 @@ export async function GET(request, context) {
       }
     } catch {}
 
-    // 3. Fetch active seat allocation
     let activeAllocation = null;
     try {
       const allocRes = await queryDb(
@@ -82,7 +79,6 @@ export async function GET(request, context) {
       console.error('Error fetching seat allocation:', err);
     }
 
-    // 4. Fetch student's applications
     let applications = [];
     try {
       const appRes = await queryDb(
@@ -145,7 +141,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Check if student already has active allocation
     const checkAlloc = await queryDb(
       `SELECT id FROM website_hostel_allocations WHERE website_id = $1 AND student_id = $2 AND status = 'active' LIMIT 1`,
       [website.id, session.id]
@@ -157,7 +152,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Check if student already has a pending application
     const checkPending = await queryDb(
       `SELECT id FROM website_hostel_applications WHERE website_id = $1 AND student_id = $2 AND status = 'pending' LIMIT 1`,
       [website.id, session.id]

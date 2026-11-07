@@ -151,7 +151,6 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
         </div>
       )}
 
-      {/* Navigation Sections */}
       <div className="p-3 space-y-4 flex-1">
         {DEVELOPER_NAV_SECTIONS.map((section) => {
           const visibleLinks = section.links.filter(isLinkAllowed);
@@ -184,7 +183,6 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
         })}
       </div>
 
-      {/* Footer Actions */}
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 sticky bottom-0">
         <Link
           href="/"
@@ -206,7 +204,6 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
   return (
     <>
-      {/* Mobile Backdrop */}
       <div
         className={`fixed inset-0 bg-black/40 z-50 md:hidden transition-opacity ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -215,7 +212,6 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
         aria-hidden="true"
       />
 
-      {/* Mobile Drawer */}
       <aside
         className={`fixed top-0 left-0 bottom-0 w-64 max-w-[80vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 md:hidden flex flex-col justify-between shadow-sm transition-transform duration-200 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -225,7 +221,6 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
         {navContent}
       </aside>
 
-      {/* Desktop Persistent Sidebar */}
       <aside
         className="hidden md:flex md:w-56 md:flex-col md:shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 h-screen sticky top-0 z-30"
         aria-label="Developer Desktop Navigation"

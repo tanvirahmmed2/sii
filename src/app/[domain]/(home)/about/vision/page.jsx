@@ -62,7 +62,6 @@ const VisionPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl mx-auto space-y-8">
         
-        {/* Header */}
         <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
           <div className="flex items-center gap-2 mb-2">
             <Link
@@ -80,7 +79,6 @@ const VisionPage = () => {
           </p>
         </div>
 
-        {/* Vision Statement */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-3 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300">
           <span className="text-xs font-semibold text-primary uppercase tracking-wider block">
             Institutional Vision
@@ -100,7 +98,6 @@ const VisionPage = () => {
           )}
         </div>
 
-        {/* Dynamic Visions from Database */}
         {!loading && visions.length > 0 && (
           <div className="space-y-4">
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
@@ -134,7 +131,6 @@ const VisionPage = () => {
           </div>
         )}
 
-        {/* Core Values Grid */}
         <div className="space-y-4">
           <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
             Four Foundational Values
@@ -159,7 +155,6 @@ const VisionPage = () => {
           </div>
         </div>
 
-        {/* Assurance Note */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-2">
           <h3 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
             Commitment to Continuous Improvement

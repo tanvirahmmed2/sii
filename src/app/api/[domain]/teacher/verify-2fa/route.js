@@ -69,7 +69,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Clear 2FA code
     await queryDb(
       `UPDATE website_teachers
        SET two_factor_code = NULL, two_factor_expires = NULL

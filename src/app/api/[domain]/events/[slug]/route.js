@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
 
-// GET: Single event details
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -19,7 +18,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Event identifier required' }, { status: 400 });
     }
 
-    // Optional student session check
     let studentId = null;
     try {
       const session = await getStudentSession(request);

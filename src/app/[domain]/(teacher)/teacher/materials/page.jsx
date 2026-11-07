@@ -127,7 +127,6 @@ const MaterialsPageContent = () => {
 
   return (
     <div className="flex flex-col gap-6 w-full pb-8">
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/70 shadow-2xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Study Materials</h1>
@@ -153,7 +152,6 @@ const MaterialsPageContent = () => {
         </button>
       </div>
 
-      {/* Add / Edit Form */}
       {showAddForm && (
         <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 max-w-3xl mx-auto w-full shadow-sm">
           <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
@@ -216,7 +214,6 @@ const MaterialsPageContent = () => {
         </div>
       )}
 
-      {/* Materials List View */}
       {materials.length === 0 ? (
         <div className="bg-white border border-slate-200/70 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-2xs">
           <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 mb-3">
@@ -258,7 +255,6 @@ const MaterialsPageContent = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="shrink-0 flex items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                 <a
                   href={mat.file_url}

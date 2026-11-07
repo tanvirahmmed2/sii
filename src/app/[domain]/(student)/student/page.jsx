@@ -123,7 +123,6 @@ const StudentHomePage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Banner / Student Identity Bar */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -154,7 +153,6 @@ const StudentHomePage = () => {
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((kpi, idx) => (
           <Link
@@ -179,9 +177,7 @@ const StudentHomePage = () => {
         ))}
       </div>
 
-      {/* Two Column Layout: Today's Routine & Upcoming Exams */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Today's Routine */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <div>
@@ -234,7 +230,6 @@ const StudentHomePage = () => {
           )}
         </div>
 
-        {/* Upcoming Exams */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <div>
@@ -297,7 +292,6 @@ const StudentHomePage = () => {
         </div>
       </div>
 
-      {/* Quick Navigation Cards */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
         <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">

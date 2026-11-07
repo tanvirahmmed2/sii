@@ -213,7 +213,6 @@ export default function MessageWhatsappPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header & KPI Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -248,7 +247,6 @@ export default function MessageWhatsappPage() {
         </div>
       </div>
 
-      {/* WhatsApp Config Missing Banner */}
       {!hasWhatsappConfig && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -275,9 +273,7 @@ export default function MessageWhatsappPage() {
         </div>
       )}
 
-      {/* Split Chat Workstation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[560px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
-        {/* Left Column: Sidebar (4 cols) */}
         <div className="lg:col-span-4 border-r border-slate-200 dark:border-slate-800 flex flex-col">
           <div className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2">
             <div className="relative">
@@ -363,11 +359,9 @@ export default function MessageWhatsappPage() {
           </div>
         </div>
 
-        {/* Right Column: Chat Window (8 cols) */}
         <div className="lg:col-span-8 flex flex-col justify-between">
           {selectedConv ? (
             <>
-              {/* Header */}
               <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-semibold text-xs">
@@ -409,7 +403,6 @@ export default function MessageWhatsappPage() {
                 </div>
               </div>
 
-              {/* Message Feed */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 max-h-[420px] bg-slate-50/20 dark:bg-slate-950/10">
                 {messagesLoading ? (
                   <div className="py-12 flex justify-center items-center">
@@ -463,7 +456,6 @@ export default function MessageWhatsappPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Composer */}
               <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <form onSubmit={handleSendMessage} className="flex items-end gap-2">
                   <textarea

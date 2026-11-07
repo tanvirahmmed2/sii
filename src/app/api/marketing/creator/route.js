@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 
-// Table-specific action handlers (reloaded)
 import { handleAuthAction } from './auth/route';
 import { handleWebsitesAction } from './websites/route';
 import { handlePaymentsAction } from './payments/route';
@@ -10,11 +9,6 @@ import { handlePurchasesAction } from './purchases/route';
 import { handleSubscriptionsAction } from './subscriptions/route';
 import { handleProfileAction } from './profile/route';
 import { handleSupportAction } from './support/route';
-
-/**
- * Main Creator Dashboard API Router
- * Aggregates dashboard data on GET and dispatches table actions on POST.
- */
 
 export async function GET(request) {
   try {
@@ -51,7 +45,6 @@ export async function GET(request) {
 
     const creatorId = creator.id;
 
-    // Auto-sync any completed purchases without a subscription row
     await queryDb(
       `INSERT INTO subscriptions (creator_id, package_id, purchase_id, status, billing_cycle, current_period_start, current_period_end)
        SELECT pu.creator_id, pu.package_id, pu.id, 'active', pu.billing_cycle, COALESCE(pu.period_start, pu.created_at), COALESCE(pu.period_end, pu.created_at + INTERVAL '30 days')
@@ -62,7 +55,6 @@ export async function GET(request) {
       [creatorId]
     ).catch(() => {});
 
-    // Fetch subscriptions, pending orders, websites, and payments
     const [
       allSubsRes,
       pendingSubRes,
@@ -73,7 +65,6 @@ export async function GET(request) {
       ticketsRes,
       purchasesRes,
     ] = await Promise.all([
-      // 1. All subscriptions for this creator with linked package, purchase, payment, and website counts
       queryDb(
         `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.status,
                 s.current_period_start, s.current_period_end,
@@ -108,7 +99,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 2. Pending or unpaid subscription order
       queryDb(
         `SELECT pu.*, 
                 pu.period_start AS current_period_start,
@@ -127,7 +117,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 3. Pending purchase order (fallback)
       queryDb(
         `SELECT pu.*, 
                 p.name AS package_name, 
@@ -140,7 +129,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 4. Creator websites
       queryDb(
         `SELECT w.id, w.name, w.slug, w.subdomain, w.custom_domain, w.status,
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
@@ -154,7 +142,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 5. Creator payments
       queryDb(
         `SELECT pay.*, 
                 (pay.amount * 100)::bigint AS amount_in_cents,
@@ -169,7 +156,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 6. Available packages catalog
       queryDb(
         `SELECT id, name, slug, tagline, description, monthly_price_usd, yearly_price_usd,
                 monthly_price_bdt, yearly_price_bdt,
@@ -183,7 +169,6 @@ export async function GET(request) {
          ORDER BY sort_order ASC, monthly_price_usd ASC, id ASC`
       ).catch(() => ({ rows: [] })),
 
-      // 7. Creator support tickets
       queryDb(
         `SELECT s.id, s.creator_id, s.ticket_number, s.subject, s.status, s.priority,
                 'General' AS category, s.created_at, s.updated_at,
@@ -195,7 +180,6 @@ export async function GET(request) {
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
-      // 8. Creator purchases
       queryDb(
         `SELECT pu.*, 
                 (pu.total_amount * 100)::bigint AS amount_in_cents, 
@@ -212,7 +196,6 @@ export async function GET(request) {
     const now = new Date();
     const rawSubs = allSubsRes.rows || [];
 
-    // Enrich subscriptions with days remaining and active flag
     const allSubscriptions = rawSubs.map((sub) => {
       let daysRemaining = 0;
       if (sub.current_period_end) {
@@ -318,46 +301,38 @@ export async function POST(request) {
     const body = await request.json();
     const { action } = body;
 
-    // 1. Auth Actions (creators table)
-    const authActions = ['register', 'google_auth', 'verify', 'resend_verification', 'login', 'logout', 'me', 'recover', 'reset_password'];
+    const authActions = ['register', 'verify', 'resend_verification', 'login', 'logout', 'me', 'recover', 'reset_password'];
     if (authActions.includes(action)) {
       return await handleAuthAction(body, request);
     }
 
-    // Get session creator for authenticated actions
     const sessionCreator = await getCreatorSession(request);
 
-    // 2. Website Actions (websites table)
     const websiteActions = ['create_website', 'setup_website', 'update_website', 'delete_website', 'check_domain'];
     if (websiteActions.includes(action)) {
       return await handleWebsitesAction(body, sessionCreator, request);
     }
 
-    // 3. Purchase Actions (purchases table)
     const purchaseActions = ['create_order', 'update_status'];
     if (purchaseActions.includes(action)) {
       return await handlePurchasesAction(body, sessionCreator);
     }
 
-    // 4. Payment Actions (payment table)
     const paymentActions = ['pay_invoice', 'pay'];
     if (paymentActions.includes(action)) {
       return await handlePaymentsAction(body, sessionCreator, request);
     }
 
-    // 5. Subscription Actions (subscription table)
     const subscriptionActions = ['purchase_subscription', 'cancel'];
     if (subscriptionActions.includes(action)) {
       return await handleSubscriptionsAction(body, sessionCreator);
     }
 
-    // 6. Profile & Security Actions (creators table)
     const profileActions = ['update_profile', 'change_password', 'toggle_2fa', 'list_sessions', 'revoke_session', 'revoke_other_sessions'];
     if (profileActions.includes(action)) {
       return await handleProfileAction(body, sessionCreator);
     }
 
-    // 7. Support Actions (support & support_messages tables)
     const supportActions = ['create_ticket', 'add_message'];
     if (supportActions.includes(action)) {
       return await handleSupportAction(body, sessionCreator);

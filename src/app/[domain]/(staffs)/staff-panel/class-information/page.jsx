@@ -8,7 +8,6 @@ import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to avoid SSR hydration issues
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => <div className="h-44 w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center text-xs text-slate-400">
@@ -22,39 +21,32 @@ export default function ClassInformationPage() {
     tenantUrl
   } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [classInfoList, setClassInfoList] = useState([]);
   const [availableClasses, setAvailableClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search, filter & view modes
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClassFilter, setSelectedClassFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [viewMode, setViewMode] = useState('cards'); 
 
-  // INLINE Form states (NO popup modal)
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [editingRecord, setEditingRecord] = useState(null);
 
-  // Form field states
   const [formClassId, setFormClassId] = useState('');
   const [formMotto, setFormMotto] = useState('');
   const [formSummary, setFormSummary] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formExpectedCost, setFormExpectedCost] = useState('');
 
-  // INLINE Delete state (NO popup modal)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const editorSectionRef = useRef(null);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/class-information'), [getApiEndpoint]);
 
-  // Fetch Class Information & Available Classes
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);else setRefreshing(true);
     try {
@@ -98,17 +90,14 @@ export default function ClassInformationPage() {
     };
   }, [apiEndpoint]);
 
-  // Classes that already have an information record
   const configuredClassIds = useMemo(() => {
     return new Set(classInfoList.map(item => String(item.class_id)));
   }, [classInfoList]);
 
-  // Open Inline Create Form
   const openCreateForm = () => {
     setFormMode('create');
     setEditingRecord(null);
 
-    // Pick first unconfigured class if available, else first class
     const firstUnconfigured = availableClasses.find(c => !configuredClassIds.has(String(c.id)));
     setFormClassId(firstUnconfigured ? String(firstUnconfigured.id) : availableClasses[0] ? String(availableClasses[0].id) : '');
     setFormMotto('');
@@ -117,7 +106,6 @@ export default function ClassInformationPage() {
     setFormExpectedCost('');
     setIsFormOpen(true);
 
-    // Scroll to editor smoothly
     setTimeout(() => {
       editorSectionRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -126,7 +114,6 @@ export default function ClassInformationPage() {
     }, 100);
   };
 
-  // Open Inline Edit Form
   const openEditForm = record => {
     setFormMode('edit');
     setEditingRecord(record);
@@ -137,7 +124,6 @@ export default function ClassInformationPage() {
     setFormExpectedCost(record.expected_cost !== null && record.expected_cost !== undefined ? String(record.expected_cost) : '');
     setIsFormOpen(true);
 
-    // Scroll to editor smoothly
     setTimeout(() => {
       editorSectionRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -151,7 +137,6 @@ export default function ClassInformationPage() {
     setEditingRecord(null);
   };
 
-  // Handle Form Submission
   const handleSubmit = async e => {
     e.preventDefault();
     if (!formClassId) {
@@ -209,7 +194,6 @@ export default function ClassInformationPage() {
     }
   };
 
-  // Inline Delete Trigger & Confirm
   const handleInlineDeleteConfirm = async id => {
     setDeletingId(id);
     const toastId = toast.loading('Removing class information record...');
@@ -240,15 +224,12 @@ export default function ClassInformationPage() {
     }
   };
 
-  // Filtered List
   const filteredList = useMemo(() => {
     return classInfoList.filter(item => {
-      // Class filter
       if (selectedClassFilter !== 'all' && String(item.class_id) !== String(selectedClassFilter)) {
         return false;
       }
 
-      // Search query
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       const name = (item.class_name || '').toLowerCase();
@@ -260,7 +241,6 @@ export default function ClassInformationPage() {
     });
   }, [classInfoList, selectedClassFilter, searchTerm]);
 
-  // Metrics
   const metrics = useMemo(() => {
     const totalProfiles = classInfoList.length;
     const totalClasses = availableClasses.length;
@@ -275,7 +255,6 @@ export default function ClassInformationPage() {
     };
   }, [classInfoList, availableClasses]);
   return <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2">
@@ -315,7 +294,6 @@ export default function ClassInformationPage() {
         </div>
       </div>
 
-      {/* Analytics & Metrics Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -392,9 +370,7 @@ export default function ClassInformationPage() {
         </div>
       </div>
 
-      {/* INLINE CREATE / EDIT WORKSTATION FORM (NO POPUP MODAL) */}
       {isFormOpen && <div ref={editorSectionRef} className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-emerald-500/40 dark:border-emerald-500/30 shadow-md p-5 sm:p-6 space-y-5 transition-all">
-          {/* Form Header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
@@ -409,9 +385,7 @@ export default function ClassInformationPage() {
             </button>
           </div>
 
-          {/* Form Body */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Class Selector */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Academic Class <span className="text-red-500">*</span>
@@ -435,9 +409,7 @@ export default function ClassInformationPage() {
               </p>
             </div>
 
-            {/* Motto and Expected Cost grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Motto */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Class Motto
@@ -448,7 +420,6 @@ export default function ClassInformationPage() {
                 </p>
               </div>
 
-              {/* Expected Cost per Academic Year */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Expected Cost per Academic Year (৳)
@@ -465,7 +436,6 @@ export default function ClassInformationPage() {
               </div>
             </div>
 
-            {/* Summary */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Executive Summary / Short Synopsis
@@ -473,7 +443,6 @@ export default function ClassInformationPage() {
               <textarea rows={2} value={formSummary} onChange={e => setFormSummary(e.target.value)} placeholder="Provide a concise 1-2 sentence overview of this academic level..." className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" />
             </div>
 
-            {/* Detailed Description with Tiptap Editor */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -491,7 +460,6 @@ export default function ClassInformationPage() {
               </p>
             </div>
 
-            {/* Form Action Buttons */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
               <button type="button" onClick={handleCloseForm} disabled={submitting} className="px-4 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer">
                 Cancel
@@ -504,7 +472,6 @@ export default function ClassInformationPage() {
           </form>
         </div>}
 
-      {/* Control Bar: Search, Filters, View Modes */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2.5">
           <div className="relative flex-1 max-w-md">
@@ -538,7 +505,6 @@ export default function ClassInformationPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       {loading ? <div className="w-full py-20 flex flex-col items-center justify-center space-y-3">
           <Loader />
           <p className="text-xs text-slate-400">Loading academic class profiles...</p>
@@ -558,11 +524,10 @@ export default function ClassInformationPage() {
               
               Add First Class Profile
             </button>}
-        </div> : viewMode === 'cards' ? (/* Cards Grid View */
+        </div> : viewMode === 'cards' ? (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filteredList.map(item => <div key={item.id} className={`bg-white dark:bg-slate-900 rounded-2xl border ${editingRecord?.id === item.id ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800'} overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group`}>
               <div>
-                {/* Card Header Banner */}
                 <div className="p-5 border-b border-slate-100 dark:border-slate-800/80 bg-linear-to-br from-slate-50/80 via-white to-slate-50/20 dark:from-slate-850 dark:via-slate-900 dark:to-slate-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -590,7 +555,6 @@ export default function ClassInformationPage() {
                     </div>
                   </div>
 
-                  {/* Motto Quote */}
                   {item.motto ? <div className="mt-3 px-3 py-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 text-emerald-800 dark:text-emerald-300 text-xs italic flex items-center gap-2">
                       
                       <span className="line-clamp-2">&ldquo;{item.motto}&rdquo;</span>
@@ -599,9 +563,7 @@ export default function ClassInformationPage() {
                     </div>}
                 </div>
 
-                {/* Card Body */}
                 <div className="p-5 space-y-3.5 text-xs text-slate-600 dark:text-slate-300">
-                  {/* Summary */}
                   {item.summary ? <div>
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
                         Executive Summary
@@ -611,7 +573,6 @@ export default function ClassInformationPage() {
                       </p>
                     </div> : null}
 
-                  {/* Description preview */}
                   {item.description ? <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">
                         Curriculum Syllabus (Tiptap Content)
@@ -626,7 +587,6 @@ export default function ClassInformationPage() {
                 </div>
               </div>
 
-              {/* Inline Delete Confirmation or Normal Card Footer */}
               {deleteConfirmId === item.id ? <div className="p-4 border-t border-red-200 dark:border-red-900 bg-red-50/80 dark:bg-red-950/40 flex items-center justify-between text-xs animate-fadeIn">
                   <div className="flex items-center gap-1.5 text-red-700 dark:text-red-300 font-medium">
                     
@@ -661,7 +621,7 @@ export default function ClassInformationPage() {
                   </div>
                 </div>}
             </div>)}
-        </div>) : (/* Table View */
+        </div>) : (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

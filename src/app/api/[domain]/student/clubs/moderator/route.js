@@ -20,7 +20,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Check clubs where student is an active executive or moderator
     const clubsRes = await queryDb(
       `SELECT c.id, c.name, c.slug, c.description, c.category,
               m.role AS moderator_designation,
@@ -38,7 +37,6 @@ export async function GET(request, context) {
     const isClubModerator = clubsRes.rows.length > 0;
     const clubs = [];
 
-    // For each club, fetch news articles
     for (const club of clubsRes.rows) {
       let news = [];
       try {
@@ -99,7 +97,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Valid Club ID is required.' }, { status: 400 });
     }
 
-    // Verify student is moderator of this club
     const modCheck = await queryDb(
       `SELECT m.id, m.role
        FROM website_student_club_members m
@@ -132,7 +129,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: true, message: 'Club news post deleted successfully.' });
     }
 
-    // manage_news
     if (!title || !content) {
       return NextResponse.json({ success: false, error: 'Title and content are required.' }, { status: 400 });
     }

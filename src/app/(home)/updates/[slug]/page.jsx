@@ -83,7 +83,6 @@ export default function SingleUpdatePage({ params }) {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Navigation Breadcrumb (No slug!) */}
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <Link
             href="/updates"
@@ -100,9 +99,7 @@ export default function SingleUpdatePage({ params }) {
           </div>
         </div>
 
-        {/* Article Main Card */}
         <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-8">
-          {/* Header Info */}
           <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-8">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono font-bold border border-secondary/20">
@@ -120,14 +117,12 @@ export default function SingleUpdatePage({ params }) {
             </h1>
           </div>
 
-          {/* Description Content */}
           {update.description && (
             <div className="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-sans">
               {update.description}
             </div>
           )}
 
-          {/* Detailed Changelog Section */}
           {update.changelog && (
             <div className="space-y-3 pt-4">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -140,7 +135,6 @@ export default function SingleUpdatePage({ params }) {
             </div>
           )}
 
-          {/* Footer Callout */}
           <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
               <BiCheckCircle className="text-secondary text-base" />
@@ -156,7 +150,6 @@ export default function SingleUpdatePage({ params }) {
           </div>
         </article>
 
-        {/* Other Recent Updates */}
         {recentUpdates.length > 0 && (
           <div className="space-y-4 pt-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">

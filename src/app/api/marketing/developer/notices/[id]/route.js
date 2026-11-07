@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// PUT: Update notice or toggle pin
-// ============================================================================
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'notices');
@@ -63,9 +60,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete notice
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'notices');

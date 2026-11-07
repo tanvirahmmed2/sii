@@ -18,7 +18,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Student profile info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -39,7 +38,6 @@ export async function GET(request, context) {
     }
     const student = studentRes.rows[0];
 
-    // Fetch paid receipts
     let receipts = [];
     try {
       const res = await queryDb(
@@ -66,7 +64,6 @@ export async function GET(request, context) {
       console.warn('Error fetching education fee receipts:', e);
     }
 
-    // Fetch active Payment Receipt template
     let template = null;
     try {
       const tplRes = await queryDb(

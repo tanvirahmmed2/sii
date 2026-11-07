@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch student's class & session
     const studentRes = await queryDb(
       `SELECT class_id, session_id FROM website_students WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [studentId, website.id]
@@ -39,7 +38,6 @@ export async function GET(request, context) {
 
     const classId = studentRes.rows[0].class_id;
 
-    // Fetch assignments with student submission status
     const assignmentsRes = await queryDb(
       `SELECT a.*,
               s.name AS subject_name, s.code AS subject_code,
@@ -114,7 +112,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Please provide submission answer text or attachment URL.' }, { status: 400 });
     }
 
-    // Verify assignment belongs to this tenant
     const assignCheck = await queryDb(
       `SELECT id, submission_date FROM website_classroom_assignments WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [assignment_id, website.id]
@@ -127,7 +124,6 @@ export async function POST(request, context) {
     const isLate = new Date() > new Date(assignCheck.rows[0].submission_date);
     const status = isLate ? 'late' : 'submitted';
 
-    // Upsert submission
     const submRes = await queryDb(
       `INSERT INTO website_classroom_assignment_submissions (
          website_id, assignment_id, student_id, submission_text, file_url, status, submitted_at

@@ -11,7 +11,6 @@ export default function StudentIdTemplateTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // New Template Modal State with manual dimensions
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -284,7 +283,6 @@ export default function StudentIdTemplateTable() {
                 />
               </div>
 
-              {/* Manual dimensions controls */}
               <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <span className="font-semibold text-slate-700 dark:text-slate-300 block">
                   Manual Size &amp; Orientation

@@ -116,7 +116,6 @@ function AdmitCardContent() {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        {/* Screen Header (Hidden during print) */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -134,7 +133,6 @@ function AdmitCardContent() {
           </p>
         </motion.div>
 
-        {/* Search Toolbar (Hidden during print) */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -173,7 +171,6 @@ function AdmitCardContent() {
           </form>
         </motion.div>
 
-        {/* Error / Pending Notice */}
         {hasSearched && errorMsg && !admitCard && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
@@ -199,14 +196,12 @@ function AdmitCardContent() {
           </motion.div>
         )}
 
-        {/* Printable Admit Card Document */}
         {admitCard && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            {/* Top Toolbar Actions (Hidden during print) */}
             <div className="print:hidden flex flex-wrap items-center justify-between gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-xl px-4 py-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-purple-900 dark:text-purple-200">
                 <FiCheckCircle className="text-purple-600 dark:text-purple-400 w-4 h-4" />
@@ -255,7 +250,6 @@ function AdmitCardContent() {
               </div>
             </div>
 
-            {/* ADMIT CARD SHEET */}
             {viewMode === 'template' && compiledHtml ? (
               <div
                 id="admit-card-printable"
@@ -271,7 +265,6 @@ function AdmitCardContent() {
               id="admit-card-printable"
               className="bg-white text-slate-900 border-2 border-slate-900 rounded-xl p-8 shadow-sm space-y-6 print:border-none print:shadow-none print:p-0 print:m-0"
             >
-              {/* Institution Header */}
               <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
                 <div className="flex items-center gap-4">
                   {admitCard.institution?.logo_url ? (
@@ -310,7 +303,6 @@ function AdmitCardContent() {
                 </div>
               </div>
 
-              {/* Title & Circular Banner */}
               <div className="bg-slate-100 p-2.5 rounded text-center border border-slate-300">
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-800">
                   {admitCard.admission?.title} &bull; Class: {admitCard.admission?.class_name || 'General'}
@@ -318,9 +310,7 @@ function AdmitCardContent() {
                 </span>
               </div>
 
-              {/* Candidate Details & Photos Grid */}
               <div className="grid grid-cols-12 gap-4 items-start">
-                {/* Details Table (9 Cols) */}
                 <div className="col-span-9 space-y-3">
                   <table className="w-full text-xs text-left">
                     <tbody className="divide-y divide-slate-200">
@@ -370,7 +360,6 @@ function AdmitCardContent() {
                   </table>
                 </div>
 
-                {/* Candidate Photo & Signature (3 Cols) */}
                 <div className="col-span-3 flex flex-col items-center gap-2">
                   <div className="w-28 h-28 border-2 border-slate-900 rounded bg-slate-100 overflow-hidden flex items-center justify-center">
                     {admitCard.applicant?.photo_url ? (
@@ -407,7 +396,6 @@ function AdmitCardContent() {
                 </div>
               </div>
 
-              {/* Examination Schedule & Venue Info */}
               <div className="bg-slate-50 border border-slate-300 rounded p-4 space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="flex items-start gap-2">
@@ -439,7 +427,6 @@ function AdmitCardContent() {
                 </div>
               </div>
 
-              {/* Subjects Table */}
               {Array.isArray(admitCard.exam?.subjects) && admitCard.exam.subjects.length > 0 && (
                 <div className="space-y-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
@@ -468,7 +455,6 @@ function AdmitCardContent() {
                 </div>
               )}
 
-              {/* Instructions */}
               <div className="border-t border-slate-300 pt-3 text-[10px] text-slate-600 space-y-1">
                 <span className="font-bold text-slate-900 uppercase block">Important Instructions:</span>
                 <p className="leading-relaxed">
@@ -477,7 +463,6 @@ function AdmitCardContent() {
                 </p>
               </div>
 
-              {/* Signatures Footer */}
               <div className="pt-8 flex justify-between items-end text-xs">
                 <div className="text-center">
                   <div className="w-40 border-t border-slate-400 pt-1 text-[10px] font-medium text-slate-600">

@@ -22,7 +22,7 @@ export default function StudentYearlyAttendanceReportPage() {
   const [studentSummaries, setStudentSummaries] = useState([]);
   const [dailySummaries, setDailySummaries] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('students'); // 'students' | 'monthly'
+  const [activeTab, setActiveTab] = useState('students'); 
 
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4];
@@ -92,7 +92,6 @@ export default function StudentYearlyAttendanceReportPage() {
     </div>
   );
 
-  // Map student_id -> stats
   const statsMap = {};
   studentSummaries.forEach((s) => {
     statsMap[s.student_id] = {
@@ -104,11 +103,9 @@ export default function StudentYearlyAttendanceReportPage() {
     };
   });
 
-  // Calculate distinct recorded instructional dates
   const distinctDates = new Set(dailySummaries.map((s) => String(s.date).substring(0, 10)));
   const totalDaysHeld = distinctDates.size;
 
-  // Monthly breakdown for selected year (01 to 12)
   const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
     const monthNum = String(i + 1).padStart(2, '0');
     const monthKey = `${targetYear}-${monthNum}`;
@@ -142,7 +139,6 @@ export default function StudentYearlyAttendanceReportPage() {
     };
   });
 
-  // Overall metrics
   const totalLogsAll = dailySummaries.reduce((acc, curr) => acc + parseInt(curr.count, 10), 0);
   const totalPresentsAll = dailySummaries
     .filter((e) => e.status === 'present')
@@ -152,7 +148,6 @@ export default function StudentYearlyAttendanceReportPage() {
     .reduce((acc, curr) => acc + parseInt(curr.count, 10), 0);
   const overallAnnualRate = totalLogsAll > 0 ? Math.round(((totalPresentsAll + totalLatesAll) / totalLogsAll) * 100) : 0;
 
-  // Filter students by search term
   const filteredStudents = students.filter((s) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -165,7 +160,6 @@ export default function StudentYearlyAttendanceReportPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -185,7 +179,6 @@ export default function StudentYearlyAttendanceReportPage() {
         )}
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -196,7 +189,6 @@ export default function StudentYearlyAttendanceReportPage() {
         description="Select session, class, section, and academic year to compile annual report"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📊"
@@ -205,7 +197,6 @@ export default function StudentYearlyAttendanceReportPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Annual KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Academic Year</span>
@@ -229,7 +220,6 @@ export default function StudentYearlyAttendanceReportPage() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
           <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
             <button
               onClick={() => setActiveTab('students')}
@@ -253,7 +243,6 @@ export default function StudentYearlyAttendanceReportPage() {
             </button>
           </div>
 
-          {/* Student Dossier Tab */}
           {activeTab === 'students' && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -344,7 +333,6 @@ export default function StudentYearlyAttendanceReportPage() {
             </div>
           )}
 
-          {/* Monthly Aggregate Tab */}
           {activeTab === 'monthly' && (
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">

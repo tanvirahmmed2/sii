@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 
-// GET: Single class details with subjects, sections, and faculty
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -18,7 +17,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Class identifier required' }, { status: 400 });
     }
 
-    // Lookup class by ID or Code
     const classRes = await queryDb(
       `SELECT c.id,
               c.website_id,
@@ -50,7 +48,6 @@ export async function GET(request, context) {
 
     const classData = classRes.rows[0];
 
-    // Get Sections
     const sectionsRes = await queryDb(
       `SELECT id, name, capacity, room_number
        FROM website_sections
@@ -59,7 +56,6 @@ export async function GET(request, context) {
       [website.id, classData.id]
     );
 
-    // Get Subjects assigned to this class
     const subjectsRes = await queryDb(
       `SELECT cs.id AS assignment_id,
               s.id AS subject_id,
@@ -73,7 +69,6 @@ export async function GET(request, context) {
       [website.id, classData.id]
     );
 
-    // Get Teachers associated with this department or class
     const teachersRes = await queryDb(
       `SELECT t.id,
               t.name,

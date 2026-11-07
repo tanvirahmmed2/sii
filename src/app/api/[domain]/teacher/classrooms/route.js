@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyTeacherClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: List classrooms accessible to this teacher
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherClassroomAccess(request, context, 'view');
@@ -12,7 +11,6 @@ export async function GET(request, context) {
 
     const teacher = auth.teacher;
 
-    // Check teacher's assigned classes
     const assignmentCheck = await query(
       `SELECT 
          (SELECT COUNT(*) FROM website_teacher_subjects WHERE website_id = $1 AND teacher_id = $2) AS total_subjects_assigned,
@@ -37,7 +35,6 @@ export async function GET(request, context) {
     let whereClause = `WHERE c.website_id = $1 AND c.is_active = TRUE`;
     const params = [auth.website.id];
 
-    // If teacher has explicit assignments in the school, filter to their classes
     if (totalAssigned > 0 && combinedClassIds.length > 0) {
       params.push(combinedClassIds);
       whereClause += ` AND c.class_id = ANY($${params.length})`;

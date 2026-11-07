@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { getWebsiteMonthlyUsageAndLimits } from 'src/lib/database/usageLimiter.js';
 
-/**
- * GET /api/[domain]/staff/panel/usage
- * Returns current monthly email and SMS consumption against subscription package quotas.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);

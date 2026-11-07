@@ -12,10 +12,9 @@ export default function ParentTransportInventoryStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('parents'); // parents | transport | inventory
+  const [activeTab, setActiveTab] = useState('parents'); 
   const [data, setData] = useState({ parents: [], routes: [], vehicles: [], inventory_items: [] });
 
-  // Parent Modal
   const [isParentModalOpen, setIsParentModalOpen] = useState(false);
   const [parentName, setParentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
@@ -23,7 +22,6 @@ export default function ParentTransportInventoryStaffPage() {
   const [parentOccupation, setParentOccupation] = useState('');
   const [submittingParent, setSubmittingParent] = useState(false);
 
-  // Route Modal
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [routeName, setRouteName] = useState('');
   const [startLoc, setStartLoc] = useState('');
@@ -31,7 +29,6 @@ export default function ParentTransportInventoryStaffPage() {
   const [fareAmount, setFareAmount] = useState('');
   const [submittingRoute, setSubmittingRoute] = useState(false);
 
-  // Inventory Modal
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [itemCode, setItemCode] = useState('');
@@ -174,7 +171,6 @@ export default function ParentTransportInventoryStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -219,7 +215,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('parents')}
@@ -253,7 +248,6 @@ export default function ParentTransportInventoryStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Parents */}
       {activeTab === 'parents' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -303,7 +297,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Transport */}
       {activeTab === 'transport' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -333,7 +326,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Inventory */}
       {activeTab === 'inventory' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -382,7 +374,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       )}
 
-      {/* Parent Modal */}
       {isParentModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -441,7 +432,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       )}
 
-      {/* Route Modal */}
       {isRouteModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -513,7 +503,6 @@ export default function ParentTransportInventoryStaffPage() {
         </div>
       )}
 
-      {/* Inventory Item Modal */}
       {isItemModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

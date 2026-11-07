@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { autoPublishDueResults } from 'src/app/api/[domain]/staff/panel/admissions/results/publish/route.js';
 
-/**
- * GET /api/[domain]/admissions/results
- * Public lookup for published admission results (strictly shows only 'selected' candidates).
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -14,7 +10,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
     }
 
-    // Auto-publish any circular whose result_date has arrived
     await autoPublishDueResults(website.id);
 
     const { searchParams } = new URL(request.url);
@@ -84,7 +79,6 @@ export async function GET(request, context) {
       ...(row.address_data || {})
     }));
 
-    // Also fetch available circulars with published results for selection dropdown
     const circularsRes = await queryDb(`
       SELECT DISTINCT adm.id, adm.title
       FROM website_admissions adm

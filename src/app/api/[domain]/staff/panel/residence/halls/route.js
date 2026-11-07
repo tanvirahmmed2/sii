@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyResidenceStaffAccess } from 'src/lib/middleware/residence-auth.js';
 
-// GET: List all halls with capacity & occupancy stats, or fetch a single hall
 export async function GET(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'view');
@@ -15,7 +14,7 @@ export async function GET(request, context) {
     const hallId = searchParams.get('id');
     const search = searchParams.get('search')?.trim();
     const gender = searchParams.get('gender');
-    const status = searchParams.get('status'); // 'all', 'active', 'inactive'
+    const status = searchParams.get('status'); 
 
     if (hallId) {
       const singleRes = await queryDb(
@@ -80,7 +79,6 @@ export async function GET(request, context) {
       values
     );
 
-    // Summary KPIs
     const statsRes = await queryDb(
       `SELECT
          COUNT(DISTINCT h.id)::int AS total_halls,
@@ -108,7 +106,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new hall
 export async function POST(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'create');
@@ -137,7 +134,6 @@ export async function POST(request, context) {
 
     const cleanName = name.trim();
 
-    // Check duplicate name within this website
     const dupCheck = await queryDb(
       `SELECT id FROM website_halls WHERE website_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
       [website.id, cleanName]
@@ -180,7 +176,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing hall
 export async function PUT(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'update');
@@ -268,7 +263,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete a hall
 export async function DELETE(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'delete');
@@ -284,7 +278,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Hall ID is required.' }, { status: 400 });
     }
 
-    // Check if there are active allocations in this hall
     const activeAlloc = await queryDb(
       `SELECT id FROM website_hall_seat_allocations WHERE website_id = $1 AND hall_id = $2 AND status = 'active' LIMIT 1`,
       [website.id, id]

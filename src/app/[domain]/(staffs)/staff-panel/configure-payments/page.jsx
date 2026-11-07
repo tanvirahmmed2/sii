@@ -6,26 +6,18 @@ import Link from 'next/link';
 import { FiEdit2, FiTrash2, FiSettings } from 'react-icons/fi';
 
 const GATEWAY_NAMES = {
-  bkash: 'bKash',
-  nagad: 'Nagad',
-  stripe: 'Stripe',
-  paypal: 'PayPal',
-  sslcommerz: 'SSLCommerz',
-  paddle: 'Paddle',
-  sonali_gateway: 'Sonali Gateway',
-  eps: 'EPS Payment',
-  surjopay: 'Shurjopay',
-  razorpay: 'Razorpay'
+  surjopay: 'shurjoPay (bKash, Nagad, Rocket & Cards -> BDT)',
+  paypal: 'PayPal Commerce Platform',
+  paddle: 'Paddle Billing (Global Cards & Multi-Currency)'
 };
 
 export default function ConfigurePaymentsPage() {
   const params = useParams();
   const domain = params?.domain || '';
 
-  // Main Data States
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('accounts'); // 'accounts' | 'routing' | 'simulator' | 'currencies' | 'catalog'
+  const [activeTab, setActiveTab] = useState('accounts'); 
   const [gateways, setGateways] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -42,21 +34,18 @@ export default function ConfigurePaymentsPage() {
     totalRoutes: 5
   });
 
-  // Inline Toast / Feedback State
-  const [toast, setToast] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [toast, setToast] = useState(null); 
 
-  // Filter States for Accounts Directory
   const [filterGateway, setFilterGateway] = useState('all');
   const [filterEnv, setFilterEnv] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [gatewayFilterType, setGatewayFilterType] = useState('all'); // 'all' | 'compatible'
+  const [gatewayFilterType, setGatewayFilterType] = useState('all'); 
 
-  // INLINE Account Form State (NO POPUP)
   const [isAccountFormOpen, setIsAccountFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [editingAccountId, setEditingAccountId] = useState(null);
   const [formData, setFormData] = useState({
-    gateway_code: 'bkash',
+    gateway_code: 'surjopay',
     account_name: '',
     account_number: '',
     environment: 'sandbox',
@@ -70,13 +59,11 @@ export default function ConfigurePaymentsPage() {
   const [testResult, setTestResult] = useState(null);
   const [testingAccountId, setTestingAccountId] = useState(null);
 
-  // Routing State for Tab 2
   const [routingForm, setRoutingForm] = useState({});
   const [savingRoute, setSavingRoute] = useState(null);
 
-  // INLINE Currency Form State (NO POPUP)
   const [isCurrencyFormOpen, setIsCurrencyFormOpen] = useState(false);
-  const [currencyFormMode, setCurrencyFormMode] = useState('create'); // 'create' | 'edit'
+  const [currencyFormMode, setCurrencyFormMode] = useState('create'); 
   const [currencyForm, setCurrencyForm] = useState({
     code: '',
     name: '',
@@ -87,7 +74,6 @@ export default function ConfigurePaymentsPage() {
   });
   const [savingCurrency, setSavingCurrency] = useState(false);
 
-  // Simulator State for Tab 3
   const [simTask, setSimTask] = useState('residential_fees');
   const [simHostelId, setSimHostelId] = useState('');
   const [simAmount, setSimAmount] = useState('1500');
@@ -96,7 +82,6 @@ export default function ConfigurePaymentsPage() {
   const [simResult, setSimResult] = useState(null);
   const [simulating, setSimulating] = useState(false);
 
-  // Auto-clear Toast
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 5000);
@@ -104,7 +89,6 @@ export default function ConfigurePaymentsPage() {
     }
   }, [toast]);
 
-  // Apply Config Data to State
   const applyConfigData = useCallback((data) => {
     if (!data) return;
     if (data.website_currency) {
@@ -118,7 +102,6 @@ export default function ConfigurePaymentsPage() {
     setPortalCurrencies(data.currencies || []);
     setMetrics(data.metrics || {});
 
-    // Initialize Routing Form state
     const initialRouting = {};
     (data.fee_purposes || []).forEach(fp => {
       const matched = (data.assignments || []).find(a => a.purpose === fp.code && (!a.hostel_id || a.hostel_id === null));
@@ -133,7 +116,6 @@ export default function ConfigurePaymentsPage() {
       };
     });
 
-    // Initialize per-hostel routes
     (data.hostels || []).forEach(h => {
       const matched = (data.assignments || []).find(a => a.purpose === 'residential_fees' && Number(a.hostel_id) === Number(h.id));
       const key = `residential_fees_hostel_${h.id}`;
@@ -151,7 +133,6 @@ export default function ConfigurePaymentsPage() {
     setRoutingForm(initialRouting);
   }, []);
 
-  // Reload Main Data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -169,7 +150,6 @@ export default function ConfigurePaymentsPage() {
     }
   }, [domain, applyConfigData]);
 
-  // Initial Data Fetch
   useEffect(() => {
     let active = true;
     async function loadInitialData() {
@@ -203,12 +183,10 @@ export default function ConfigurePaymentsPage() {
     };
   }, [domain, applyConfigData]);
 
-  // Selected Gateway Schema
   const activeGatewayObj = useMemo(() => {
     return gateways.find(g => g.code === formData.gateway_code) || gateways[0];
   }, [gateways, formData.gateway_code]);
 
-  // Count gateways supporting current institution base currency
   const compatibleGatewaysCount = useMemo(() => {
     return gateways.filter(gw => {
       const supported = Array.isArray(gw.supported_currencies) ? gw.supported_currencies : ['BDT'];
@@ -216,7 +194,6 @@ export default function ConfigurePaymentsPage() {
     }).length;
   }, [gateways, websiteCurrency]);
 
-  // Gateways displayed in the create/edit account form based on filter
   const displayedFormGateways = useMemo(() => {
     if (gatewayFilterType === 'compatible') {
       return gateways.filter(gw => {
@@ -227,7 +204,6 @@ export default function ConfigurePaymentsPage() {
     return gateways;
   }, [gateways, gatewayFilterType, websiteCurrency]);
 
-  // Filtered Accounts
   const filteredAccounts = useMemo(() => {
     return accounts.filter(acc => {
       const matchGateway = filterGateway === 'all' || acc.gateway_code === filterGateway;
@@ -241,7 +217,6 @@ export default function ConfigurePaymentsPage() {
     });
   }, [accounts, filterGateway, filterEnv, searchQuery]);
 
-  // Open Inline Account Form for Create
   const handleOpenCreateAccount = (gwCode = 'bkash') => {
     setFormMode('create');
     setEditingAccountId(null);
@@ -265,7 +240,6 @@ export default function ConfigurePaymentsPage() {
     setActiveTab('accounts');
   };
 
-  // Open Inline Account Form for Edit
   const handleOpenEditAccount = (acc) => {
     setFormMode('edit');
     setEditingAccountId(acc.id);
@@ -310,7 +284,6 @@ export default function ConfigurePaymentsPage() {
     setShowSecrets(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Test Gateway Connection
   const handleTestConnection = async (targetAccountId = null, inlineData = null) => {
     const testingKey = targetAccountId || 'form';
     setTestingAccountId(testingKey);
@@ -344,7 +317,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Save Account
   const handleSaveAccount = async (e) => {
     e.preventDefault();
     if (!formData.account_name.trim()) {
@@ -392,7 +364,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Toggle Account Active / Inactive
   const handleToggleAccountActive = async (acc) => {
     try {
       const res = await fetch(`/api/${domain}/staff/panel/configure/payments`, {
@@ -418,7 +389,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Delete Account
   const handleDeleteAccount = async (acc) => {
     if (!confirm(`Are you sure you want to delete gateway account "${acc.account_name}"?`)) {
       return;
@@ -443,7 +413,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Handle Route Assignment Change
   const handleRoutingFieldChange = (key, field, value) => {
     setRoutingForm(prev => ({
       ...prev,
@@ -454,7 +423,6 @@ export default function ConfigurePaymentsPage() {
     }));
   };
 
-  // Save Route Assignment
   const handleSaveRoute = async (key, purposeCode, hostelId = null) => {
     const routeData = routingForm[key];
     if (!routeData || !routeData.gateway_account_id) {
@@ -493,7 +461,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Reset hostel-specific route
   const handleResetHostelRoute = async (assignmentId, hostelName) => {
     if (!window.confirm(`Revert "${hostelName}" to using the All Halls default payment account?`)) {
       return;
@@ -517,7 +484,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Open Inline Currency Form for Create
   const handleOpenCreateCurrency = () => {
     setCurrencyFormMode('create');
     setCurrencyForm({
@@ -531,7 +497,6 @@ export default function ConfigurePaymentsPage() {
     setIsCurrencyFormOpen(true);
   };
 
-  // Open Inline Currency Form for Edit
   const handleOpenEditCurrency = (cur) => {
     setCurrencyFormMode('edit');
     setCurrencyForm({
@@ -546,7 +511,6 @@ export default function ConfigurePaymentsPage() {
     setIsCurrencyFormOpen(true);
   };
 
-  // Save Currency
   const handleSaveCurrency = async (e) => {
     if (e) e.preventDefault();
     if (!currencyForm.code.trim()) {
@@ -592,7 +556,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Toggle Currency Active Status
   const handleToggleCurrencyActive = async (cur) => {
     if (cur.is_base_currency) {
       setToast({ type: 'error', text: 'Cannot deactivate the primary base currency.' });
@@ -619,7 +582,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Set Currency as Base
   const handleSetBaseCurrency = async (cur) => {
     if (cur.is_base_currency) return;
     if (!window.confirm(`Set ${cur.code} (${cur.name}) as primary base currency?`)) {
@@ -648,7 +610,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Delete Currency
   const handleDeleteCurrency = async (cur) => {
     if (cur.is_base_currency) {
       setToast({ type: 'error', text: 'Cannot delete primary base currency.' });
@@ -673,7 +634,6 @@ export default function ConfigurePaymentsPage() {
     }
   };
 
-  // Run Simulator
   const handleRunSimulator = async (e) => {
     e.preventDefault();
     setSimulating(true);
@@ -711,7 +671,6 @@ export default function ConfigurePaymentsPage() {
 
   return (
     <div className="w-full space-y-4 font-sans text-slate-800 dark:text-slate-200">
-      {/* 5.1 Page Header with Actions */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">Payment Gateway Configuration</h1>
@@ -738,7 +697,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       </div>
 
-      {/* Inline Toast / Notification Banner (NO POPUP) */}
       {toast && (
         <div className={`w-full p-3 rounded-md text-xs font-medium border flex items-center justify-between ${
           toast.type === 'success'
@@ -756,7 +714,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       )}
 
-      {/* Metric Cards (High Density) */}
       <div className="w-full grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5 space-y-1">
           <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Gateway Accounts</div>
@@ -829,7 +786,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       </div>
 
-      {/* Main Tabs Navigation Bar */}
       <div className="w-full flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
         <button
           type="button"
@@ -892,12 +848,8 @@ export default function ConfigurePaymentsPage() {
         </button>
       </div>
 
-      {/* =========================================================================
-          TAB 1: GATEWAY ACCOUNTS (WITH INLINE FORM - NO POPUP)
-         ========================================================================= */}
       {activeTab === 'accounts' && (
         <div className="w-full space-y-4">
-          {/* INLINE ACCOUNT FORM (EXPANDS IN PAGE WHEN ADDING OR EDITING) */}
           {isAccountFormOpen && (
             <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4 animate-in fade-in duration-150">
               <div className="w-full flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -919,7 +871,6 @@ export default function ConfigurePaymentsPage() {
               </div>
 
               <form onSubmit={handleSaveAccount} className="space-y-4">
-                {/* Gateway Provider Selector */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -996,7 +947,6 @@ export default function ConfigurePaymentsPage() {
                     })}
                   </div>
 
-                  {/* Informative Notice if selected provider operates in an alternate currency */}
                   {Array.isArray(activeGatewayObj?.supported_currencies) &&
                     !activeGatewayObj.supported_currencies.includes(websiteCurrency) && (
                       <div className="mt-2 p-2.5 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
@@ -1010,7 +960,6 @@ export default function ConfigurePaymentsPage() {
                     )}
                 </div>
 
-                {/* Account Label & Number */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -1061,7 +1010,6 @@ export default function ConfigurePaymentsPage() {
                   </div>
                 </div>
 
-                {/* Environment Mode */}
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Environment Mode *</label>
                   <div className="flex items-center gap-4">
@@ -1091,7 +1039,6 @@ export default function ConfigurePaymentsPage() {
                   </div>
                 </div>
 
-                {/* Dynamic Credential Schema Inputs */}
                 <div className="p-3.5 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 space-y-3">
                   <div className="text-xs font-semibold text-slate-900 dark:text-white">
                     {activeGatewayObj?.name} API Credentials
@@ -1134,7 +1081,6 @@ export default function ConfigurePaymentsPage() {
                   </div>
                 </div>
 
-                {/* Notes & Checkboxes */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Internal Notes</label>
@@ -1170,7 +1116,6 @@ export default function ConfigurePaymentsPage() {
                   </div>
                 </div>
 
-                {/* Test Result Message */}
                 {testResult && (
                   <div className={`p-2.5 rounded-md text-xs border ${
                     testResult.success
@@ -1181,7 +1126,6 @@ export default function ConfigurePaymentsPage() {
                   </div>
                 )}
 
-                {/* Form Action Buttons */}
                 <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
@@ -1213,7 +1157,6 @@ export default function ConfigurePaymentsPage() {
             </div>
           )}
 
-          {/* Filter Toolbar */}
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1 min-w-[240px]">
               <input
@@ -1262,7 +1205,6 @@ export default function ConfigurePaymentsPage() {
             </div>
           </div>
 
-          {/* Accounts Grid */}
           {loading && accounts.length === 0 ? (
             <div className="py-16 text-center text-xs text-slate-400">Loading payment accounts...</div>
           ) : filteredAccounts.length === 0 ? (
@@ -1333,7 +1275,6 @@ export default function ConfigurePaymentsPage() {
                       )}
                     </div>
 
-                    {/* Masked Credentials Overview */}
                     <div className="p-2.5 rounded-md border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-[11px] space-y-1">
                       <div className="flex items-center justify-between text-slate-500 text-[10px] uppercase font-medium">
                         <span>Configured Keys</span>
@@ -1356,7 +1297,6 @@ export default function ConfigurePaymentsPage() {
                       </div>
                     </div>
 
-                    {/* Assigned Tasks Tags */}
                     {assignedTasks.length > 0 && (
                       <div className="flex flex-wrap items-center gap-1 text-[10px]">
                         <span className="text-slate-400">Routes:</span>
@@ -1371,7 +1311,6 @@ export default function ConfigurePaymentsPage() {
                       </div>
                     )}
 
-                    {/* Actions Toolbar */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                       <button
                         type="button"
@@ -1410,9 +1349,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          TAB 2: TASK & FEE ROUTING MATRIX
-         ========================================================================= */}
       {activeTab === 'routing' && (
         <div className="w-full space-y-4">
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4">
@@ -1540,7 +1476,6 @@ export default function ConfigurePaymentsPage() {
             })}
           </div>
 
-          {/* Residential Hall Overrides */}
           {hostels.length > 0 && (
             <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-3">
               <div>
@@ -1625,9 +1560,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          TAB 3: CHECKOUT SIMULATOR
-         ========================================================================= */}
       {activeTab === 'simulator' && (
         <div className="w-full space-y-4">
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4">
@@ -1638,7 +1570,6 @@ export default function ConfigurePaymentsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Simulation Form Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-4">
               <form onSubmit={handleRunSimulator} className="space-y-3">
                 <div className="space-y-1">
@@ -1715,7 +1646,6 @@ export default function ConfigurePaymentsPage() {
               </form>
             </div>
 
-            {/* Simulation Result Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-3">
               <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
                 Routing Simulation Result
@@ -1762,9 +1692,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          TAB 4: GATEWAYS GUIDE (CATALOG)
-         ========================================================================= */}
       {activeTab === 'catalog' && (
         <div className="w-full space-y-4">
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4">
@@ -1818,9 +1745,6 @@ export default function ConfigurePaymentsPage() {
         </div>
       )}
 
-      {/* =========================================================================
-          TAB 5: CURRENCIES TABLE (WITH INLINE FORM - NO POPUP)
-         ========================================================================= */}
       {activeTab === 'currencies' && (
         <div className="w-full space-y-4">
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1847,7 +1771,6 @@ export default function ConfigurePaymentsPage() {
             )}
           </div>
 
-          {/* INLINE CURRENCY FORM (EXPANDS IN PAGE WHEN ADDING OR EDITING - NO POPUP) */}
           {isCurrencyFormOpen && (
             <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4 animate-in fade-in duration-150">
               <div className="w-full flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -1982,7 +1905,6 @@ export default function ConfigurePaymentsPage() {
             </div>
           )}
 
-          {/* Currencies Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {portalCurrencies.map(cur => {
               const isBase = cur.is_base_currency || cur.code === websiteCurrency;

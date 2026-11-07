@@ -11,7 +11,7 @@ const EventsPage = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'popular' | 'rsvp'
+  const [filterTab, setFilterTab] = useState('all'); 
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -63,7 +63,6 @@ const EventsPage = () => {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors overflow-hidden">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -88,9 +87,7 @@ const EventsPage = () => {
           </div>
         </motion.div>
 
-        {/* Filter Bar & Search */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          {/* Tabs */}
           <div className="flex flex-wrap items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -132,7 +129,6 @@ const EventsPage = () => {
             </motion.button>
           </div>
 
-          {/* Search box */}
           <div className="relative w-full sm:w-72">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
             <input
@@ -145,7 +141,6 @@ const EventsPage = () => {
           </div>
         </div>
 
-        {/* Listing */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (

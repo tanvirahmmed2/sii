@@ -125,7 +125,6 @@ export default function DeveloperSettingsPage() {
     setTimeout(() => setFeedback(null), 5000);
   };
 
-  // 1. Update Profile Info
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
@@ -171,7 +170,6 @@ export default function DeveloperSettingsPage() {
     }
   };
 
-  // 2. Change Password
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
@@ -225,7 +223,6 @@ export default function DeveloperSettingsPage() {
     }
   };
 
-  // 3. Revoke Session(s)
   const handleRevokeSession = async (sessionId = null, revokeOthers = false) => {
     try {
       setRevokingSessionId(revokeOthers ? 'others' : sessionId);
@@ -259,7 +256,6 @@ export default function DeveloperSettingsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {feedback && (
         <div
           className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
@@ -279,7 +275,6 @@ export default function DeveloperSettingsPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-medium text-slate-900 dark:text-white">Account Settings</h1>
@@ -297,7 +292,6 @@ export default function DeveloperSettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column: Profile Information Form */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
             Profile Information
@@ -408,9 +402,7 @@ export default function DeveloperSettingsPage() {
           </form>
         </div>
 
-        {/* Right Column: Security (Password + Sessions) */}
         <div className="space-y-4">
-          {/* Change Password Form */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
             <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
               Change Password
@@ -467,7 +459,6 @@ export default function DeveloperSettingsPage() {
             </form>
           </div>
 
-          {/* Connected Sessions */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
               <div>

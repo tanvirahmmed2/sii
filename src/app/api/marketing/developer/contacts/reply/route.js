@@ -29,7 +29,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Reply message cannot be empty.' }, { status: 400 });
     }
 
-    // Retrieve contact record
     const contactRes = await queryDb('SELECT * FROM contacts WHERE id = $1 LIMIT 1', [id]);
     if (contactRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Contact inquiry not found.' }, { status: 404 });
@@ -38,7 +37,6 @@ export async function POST(request) {
     const contact = contactRes.rows[0];
     const dev = auth.user || auth.staff || {};
 
-    // Send email using mailer
     const emailSubject = `Re: ${contact.subject || 'Your Inquiry'} - ${SITE_NAME || 'Platform'}`;
     const formattedReplyHtml = replyText
       .split('\n')
@@ -81,7 +79,6 @@ export async function POST(request) {
       );
     }
 
-    // Update contact record in DB
     const updateRes = await queryDb(
       `UPDATE contacts
        SET admin_notes = $1,

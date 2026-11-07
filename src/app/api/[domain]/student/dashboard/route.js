@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // 1. Fetch student basic info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id,
               COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
@@ -61,7 +60,6 @@ export async function GET(request, context) {
       roll: studentRow.roll_no,
     };
 
-    // 2. Fetch Subjects Count
     let subjectsCount = 0;
     try {
       const subjectsCountRes = await queryDb(
@@ -75,7 +73,6 @@ export async function GET(request, context) {
       console.warn('Error fetching subjects count:', e.message);
     }
 
-    // 3. Fetch Attendance Stats
     let totalDays = 0;
     let presentDays = 0;
     let attendanceRate = 100;
@@ -96,7 +93,6 @@ export async function GET(request, context) {
       console.warn('Error fetching attendance stats:', e.message);
     }
 
-    // 4. Fetch Unpaid Fees & Fines Count
     let unpaidFeesCount = 0;
     let unpaidFinesCount = 0;
     try {
@@ -114,7 +110,6 @@ export async function GET(request, context) {
       console.warn('Error fetching fees stats:', e.message);
     }
 
-    // 5. Fetch Clubs Count
     let clubsCount = 0;
     try {
       const clubsRes = await queryDb(
@@ -128,7 +123,6 @@ export async function GET(request, context) {
       console.warn('Error fetching clubs count:', e.message);
     }
 
-    // 6. Fetch Upcoming Exams
     let upcomingExams = [];
     try {
       const upcomingExamsRes = await queryDb(
@@ -144,7 +138,6 @@ export async function GET(request, context) {
       console.warn('Error fetching upcoming exams:', e.message);
     }
 
-    // 7. Today's Class Routine
     let todayRoutine = [];
     try {
       const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -193,7 +186,6 @@ export async function GET(request, context) {
       student,
       todayRoutine,
       upcomingExams,
-      // Backwards-compatible payload
       payload: {
         stats,
         student,

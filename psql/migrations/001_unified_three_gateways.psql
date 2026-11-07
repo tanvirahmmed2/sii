@@ -1,0 +1,164 @@
+BEGIN;
+
+-- ============================================================================
+-- TIER 1: MAIN PLATFORM SAAS BILLING & PACKAGE CHARGE MODELS
+-- ============================================================================
+
+-- 1. Add Charge Options to `packages` (i. per_transaction, ii. per_student, or hybrid)
+ALTER TABLE packages
+  ADD COLUMN IF NOT EXISTS charge_model VARCHAR(30) NOT NULL DEFAULT 'per_transaction'
+    CHECK (charge_model IN ('per_transaction', 'per_student', 'hybrid', 'flat_subscription')),
+  ADD COLUMN IF NOT EXISTS per_tx_fee_type VARCHAR(20) NOT NULL DEFAULT 'percentage'
+    CHECK (per_tx_fee_type IN ('percentage', 'fixed')),
+  ADD COLUMN IF NOT EXISTS per_tx_fee_value NUMERIC(10,2) NOT NULL DEFAULT 2.50,
+  ADD COLUMN IF NOT EXISTS per_student_fee_usd NUMERIC(10,2) NOT NULL DEFAULT 0.50,
+  ADD COLUMN IF NOT EXISTS per_student_fee_bdt NUMERIC(10,2) NOT NULL DEFAULT 50.00,
+  ADD COLUMN IF NOT EXISTS student_fee_cycle_days INT NOT NULL DEFAULT 30;
+
+-- 2. Upgrade `payments` (Main Website Package Purchases via surjopay, paypal, paddle)
+ALTER TABLE payments
+  ALTER COLUMN payment_method SET DEFAULT 'surjopay',
+  ADD COLUMN IF NOT EXISTS gateway_order_id VARCHAR(150),
+  ADD COLUMN IF NOT EXISTS payer_email VARCHAR(150),
+  ADD COLUMN IF NOT EXISTS payer_phone VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS net_amount NUMERIC(12,2);
+
+CREATE INDEX IF NOT EXISTS idx_tier1_payments_gw_order ON payments(gateway_order_id);
+
+-- 3. Upgrade `subscriptions` to track round-time & renewal deductions for `per_student` fees
+ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS next_student_fee_deduction_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS last_student_fee_deduction_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS accumulated_student_fee_due NUMERIC(12,2) NOT NULL DEFAULT 0.00;
+
+
+-- ============================================================================
+-- TIER 2: TENANT WEBSITE ERP GATEWAYS, PAYOUT ACCOUNTS & SPLIT LEDGERS
+-- ============================================================================
+
+-- 4. Lock `website_payment_gateways` to the 3 Central Platform Gateways
+INSERT INTO website_payment_gateways (code, name, category, description, supported_currencies, credential_schema, is_active)
+VALUES
+  (
+    'surjopay',
+    'shurjoPay (bKash, Nagad, Rocket & Local/Intl Cards -> BDT)',
+    'aggregator',
+    'Platform-managed shurjoPay gateway. Settles in BDT to your configured Bank or MFS account.',
+    ARRAY['BDT', 'USD'],
+    '{"required": ["payout_method", "account_holder_name", "account_number"], "optional": ["bank_name", "branch_name", "routing_number"]}'::jsonb,
+    TRUE
+  ),
+  (
+    'paypal',
+    'PayPal Commerce Platform (Global USD / Multi-Currency)',
+    'card_processing',
+    'Global checkout via PayPal. Splits platform commission at checkout or settles to your PayPal Merchant account.',
+    ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD'],
+    '{"required": ["paypal_email"], "optional": ["paypal_merchant_id"]}'::jsonb,
+    TRUE
+  ),
+  (
+    'paddle',
+    'Paddle Billing (Global Cards, Apple Pay, PayPal & Tax Compliance)',
+    'card_international',
+    'Global checkout via Paddle Billing. Tax compliant multi-currency card processing.',
+    ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD'],
+    '{"required": ["vendor_id", "payout_email"], "optional": ["account_holder_name"]}'::jsonb,
+    TRUE
+  )
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  supported_currencies = EXCLUDED.supported_currencies,
+  credential_schema = EXCLUDED.credential_schema,
+  is_active = TRUE;
+
+-- Explicitly purge bKash, Stripe and inactive gateways
+DELETE FROM website_payment_purpose_assignments WHERE gateway_account_id IN (
+  SELECT id FROM website_payment_gateway_accounts WHERE gateway_code IN ('bkash', 'stripe', 'stripe_connect')
+);
+DELETE FROM website_payment_gateway_accounts WHERE gateway_code IN ('bkash', 'stripe', 'stripe_connect');
+DELETE FROM website_payment_gateways WHERE code IN ('bkash', 'stripe', 'stripe_connect');
+
+UPDATE website_payment_gateways
+SET is_active = FALSE
+WHERE code NOT IN ('surjopay', 'paypal', 'paddle');
+
+UPDATE payments SET payment_method = 'surjopay' WHERE payment_method IN ('bkash', 'stripe', 'stripe_connect');
+
+-- 5. Upgrade `website_payment_gateway_accounts` for Tenant Merchant/Bank Payout Accounts & Balances
+ALTER TABLE website_payment_gateway_accounts
+  ADD COLUMN IF NOT EXISTS account_type VARCHAR(30) NOT NULL DEFAULT 'merchant_payout'
+    CHECK (account_type IN ('merchant_payout', 'bank_account', 'mfs_account', 'paddle_connected', 'paypal_connected')),
+  ADD COLUMN IF NOT EXISTS payout_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS available_balance NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS pending_escrow_balance NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS total_platform_fees_paid NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT TRUE;
+
+-- 6. Upgrade `website_payment_purpose_assignments` (Supports 'all_fees' single account OR separate accounts per purpose)
+ALTER TABLE website_payment_purpose_assignments
+  DROP CONSTRAINT IF EXISTS website_payment_purpose_assignments_purpose_check;
+
+ALTER TABLE website_payment_purpose_assignments
+  ADD CONSTRAINT website_payment_purpose_assignments_purpose_check
+  CHECK (purpose IN ('all_fees', 'admission_fees', 'education_fees', 'exam_fees', 'residential_fees', 'other_fees'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ws_purpose_unique_routing
+  ON website_payment_purpose_assignments (website_id, purpose, COALESCE(hostel_id, 0));
+
+-- 7. Upgrade `website_payment_transactions` with Full Commission Split & Multi-Currency Audit Columns
+ALTER TABLE website_payment_transactions
+  ADD COLUMN IF NOT EXISTS gross_amount NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS gateway_processing_fee NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS platform_commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS merchant_net_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  ADD COLUMN IF NOT EXISTS charge_model_applied VARCHAR(30) DEFAULT 'per_transaction',
+  ADD COLUMN IF NOT EXISTS split_status VARCHAR(30) NOT NULL DEFAULT 'pending'
+    CHECK (split_status IN ('pending', 'split_at_checkout', 'credited_to_ledger', 'disbursed_to_merchant', 'failed')),
+  ADD COLUMN IF NOT EXISTS settled_currency VARCHAR(10) DEFAULT 'BDT',
+  ADD COLUMN IF NOT EXISTS exchange_rate_applied NUMERIC(12,4) DEFAULT 1.0000;
+
+UPDATE website_payment_transactions SET gross_amount = amount WHERE gross_amount IS NULL;
+
+-- 8. Create `website_platform_fee_deductions` (Records Per-Student Cycle Deductions & Renewal Deductions)
+CREATE TABLE IF NOT EXISTS website_platform_fee_deductions (
+  id BIGSERIAL PRIMARY KEY,
+  website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  subscription_id BIGINT REFERENCES subscriptions(id) ON DELETE SET NULL,
+  gateway_account_id BIGINT REFERENCES website_payment_gateway_accounts(id) ON DELETE SET NULL,
+  deduction_type VARCHAR(40) NOT NULL CHECK (deduction_type IN ('per_student_cycle', 'per_transaction_split', 'subscription_renewal_deduction')),
+  active_student_count INT NOT NULL DEFAULT 0,
+  fee_per_student NUMERIC(10,2) NOT NULL DEFAULT 0.00,
+  currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+  total_deducted_amount NUMERIC(12,2) NOT NULL,
+  deduction_method VARCHAR(50) NOT NULL CHECK (deduction_method IN ('merchant_ledger_debit', 'paddle_fee_deduction', 'paypal_fee_deduction', 'invoice_adjustment')),
+  reference_tx_id VARCHAR(150),
+  status VARCHAR(30) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'invoiced_due')),
+  billing_period_start TIMESTAMPTZ,
+  billing_period_end TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_pf_deductions_web ON website_platform_fee_deductions(website_id, created_at DESC);
+
+-- 9. Create `website_merchant_payout_ledger` (Immutable Double-Entry Ledger for Tenant Merchant Accounts)
+CREATE TABLE IF NOT EXISTS website_merchant_payout_ledger (
+  id BIGSERIAL PRIMARY KEY,
+  website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+  gateway_account_id BIGINT NOT NULL REFERENCES website_payment_gateway_accounts(id) ON DELETE CASCADE,
+  payment_transaction_id BIGINT REFERENCES website_payment_transactions(id) ON DELETE SET NULL,
+  deduction_id BIGINT REFERENCES website_platform_fee_deductions(id) ON DELETE SET NULL,
+  entry_type VARCHAR(20) NOT NULL CHECK (entry_type IN ('credit', 'debit')),
+  category VARCHAR(50) NOT NULL CHECK (category IN ('student_fee_collection', 'platform_tx_commission', 'platform_student_headcount_fee', 'merchant_withdrawal', 'refund_reversal')),
+  amount NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
+  balance_after NUMERIC(14,2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+  description TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_merch_ledger_web ON website_merchant_payout_ledger(website_id, gateway_account_id, created_at DESC);
+
+COMMIT;

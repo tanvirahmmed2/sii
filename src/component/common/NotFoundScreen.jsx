@@ -3,14 +3,11 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * Clean, minimalist 404 Not Found Component conforming strictly to STYLE.md.
- * Zero icons, compact rounded radiuses, neutral slate palette.
- */
 export default function NotFoundScreen({
   title = 'Page Not Found',
   description = 'The page or resource you are trying to access does not exist, has been removed, or is temporarily unavailable.',
   isTenant = false,
+  homeUrl = '/',
 }) {
   const router = useRouter();
   const [platformBaseUrl, setPlatformBaseUrl] = React.useState('');
@@ -62,14 +59,12 @@ export default function NotFoundScreen({
       aria-label="404 Page Not Found"
     >
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 sm:p-8 max-w-sm w-full text-center space-y-4">
-        {/* Status pill badge */}
         <div>
           <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">
             404 Error
           </span>
         </div>
 
-        {/* Heading */}
         <div className="space-y-1">
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
             {title}
@@ -79,7 +74,6 @@ export default function NotFoundScreen({
           </p>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center justify-center gap-2 pt-2">
           <button
             type="button"

@@ -61,7 +61,6 @@ export default function ContactDetailPage({ params }) {
     fetchContact(true);
   }, [fetchContact]);
 
-  // Send official email reply
   const handleSendReply = async (e) => {
     e.preventDefault();
     if (!canReply) {
@@ -99,7 +98,6 @@ export default function ContactDetailPage({ params }) {
     }
   };
 
-  // Update status
   const handleStatusChange = async (newStatus) => {
     setStatusLoading(true);
     try {
@@ -126,7 +124,6 @@ export default function ContactDetailPage({ params }) {
     }
   };
 
-  // Save internal admin notes
   const handleSaveNotes = async () => {
     setNotesSaving(true);
     try {
@@ -151,7 +148,6 @@ export default function ContactDetailPage({ params }) {
     }
   };
 
-  // Delete contact inquiry
   const handleDelete = async () => {
     if (!canDelete) {
       notify('Access denied: Permission contacts required to delete.', 'error');
@@ -208,7 +204,6 @@ export default function ContactDetailPage({ params }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
@@ -227,7 +222,6 @@ export default function ContactDetailPage({ params }) {
         </div>
       )}
 
-      {/* Navigation & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -260,7 +254,6 @@ export default function ContactDetailPage({ params }) {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Status selector */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-slate-500">Status:</span>
             <select
@@ -298,9 +291,7 @@ export default function ContactDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Inquiry Meta & Details Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Left Column: Sender Info */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
           <h2 className="text-[10px] font-semibold text-slate-400 uppercase">
             Sender Information
@@ -335,7 +326,6 @@ export default function ContactDetailPage({ params }) {
             )}
           </div>
 
-          {/* Internal Admin Notes */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
               Staff Internal Notes
@@ -358,9 +348,7 @@ export default function ContactDetailPage({ params }) {
           </div>
         </div>
 
-        {/* Right Column: Original Message & Reply Form */}
         <div className="md:col-span-2 space-y-4">
-          {/* Inquiry Message Box */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-2">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h2 className="text-xs font-semibold text-slate-800 dark:text-slate-200">Inquiry Message</h2>
@@ -373,7 +361,6 @@ export default function ContactDetailPage({ params }) {
             </div>
           </div>
 
-          {/* Email Reply Composer */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
             <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">

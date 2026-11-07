@@ -13,7 +13,6 @@ const StudentClubModeratorPage = () => {
   const [clubs, setClubs] = useState([]);
   const [selectedClubId, setSelectedClubId] = useState('');
 
-  // Manage News states
   const [editingNewsId, setEditingNewsId] = useState(null);
   const [newsTitle, setNewsTitle] = useState('');
   const [newsContent, setNewsContent] = useState('');
@@ -59,7 +58,6 @@ const StudentClubModeratorPage = () => {
     }
   }, [selectedClubId, currentClub]);
 
-  // Image handler
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -75,7 +73,6 @@ const StudentClubModeratorPage = () => {
     }
   };
 
-  // Save News (Moderator)
   const handleSaveNews = async (e) => {
     e.preventDefault();
     if (!newsTitle || !newsContent) {
@@ -115,7 +112,6 @@ const StudentClubModeratorPage = () => {
     }
   };
 
-  // Delete News
   const handleDeleteNews = async (newsId) => {
     if (!confirm('Delete this news post?')) return;
     try {
@@ -168,7 +164,6 @@ const StudentClubModeratorPage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -201,7 +196,6 @@ const StudentClubModeratorPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        {/* News Article Form */}
         <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
             <h2 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -268,7 +262,6 @@ const StudentClubModeratorPage = () => {
           </form>
         </div>
 
-        {/* News List */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center justify-between">
             <h2 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">

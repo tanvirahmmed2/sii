@@ -80,7 +80,6 @@ export async function POST(request) {
     let slug = generateFeatureKey(data.key || data.slug || name);
     if (!slug) slug = `feat-${Date.now()}`;
 
-    // Ensure unique slug
     const keyCheck = await queryDb('SELECT id FROM website_control_modules WHERE LOWER(slug) = LOWER($1) LIMIT 1', [slug]);
     if (keyCheck.rows.length > 0) {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 
-// GET: Fetch teacher attendance roster for a date or specific teacher
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -14,9 +13,8 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
     const teacherId = searchParams.get('teacher_id');
-    const month = searchParams.get('month'); // e.g. '2026-10'
+    const month = searchParams.get('month'); 
 
-    // If teacher_id and month are provided, fetch monthly history for this teacher
     if (teacherId && month) {
       const res = await queryDb(
         `SELECT wta.id, wta.date, wta.status, wta.in_time, wta.out_time, wta.remark,
@@ -31,7 +29,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, attendance: res.rows });
     }
 
-    // Daily roster: Return all active teachers with their attendance record for this date
     const res = await queryDb(
       `SELECT wt.id AS teacher_id, wt.name AS teacher_name, wt.email AS teacher_email,
               wt.number AS teacher_number, wt.photo_url,
@@ -47,7 +44,6 @@ export async function GET(request, context) {
       [website.id, date]
     );
 
-    // Summary counts
     const present = res.rows.filter((r) => r.status === 'present').length;
     const absent = res.rows.filter((r) => r.status === 'absent').length;
     const late = res.rows.filter((r) => r.status === 'late').length;
@@ -73,7 +69,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Take / update attendance (single or batch)
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');

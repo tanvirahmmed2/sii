@@ -12,11 +12,11 @@ export default function StudentCardsPortfolioPage() {
   const { getApiEndpoint, tenantUrl, website } = useTenantWebsite();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
-  const [selectedFilter, setSelectedFilter] = useState('all'); // 'all' | 'identity' | 'admit' | 'campus'
+  const [selectedFilter, setSelectedFilter] = useState('all'); 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedExamId, setExpandedExamId] = useState(null);
   const [activeModalCard, setActiveModalCard] = useState(null);
-  const [idCardSide, setIdCardSide] = useState('front'); // 'front' | 'back'
+  const [idCardSide, setIdCardSide] = useState('front'); 
 
   useEffect(() => {
     const fetchCards = async () => {
@@ -44,10 +44,8 @@ export default function StudentCardsPortfolioPage() {
   const institution = data?.institution || website || {};
   const allCards = useMemo(() => data?.cards || [], [data?.cards]);
 
-  // Filter cards based on tab and search
   const filteredCards = useMemo(() => {
     return allCards.filter((card) => {
-      // Tab matching
       if (selectedFilter === 'identity') {
         if (card.type !== 'id_card' && card.type !== 'registration_card') return false;
       } else if (selectedFilter === 'admit') {
@@ -56,7 +54,6 @@ export default function StudentCardsPortfolioPage() {
         if (card.type !== 'library_card' && card.type !== 'residence_card') return false;
       }
 
-      // Query matching
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const titleMatch = card.title?.toLowerCase().includes(q);
@@ -70,7 +67,6 @@ export default function StudentCardsPortfolioPage() {
     });
   }, [allCards, selectedFilter, searchQuery]);
 
-  // Statistics
   const stats = useMemo(() => {
     const total = allCards.length;
     const active = allCards.filter((c) => c.status === 'active').length;
@@ -78,7 +74,6 @@ export default function StudentCardsPortfolioPage() {
     return { total, active, admitCount };
   }, [allCards]);
 
-  // Generic Printable Popup for Library, Hostel & Registration Cards
   const handlePrintGenericCard = (card) => {
     if (typeof window === 'undefined') return;
     const printWindow = window.open('', '_blank', 'width=850,height=920');
@@ -297,7 +292,6 @@ export default function StudentCardsPortfolioPage() {
     printWindow.focus();
   };
 
-  // Central Card Print Handler
   const handlePrintCard = (card) => {
     if (card.type === 'id_card') {
       printStudentIDCard({
@@ -324,7 +318,6 @@ export default function StudentCardsPortfolioPage() {
 
   return (
     <div className="w-full space-y-5 pb-12">
-      {/* Page Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-3">
         <div>
           <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
@@ -361,7 +354,6 @@ export default function StudentCardsPortfolioPage() {
         </div>
       </div>
 
-      {/* Candidate Enrollment Banner */}
       {student && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-center gap-3.5">
@@ -388,7 +380,6 @@ export default function StudentCardsPortfolioPage() {
             </div>
           </div>
 
-          {/* Quick Metrics */}
           <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 pt-3 md:pt-0 md:pl-5 shrink-0">
             <div className="text-center">
               <p className="text-xs text-slate-400">Total Cards</p>
@@ -408,9 +399,7 @@ export default function StudentCardsPortfolioPage() {
         </div>
       )}
 
-      {/* Filter Tabs & Search Bar */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { id: 'all', label: 'All Cards', count: allCards.length },
@@ -442,7 +431,6 @@ export default function StudentCardsPortfolioPage() {
           ))}
         </div>
 
-        {/* Search Input */}
         <div className="w-full sm:w-64">
           <input
             type="text"
@@ -454,7 +442,6 @@ export default function StudentCardsPortfolioPage() {
         </div>
       </div>
 
-      {/* Cards Portfolio Grid */}
       {filteredCards.length === 0 ? (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-10 text-center space-y-2">
           <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">No Matching Cards Found</p>
@@ -482,23 +469,18 @@ export default function StudentCardsPortfolioPage() {
                 key={card.id}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs hover:shadow-md transition-shadow flex flex-col justify-between"
               >
-                {/* Physical Card Mockup Header */}
                 <div className={`p-4 bg-gradient-to-br ${card.gradient || 'from-slate-800 to-slate-950'} text-white relative overflow-hidden`}>
-                  {/* Subtle Background Pattern */}
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:12px_12px]" />
 
-                  {/* Header Row: Badge & Chip Icon */}
                   <div className="relative z-10 flex items-center justify-between pb-2">
                     <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-white/20 backdrop-blur-xs text-white">
                       {card.badge}
                     </span>
-                    {/* Chip Graphic */}
                     <div className="w-7 h-5 rounded bg-amber-400/80 border border-amber-300/90 flex items-center justify-center">
                       <div className="w-4 h-3 border border-amber-600/60 rounded-xs" />
                     </div>
                   </div>
 
-                  {/* Title & Subtitle */}
                   <div className="relative z-10 pt-1 space-y-0.5">
                     <h3 className="text-sm font-bold tracking-tight text-white leading-tight">
                       {card.title}
@@ -508,7 +490,6 @@ export default function StudentCardsPortfolioPage() {
                     </p>
                   </div>
 
-                  {/* Monospace Permit Number */}
                   <div className="relative z-10 pt-4 flex items-center justify-between">
                     <div>
                       <p className="text-[9px] uppercase tracking-wider text-white/60">Credential Number</p>
@@ -516,7 +497,6 @@ export default function StudentCardsPortfolioPage() {
                         {card.card_number}
                       </p>
                     </div>
-                    {/* Status Pill */}
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
                       card.status === 'active'
                         ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40'
@@ -527,7 +507,6 @@ export default function StudentCardsPortfolioPage() {
                   </div>
                 </div>
 
-                {/* Card Meta Details */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
@@ -544,7 +523,6 @@ export default function StudentCardsPortfolioPage() {
                     </div>
                   </div>
 
-                  {/* Key Highlights */}
                   {card.details && (
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
                       {Object.entries(card.details).slice(0, 4).map(([k, v]) => (
@@ -556,7 +534,6 @@ export default function StudentCardsPortfolioPage() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                     <button
                       type="button"
@@ -588,7 +565,6 @@ export default function StudentCardsPortfolioPage() {
                   </div>
                 </div>
 
-                {/* Inline Timetable for Admit Cards */}
                 {isExpanded && (
                   <div className="p-3 bg-slate-50 dark:bg-slate-850 border-t border-slate-200 dark:border-slate-800 text-xs space-y-2">
                     <span className="font-semibold text-slate-800 dark:text-slate-200 block text-[11px] uppercase tracking-wider">
@@ -623,11 +599,9 @@ export default function StudentCardsPortfolioPage() {
         </div>
       )}
 
-      {/* Card Inspection Modal */}
       {activeModalCard && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -646,9 +620,7 @@ export default function StudentCardsPortfolioPage() {
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className="p-5 overflow-y-auto space-y-4">
-              {/* If ID Card: Provide Flip Toggle */}
               {activeModalCard.type === 'id_card' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-center gap-2">
@@ -721,7 +693,6 @@ export default function StudentCardsPortfolioPage() {
                 </div>
               )}
 
-              {/* Comprehensive Card Metadata Table */}
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-lg p-3.5 space-y-2 border border-slate-200 dark:border-slate-700/60 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -765,7 +736,6 @@ export default function StudentCardsPortfolioPage() {
                 )}
               </div>
 
-              {/* If Admit Card: Show Examination Routine Timetable */}
               {activeModalCard.type === 'admit_card' && (
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -803,7 +773,6 @@ export default function StudentCardsPortfolioPage() {
               )}
             </div>
 
-            {/* Modal Footer */}
             <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/80">
               <button
                 type="button"

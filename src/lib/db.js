@@ -1,9 +1,5 @@
 import pool, { query, queryDb } from './database/db.js';
 
-/**
- * Execute a callback within an isolated tenant transaction.
- * Automatically handles BEGIN, COMMIT, and ROLLBACK.
- */
 export async function withTenantTransaction(websiteId, callback) {
   const client = await pool.connect();
   try {

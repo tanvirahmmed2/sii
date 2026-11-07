@@ -5,10 +5,6 @@ import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateway
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay/exam-fees
- * Look up student examination fee invoices and admit clearance status.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -19,7 +15,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const identifier = (searchParams.get('identifier') || '').trim();
 
-    // Fetch assigned gateways specifically for exam fees
     const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'exam_fees');
 
     if (!identifier) {
@@ -90,7 +85,6 @@ export async function GET(request, context) {
       masked_phone: maskPhone(row.raw_phone)
     };
 
-    // Fetch unpaid exam fees
     const feeRes = await queryDb(`
       SELECT p.id, p.invoice_no, p.title, p.amount, p.currency, p.payment_status,
              e.name AS exam_name, p.amount AS net_due
@@ -128,10 +122,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/pay/exam-fees
- * Settle examination fee and automatically issue candidate admit card.
- */
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -184,7 +174,6 @@ export async function POST(request, context) {
       if (match) finalAccountId = match.id;
     }
 
-    // Update exam fee invoice
     await client.query(`
       UPDATE website_exam_fee_payments
       SET payment_status = 'paid',
@@ -197,7 +186,6 @@ export async function POST(request, context) {
       WHERE id = $3
     `, [gw, txnId, inv.id]);
 
-    // Unlock and issue admit card in candidates table
     if (inv.exam_id && inv.student_id) {
       await client.query(`
         UPDATE website_exam_candidates
@@ -206,7 +194,6 @@ export async function POST(request, context) {
       `, [website.id, inv.exam_id, inv.student_id]);
     }
 
-    // Record in transaction audit
     await client.query(`
       INSERT INTO website_payment_transactions (
         website_id, gateway_account_id, gateway_code, purpose, invoice_ref,

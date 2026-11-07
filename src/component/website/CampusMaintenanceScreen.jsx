@@ -16,18 +16,15 @@ export default function CampusMaintenanceScreen() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-between bg-slate-950 text-slate-100 p-4 sm:p-8 relative overflow-hidden select-none">
-      {/* Background Decorative Glow */}
       <div
         className="absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[128px] opacity-25 pointer-events-none"
         style={{ backgroundColor: primaryColor || '#1e40af' }}
       />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full blur-[128px] bg-sky-600 opacity-20 pointer-events-none" />
 
-      {/* Top Header */}
       <header className="w-full max-w-4xl flex items-center justify-between py-4 border-b border-slate-800/80 z-10">
         <div className="flex items-center gap-3">
           {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={logo} alt={name} className="w-10 h-10 object-contain rounded p-1 bg-white/5 border border-white/10" />
           ) : (
             <div
@@ -54,9 +51,7 @@ export default function CampusMaintenanceScreen() {
         </Link>
       </header>
 
-      {/* Central Announcement Card */}
       <main className="w-full max-w-2xl my-auto py-12 z-10 text-center space-y-6">
-        {/* Status Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold tracking-wide uppercase">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
@@ -65,17 +60,14 @@ export default function CampusMaintenanceScreen() {
           System Maintenance Active
         </div>
 
-        {/* Headline */}
         <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
           Enhancing Our Digital Campus
         </h2>
 
-        {/* Message */}
         <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed bg-slate-900/50 p-6 rounded-2xl border border-slate-800/80 shadow-2xl backdrop-blur-md">
           {maintenanceMessage}
         </p>
 
-        {/* Fast Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <Link
             href="/auth/access"
@@ -94,7 +86,6 @@ export default function CampusMaintenanceScreen() {
         </div>
       </main>
 
-      {/* Bottom Campus Helplines & Location */}
       <footer className="w-full max-w-4xl py-6 border-t border-slate-800/80 z-10 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-400">
         {website?.contact_phone && (
           <div className="flex items-center gap-2.5">

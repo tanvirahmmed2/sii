@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET ALL CONTACTS (Staff access)
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'contacts');
@@ -86,7 +85,6 @@ export async function GET(request) {
   }
 }
 
-// POST is disabled: Contacts must originate exclusively from public visitors on the contact page
 export async function POST() {
   return NextResponse.json(
     { success: false, error: 'Manual contact creation is disabled. Contacts can only be submitted via the public contact page.' },
@@ -94,7 +92,6 @@ export async function POST() {
   );
 }
 
-// UPDATE CONTACT (Staff update)
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'contacts');
@@ -143,7 +140,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE CONTACT
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'contacts');

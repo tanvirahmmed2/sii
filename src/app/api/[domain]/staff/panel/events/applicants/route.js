@@ -10,7 +10,6 @@ async function verifyStaffOrOfficerAccess(request, context) {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  // 1. Staff session
   try {
     const staffSession = await getStaffSession(request);
     if (staffSession) {
@@ -34,7 +33,6 @@ async function verifyStaffOrOfficerAccess(request, context) {
     console.warn('Error checking staff session:', e?.message);
   }
 
-  // 2. Officer session
   try {
     const officerSession = await getOfficerSession(request);
     if (officerSession) {
@@ -61,7 +59,6 @@ async function verifyStaffOrOfficerAccess(request, context) {
   return { error: 'Unauthorized: Staff or Officer login required.', status: 401 };
 }
 
-// GET: Fetch applicants with optional filters
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context);
@@ -134,7 +131,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Update applicant status ('approved', 'rejected', 'registered', etc.)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context);
@@ -175,7 +171,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove an applicant
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context);

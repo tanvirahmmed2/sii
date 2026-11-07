@@ -12,7 +12,6 @@ export default function DeveloperPoliciesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // In-page Editor states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
   const [formData, setFormData] = useState({
@@ -220,7 +219,6 @@ export default function DeveloperPoliciesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-2">
@@ -263,7 +261,6 @@ export default function DeveloperPoliciesPage() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback.message && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-normal ${
@@ -283,7 +280,6 @@ export default function DeveloperPoliciesPage() {
         </div>
       )}
 
-      {/* In-Page Create / Edit Panel */}
       {isEditorOpen && (
         <div
           ref={editorRef}
@@ -370,9 +366,7 @@ export default function DeveloperPoliciesPage() {
         </div>
       )}
 
-      {/* Main List Card */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
-        {/* Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
             <input
@@ -415,7 +409,6 @@ export default function DeveloperPoliciesPage() {
           </div>
         </div>
 
-        {/* Policies Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

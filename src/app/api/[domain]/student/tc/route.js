@@ -18,7 +18,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Student profile info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id,
               COALESCE(s.name, i.data->>'name') AS name, s.email, s.number, s.date_of_birth, s.admission_date,
@@ -40,7 +39,6 @@ export async function GET(request, context) {
     }
     const student = studentRes.rows[0];
 
-    // Fetch issued TC
     let tc = null;
     try {
       const tcRes = await queryDb(
@@ -59,7 +57,6 @@ export async function GET(request, context) {
       console.warn('Error fetching student TC record:', e);
     }
 
-    // Fetch active TC template
     let template = null;
     try {
       const tplRes = await queryDb(

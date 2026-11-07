@@ -10,16 +10,14 @@ export default function LibraryBookCategoryPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
+  const [modalMode, setModalMode] = useState('add'); 
   const [currentCategory, setCurrentCategory] = useState(null);
   const [formData, setFormData] = useState({ name: '', code: '', description: '', is_active: true });
   const [submitting, setSubmitting] = useState(false);
@@ -47,12 +45,10 @@ export default function LibraryBookCategoryPage() {
     loadCategories();
   }, [loadCategories]);
 
-  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, pageSize]);
 
-  // Filtered and paginated rows
   const filteredCategories = useMemo(() => {
     return categories.filter((c) => {
       const matchSearch =
@@ -153,7 +149,6 @@ export default function LibraryBookCategoryPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -171,7 +166,6 @@ export default function LibraryBookCategoryPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -210,7 +204,6 @@ export default function LibraryBookCategoryPage() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -229,7 +222,6 @@ export default function LibraryBookCategoryPage() {
         </div>
       )}
 
-      {/* Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex-1 max-w-sm">
@@ -262,7 +254,6 @@ export default function LibraryBookCategoryPage() {
           </div>
         </div>
 
-        {/* Categories Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -339,7 +330,6 @@ export default function LibraryBookCategoryPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
@@ -377,7 +367,6 @@ export default function LibraryBookCategoryPage() {
         </div>
       </div>
 
-      {/* Modal: Add / Edit Category */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-4 shadow-xl space-y-3">
@@ -474,7 +463,6 @@ export default function LibraryBookCategoryPage() {
         </div>
       )}
 
-      {/* Modal: Delete Confirmation */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

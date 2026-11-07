@@ -60,7 +60,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE SUBSCRIPTION FOR CREATOR (PAID OR UNPAID)
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
@@ -71,7 +70,6 @@ export async function POST(request) {
     const body = await request.json();
     const data = body.data || body;
 
-    // 1. Resolve & validate Creator
     const creatorEmail = (data.creator_email || data.email || '').trim().toLowerCase();
     const creatorIdInput = data.creator_id ? Number(data.creator_id) : null;
 
@@ -106,7 +104,6 @@ export async function POST(request) {
 
     const creatorId = Number(creator.id);
 
-    // 2. Resolve & validate Package
     const packageId = Number(data.package_id);
     if (!packageId || isNaN(packageId)) {
       return NextResponse.json({ success: false, error: 'Package ID is required.' }, { status: 400 });
@@ -118,8 +115,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Selected package does not exist.' }, { status: 404 });
     }
 
-    // 3. Duration & Billing Cycle Calculation
-    // duration_type: 'monthly', 'yearly', 'multiple_months', 'multiple_years', 'custom'
     const durationType = (data.duration_type || 'monthly').toLowerCase();
     const durationMultiplier = Math.max(1, parseInt(data.duration_multiplier, 10) || 1);
 
@@ -146,13 +141,11 @@ export async function POST(request) {
       periodEnd = new Date(data.period_end);
       billingCycle = 'custom';
     } else {
-      // Default: 1 month
       monthsSpan = 1;
       billingCycle = 'monthly';
       periodEnd.setMonth(periodEnd.getMonth() + 1);
     }
 
-    // 4. Amount and Currency Calculation
     const currency = (data.currency || 'USD').toUpperCase();
     let calculatedAmount = 0;
 
@@ -177,8 +170,6 @@ export async function POST(request) {
       }
     }
 
-    // 5. Payment Status: PAID vs UNPAID
-    // Strict uppercase token generation with NO prefixes/suffixes:
     const purchaseCode = generateToken(12);
     const transactionId = generateToken(14);
 
@@ -200,7 +191,6 @@ export async function POST(request) {
 
     const notes = (data.notes || (isPaid ? 'Developer grant - Paid' : 'Developer custom subscription - Awaiting payment')).trim();
 
-    // 6. Insert Purchase Record
     const puRes = await queryDb(
       `INSERT INTO purchases (
         creator_id, package_id, purchase_code, billing_cycle,
@@ -219,7 +209,6 @@ export async function POST(request) {
     );
     const purchase = puRes.rows[0];
 
-    // 7. Insert Payment Record
     const payRes = await queryDb(
       `INSERT INTO payments (
         purchase_id, creator_id, transaction_id, amount, currency,
@@ -236,7 +225,6 @@ export async function POST(request) {
     );
     const payment = payRes.rows[0];
 
-    // 8. Insert or Update Subscriptions Record
     const websiteIdInput = data.website_id ? Number(data.website_id) : null;
     let subscription = null;
     try {
@@ -256,7 +244,6 @@ export async function POST(request) {
       console.warn('Notice inserting subscription record:', subErr.message);
     }
 
-    // 9. Update website subscription expiration and link if website exists
     if (subscription?.id) {
       if (websiteIdInput) {
         await queryDb(
@@ -291,7 +278,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE SUBSCRIPTION
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
@@ -338,7 +324,6 @@ export async function PUT(request) {
 
     const updatedPurchase = res.rows[0];
 
-    // If purchase status updated, sync subscriptions table status
     if (updatedPurchase) {
       const newSubStatus = updatedPurchase.status === 'completed' ? 'active' : (updatedPurchase.status === 'cancelled' ? 'cancelled' : 'past_due');
       await queryDb(
@@ -356,7 +341,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE SUBSCRIPTION
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
@@ -371,7 +355,6 @@ export async function DELETE(request) {
     }
     if (!id) return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
 
-    // Cascades or deletes linked payments and subscriptions
     await queryDb('DELETE FROM payments WHERE purchase_id = $1', [id]).catch(() => {});
     await queryDb('DELETE FROM subscriptions WHERE purchase_id = $1', [id]).catch(() => {});
     await queryDb('DELETE FROM purchases WHERE id = $1', [id]);

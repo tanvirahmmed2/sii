@@ -7,8 +7,6 @@ import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
-
-// GET: Fetch students with academic metadata, filters, stats, and search
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -24,13 +22,12 @@ export async function GET(request, context) {
     const classId = searchParams.get('class_id');
     const sectionId = searchParams.get('section_id');
     const sessionId = searchParams.get('session_id');
-    const status = searchParams.get('status'); // 'all', 'pending_setup', 'submitted', 'verified', 'rejected'
+    const status = searchParams.get('status'); 
     const search = searchParams.get('search')?.trim();
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
     const offset = (page - 1) * limit;
 
-    // Single student detail fetch
     if (id) {
       const singleRes = await queryDb(
         `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
@@ -93,7 +90,6 @@ export async function GET(request, context) {
       });
     }
 
-    // List query with filters
     const conditions = ['s.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -139,7 +135,6 @@ export async function GET(request, context) {
     );
     const totalCount = countRes.rows[0]?.total || 0;
 
-    // Fetch roster with full student, guardian, and address details in one row
     const rosterQuery = `
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
              s.department_id, s.class_id, s.section_id, s.session_id, s.is_active,
@@ -192,7 +187,6 @@ export async function GET(request, context) {
 
     const rosterRes = await queryDb(rosterQuery, [...values, limit, offset]);
 
-    // Aggregate statistics
     const statsRes = await queryDb(
       `SELECT
          COUNT(*)::int AS total,
@@ -207,7 +201,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // Fetch active form fields / custom columns configured for the students table
     const fieldsRes = await queryDb(
       `SELECT * FROM website_form_fields WHERE website_id = $1 AND is_active = TRUE ORDER BY sort_order ASC, id ASC`,
       [website.id]
@@ -234,7 +227,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Register single student (takes only required info in website_students table: department_id, session_id, class_id, section_id, registration_no, roll_no, email)
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -278,7 +270,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Please enter a valid student email address.' }, { status: 400 });
       }
 
-      // Check cross-role email uniqueness across students, staff, teachers, officers, and applicants
       const emailAvail = await checkInstitutionEmailAvailability(website.id, cleanEmail);
       if (!emailAvail.available) {
         return NextResponse.json(
@@ -288,13 +279,11 @@ export async function POST(request, context) {
       }
     }
 
-    // Do not add or allow REG- prefix in registration number
     const regNo = registration_no.trim().replace(/^REG-?/i, '');
     if (!regNo) {
       return NextResponse.json({ success: false, error: 'Registration number is required.' }, { status: 400 });
     }
 
-    // Check duplicate registration_no in website_students (case-insensitive and trimmed)
     const duplicateReg = await queryDb(
       `SELECT id FROM website_students WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2)) LIMIT 1`,
       [website.id, regNo]
@@ -306,10 +295,8 @@ export async function POST(request, context) {
       );
     }
 
-    // Unique student identifier
     const studentUniqueId = `STU-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
 
-    // Insert only required information into website_students table
     const insertRes = await queryDb(
       `INSERT INTO website_students (
           website_id, department_id, session_id, class_id, section_id,
@@ -332,7 +319,6 @@ export async function POST(request, context) {
 
     const newStudent = insertRes.rows[0];
 
-    // Modular profile insertion if additional data was provided
     const customFields = body.custom_fields && typeof body.custom_fields === 'object' ? body.custom_fields : {};
     const infoData = {
       name: body.name?.trim() || null,
@@ -392,7 +378,6 @@ export async function POST(request, context) {
       `, [website.id, newStudent.id, JSON.stringify(addrData)]);
     }
 
-    // If student email is provided, send invitation to setup account via website mailer
     let setupUrl = `/auth/student/setup?email=${encodeURIComponent(cleanEmail || '')}`;
     if (cleanEmail) {
       try {
@@ -432,7 +417,6 @@ export async function POST(request, context) {
       }
     }
 
-
     return NextResponse.json({
       success: true,
       message: 'Student registered successfully in website_students table. Setup email sent.',
@@ -447,7 +431,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update student record (basic, academic, address, guardian, dropout status, or bulk migration)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'edit');
@@ -458,7 +441,6 @@ export async function PUT(request, context) {
     const { website } = auth;
     const body = await request.json();
 
-    // Bulk migration
     if (body.action === 'migrate' && Array.isArray(body.student_ids) && body.student_ids.length > 0) {
       const { student_ids, target_session_id, target_class_id, target_section_id } = body;
       const updateParams = [website.id, student_ids];
@@ -492,7 +474,6 @@ export async function PUT(request, context) {
       });
     }
 
-    // Toggle drop out / active status
     if (body.action === 'toggle_dropout' || body.action === 'toggle_active') {
       const { student_id, is_active } = body;
       if (!student_id) {
@@ -506,7 +487,6 @@ export async function PUT(request, context) {
         [Boolean(is_active), website.id, student_id]
       );
 
-      // Synchronize with website_student_exits
       if (!is_active) {
         const stuInfo = await queryDb(
           `SELECT class_id, section_id, session_id FROM website_students WHERE website_id = $1 AND id = $2`,
@@ -543,13 +523,11 @@ export async function PUT(request, context) {
       });
     }
 
-    // Single student profile update
     const studentId = body.id || body.student_id;
     if (!studentId) {
       return NextResponse.json({ success: false, error: 'Student ID is required.' }, { status: 400 });
     }
 
-    // Academic & Core Fields in website_students
     const sFields = [];
     const sValues = [website.id, studentId];
     let sIdx = 3;
@@ -626,7 +604,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Personal & Info fields in website_student_info (Modular)
     const infoPayload = {
       ...(body.name !== undefined ? { name: body.name?.trim() || null } : {}),
       ...(cleanUpdateEmail !== undefined ? { email: cleanUpdateEmail } : {}),
@@ -649,7 +626,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Address upsert (Modular)
     if (body.address) {
       const a = body.address;
       await queryDb(
@@ -669,7 +645,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Guardian upsert (Modular)
     if (body.guardian) {
       const g = body.guardian;
       await queryDb(
@@ -689,7 +664,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Media: Student Picture upsert
     if (body.image_url !== undefined && body.image_url?.trim()) {
       await queryDb(
         `INSERT INTO website_student_pictures (website_id, student_id, image_url, is_primary)
@@ -698,7 +672,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Media: Student Signature upsert
     if (body.signature_url !== undefined && body.signature_url?.trim()) {
       await queryDb(
         `INSERT INTO website_student_signatures (website_id, student_id, signature_url, updated_at)
@@ -719,7 +692,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete student record(s)
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'delete');

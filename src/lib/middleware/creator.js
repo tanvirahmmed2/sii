@@ -13,7 +13,6 @@ import {
 const DEFAULT_JWT_SECRET = JWT_SECRET 
 const CREATOR_COOKIE_NAME = CREATOR_TOKEN;
 
-// Password helpers
 export async function hashPassword(password) {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
@@ -24,7 +23,6 @@ export async function comparePassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
-// JWT helpers
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -41,14 +39,13 @@ export function verifyJWT(token) {
   }
 }
 
-// Cookie helpers
 export async function setCreatorSessionCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -72,9 +69,6 @@ export async function clearCreatorSessionCookie(response) {
   }
 }
 
-/**
- * Extracts and decodes active creator session from request or cookies
- */
 export async function getCreatorSession(request) {
   try {
     let token = null;
@@ -112,7 +106,6 @@ export async function getCreatorSession(request) {
 
     if (!c.is_active) return null;
 
-    // Check creator_login_sessions for revocation and activity
     if (!token) return null;
     try {
       const sessRes = await query(
@@ -120,13 +113,12 @@ export async function getCreatorSession(request) {
         [token, c.id]
       );
       if (sessRes.rows.length === 0) {
-        return null; // Session record does not exist in database
+        return null; 
       }
       const s = sessRes.rows[0];
       if (s.is_active === false) return null;
       if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
 
-      // Touch last_active_at asynchronously
       query(
         `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
         [token]
@@ -144,7 +136,6 @@ export async function getCreatorSession(request) {
       bio: c.bio || null,
       avatarUrl: c.avatar_url || null,
       authProvider: c.auth_provider || 'local',
-      googleId: c.google_id || null,
       isActive: c.is_active,
       isVerified: c.is_verified || c.email_verified || false,
       createdAt: c.created_at,
@@ -156,9 +147,6 @@ export async function getCreatorSession(request) {
   }
 }
 
-/**
- * Direct email/password authentication handler for creators
- */
 export async function authenticateCreator(email, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
   const cleanEmail = String(email || '').trim().toLowerCase();
 
@@ -180,21 +168,14 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     throw err;
   }
 
-  if (!creator.password && (creator.auth_provider === 'google' || creator.google_id)) {
-    const err = new Error('This account was registered using Google. Please log in with Google.');
+  if (!creator.password) {
+    const err = new Error('No password is set for this account. Please use password recovery.');
     err.status = 400;
-    err.googleAuth = true;
     throw err;
   }
 
   const isMatch = await comparePassword(password, creator.password);
   if (!isMatch) {
-    if (creator.auth_provider === 'google') {
-      const err = new Error('This account was registered using Google. Please log in with Google.');
-      err.status = 400;
-      err.googleAuth = true;
-      throw err;
-    }
     throw new Error('Incorrect email or password.');
   }
 
@@ -207,7 +188,6 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     throw err;
   }
 
-  // Handle 2FA if active code is present
   if (creator.two_factor_code && creator.two_factor_expires && new Date(creator.two_factor_expires) > new Date()) {
     if (!twoFactorCode) {
       const err = new Error('Two-factor authentication code required.');
@@ -231,7 +211,6 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     type: 'creator',
   });
 
-  // Update last_login_at and insert into creator_login_sessions
   try {
     await queryDb(
       `UPDATE creators SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -247,7 +226,6 @@ export async function authenticateCreator(email, password, { ip = '127.0.0.1', u
     console.warn('Notice saving creator login session:', e.message);
   }
 
-  // Set cookie
   await setCreatorSessionCookie(null, token);
 
   return {
@@ -284,9 +262,6 @@ export {
   clearWebsiteCache,
 };
 
-/**
- * Get the currently authenticated website user from request cookie/header.
- */
 export async function getWebsiteUserSession(request) {
   try {
     let token = null;
@@ -312,9 +287,6 @@ export async function getWebsiteUserSession(request) {
   }
 }
 
-/**
- * Get user roles and permissions for a given website.
- */
 export async function getUserRolesAndPermissions(userId, websiteId) {
   try {
     const res = await query(

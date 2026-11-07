@@ -7,19 +7,16 @@ export default function LibraryShelvesWorkstation() {
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // View Mode: 'cards' | 'table'
   const [viewMode, setViewMode] = useState('cards');
 
-  // Add / Edit Modal
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
+  const [modalMode, setModalMode] = useState('add'); 
   const [currentItem, setCurrentItem] = useState(null);
   const [formData, setFormData] = useState({
     shelf_name: '',
@@ -33,15 +30,12 @@ export default function LibraryShelvesWorkstation() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Shelf Book Roster Drawer / Modal
   const [rosterShelf, setRosterShelf] = useState(null);
   const [rosterBooks, setRosterBooks] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
 
-  // Delete State
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Load Shelves
   const loadShelves = useCallback(async () => {
     setLoading(true);
     try {
@@ -76,7 +70,6 @@ export default function LibraryShelvesWorkstation() {
     return shelves.slice(start, start + pageSize);
   }, [shelves, currentPage, pageSize]);
 
-  // Open Add Modal
   const handleOpenAdd = () => {
     setModalMode('add');
     setCurrentItem(null);
@@ -93,7 +86,6 @@ export default function LibraryShelvesWorkstation() {
     setModalOpen(true);
   };
 
-  // Open Edit Modal
   const handleOpenEdit = (shelf) => {
     setModalMode('edit');
     setCurrentItem(shelf);
@@ -110,7 +102,6 @@ export default function LibraryShelvesWorkstation() {
     setModalOpen(true);
   };
 
-  // Open Book Roster
   const handleOpenRoster = async (shelf) => {
     setRosterShelf(shelf);
     setRosterLoading(true);
@@ -130,7 +121,6 @@ export default function LibraryShelvesWorkstation() {
     }
   };
 
-  // Submit Add / Edit
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -163,7 +153,6 @@ export default function LibraryShelvesWorkstation() {
     }
   };
 
-  // Delete Shelf
   const handleDeleteShelf = async () => {
     if (!deleteTarget) return;
     setSubmitting(true);
@@ -185,7 +174,6 @@ export default function LibraryShelvesWorkstation() {
     }
   };
 
-  // Helper for Occupancy Color
   const getOccupancyColor = (percentage) => {
     if (percentage >= 100) return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800';
     if (percentage >= 80) return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800';
@@ -200,7 +188,6 @@ export default function LibraryShelvesWorkstation() {
 
   return (
     <div className="w-full space-y-4">
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -253,7 +240,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -272,7 +258,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       )}
 
-      {/* Action / Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5 shadow-2xs">
         <div className="flex flex-1 items-center gap-2">
           <input
@@ -295,7 +280,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
           <div className="flex items-center rounded border border-slate-300 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800">
             <button
               onClick={() => setViewMode('cards')}
@@ -337,7 +321,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       </div>
 
-      {/* Main View Area */}
       {loading ? (
         <div className="p-12 flex justify-center items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
           <div className="loader loader-md" />
@@ -353,7 +336,6 @@ export default function LibraryShelvesWorkstation() {
           </button>
         </div>
       ) : viewMode === 'cards' ? (
-        /* Grid of Visual Shelf Cards */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {paginatedShelves.map((shelf) => {
             const occupancy = shelf.occupancy_percentage || 0;
@@ -388,7 +370,6 @@ export default function LibraryShelvesWorkstation() {
                     </span>
                   </div>
 
-                  {/* Location Tag */}
                   {(shelf.room || shelf.floor || shelf.section) && (
                     <div className="mt-2 text-[10px] text-slate-500 dark:text-slate-400 flex flex-wrap gap-1">
                       {shelf.room && <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{shelf.room}</span>}
@@ -397,7 +378,6 @@ export default function LibraryShelvesWorkstation() {
                     </div>
                   )}
 
-                  {/* Capacity & Occupancy Bar */}
                   <div className="mt-3 space-y-1">
                     <div className="flex items-baseline justify-between text-xs">
                       <span className="font-semibold text-slate-900 dark:text-white font-mono">
@@ -421,7 +401,6 @@ export default function LibraryShelvesWorkstation() {
                     </div>
                   </div>
 
-                  {/* Stock Breakdown */}
                   <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px] bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded">
                     <div>
                       <span className="text-slate-400">On Shelf:</span>{' '}
@@ -434,7 +413,6 @@ export default function LibraryShelvesWorkstation() {
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1">
                   <button
                     onClick={() => handleOpenRoster(shelf)}
@@ -463,7 +441,6 @@ export default function LibraryShelvesWorkstation() {
           })}
         </div>
       ) : (
-        /* High-Density Data Table View */
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-900">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -558,7 +535,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       )}
 
-      {/* Pagination Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 rounded bg-white dark:bg-slate-900 text-xs text-slate-500 shadow-2xs">
         <div>
           Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
@@ -598,7 +574,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       </div>
 
-      {/* Slide-out Drawer / Modal: Shelf Book Roster */}
       {rosterShelf && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-2xl w-full p-4 shadow-xl space-y-4 max-h-[90vh] flex flex-col">
@@ -622,7 +597,6 @@ export default function LibraryShelvesWorkstation() {
               </button>
             </div>
 
-            {/* Quick Shelf Capacity Bar in Modal */}
             <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-1.5">
               <div className="flex justify-between text-xs">
                 <span className="font-medium text-slate-700 dark:text-slate-300">
@@ -640,7 +614,6 @@ export default function LibraryShelvesWorkstation() {
               </div>
             </div>
 
-            {/* Books Roster Table */}
             <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded">
               {rosterLoading ? (
                 <div className="p-8 flex items-center justify-center">
@@ -696,7 +669,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       )}
 
-      {/* Modal: Add / Edit Shelf */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-4 shadow-xl space-y-4">
@@ -844,7 +816,6 @@ export default function LibraryShelvesWorkstation() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

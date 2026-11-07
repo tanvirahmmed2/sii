@@ -4,7 +4,6 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from 'src/lib/database/secret';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
-// GET Public Website Settings for Tenant directly from websites table
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -75,7 +74,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT / POST update tenant website settings directly on websites table
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -86,7 +84,6 @@ export async function PUT(request, context) {
     const body = await request.json().catch(() => ({}));
     const websiteId = website.id;
 
-    // Handle Cloudinary upload / deletion for Logo
     let finalLogo = body.logo !== undefined || body.logo_url !== undefined ? (body.logo || body.logo_url || null) : undefined;
     let finalLogoId = body.logo_id !== undefined ? (body.logo_id || null) : undefined;
 
@@ -105,7 +102,6 @@ export async function PUT(request, context) {
       finalLogoId = up.publicId;
     }
 
-    // Handle Cloudinary upload / deletion for Favicon
     let finalFavicon = body.favicon !== undefined ? (body.favicon || null) : undefined;
     let finalFaviconId = body.favicon_id !== undefined ? (body.favicon_id || null) : undefined;
 

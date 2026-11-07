@@ -13,7 +13,6 @@ const StudentProfilePage = () => {
   const [dynamicValues, setDynamicValues] = useState({});
 
   const [form, setForm] = useState({
-    // Read-only credentials
     registration_number: '',
     roll: '',
     class_name: '',
@@ -22,7 +21,6 @@ const StudentProfilePage = () => {
     email: '',
     birth_certificate_number: '',
 
-    // Editable personal details
     name: '',
     phone: '',
     date_of_birth: '',
@@ -30,7 +28,6 @@ const StudentProfilePage = () => {
     blood_group: '',
     religion: 'Islam',
 
-    // Editable address details
     present_address: '',
     permanent_address: '',
     city: '',
@@ -38,7 +35,6 @@ const StudentProfilePage = () => {
     upazila: '',
     postal_code: '',
 
-    // Editable parents & guardian details
     father_name: '',
     father_occupation: '',
     father_phone: '',
@@ -51,16 +47,13 @@ const StudentProfilePage = () => {
     guardian_relation: 'Father',
     guardian_phone: '',
 
-    // Academic background
     past_school_name: '',
     past_school_class: '',
     past_school_result: '',
     special_note: '',
 
-    // Media
     image: '',
 
-    // Password change
     current_password: '',
     new_password: '',
     confirm_password: '',
@@ -127,7 +120,6 @@ const StudentProfilePage = () => {
           confirm_password: '',
         });
 
-        // Populate dynamic values if present in info_data / guardian / address
         const mergedCustom = {
           ...(s.info_data || {}),
           ...(addr.data || {}),
@@ -317,7 +309,6 @@ const StudentProfilePage = () => {
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4 pb-8">
-      {/* Page Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -338,7 +329,6 @@ const StudentProfilePage = () => {
         </div>
       </div>
 
-      {/* Profile Overview Card */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col md:flex-row items-center gap-4">
         <div className="w-16 h-16 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-sm font-semibold text-slate-600 dark:text-slate-300 shrink-0 overflow-hidden relative">
           {form.image ? (
@@ -368,7 +358,6 @@ const StudentProfilePage = () => {
         </label>
       </div>
 
-      {/* Read-Only Academic Box */}
       <div className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-3">
         <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
           <span className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -417,9 +406,7 @@ const StudentProfilePage = () => {
         </div>
       </div>
 
-      {/* Editable Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Personal Details */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -495,12 +482,10 @@ const StudentProfilePage = () => {
               </div>
             </div>
 
-            {/* Dynamic fields with target_scope = info */}
             {renderScopedFields('info')}
           </div>
         </div>
 
-        {/* Address Information */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -555,12 +540,10 @@ const StudentProfilePage = () => {
               </div>
             </div>
 
-            {/* Dynamic fields with target_scope = addresses */}
             {renderScopedFields('addresses')}
           </div>
         </div>
 
-        {/* Parents & Guardians Details */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -611,12 +594,10 @@ const StudentProfilePage = () => {
               </div>
             </div>
 
-            {/* Dynamic fields with target_scope = guardians */}
             {renderScopedFields('guardians')}
           </div>
         </div>
 
-        {/* Security & Password */}
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -663,7 +644,6 @@ const StudentProfilePage = () => {
         </div>
       </div>
 
-      {/* Footer Submit */}
       <div className="w-full flex justify-end pt-2">
         <button
           type="submit"

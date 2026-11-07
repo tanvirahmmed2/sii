@@ -17,7 +17,7 @@ function CheckoutContent() {
   const [loadingPackages, setLoadingPackages] = useState(true);
   const [selectedPkgId, setSelectedPkgId] = useState(initialPkgId ? Number(initialPkgId) : null);
   const [billingCycle, setBillingCycle] = useState(initialInterval === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
-  const [paymentMethod, setPaymentMethod] = useState('PADDLE');
+  const [paymentMethod, setPaymentMethod] = useState('surjopay');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,7 +52,6 @@ function CheckoutContent() {
         const data = await res.json();
         let list = data.packages || [];
 
-        // If a specific package was requested (e.g. custom private plan), ensure it's loaded
         if (initialPkgId && !list.some((p) => p.id === Number(initialPkgId))) {
           try {
             const singleRes = await fetch(`/api/marketing/packages?id=${initialPkgId}`);
@@ -61,7 +60,6 @@ function CheckoutContent() {
               list = [singleData.package || singleData.record, ...list];
             }
           } catch {
-            // ignore
           }
         }
 
@@ -107,23 +105,26 @@ function CheckoutContent() {
     setError('');
 
     try {
-      const res = await fetch('/api/marketing/creator/purchases', {
+      const isBdt = paymentMethod === 'surjopay';
+      const res = await fetch('/api/marketing/creator/payments/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create_order',
           creatorId: creator.id,
           packageId: selectedPkg.id,
-          billingInterval: billingCycle.toLowerCase(),
-          paymentMethod: paymentMethod,
+          billingCycle: billingCycle.toLowerCase(),
+          gatewayCode: paymentMethod,
+          currency: isBdt ? 'BDT' : 'USD',
         }),
       });
 
       const data = await res.json();
-      if (data.success && data.payment?.id) {
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else if (data.success && data.payment?.id) {
         router.push(`/creator/${creator.id}/payments/${data.payment.id}`);
       } else {
-        setError(data.error || 'Failed to generate order invoice. Please try again.');
+        setError(data.error || 'Failed to initiate payment. Please try again.');
       }
     } catch {
       setError('Network error processing checkout order.');
@@ -185,7 +186,6 @@ function CheckoutContent() {
         )}
 
         <form onSubmit={handleConfirmOrder} className="space-y-4">
-          {/* Select Package */}
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Select Package Tier
@@ -221,7 +221,6 @@ function CheckoutContent() {
             </div>
           </div>
 
-          {/* Billing Interval */}
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Billing Interval
@@ -252,40 +251,53 @@ function CheckoutContent() {
             </div>
           </div>
 
-          {/* Payment Gateway */}
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
-              Select Payment Method
+              Select Central Payment Gateway
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setPaymentMethod('PADDLE')}
-                className={`py-2 px-3 rounded border text-left cursor-pointer ${
-                  paymentMethod === 'PADDLE'
-                    ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
+                onClick={() => setPaymentMethod('surjopay')}
+                className={`py-2 px-3 rounded border text-left cursor-pointer transition ${
+                  paymentMethod === 'surjopay'
+                    ? 'border-emerald-600 bg-emerald-50/50 font-semibold text-slate-900 ring-1 ring-emerald-500'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <div>Paddle / Card</div>
-                <div className="text-[11px] font-mono text-slate-500">${usdPrice.toFixed(2)} USD</div>
+                <div className="font-semibold text-emerald-700">shurjoPay</div>
+                <div className="text-[10px] text-slate-500">bKash, Nagad, Cards</div>
+                <div className="text-[11px] font-mono text-slate-800 mt-1">৳{bdtPrice} BDT</div>
               </button>
               <button
                 type="button"
-                onClick={() => setPaymentMethod('BKASH')}
-                className={`py-2 px-3 rounded border text-left cursor-pointer ${
-                  paymentMethod === 'BKASH'
-                    ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
+                onClick={() => setPaymentMethod('paypal')}
+                className={`py-2 px-3 rounded border text-left cursor-pointer transition ${
+                  paymentMethod === 'paypal'
+                    ? 'border-blue-600 bg-blue-50/50 font-semibold text-slate-900 ring-1 ring-blue-500'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <div>bKash (বিকাশ)</div>
-                <div className="text-[11px] font-mono text-slate-500">৳{bdtPrice} BDT</div>
+                <div className="font-semibold text-blue-700">PayPal</div>
+                <div className="text-[10px] text-slate-500">Global USD Checkout</div>
+                <div className="text-[11px] font-mono text-slate-800 mt-1">${usdPrice.toFixed(2)} USD</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('paddle')}
+                className={`py-2 px-3 rounded border text-left cursor-pointer transition ${
+                  paymentMethod === 'paddle'
+                    ? 'border-indigo-600 bg-indigo-50/50 font-semibold text-slate-900 ring-1 ring-indigo-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <div className="font-semibold text-indigo-700">Paddle Billing</div>
+                <div className="text-[10px] text-slate-500">Global Cards & Pay</div>
+                <div className="text-[11px] font-mono text-slate-800 mt-1">${usdPrice.toFixed(2)} USD</div>
               </button>
             </div>
           </div>
 
-          {/* Summary */}
           <div className="p-3 rounded bg-slate-50 border border-slate-200 space-y-1 font-mono text-[11px]">
             <div className="flex justify-between text-slate-600">
               <span>Account:</span>
@@ -298,7 +310,7 @@ function CheckoutContent() {
             <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
               <span>Payable Amount:</span>
               <span>
-                {paymentMethod === 'BKASH' ? `৳${bdtPrice} BDT` : `$${usdPrice.toFixed(2)} USD`}
+                {paymentMethod === 'surjopay' ? `৳${bdtPrice} BDT` : `$${usdPrice.toFixed(2)} USD`}
               </span>
             </div>
           </div>

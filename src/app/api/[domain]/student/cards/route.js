@@ -3,15 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
 
-/**
- * GET /api/[domain]/student/cards
- * Retrieves all issued credentials and cards for the authenticated student:
- * - Student Identity Card (ID Card) + active template
- * - Examination Entry Permits / Admit Cards
- * - Digital Library Membership Pass
- * - Hostel / Residence Accommodation Pass
- * - Official Academic Registration Card
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -36,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // 1. Fetch Comprehensive Student Record
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.department_id,
@@ -87,7 +77,6 @@ export async function GET(request, context) {
       signature: rawStudent.signature_url || null,
     };
 
-    // 2. Fetch Issued Student ID Card
     let rawIdCard = null;
     try {
       const cardRes = await queryDb(
@@ -121,7 +110,6 @@ export async function GET(request, context) {
       barcode_data: rawIdCard.barcode_data || formattedStudent.registration_number
     };
 
-    // 3. Resolve ID Card Template
     let idTemplate = null;
     try {
       if (rawStudent.class_id) {
@@ -174,7 +162,6 @@ export async function GET(request, context) {
       console.warn('Note: idTemplate lookup:', e.message);
     }
 
-    // 4. Fetch Published Exams and Admit Cards
     let admitCards = [];
     try {
       const examsRes = await queryDb(
@@ -190,7 +177,6 @@ export async function GET(request, context) {
         [studentId, website.id, rawStudent.class_id]
       );
 
-      // Fetch subjects for timetable mapping
       const subjectsRes = await queryDb(
         `SELECT sub.id, sub.name, sub.code
          FROM website_subjects sub
@@ -205,7 +191,7 @@ export async function GET(request, context) {
         const isProvided = exam.candidate_status === 'approved' || 
                            exam.candidate_status === 'admit_issued' || 
                            Boolean(exam.admit_card_number) ||
-                           true; // Allow student to access official pass for enrolled class
+                           true; 
 
         const examStart = exam.start_date ? new Date(exam.start_date) : new Date();
         const schedules = classSubjects.map((sub, idx) => {
@@ -238,7 +224,6 @@ export async function GET(request, context) {
       console.warn('Note: admitCards lookup:', e.message);
     }
 
-    // 5. Fetch Library Circulation & Membership Pass
     let activeLoans = 0;
     try {
       const loanRes = await queryDb(
@@ -262,7 +247,6 @@ export async function GET(request, context) {
       barcode_data: `LIB-${formattedStudent.registration_number}`
     };
 
-    // 6. Fetch Residential / Hostel Accommodation Pass
     let residenceCard = null;
     try {
       const allocRes = await queryDb(
@@ -299,7 +283,6 @@ export async function GET(request, context) {
       console.warn('Note: residenceCard lookup:', e.message);
     }
 
-    // 7. Academic Registration Card (Institutional Enrollment Pass)
     const registrationCard = {
       card_number: `REG-${formattedStudent.registration_number}`,
       student_unique_id: rawStudent.student_unique_id || `STU-${rawStudent.id}`,
@@ -314,7 +297,6 @@ export async function GET(request, context) {
       barcode_data: formattedStudent.registration_number
     };
 
-    // 8. Aggregated Card Portfolio for easy UI rendering
     const cards = [
       {
         id: `id-card-${idCard.id_card_no}`,

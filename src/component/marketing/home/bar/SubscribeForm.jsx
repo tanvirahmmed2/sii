@@ -103,7 +103,6 @@ export default function SubscribeForm({ source = 'HOME_FOOTER' }) {
           </button>
         </div>
 
-        {/* Feedback Alerts */}
         {status.message && (
           <div
             role="alert"

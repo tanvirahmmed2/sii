@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyEducationFeeAccess } from 'src/lib/middleware/education_fee_auth.js';
 
-// GET: List student education fee payments and dues with pagination and stats
 export async function GET(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'view');
@@ -24,7 +23,6 @@ export async function GET(request, context) {
     const monthName = searchParams.get('month_name');
     const search = searchParams.get('search')?.trim();
 
-    // Base WHERE conditions
     const whereClauses = ['p.website_id = $1'];
     const params = [website.id];
     let idx = 2;
@@ -68,7 +66,6 @@ export async function GET(request, context) {
 
     const whereString = whereClauses.join(' AND ');
 
-    // 1. Get totals and summary statistics for this filter scope
     const statsQuery = `
       SELECT 
         COUNT(*)::int AS total_records,
@@ -95,7 +92,6 @@ export async function GET(request, context) {
       waived_count: 0,
     };
 
-    // 2. Fetch paginated records
     const dataQuery = `
       SELECT p.*,
              c.name AS class_name,
@@ -142,7 +138,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Staff manual collection (e.g. Cash / Bank on-campus payment)
 export async function POST(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'edit');
@@ -227,7 +222,6 @@ export async function POST(request, context) {
   }
 }
 
-// PATCH: Waive fee or fine adjustments
 export async function PATCH(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'edit');
@@ -298,7 +292,6 @@ export async function PATCH(request, context) {
   }
 }
 
-// DELETE: Cancel unpaid fee record
 export async function DELETE(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'delete');

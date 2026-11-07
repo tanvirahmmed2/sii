@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 
-/**
- * GET /api/[domain]/staff/panel/admissions/applicants/export?status=all|selected|pending|rejected
- * Streams a formatted CSV export of applicants according to the selected filter.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -59,7 +55,6 @@ export async function GET(request, context) {
 
     const res = await queryDb(sql, params);
 
-    // Build CSV
     const headers = [
       'Application No',
       'Roll No',

@@ -139,7 +139,6 @@ function OfficerVerifyContent() {
     <div className="w-full min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 sm:px-6">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 sm:p-8 shadow-2xs space-y-6">
 
-        {/* Header */}
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 inline-block">
             {website?.name || 'Campus Portal'}
@@ -202,7 +201,6 @@ function OfficerVerifyContent() {
           </form>
         ) : (
           <form onSubmit={handleSetupSubmit} className="space-y-4">
-            {/* Officer Details Card */}
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded text-xs space-y-1">
               <div className="font-semibold text-slate-900 dark:text-white text-sm">
                 {officerData.name}

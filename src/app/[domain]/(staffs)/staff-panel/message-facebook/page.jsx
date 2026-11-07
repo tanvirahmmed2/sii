@@ -61,7 +61,6 @@ export default function MessageFacebookPage() {
         setStats(data.stats || { totalThreads: 0, openThreads: 0, totalUnread: 0 });
         setMetaConfig(data.metaConfig || null);
 
-        // Select first conversation if none selected
         if (!selectedConv && data.conversations?.length > 0) {
           setSelectedConv(data.conversations[0]);
         }
@@ -81,7 +80,6 @@ export default function MessageFacebookPage() {
       const data = await res.json();
       if (data.success) {
         setMessages(data.messages || []);
-        // Update unread count locally
         setConversations((prev) =>
           prev.map((c) => (c.id === convId ? { ...c, unread_count: 0 } : c))
         );
@@ -101,7 +99,6 @@ export default function MessageFacebookPage() {
     setSending(true);
     setActionError(null);
 
-    // Optimistic message append
     const tempMessage = {
       id: `temp_${Date.now()}`,
       conversation_id: selectedConv.id,
@@ -131,12 +128,10 @@ export default function MessageFacebookPage() {
         throw new Error(data.error || 'Failed to dispatch message to Facebook.');
       }
 
-      // Replace optimistic message with saved DB message
       setMessages((prev) =>
         prev.map((m) => (m.id === tempMessage.id ? data.message : m))
       );
 
-      // Update last message on conversation
       setConversations((prev) =>
         prev.map((c) =>
           c.id === selectedConv.id
@@ -216,7 +211,6 @@ export default function MessageFacebookPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header & KPI Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -251,7 +245,6 @@ export default function MessageFacebookPage() {
         </div>
       </div>
 
-      {/* Meta Token Missing Alert Banner */}
       {!hasPageToken && (
         <div className="p-3 rounded text-xs bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -278,11 +271,8 @@ export default function MessageFacebookPage() {
         </div>
       )}
 
-      {/* Split Chat Workstation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[560px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
-        {/* Left Column: Conversation Sidebar (4 cols) */}
         <div className="lg:col-span-4 border-r border-slate-200 dark:border-slate-800 flex flex-col">
-          {/* Search & Filters */}
           <div className="p-3 border-b border-slate-100 dark:border-slate-800 space-y-2">
             <div className="relative">
               <input
@@ -312,7 +302,6 @@ export default function MessageFacebookPage() {
             </div>
           </div>
 
-          {/* Conversation List */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 max-h-[500px]">
             {filteredConversations.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500">
@@ -368,11 +357,9 @@ export default function MessageFacebookPage() {
           </div>
         </div>
 
-        {/* Right Column: Chat Window (8 cols) */}
         <div className="lg:col-span-8 flex flex-col justify-between">
           {selectedConv ? (
             <>
-              {/* Chat Header */}
               <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-xs">
@@ -412,7 +399,6 @@ export default function MessageFacebookPage() {
                 </div>
               </div>
 
-              {/* Message Feed */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 max-h-[420px] bg-slate-50/20 dark:bg-slate-950/10">
                 {messagesLoading ? (
                   <div className="py-12 flex justify-center items-center">
@@ -466,7 +452,6 @@ export default function MessageFacebookPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Composer */}
               <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <form onSubmit={handleSendMessage} className="flex items-end gap-2">
                   <textarea

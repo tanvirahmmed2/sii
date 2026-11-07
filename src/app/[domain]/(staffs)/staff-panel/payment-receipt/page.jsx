@@ -102,7 +102,6 @@ export default function PaymentReceiptPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -140,7 +139,6 @@ export default function PaymentReceiptPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Form */}
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -243,7 +241,6 @@ export default function PaymentReceiptPage() {
           </div>
         </div>
 
-        {/* Right Preview */}
         <div className="lg:col-span-7 flex flex-col items-center">
           <div className="w-full bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 overflow-auto flex justify-center">
             {compiled ? (

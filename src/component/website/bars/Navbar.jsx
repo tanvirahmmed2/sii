@@ -30,7 +30,6 @@ const Navbar = () => {
   const aboutRef = useRef(null);
   const clubsRef = useRef(null);
 
-  // Close dropdowns on route changes during render
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     setDeptOpen(false);
@@ -40,7 +39,6 @@ const Navbar = () => {
 
   const schoolName = website?.name || websiteSettings?.school_name || SCHOOL_NAME;
 
-  // Use logo strictly from website table with no fallback
   const rawLogo = website?.logo;
   const logoUrl =
     typeof rawLogo === 'string' &&
@@ -50,11 +48,8 @@ const Navbar = () => {
       ? rawLogo.trim()
       : null;
 
-
-  // Primary brand background color
   const navBg = primaryColor || website?.primary_color || '#A2AB73';
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (deptRef.current && !deptRef.current.contains(event.target)) {
@@ -92,14 +87,11 @@ const Navbar = () => {
       className="w-full text-white sticky top-0 z-40 transition-colors shadow-md select-none"
       style={{ backgroundColor: navBg }}
     >
-      {/* Upper Navigation Bar */}
       <div className="w-full px-4 sm:px-6 lg:px-8 border-b border-white/15">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
-          {/* Brand & Institution Info */}
           <Link href={tenantUrl('/')} className="flex items-center gap-2.5 min-w-0 group">
             {logoUrl && !logoError && (
               <div className="relative w-8 h-8 sm:w-9 sm:h-9  overflow-hidden shrink-0 flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={logoUrl}
                   alt={schoolName}
@@ -115,9 +107,7 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Right Action Suite: Mode, Portals & Mobile Menu */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Theme Toggle Button */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -128,7 +118,6 @@ const Navbar = () => {
               <span>{isDark ? '☀ Light' : '☾ Dark'}</span>
             </button>
 
-            {/* Desktop Portal Links */}
             <div className="hidden lg:flex items-center gap-2 pl-1">
               <Link
                 href={tenantUrl('/auth/student')}
@@ -144,7 +133,6 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Mobile Navigation Drawer Trigger */}
             <button
               type="button"
               onClick={() => setSidebar(!sidebar)}
@@ -169,7 +157,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Primary Academic Navigation (Desktop) */}
       <div className="w-full px-4 sm:px-6 lg:px-8 hidden md:block relative">
         <nav className="flex items-center justify-between h-11 gap-1.5 relative">
           <div className="flex items-center gap-1 h-full">
@@ -177,7 +164,6 @@ const Navbar = () => {
               Home
             </Link>
 
-            {/* About Dropdown (Only Valid, Verified Working Routes) */}
             <div
               className="relative h-full flex items-center group"
               ref={aboutRef}
@@ -240,7 +226,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* DEPARTMENT POPUP BOX (Instead of Class, Show Department, Then Appear Department Box) */}
             <div
               className="relative h-full flex items-center group"
               ref={deptRef}
@@ -258,7 +243,6 @@ const Navbar = () => {
                 <span className="text-[9px] opacity-80">▾</span>
               </button>
 
-              {/* Department Box */}
               {deptOpen && (
                 <div className="absolute top-full left-0 z-50 pt-1">
                   <div
@@ -316,13 +300,11 @@ const Navbar = () => {
                       )}
                     </div>
 
-
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Clubs Dropdown */}
             <div
               className="relative h-full flex items-center group"
               ref={clubsRef}
@@ -369,7 +351,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Direct Navigation Links (All Verified Active Routes) */}
             <Link href={tenantUrl('/teachers')} className={navLinkClass('/teachers')}>
               Faculty
             </Link>
@@ -393,7 +374,6 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Right Action Button: Pay Online & Apply Online */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href={tenantUrl('/pay')}

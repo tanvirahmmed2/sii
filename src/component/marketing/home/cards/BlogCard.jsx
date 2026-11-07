@@ -36,7 +36,6 @@ export default function HomeBlogCard({ blog }) {
     <div className="group rounded-3xl bg-white border border-slate-200/80 hover:border-secondary/40 transition-all duration-300 shadow-xs hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between overflow-hidden">
       <Link href={`/blogs/${blog.slug}`} className="flex flex-col h-full justify-between">
         <div>
-          {/* Cover / Image Preview Area */}
           <div className="relative aspect-16/10 overflow-hidden bg-slate-900 flex items-center justify-center">
             {coverImage ? (
               <Image
@@ -57,7 +56,6 @@ export default function HomeBlogCard({ blog }) {
               </div>
             )}
 
-            {/* App Tag pill if associated with an app */}
             {blog.app_title && (
               <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white font-semibold text-[11px] border border-white/10">
                 {blog.app_title}
@@ -67,7 +65,6 @@ export default function HomeBlogCard({ blog }) {
             
           </div>
 
-          {/* Content Details */}
           <div className="p-6 space-y-3">
             <h3 className="text-lg font-bold text-slate-900 group-hover:text-secondary transition-colors tracking-tight line-clamp-2">
               {blog.title}
@@ -79,7 +76,6 @@ export default function HomeBlogCard({ blog }) {
           </div>
         </div>
 
-        {/* Footer Meta Row */}
         <div className="px-6 pb-6 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center gap-3">
             {blog.author_name && (

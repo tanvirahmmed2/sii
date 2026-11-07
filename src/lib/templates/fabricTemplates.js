@@ -1,10 +1,4 @@
-// Fabric.js canvas JSON models for each document task
-// Standard canvas scales:
-// ID Card: 600px x 380px (Standard CR80 86mm x 54mm)
-// A4 Portrait: 600px x 848px (210mm x 297mm)
-// A4 Landscape: 848px x 600px (297mm x 210mm)
 
-// Patch Fabric.js 5.x bug where fabric.util.stylesToArray fails on undefined styles
 export function patchFabric(fabric) {
   if (!fabric) return;
   if (fabric.util) {
@@ -273,7 +267,6 @@ export const TASK_CONFIGS = {
   }
 };
 
-// Generates starter Fabric JSON for any task
 export function generateStarterFabricJSON(taskKey) {
   const config = TASK_CONFIGS[taskKey] || TASK_CONFIGS.student_id;
   const isLandscape = (config.dimension_width || config.width) >= (config.dimension_height || config.height);
@@ -285,7 +278,6 @@ export function generateStarterFabricJSON(taskKey) {
       version: '5.3.0',
       background: '#ffffff',
       objects: [
-        // Top header band
         {
           type: 'rect',
           left: 0,
@@ -296,7 +288,6 @@ export function generateStarterFabricJSON(taskKey) {
           selectable: true,
           name: 'Header Banner'
         },
-        // Institute Name
         {
           type: 'i-text',
           left: 20,
@@ -319,7 +310,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#93c5fd',
           name: 'Card Subtitle'
         },
-        // Photo Placeholder Frame
         {
           type: 'rect',
           left: 30,
@@ -344,7 +334,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#94a3b8',
           name: 'Photo Label'
         },
-        // Student Name
         {
           type: 'i-text',
           left: 175,
@@ -356,7 +345,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#0f172a',
           name: 'Student Name'
         },
-        // Details
         {
           type: 'i-text',
           left: 175,
@@ -401,7 +389,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#64748b',
           name: 'Emergency'
         },
-        // Bottom Footer Band
         {
           type: 'rect',
           left: 0,
@@ -475,7 +462,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#38bdf8',
           name: 'Badge Type'
         },
-        // Photo Box
         {
           type: 'rect',
           left: 30,
@@ -500,7 +486,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#94a3b8',
           name: 'Faculty Tag'
         },
-        // Name & Designation
         {
           type: 'i-text',
           left: 175,
@@ -556,7 +541,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#64748b',
           name: 'Email'
         },
-        // Footer
         {
           type: 'rect',
           left: 0,
@@ -632,7 +616,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#f59e0b',
           name: 'Badge Type'
         },
-        // Photo Box
         {
           type: 'rect',
           left: 30,
@@ -657,7 +640,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#b45309',
           name: 'Officer Tag'
         },
-        // Details
         {
           type: 'i-text',
           left: 175,
@@ -713,7 +695,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#64748b',
           name: 'Email'
         },
-        // Footer
         {
           type: 'rect',
           left: 0,
@@ -750,13 +731,11 @@ export function generateStarterFabricJSON(taskKey) {
     };
   }
 
-  // A4 Document Templates (TC, Testimonial, Certificate)
   if (taskKey === 'student_tc') {
     return {
       version: '5.3.0',
       background: '#ffffff',
       objects: [
-        // Outer decorative border
         {
           type: 'rect',
           left: 20,
@@ -823,7 +802,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#475569',
           name: 'Issue Date'
         },
-        // Body Paragraph
         {
           type: 'i-text',
           left: 45,
@@ -856,7 +834,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#1e293b',
           name: 'Body Paragraph 3'
         },
-        // Signatures
         {
           type: 'line',
           left: 45,
@@ -1001,7 +978,6 @@ export function generateStarterFabricJSON(taskKey) {
           fill: '#1e293b',
           name: 'Para 4'
         },
-        // Signatures
         {
           type: 'line',
           left: w - 220,
@@ -1031,7 +1007,6 @@ export function generateStarterFabricJSON(taskKey) {
       version: '5.3.0',
       background: '#fffdf5',
       objects: [
-        // Ornate outer frame
         {
           type: 'rect',
           left: 25,
@@ -1131,7 +1106,6 @@ export function generateStarterFabricJSON(taskKey) {
           textAlign: 'center',
           name: 'Achievement Desc'
         },
-        // Signatures & Serial
         {
           type: 'i-text',
           left: 80,
@@ -1638,7 +1612,6 @@ export function generateStarterFabricJSON(taskKey) {
     };
   }
 
-  // Generic fallback starter
   return {
     version: '5.3.0',
     background: '#ffffff',
@@ -1667,7 +1640,6 @@ export function generateStarterFabricJSON(taskKey) {
   };
 }
 
-// Generates starter Fabric JSON for back side of ID cards
 export function generateStarterFabricBackJSON(taskKey) {
   const config = TASK_CONFIGS[taskKey] || TASK_CONFIGS.student_id;
   const w = config.width || 600;

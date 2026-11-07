@@ -11,10 +11,8 @@ import { FiSave, FiList, FiCheckCircle, FiTrash2, FiSearch, FiRefreshCw } from '
 export default function StudentIdCardDownloadPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'generate' or 'archive'
   const [activeTab, setActiveTab] = useState('generate');
 
-  // Generation state
   const [hasFiltered, setHasFiltered] = useState(false);
   const [filterInfo, setFilterInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -23,24 +21,20 @@ export default function StudentIdCardDownloadPage() {
   const [isPrintPreview, setIsPrintPreview] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Archive / Issued cards state
   const [issuedCards, setIssuedCards] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveStatus, setArchiveStatus] = useState('all');
 
-  // Template from database
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [systemTemplates, setSystemTemplates] = useState([]);
   const [classAssignments, setClassAssignments] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Card element refs map
   const cardFrontRefs = useRef({});
   const cardBackRefs = useRef({});
-  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+  const [cardSideView, setCardSideView] = useState('both'); 
 
-  // Fetch active school template and class-specific assignments
   useEffect(() => {
     async function fetchActiveTemplate() {
       try {
@@ -58,7 +52,6 @@ export default function StudentIdCardDownloadPage() {
     fetchActiveTemplate();
   }, [getApiEndpoint]);
 
-  // Resolve template for a specific student (Class-specific or school default)
   const getTemplateForStudent = useCallback((student) => {
     if (student?.class_id && classAssignments.length > 0) {
       const assigned = classAssignments.find((c) => String(c.class_id) === String(student.class_id));
@@ -70,7 +63,6 @@ export default function StudentIdCardDownloadPage() {
     return activeTemplate || systemTemplates[0] || null;
   }, [classAssignments, systemTemplates, activeTemplate]);
 
-  // Fetch Issued Cards Archive from website_student_ids
   const fetchIssuedArchive = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -146,7 +138,6 @@ export default function StudentIdCardDownloadPage() {
     );
   };
 
-  // Issue & persist cards in database website_student_ids
   const handleIssueAndSave = async () => {
     if (selectedIds.length === 0) {
       toast.error('Please select at least one student to issue ID cards.');
@@ -180,7 +171,6 @@ export default function StudentIdCardDownloadPage() {
     }
   };
 
-  // Helper to compile card HTML for a student (Both Front and Back)
   const compileStudentCard = (student) => {
     const tpl = getTemplateForStudent(student);
     if (!tpl) return null;
@@ -211,7 +201,6 @@ export default function StudentIdCardDownloadPage() {
     }
 
     const replacements = {
-      // Academic
       '{{student_name}}': student.student_name || student.name || 'Student Name',
       '{{registration_no}}': student.registration_no || student.student_unique_id || 'REG-0001',
       '{{roll_no}}': student.roll_no || '01',
@@ -227,20 +216,17 @@ export default function StudentIdCardDownloadPage() {
       '{{barcode}}': `*${student.registration_no || student.id}*`,
       '{{qr_code}}': `https://${website?.domain || 'school.edu'}/verify/student/${student.registration_no || student.id}`,
 
-      // Personal
       '{{gender}}': student.gender || '—',
       '{{blood_group}}': student.blood_group || 'O+',
       '{{date_of_birth}}': student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : '—',
       '{{religion}}': student.religion || '—',
       '{{student_photo}}': student.student_photo_url || student.primary_photo_url || student.image_url || '/default-avatar.png',
 
-      // Contact
       '{{email}}': student.email || '—',
       '{{phone}}': student.number || student.phone || '—',
       '{{number}}': student.number || student.phone || '—',
       '{{emergency_contact}}': student.emergency_contact || student.guardian_phone || student.father_phone || website?.phone || '+880 1700-000000',
 
-      // Parents & Guardians
       '{{father_name}}': student.father_name || 'Father Name',
       '{{father_phone}}': student.father_phone || '—',
       '{{father_occupation}}': student.father_occupation || '—',
@@ -255,7 +241,6 @@ export default function StudentIdCardDownloadPage() {
       '{{guardian_email}}': student.guardian_email || '—',
       '{{guardian_address}}': student.guardian_address || student.present_address || '—',
 
-      // Addresses
       '{{present_address}}': student.present_address || student.address || '—',
       '{{permanent_address}}': student.permanent_address || student.address || '—',
       '{{city}}': student.city || 'Dhaka',
@@ -264,7 +249,6 @@ export default function StudentIdCardDownloadPage() {
       '{{postal_code}}': student.postal_code || '—',
       '{{country}}': student.country || 'Bangladesh',
 
-      // Institutional
       '{{institution_name}}': website?.name || 'Educational Institution',
       '{{school_name}}': website?.name || 'Educational Institution',
       '{{institution_logo}}': website?.logo_url || '/school-logo.png',
@@ -287,7 +271,6 @@ export default function StudentIdCardDownloadPage() {
     return { frontHtml, backHtml, css };
   };
 
-  // Export single card as JPEG (Front, Back, or Both)
   const handleDownloadSingleJpeg = async (student) => {
     const frontEl = cardFrontRefs.current[student.id];
     const backEl = cardBackRefs.current[student.id];
@@ -308,7 +291,6 @@ export default function StudentIdCardDownloadPage() {
     }
   };
 
-  // Export single card as PDF (Front, Back, or Both as 2-page document)
   const handleDownloadSinglePdf = async (student) => {
     const frontEl = cardFrontRefs.current[student.id];
     const backEl = cardBackRefs.current[student.id];
@@ -321,7 +303,6 @@ export default function StudentIdCardDownloadPage() {
       };
 
       if (cardSideView === 'both' && frontEl && backEl) {
-        // True 2-page PDF (Page 1 = Front, Page 2 = Back)
         await exportMultipleCardsAsPdf([frontEl, backEl], `ID_Card_${student.registration_no || student.name}_DualSided`, options);
       } else if (cardSideView === 'back' && backEl) {
         await exportElementAsPdf(backEl, `ID_Card_${student.registration_no || student.name}_Back`, options);
@@ -334,12 +315,10 @@ export default function StudentIdCardDownloadPage() {
     }
   };
 
-  // Batch Export selected cards as multi-page PDF (Handles dual-sided or single-sided)
   const handleBatchPdfDownload = async () => {
     let targetElements = [];
 
     if (cardSideView === 'both') {
-      // 2 pages per student (Front, Back, Front, Back...)
       targetElements = selectedStudents.flatMap((s) => [
         cardFrontRefs.current[s.id],
         cardBackRefs.current[s.id],
@@ -374,7 +353,6 @@ export default function StudentIdCardDownloadPage() {
     }
   };
 
-  // Revoke/Delete from archive
   const handleDeleteIssuedCard = async (cardId) => {
     if (!window.confirm('Are you sure you want to delete this issued ID card record?')) return;
     try {
@@ -397,7 +375,6 @@ export default function StudentIdCardDownloadPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header (hidden in print) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 print:hidden">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -409,7 +386,6 @@ export default function StudentIdCardDownloadPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -445,7 +421,6 @@ export default function StudentIdCardDownloadPage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED CARDS REGISTRY ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -561,9 +536,7 @@ export default function StudentIdCardDownloadPage() {
           </div>
         </div>
       ) : (
-        /* ================= GENERATE & EXPORT CARDS ================= */
         <>
-          {/* Filter Bar */}
           <div className="print:hidden">
             <StudentFilterBar
               onFilter={loadData}
@@ -581,7 +554,6 @@ export default function StudentIdCardDownloadPage() {
             />
           ) : (
             <div className="space-y-4">
-              {/* Action Toolbar */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -671,7 +643,6 @@ export default function StudentIdCardDownloadPage() {
                 </div>
               </div>
 
-              {/* Checklist Mode */}
               {!isPrintPreview && (
                 <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3 print:hidden">
                   <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
@@ -750,7 +721,6 @@ export default function StudentIdCardDownloadPage() {
                 </div>
               )}
 
-              {/* Cards Grid Preview & Export */}
               <div className={`grid grid-cols-1 ${cardSideView === 'both' ? 'md:grid-cols-2 xl:grid-cols-2' : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-4 print:grid-cols-2 print:gap-4`}>
                 {selectedStudents.map((s) => {
                   const tpl = getTemplateForStudent(s);
@@ -772,12 +742,10 @@ export default function StudentIdCardDownloadPage() {
                           {tpl?.name || 'Default Template'}
                         </span>
                       </div>
-                      {/* Card Container for Export */}
                       <div className={`flex flex-wrap justify-center items-center gap-3 overflow-hidden bg-slate-50 dark:bg-slate-950 p-3 rounded ${cardSideView === 'both' ? 'sm:flex-row' : ''}`}>
                         {cardData ? (
                           <>
                             <style dangerouslySetInnerHTML={{ __html: cardData.css }} />
-                            {/* FRONT SIDE */}
                             {(cardSideView === 'both' || cardSideView === 'front') && (
                               <div className="flex flex-col items-center gap-1.5">
                                 {cardSideView === 'both' && (
@@ -804,7 +772,6 @@ export default function StudentIdCardDownloadPage() {
                               </div>
                             )}
 
-                            {/* BACK SIDE */}
                             {(cardSideView === 'both' || cardSideView === 'back') && (
                               <div className="flex flex-col items-center gap-1.5">
                                 {cardSideView === 'both' && (
@@ -842,7 +809,6 @@ export default function StudentIdCardDownloadPage() {
                         )}
                       </div>
 
-                      {/* Card Actions (hidden in print) */}
                       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs print:hidden">
                         <span className="font-medium text-slate-900 dark:text-white truncate max-w-[140px]" title={s.name}>
                           {s.name}

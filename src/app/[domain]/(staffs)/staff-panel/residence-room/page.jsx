@@ -18,7 +18,6 @@ export default function ResidenceRoomPage() {
   const [selectedFloor, setSelectedFloor] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
 
-  // Add / Edit Room Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
@@ -35,13 +34,11 @@ export default function ResidenceRoomPage() {
     auto_generate_seats: true,
   });
 
-  // Room Seats Inspection Drawer
   const [inspectingRoom, setInspectingRoom] = useState(null);
   const [roomSeats, setRoomSeats] = useState([]);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [newSeatNumber, setNewSeatNumber] = useState('');
 
-  // Fetch all halls for dropdown
   const fetchHalls = async () => {
     try {
       const url = getApiEndpoint('/staff/panel/residence/halls');
@@ -55,7 +52,6 @@ export default function ResidenceRoomPage() {
     }
   };
 
-  // Fetch rooms
   const fetchRooms = async () => {
     try {
       setLoading(true);
@@ -180,7 +176,6 @@ export default function ResidenceRoomPage() {
     }
   };
 
-  // Inspect seats for a room
   const inspectRoomSeats = async (room) => {
     setInspectingRoom(room);
     setLoadingSeats(true);
@@ -197,7 +192,6 @@ export default function ResidenceRoomPage() {
     }
   };
 
-  // Add individual seat to room
   const handleAddSeat = async (e) => {
     e.preventDefault();
     if (!newSeatNumber.trim() || !inspectingRoom) return;
@@ -225,7 +219,6 @@ export default function ResidenceRoomPage() {
     }
   };
 
-  // Toggle seat maintenance
   const handleToggleSeatStatus = async (seat) => {
     const nextStatus = seat.status === 'maintenance' ? 'available' : 'maintenance';
     try {
@@ -249,14 +242,12 @@ export default function ResidenceRoomPage() {
     }
   };
 
-  // Summary counts
   const totalCapacity = rooms.reduce((acc, r) => acc + (r.capacity || 0), 0);
   const totalAllocated = rooms.reduce((acc, r) => acc + (r.allocated_seats || 0), 0);
   const totalAvailable = rooms.reduce((acc, r) => acc + (r.available_seats || 0), 0);
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -294,7 +285,6 @@ export default function ResidenceRoomPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Rooms</p>
@@ -329,7 +319,6 @@ export default function ResidenceRoomPage() {
         </div>
       </div>
 
-      {/* IN-PAGE CREATE / EDIT ROOM FORM */}
       {isModalOpen && (
         <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -504,7 +493,6 @@ export default function ResidenceRoomPage() {
         </div>
       )}
 
-      {/* IN-PAGE ROOM SEATS INVENTORY PANEL */}
       {inspectingRoom && (
         <div className="bg-white dark:bg-slate-900 border-2 border-indigo-500/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -525,7 +513,6 @@ export default function ResidenceRoomPage() {
             </button>
           </div>
 
-          {/* Quick Add Seat Form */}
           <form onSubmit={handleAddSeat} className="flex items-center gap-2">
             <input
               type="text"
@@ -542,7 +529,6 @@ export default function ResidenceRoomPage() {
             </button>
           </form>
 
-          {/* Seats Grid */}
           {loadingSeats ? (
             <TenantLoader fullScreen={false} size="sm" />
           ) : roomSeats.length === 0 ? (
@@ -595,9 +581,7 @@ export default function ResidenceRoomPage() {
         </div>
       )}
 
-      {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-sm">
             <input
@@ -657,7 +641,6 @@ export default function ResidenceRoomPage() {
           </div>
         </div>
 
-        {/* Table */}
         {loading ? (
           <TenantLoader fullScreen={false} size="sm" />
         ) : rooms.length === 0 ? (

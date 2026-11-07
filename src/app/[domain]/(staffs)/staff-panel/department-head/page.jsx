@@ -10,7 +10,6 @@ import Loader from 'src/component/common/Loader';
 export default function DepartmentHeadPage() {
   const { website, getApiEndpoint, tenantUrl } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [deptHeads, setDeptHeads] = useState([]);
   const [availableDepartments, setAvailableDepartments] = useState([]);
   const [availableTeachers, setAvailableTeachers] = useState([]);
@@ -19,18 +18,15 @@ export default function DepartmentHeadPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Filter & Search states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [statusFilter, setStatusFilter] = useState('all'); 
+  const [viewMode, setViewMode] = useState('cards'); 
 
-  // INLINE Workstation Form states (NO popup modal)
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [editingRecord, setEditingRecord] = useState(null);
 
-  // Form input states
   const [formDeptId, setFormDeptId] = useState('');
   const [formTeacherId, setFormTeacherId] = useState('');
   const [formName, setFormName] = useState('');
@@ -46,24 +42,18 @@ export default function DepartmentHeadPage() {
   const [formOrderNo, setFormOrderNo] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // INLINE Delete state (NO popup modal)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Expandable message view state on cards
   const [expandedMessageId, setExpandedMessageId] = useState(null);
 
-  // Ref to scroll smoothly to editor workstation
   const formSectionRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // State for pending image file
   const [selectedImageFile, setSelectedImageFile] = useState(null);
 
-  // Endpoints
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/dept-heads'), [getApiEndpoint]);
 
-  // Fetch Department Heads & lists
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -111,12 +101,10 @@ export default function DepartmentHeadPage() {
     };
   }, [apiEndpoint]);
 
-  // Set of department IDs that already have a designated head
   const assignedDeptIds = useMemo(() => {
     return new Set(deptHeads.map((dh) => String(dh.department_id)));
   }, [deptHeads]);
 
-  // Handle Teacher Selection for instant auto-fill
   const handleSelectTeacher = (teacherId) => {
     setFormTeacherId(teacherId);
     if (!teacherId) return;
@@ -137,7 +125,6 @@ export default function DepartmentHeadPage() {
     }
   };
 
-  // Image Select handler (Local preview only, no remote upload until submit)
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,13 +145,11 @@ export default function DepartmentHeadPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Open Create Form
   const openCreateForm = (preselectDeptId = '') => {
     setFormMode('create');
     setEditingRecord(null);
     setSelectedImageFile(null);
 
-    // Pick first unassigned department if not specified
     const defaultDept =
       preselectDeptId ||
       availableDepartments.find((d) => !assignedDeptIds.has(String(d.id)))?.id ||
@@ -192,7 +177,6 @@ export default function DepartmentHeadPage() {
     }, 50);
   };
 
-  // Open Edit Form
   const openEditForm = (head) => {
     setFormMode('edit');
     setEditingRecord(head);
@@ -219,14 +203,12 @@ export default function DepartmentHeadPage() {
     }, 50);
   };
 
-  // Close Form
   const handleCloseForm = () => {
     setIsFormOpen(false);
     setEditingRecord(null);
     setSelectedImageFile(null);
   };
 
-  // Save / Update Form Submission
   const handleSubmitForm = async (e) => {
     e.preventDefault();
 
@@ -297,7 +279,6 @@ export default function DepartmentHeadPage() {
     }
   };
 
-  // Delete Action
   const handleDelete = async (id, name) => {
     setDeletingId(id);
     const toastId = toast.loading(`Removing department head "${name}"...`);
@@ -321,18 +302,14 @@ export default function DepartmentHeadPage() {
     }
   };
 
-  // Filtered List
   const filteredHeads = useMemo(() => {
     return deptHeads.filter((item) => {
-      // Department filter
       if (selectedDeptFilter !== 'all' && String(item.department_id) !== String(selectedDeptFilter)) {
         return false;
       }
-      // Status filter
       if (statusFilter === 'active' && !item.is_active) return false;
       if (statusFilter === 'inactive' && item.is_active) return false;
 
-      // Search term
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       const name = (item.name || '').toLowerCase();
@@ -353,7 +330,6 @@ export default function DepartmentHeadPage() {
     });
   }, [deptHeads, selectedDeptFilter, statusFilter, searchTerm]);
 
-  // Key metrics
   const metrics = useMemo(() => {
     const totalHeads = deptHeads.length;
     const totalDepts = availableDepartments.length;
@@ -370,7 +346,6 @@ export default function DepartmentHeadPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-900/60">
@@ -429,7 +404,6 @@ export default function DepartmentHeadPage() {
         </div>
       </div>
 
-      {/* Metrics Banner */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-2xs">
           <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -484,7 +458,6 @@ export default function DepartmentHeadPage() {
         </div>
       </div>
 
-      {/* INLINE WORKSTATION FORM (NO POPUP MODAL) */}
       {isFormOpen && (
         <div
           ref={formSectionRef}
@@ -513,7 +486,6 @@ export default function DepartmentHeadPage() {
           </div>
 
           <form onSubmit={handleSubmitForm} className="space-y-6">
-            {/* Row 1: Department Selection & Teacher Quick-Fill */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -564,7 +536,6 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Row 2: Name, Title & Designation */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -607,7 +578,6 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Row 3: Contacts & Appointment Date */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -648,14 +618,12 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Row 4: Image Upload & Preview */}
             <div className="bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 Executive Profile Photograph
               </label>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                {/* Photo Preview */}
                 <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
                   {formImage ? (
                     <img
@@ -726,7 +694,6 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Row 5: Bio & Welcome Message */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -755,7 +722,6 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Row 6: Order No & Active Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-1 border-t border-slate-100 dark:border-slate-800">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -792,7 +758,6 @@ export default function DepartmentHeadPage() {
               </div>
             </div>
 
-            {/* Bottom Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -818,10 +783,8 @@ export default function DepartmentHeadPage() {
         </div>
       )}
 
-      {/* Control Bar: Search & Filters */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2.5 flex-wrap">
-          {/* Search Box */}
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <input
               type="text"
@@ -841,7 +804,6 @@ export default function DepartmentHeadPage() {
             )}
           </div>
 
-          {/* Department Filter */}
           <div className="w-48">
             <select
               value={selectedDeptFilter}
@@ -857,7 +819,6 @@ export default function DepartmentHeadPage() {
             </select>
           </div>
 
-          {/* Status Filter */}
           <div className="w-36">
             <select
               value={statusFilter}
@@ -871,7 +832,6 @@ export default function DepartmentHeadPage() {
           </div>
         </div>
 
-        {/* View mode toggle */}
         <div className="flex items-center gap-2 self-end md:self-auto">
           <div className="flex items-center p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
             <button
@@ -900,7 +860,6 @@ export default function DepartmentHeadPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3">
           <Loader />
@@ -932,7 +891,6 @@ export default function DepartmentHeadPage() {
           </div>
         </div>
       ) : viewMode === 'cards' ? (
-        /* Cards View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredHeads.map((head) => {
             const isDeleting = deletingId === head.id;
@@ -945,7 +903,6 @@ export default function DepartmentHeadPage() {
                 className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
               >
                 <div className="space-y-4">
-                  {/* Top card bar: Department badge & Status */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/70 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-900/60 truncate max-w-[200px]">
                       {head.department_name} {head.department_code ? `(${head.department_code})` : ''}
@@ -967,7 +924,6 @@ export default function DepartmentHeadPage() {
                     </span>
                   </div>
 
-                  {/* Profile Header: Avatar & Names */}
                   <div className="flex items-center gap-3.5 pt-1">
                     <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shadow-2xs">
                       {head.image ? (
@@ -1008,7 +964,6 @@ export default function DepartmentHeadPage() {
                     </div>
                   </div>
 
-                  {/* Contact Info Pills */}
                   <div className="space-y-1.5 pt-1 text-[11px] text-slate-600 dark:text-slate-300">
                     {head.email && (
                       <div className="flex items-center gap-2 truncate">
@@ -1040,7 +995,6 @@ export default function DepartmentHeadPage() {
                     )}
                   </div>
 
-                  {/* Bio / Message snippet */}
                   {(head.bio || head.message) && (
                     <div className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 border border-slate-100 dark:border-slate-800/80 text-xs space-y-1.5">
                       {head.bio && (
@@ -1070,7 +1024,6 @@ export default function DepartmentHeadPage() {
                   )}
                 </div>
 
-                {/* Bottom Card Actions & Inline Delete Confirmation */}
                 <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
                   {isConfirming ? (
                     <div className="bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 rounded-xl p-2.5 text-center space-y-2">
@@ -1130,7 +1083,6 @@ export default function DepartmentHeadPage() {
           })}
         </div>
       ) : (
-        /* Table View */
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">

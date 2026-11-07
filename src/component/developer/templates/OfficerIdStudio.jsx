@@ -32,7 +32,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
   const fabricCanvasRef = useRef(null);
   const fabricRef = useRef(null);
 
-  // Dual-sided state: 'front' or 'back'
   const [activeSide, setActiveSide] = useState('front');
   const [activeTab, setActiveTab] = useState('elements');
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -45,13 +44,11 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
   const [tagSearch, setTagSearch] = useState('');
   const [selectedTagCategory, setSelectedTagCategory] = useState('all');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 86);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 54);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
 
-  // Both sides vector JSON storage
   const [frontData, setFrontData] = useState(() => {
     if (initialTemplate?.fabric_data && typeof initialTemplate.fabric_data === 'object' && initialTemplate.fabric_data.objects?.length > 0) {
       return initialTemplate.fabric_data;
@@ -66,14 +63,12 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     return generateStarterFabricBackJSON('officer_id');
   });
 
-  // Cached SVGs for instant dual export
   const [frontSvg, setFrontSvg] = useState(initialTemplate?.html_content || '');
   const [backSvg, setBackSvg] = useState(initialTemplate?.html_back_content || '');
 
   const [templateName, setTemplateName] = useState(initialTemplate?.name || 'Administrative Officer ID Pass');
   const [description, setDescription] = useState(initialTemplate?.description || '');
 
-  // Undo / Redo history
   const historyRef = useRef([]);
   const historyIndexRef = useRef(-1);
   const isHistoryActionRef = useRef(false);
@@ -119,7 +114,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     handleDimensionChange(dimHeight, dimWidth, dimUnit);
   };
 
-  // Switch between Front & Back side
   const handleSwitchSide = (side) => {
     if (side === activeSide) return;
     const canvas = fabricCanvasRef.current;
@@ -148,7 +142,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     canvas.clear();
     canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
 
-    // Reset history for the side
     historyRef.current = [];
     historyIndexRef.current = -1;
 
@@ -202,7 +195,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     });
   };
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
@@ -229,7 +221,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Initialize Canvas
   useEffect(() => {
     let isMounted = true;
     async function init() {
@@ -315,7 +306,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     };
   }, []);
 
-  // ================= ALIGNMENT UTILITIES =================
   const alignLeft = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !selectedObject) return;
@@ -388,7 +378,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     toast.success('Centered on Canvas');
   };
 
-  // ================= ADVANCE TOOLS =================
   const duplicateSelected = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !selectedObject) return;
@@ -492,7 +481,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     saveHistoryState();
   };
 
-  // ================= SHAPES PALETTE =================
   const addRectangle = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -635,7 +623,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     toast.success('Added Pill Badge');
   };
 
-  // Standard Officer Back Layout
   const loadStandardOfficerBackLayout = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -760,7 +747,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     saveHistoryState();
   };
 
-  // Add Front Elements
   const addHeading = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -846,7 +832,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
     toast.success(`Added ${tag.label}`);
   };
 
-  // ================= SAVE BOTH SIDES (ZERO THUMBNAILS) =================
   const handleSave = async () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -864,7 +849,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
       let finalFrontSvg = activeSide === 'front' ? activeSvg : frontSvg;
       let finalBackSvg = activeSide === 'back' ? activeSvg : backSvg;
 
-      // If one side's SVG is missing, render offscreen to guarantee full vector exports
       if (!finalFrontSvg && finalFrontData && fabric) {
         const offCanvas = new fabric.StaticCanvas(null, { width: canvas.width, height: canvas.height });
         await new Promise((res) => {
@@ -915,7 +899,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
         if (!d.success) throw new Error(d.error || 'Failed to save template');
       }
 
-      // Update state caches
       if (activeSide === 'front') {
         setFrontData(finalFrontData);
         setFrontSvg(finalFrontSvg);
@@ -937,7 +920,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
 
   return (
     <div className="w-full h-screen flex flex-col bg-slate-950 text-slate-100 font-sans select-none overflow-hidden">
-      {/* Top Application Bar */}
       <header className="h-12 border-b border-slate-800 bg-slate-900 px-4 flex items-center justify-between z-30 shrink-0">
         <div className="flex items-center gap-3">
           <a
@@ -958,9 +940,7 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </div>
 
-        {/* Center: DUAL-SIDED SWITCHER & SIZING */}
         <div className="flex items-center gap-3">
-          {/* Dual Side Toggle */}
           <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
             <button
               type="button"
@@ -986,13 +966,11 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
             </button>
           </div>
 
-          {/* Quick Dimensions Badge */}
           <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-800 text-[11px] text-slate-300 border border-slate-700">
             <span>{dimWidth} × {dimHeight} {dimUnit}</span>
             <span className="text-slate-500 capitalize">({dimWidth >= dimHeight ? 'Landscape' : 'Portrait'})</span>
           </div>
 
-          {/* Undo / Redo */}
           <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded border border-slate-700">
             <button
               type="button"
@@ -1013,7 +991,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </div>
 
-        {/* Right Action: Save */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 hidden lg:inline">{statusMessage}</span>
           <button
@@ -1027,9 +1004,7 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
         </div>
       </header>
 
-      {/* Main Studio Body */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Sidebar */}
         <div className={`w-full lg:w-80 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0 ${mobileView === 'tools' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="flex border-b border-slate-800 bg-slate-950/60 p-1">
             <button
@@ -1161,7 +1136,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
               </>
             )}
 
-            {/* Shapes Palette Tab */}
             {activeTab === 'shapes' && (
               <div className="space-y-4">
                 <div className="p-3 bg-slate-950 rounded border border-slate-800">
@@ -1249,7 +1223,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Merge Tags Tab */}
             {activeTab === 'tags' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1261,7 +1234,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                   </span>
                 </div>
 
-                {/* Field Search */}
                 <div>
                   <input
                     type="text"
@@ -1272,7 +1244,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                   />
                 </div>
 
-                {/* Category Chips */}
                 <div className="flex flex-wrap gap-1">
                   {DATA_CATEGORIES.filter(c => c.id !== 'guardian').map((cat) => (
                     <button
@@ -1290,7 +1261,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                   ))}
                 </div>
 
-                {/* Filtered Fields List */}
                 <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
                   {COMPREHENSIVE_OFFICER_TAGS.filter((tag) => {
                     const matchesCat = selectedTagCategory === 'all' || tag.category === selectedTagCategory;
@@ -1338,7 +1308,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Layers Tab */}
             {activeTab === 'layers' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between mb-2">
@@ -1368,7 +1337,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
               </div>
             )}
 
-            {/* Canvas Settings */}
             {activeTab === 'settings' && (
               <div className="space-y-4">
                 <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-3">
@@ -1451,11 +1419,8 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </div>
 
-        {/* Center: Workstation & Alignment Toolbar */}
         <div className={`flex-1 min-w-0 flex flex-col bg-slate-950 overflow-hidden ${mobileView === 'canvas' ? 'flex' : 'hidden lg:flex'}`}>
-          {/* Alignment & Quick Tools Sub-bar */}
           <div className="min-h-10 border-b border-slate-800 bg-slate-900/90 px-3 py-1 flex items-center justify-between text-xs shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none gap-2">
-            {/* Alignment Buttons */}
             <div className="flex items-center gap-1">
               <span className="text-[10px] text-slate-400 uppercase font-semibold mr-1">Align:</span>
               <button
@@ -1524,7 +1489,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
               </button>
             </div>
 
-            {/* Quick Actions (Duplicate, Flip, Lock, Delete) */}
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -1582,7 +1546,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
 
               <span className="text-slate-700 mx-1">|</span>
 
-              {/* Grid Toggle */}
               <button
                 type="button"
                 onClick={() => setShowGrid(!showGrid)}
@@ -1595,7 +1558,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                 Grid: {showGrid ? 'On' : 'Off'}
               </button>
 
-              {/* Zoom Controls */}
               <div className="flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-slate-300">
                 <button
                   type="button"
@@ -1623,7 +1585,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
             </div>
           </div>
 
-          {/* Canvas Viewport */}
           <div
             className={`flex-1 overflow-auto flex items-center justify-center p-8 ${
               showGrid
@@ -1642,7 +1603,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
             </div>
           </div>
 
-          {/* Canvas Footer Status */}
           <div className="h-6 border-t border-slate-800 bg-slate-900 px-3 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
             <div className="flex items-center gap-3">
               <span>Side: <b className="text-amber-400 capitalize">{activeSide}</b></span>
@@ -1657,7 +1617,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
           </div>
         </div>
 
-        {/* Right Inspector Sidebar */}
         <div className={`w-full lg:w-72 border-l border-slate-800 bg-slate-900 p-4 overflow-y-auto text-xs space-y-4 shrink-0 ${mobileView === 'inspector' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="border-b border-slate-800 pb-2">
             <h3 className="font-bold text-slate-200 uppercase text-[11px] tracking-wider">
@@ -1670,7 +1629,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
 
           {selectedObject ? (
             <div className="space-y-4">
-              {/* Layer Stacking Order */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Layer Ordering</span>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1705,7 +1663,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                 </div>
               </div>
 
-              {/* Opacity Slider */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-1.5">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-slate-400">Opacity</span>
@@ -1730,7 +1687,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                 />
               </div>
 
-              {/* Color & Fills */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Colors & Stroke</span>
                 <div className="flex items-center justify-between">
@@ -1812,7 +1768,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                 )}
               </div>
 
-              {/* Typography if Text Object */}
               {(selectedObject.type === 'i-text' || selectedObject.type === 'text') && (
                 <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Typography</span>
@@ -1876,7 +1831,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
                     </div>
                   </div>
 
-                  {/* Font Styling Buttons */}
                   <div className="flex gap-1 pt-1">
                     <button
                       type="button"
@@ -1941,7 +1895,6 @@ export default function OfficerIdStudio({ initialTemplate, onSave, onExitUrl = '
         </div>
       </div>
 
-      {/* Mobile Navigation Tab Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

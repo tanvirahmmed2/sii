@@ -4,9 +4,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 
-/**
- * Validates staff authorization to manage officer ID cards for this tenant website.
- */
 async function verifyOfficerStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
@@ -63,7 +60,6 @@ async function verifyOfficerStaffAccess(request, context, action = 'view') {
   };
 }
 
-// GET: List issued officer ID cards with rich officer JOIN metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyOfficerStaffAccess(request, context, 'view');
@@ -108,7 +104,6 @@ export async function GET(request, context) {
       LEFT JOIN website_officer_id_templates tpl ON oid.template_id = tpl.id
     `;
 
-    // Single card fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE oid.website_id = $1 AND oid.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -117,7 +112,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { id_card: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['oid.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -191,7 +185,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Issue new officer ID cards (single or bulk batch)
 export async function POST(request, context) {
   try {
     const auth = await verifyOfficerStaffAccess(request, context, 'create');
@@ -203,7 +196,6 @@ export async function POST(request, context) {
     const body = await request.json().catch(() => ({}));
     const staffId = staff?.id || null;
 
-    // Handle Bulk issuance
     if (Array.isArray(body.officers) && body.officers.length > 0) {
       const results = [];
       const now = new Date();
@@ -262,7 +254,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Single card issuance
     const {
       officer_id,
       card_number,
@@ -280,7 +271,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Officer selection is required.' }, { status: 400 });
     }
 
-    // Verify officer belongs to tenant website
     const officerCheck = await queryDb(
       `SELECT id, name, department, designation FROM website_officers WHERE id = $1 AND website_id = $2`,
       [officer_id, website.id]
@@ -348,7 +338,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update card status or metadata
 export async function PUT(request, context) {
   try {
     const auth = await verifyOfficerStaffAccess(request, context, 'edit');
@@ -431,7 +420,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Revoke or delete officer ID card
 export async function DELETE(request, context) {
   try {
     const auth = await verifyOfficerStaffAccess(request, context, 'delete');

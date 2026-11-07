@@ -13,13 +13,8 @@ export default function HomeNavbar() {
 
   return (
     <>
-      {/* Fixed Top Navbar */}
       <nav className="fixed top-0 left-0 right-0 h-16 w-full flex items-center justify-between bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 lg:px-8 z-50 transition-colors shadow-xs">
-        {/* ======================================================== */}
-        {/* PART 1 (LEFT): Site Name & Primary Navigation Links      */}
-        {/* ======================================================== */}
         <div className="flex items-center gap-5 xl:gap-8 justify-center">
-          {/* Site Name / Brand */}
           <Link
             href="/"
             className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white flex items-center hover:opacity-90 transition-opacity shrink-0"
@@ -27,7 +22,6 @@ export default function HomeNavbar() {
             {SITE_NAME}
           </Link>
 
-          {/* Desktop Navigation Links */}
           <div className="hidden lg:flex items-center gap-1 xl:gap-1.5">
             <Link
               href="/packages"
@@ -52,11 +46,7 @@ export default function HomeNavbar() {
           </div>
         </div>
 
-        {/* ======================================================== */}
-        {/* PART 2 (RIGHT): Contact, Login, Get Started & Menubar    */}
-        {/* ======================================================== */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Action Links (Desktop) */}
           <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
             <Link
               href="/contact"
@@ -94,7 +84,6 @@ export default function HomeNavbar() {
 
           
 
-          {/* Menubar Toggle Button on the Right for Mobile */}
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
@@ -106,10 +95,8 @@ export default function HomeNavbar() {
         </div>
       </nav>
 
-      {/* Top Spacer for Fixed Navbar */}
       <div className="h-16 w-full shrink-0" aria-hidden="true" />
 
-      {/* Right-sided Drawer Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     </>
   );

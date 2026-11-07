@@ -40,14 +40,12 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
   let clean = rawInput.trim().toLowerCase();
   clean = clean.replace(/^https?:\/\//, '');
 
-  // Strip trailing baseDomain if present
   if (clean.endsWith(`.${baseDomain.toLowerCase()}`)) {
     clean = clean.slice(0, -(baseDomain.length + 1));
   } else if (clean.includes('.')) {
     clean = clean.split('.')[0];
   }
 
-  // Sanitize characters: only letters, numbers, single hyphens
   clean = clean.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
 
   if (clean.length === 0) {
@@ -160,9 +158,6 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
   }
 }
 
-/**
- * Checks availability and validity of external custom domains (e.g. schoolname.edu)
- */
 export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude = null, request = null) {
   const baseDomain = BASE_DOMAIN || 'localhost:3000';
   const cleanBase = baseDomain.split(':')[0].toLowerCase();
@@ -177,7 +172,7 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
 
   let clean = rawInput.trim().toLowerCase();
   clean = clean.replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
-  clean = clean.split(':')[0]; // strip port
+  clean = clean.split(':')[0]; 
 
   if (!clean) {
     return {
@@ -187,7 +182,6 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
     };
   }
 
-  // Must contain at least one dot
   if (!clean.includes('.')) {
     return {
       available: false,
@@ -197,7 +191,6 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
     };
   }
 
-  // Hostname validation regex
   const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/;
   if (!domainRegex.test(clean) || clean.length < 4 || clean.length > 253) {
     return {
@@ -208,7 +201,6 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
     };
   }
 
-  // Prevent connecting the SaaS root domain as a tenant custom domain
   if (clean === cleanBase || clean === `www.${cleanBase}` || clean.endsWith(`.${cleanBase}`) || clean.endsWith('.localhost')) {
     return {
       available: false,

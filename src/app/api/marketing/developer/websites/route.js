@@ -29,7 +29,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE WEBSITE
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'websites');
@@ -39,7 +38,7 @@ export async function POST(request) {
     const body = await request.json();
     const rawData = body.data || body;
     const data = { ...rawData };
-    delete data.package_id; // package_id dropped from websites; derived via subscription
+    delete data.package_id; 
 
     if (!data.slug) {
       data.slug = (data.subdomain || data.name || 'site')
@@ -81,7 +80,6 @@ export async function POST(request) {
     );
     const row = res.rows[0];
 
-    // Link subscription bidirectionally if provided
     if (row?.id && data.subscription_id) {
       const subId = Number(data.subscription_id);
       await queryDb(
@@ -102,7 +100,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE WEBSITE
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'websites');
@@ -115,7 +112,7 @@ export async function PUT(request) {
     
     const rawData = body.data || body;
     const data = { ...rawData };
-    delete data.package_id; // package_id removed from websites table
+    delete data.package_id; 
 
     if (data.is_published !== undefined) {
       const isPub = Boolean(data.is_published);
@@ -130,7 +127,6 @@ export async function PUT(request) {
       }
     }
 
-    // Bidirectional sync if subscription_id is updated
     if (data.subscription_id !== undefined) {
       const targetSubId = data.subscription_id ? Number(data.subscription_id) : null;
       if (targetSubId) {
@@ -170,7 +166,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE WEBSITE
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'websites');

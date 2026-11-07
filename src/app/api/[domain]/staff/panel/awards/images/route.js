@@ -7,7 +7,6 @@ async function verifyStaffAccess(request, context, action = 'view') {
   return verifyStaffModuleAccess(request, context, 'website-builder', action);
 }
 
-// GET: List all award images with award metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'view');
@@ -55,7 +54,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Upsert single image for an award
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'create');
@@ -72,7 +70,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Image URL is required.' }, { status: 400 });
     }
 
-    // Verify award belongs to this website
     const awardCheck = await queryDb(
       `SELECT id, title FROM website_awards WHERE id = $1 AND website_id = $2`,
       [award_id, auth.website.id]
@@ -82,7 +79,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Award not found or unauthorized.' }, { status: 404 });
     }
 
-    // Enforce strictly single image via ON CONFLICT (award_id)
     const upsertResult = await queryDb(
       `INSERT INTO website_award_images 
         (website_id, award_id, image_url, image_id, caption)
@@ -113,7 +109,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove image for an award
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'delete');

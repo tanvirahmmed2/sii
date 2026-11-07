@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -28,22 +26,18 @@ function TeacherAssignContent() {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState(initialTeacherId);
 
-  // Institution metadata for assignment dropdowns
   const [subjectsList, setSubjectsList] = useState([]);
   const [classesList, setClassesList] = useState([]);
   const [sectionsList, setSectionsList] = useState([]);
   const [daysList, setDaysList] = useState([]);
   const [periodsList, setPeriodsList] = useState([]);
 
-  // Teacher current assignments
   const [assignedSubjects, setAssignedSubjects] = useState([]);
   const [assignedPeriods, setAssignedPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Active tab: 'subjects' or 'periods'
   const [activeTab, setActiveTab] = useState('subjects');
 
-  // Modals
   const [isSubjModalOpen, setIsSubjModalOpen] = useState(false);
   const [subjFormData, setSubjFormData] = useState({
     subject_id: '',
@@ -61,7 +55,6 @@ function TeacherAssignContent() {
 
   const [saving, setSaving] = useState(false);
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -75,7 +68,6 @@ function TeacherAssignContent() {
     }
   }, []);
 
-  // Fetch teachers roster
   useEffect(() => {
     async function loadTeachers() {
       if (!domain) return;
@@ -95,12 +87,10 @@ function TeacherAssignContent() {
     loadTeachers();
   }, [domain, selectedTeacherId]);
 
-  // Fetch institutional options (subjects, classes, days, periods)
   useEffect(() => {
     async function loadMeta() {
       if (!domain) return;
       try {
-        // Subjects
         fetch(`/api/${domain}/staff/panel/subjects`)
           .then((r) => r.json())
           .then((d) => {
@@ -108,7 +98,6 @@ function TeacherAssignContent() {
           })
           .catch(() => {});
 
-        // Classes
         fetch(`/api/${domain}/staff/panel/classes`)
           .then((r) => r.json())
           .then((d) => {
@@ -116,7 +105,6 @@ function TeacherAssignContent() {
           })
           .catch(() => {});
 
-        // Sections
         fetch(`/api/${domain}/staff/panel/sections`)
           .then((r) => r.json())
           .then((d) => {
@@ -124,7 +112,6 @@ function TeacherAssignContent() {
           })
           .catch(() => {});
 
-        // Days
         fetch(`/api/${domain}/staff/panel/days`)
           .then((r) => r.json())
           .then((d) => {
@@ -132,7 +119,6 @@ function TeacherAssignContent() {
           })
           .catch(() => {});
 
-        // Periods
         fetch(`/api/${domain}/staff/panel/periods`)
           .then((r) => r.json())
           .then((d) => {
@@ -146,7 +132,6 @@ function TeacherAssignContent() {
     loadMeta();
   }, [domain]);
 
-  // Fetch assignments for selected teacher
   const fetchTeacherAssignments = useCallback(async (tId) => {
     if (!domain || !tId) return;
     try {
@@ -173,7 +158,6 @@ function TeacherAssignContent() {
     }
   }, [selectedTeacherId, fetchTeacherAssignments]);
 
-  // Handle Subject assignment save
   const handleAssignSubject = async (e) => {
     e.preventDefault();
     if (!subjFormData.subject_id) {
@@ -211,7 +195,6 @@ function TeacherAssignContent() {
     }
   };
 
-  // Handle Period assignment save
   const handleAssignPeriod = async (e) => {
     e.preventDefault();
     if (!periodFormData.period_id) {
@@ -250,7 +233,6 @@ function TeacherAssignContent() {
     }
   };
 
-  // Remove assignment
   const handleRemoveAssignment = async (type, id) => {
     if (!confirm(`Are you sure you want to remove this ${type} assignment?`)) return;
     try {
@@ -275,7 +257,6 @@ function TeacherAssignContent() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -289,7 +270,6 @@ function TeacherAssignContent() {
         </div>
       )}
 
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
@@ -309,7 +289,6 @@ function TeacherAssignContent() {
           </p>
         </div>
 
-        {/* Faculty Selector */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Faculty:</span>
           <select
@@ -326,7 +305,6 @@ function TeacherAssignContent() {
         </div>
       </div>
 
-      {/* Selected Teacher Summary Banner */}
       {currentTeacher && (
         <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
           <div className="flex items-center gap-3">
@@ -365,9 +343,7 @@ function TeacherAssignContent() {
         </div>
       )}
 
-      {/* Main Tabs Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Navigation Tabs */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <button
@@ -416,7 +392,6 @@ function TeacherAssignContent() {
           </div>
         </div>
 
-        {/* Tab 1: Assigned Subjects Table */}
         {activeTab === 'subjects' && (
           <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
             <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
@@ -492,7 +467,6 @@ function TeacherAssignContent() {
           </div>
         )}
 
-        {/* Tab 2: Assigned Periods Routine Table */}
         {activeTab === 'periods' && (
           <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
             <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
@@ -563,7 +537,6 @@ function TeacherAssignContent() {
         )}
       </div>
 
-      {/* Modal 1: Assign Subject */}
       {isSubjModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95">
@@ -649,7 +622,6 @@ function TeacherAssignContent() {
         </div>
       )}
 
-      {/* Modal 2: Assign Period Routine */}
       {isPeriodModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95">

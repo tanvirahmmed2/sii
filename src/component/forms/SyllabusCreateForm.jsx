@@ -67,7 +67,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
       }
 
       toast.success(data.message || 'Syllabus created successfully!');
-      // Reset form fields (retaining classId filter helper)
       setName('');
       setTitle('');
       setLink('');
@@ -97,7 +96,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Class selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiLayers className="text-slate-400" /> Class
@@ -118,7 +116,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
             </select>
           </div>
 
-          {/* Subject selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiBook className="text-slate-400" /> Subject
@@ -141,7 +138,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Syllabus Name */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiFileText className="text-slate-400" /> Syllabus Name
@@ -156,7 +152,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
             />
           </div>
 
-          {/* Syllabus Title */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiFileText className="text-slate-400" /> Syllabus Title / Term
@@ -172,7 +167,6 @@ const SyllabusCreateForm = ({ initialClassId = '', onSuccess, onCancel }) => {
           </div>
         </div>
 
-        {/* Syllabus Document URL */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiLink className="text-slate-400" /> Syllabus Link / Document URL

@@ -59,7 +59,6 @@ const AdminHomePage = () => {
 
   return (
     <div className="w-full flex flex-col gap-6 pb-12">
-      {/* Top Banner Header */}
       <div className="w-full bg-slate-900 text-white rounded p-6 md:p-7 shadow-xs relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-slate-800">
         <div className="flex flex-col gap-1.5 z-10">
           <div className="flex items-center gap-2">
@@ -89,9 +88,7 @@ const AdminHomePage = () => {
         </div>
       </div>
 
-      {/* KPI Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Stat 1: Total Students */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -109,7 +106,6 @@ const AdminHomePage = () => {
           </div>
         </div>
 
-        {/* Stat 2: Total Teachers */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -127,7 +123,6 @@ const AdminHomePage = () => {
           </div>
         </div>
 
-        {/* Stat 3: Total Staff */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -145,7 +140,6 @@ const AdminHomePage = () => {
           </div>
         </div>
 
-        {/* Stat 4: Academic Classes */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -164,9 +158,7 @@ const AdminHomePage = () => {
         </div>
       </div>
 
-      {/* Analytics & Overview Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Admissions Overview */}
         <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="font-semibold text-slate-800 dark:text-white text-sm">Admissions Overview</h3>
@@ -217,7 +209,6 @@ const AdminHomePage = () => {
           </div>
         </div>
 
-        {/* Finance Overview */}
         <div className="lg:col-span-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col justify-between gap-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="font-semibold text-slate-800 dark:text-white text-sm">Financial Overview</h3>
@@ -263,7 +254,6 @@ const AdminHomePage = () => {
         </div>
       </div>
 
-      {/* Quick Action Navigation Tiles */}
       <div className="flex flex-col gap-2.5">
         <h3 className="text-sm font-semibold text-slate-800 dark:text-white">
           Shortcuts &amp; Operations
@@ -320,9 +310,7 @@ const AdminHomePage = () => {
         </div>
       </div>
 
-      {/* Data Tables Row: Recent Admissions & Security Logs */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Recent Admissions Table */}
         <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="font-semibold text-slate-800 dark:text-white text-sm">
@@ -378,7 +366,6 @@ const AdminHomePage = () => {
           )}
         </div>
 
-        {/* Security & System Activity Logs */}
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded shadow-2xs flex flex-col gap-3">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="font-semibold text-slate-800 dark:text-white text-sm">

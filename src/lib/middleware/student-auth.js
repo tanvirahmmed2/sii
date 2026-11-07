@@ -1,20 +1,12 @@
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from './websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission } from './staff.js';
 
-/**
- * Verifies staff authentication and permission for student operations.
- * Enforces:
- * 1. Tenant website has the 'sis' module in its subscription package
- * 2. Authenticated staff belongs to this tenant website
- * 3. Staff member has explicit permission for the requested action on 'sis'
- */
 export async function verifyStudentStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Check Tenant Subscription Package Allowance
   const hasAllowance = await hasTenantModuleAllowance(website, 'sis');
   if (!hasAllowance) {
     return {
@@ -25,7 +17,6 @@ export async function verifyStudentStaffAccess(request, context, action = 'view'
     };
   }
 
-  // 2. Check Staff Session & Tenant Boundary
   const staffSession = await getStaffSession(request);
   if (!staffSession) {
     return { error: 'Unauthorized: Staff access required.', status: 401, code: 'UNAUTHORIZED' };
@@ -41,7 +32,6 @@ export async function verifyStudentStaffAccess(request, context, action = 'view'
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
   }
 
-  // 3. Check Staff Module Permissions
   const hasStudentPerm =
     hasStaffModulePermission(staffSession, 'sis', action) ||
     hasStaffModulePermission(staffSession, 'student-management', action) ||

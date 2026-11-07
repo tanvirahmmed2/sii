@@ -91,7 +91,6 @@ const ClassEditForm = ({ cls, onSuccess, onCancel }) => {
           />
         </div>
 
-        {/* Description */}
         <div className="flex flex-col gap-1.5 md:col-span-4">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Description

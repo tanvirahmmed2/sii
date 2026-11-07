@@ -66,7 +66,6 @@ export default function AccessPortalSelectionPage() {
           ))}
         </div>
 
-        {/* Footer Navigation */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
           <Link
             href={tenantUrl('/auth')}

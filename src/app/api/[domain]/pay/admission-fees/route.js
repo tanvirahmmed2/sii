@@ -5,10 +5,6 @@ import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateway
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay/admission-fees
- * Search and check admission application fees.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -19,7 +15,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const identifier = (searchParams.get('identifier') || searchParams.get('applicant_id') || searchParams.get('id') || '').trim();
 
-    // Fetch assigned gateways specifically for admission fees
     const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'admission_fees');
 
     if (!identifier) {
@@ -86,7 +81,6 @@ export async function GET(request, context) {
       masked_phone: maskPhone(row.phone)
     };
 
-    // Fetch admission fee invoice
     const feeRes = await queryDb(`
       SELECT p.id, p.invoice_no, p.amount, p.currency, p.payment_status,
              a.application_no, a.applicant_name,
@@ -127,10 +121,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/pay/admission-fees
- * Process payment for admission fee invoice.
- */
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -185,7 +175,6 @@ export async function POST(request, context) {
       if (match) finalAccountId = match.id;
     }
 
-    // Update fee payment record
     await client.query(`
       UPDATE website_admission_fee_payments
       SET payment_status = 'paid',
@@ -195,14 +184,12 @@ export async function POST(request, context) {
       WHERE id = $3
     `, [gw, txnId, inv.id]);
 
-    // Update applicant updated_at timestamp
     await client.query(`
       UPDATE website_admission_applicants
       SET updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, [inv.applicant_record_id]);
 
-    // Record transaction in audit ledger
     await client.query(`
       INSERT INTO website_payment_transactions (
         website_id, gateway_account_id, gateway_code, purpose, invoice_ref,

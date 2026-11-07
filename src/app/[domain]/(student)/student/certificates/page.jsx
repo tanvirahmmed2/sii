@@ -46,7 +46,6 @@ export default function StudentCertificatesPage() {
     return <TenantLoader fullScreen={false} />;
   }
 
-  // Compile Certificate HTML with active template
   const compileCertHtml = (cert) => {
     if (!cert || !template) return null;
     let html = template.custom_html || template.html_content || '';
@@ -126,7 +125,6 @@ export default function StudentCertificatesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -178,7 +176,6 @@ export default function StudentCertificatesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Certificate Selection Roster */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 space-y-2">
             <div className="px-2 py-1 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
@@ -228,7 +225,6 @@ export default function StudentCertificatesPage() {
             </div>
           </div>
 
-          {/* Visual Certificate Preview Area */}
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center space-y-4">
             <div className="flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>

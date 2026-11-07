@@ -4,18 +4,16 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 
 export default function OfficerLibraryPage() {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'books' | 'shelves' | 'students' | 'faculty'
+  const [activeTab, setActiveTab] = useState('overview'); 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
 
-  // Tab Data States
   const [books, setBooks] = useState([]);
   const [shelves, setShelves] = useState([]);
   const [studentCirc, setStudentCirc] = useState([]);
   const [teacherCirc, setTeacherCirc] = useState([]);
 
-  // Search & Pagination per tab
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -52,7 +50,6 @@ export default function OfficerLibraryPage() {
     setSearchTerm('');
   }, [activeTab, pageSize]);
 
-  // Tab Records & Pagination
   const activeDataset = useMemo(() => {
     if (activeTab === 'books') return books;
     if (activeTab === 'shelves') return shelves;
@@ -90,7 +87,6 @@ export default function OfficerLibraryPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Title */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -118,7 +114,6 @@ export default function OfficerLibraryPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Catalog Titles</p>
@@ -169,7 +164,6 @@ export default function OfficerLibraryPage() {
         </div>
       </div>
 
-      {/* Direct Desk Shortcuts */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         <Link
           href="/officer/library/books"
@@ -218,7 +212,6 @@ export default function OfficerLibraryPage() {
         </Link>
       </div>
 
-      {/* Main Tab Navigation */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 text-xs font-medium space-x-6">
         {[
           { key: 'overview', label: 'Executive Ledger' },
@@ -241,9 +234,7 @@ export default function OfficerLibraryPage() {
         ))}
       </div>
 
-      {/* Interactive Table Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden space-y-0">
-        {/* Toolbar */}
         <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -280,7 +271,6 @@ export default function OfficerLibraryPage() {
           </div>
         </div>
 
-        {/* Content Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -327,7 +317,6 @@ export default function OfficerLibraryPage() {
                   </td>
                 </tr>
               ) : activeTab === 'overview' ? (
-                // Combined recent overview
                 studentCirc.slice(0, pageSize).map((iss) => (
                   <tr key={'stu-' + iss.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                     <td className="py-2.5 px-3">
@@ -427,7 +416,6 @@ export default function OfficerLibraryPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         {activeTab !== 'overview' && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
             <div>

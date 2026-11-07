@@ -35,7 +35,6 @@ export default function ResidenceReportPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -58,7 +57,6 @@ export default function ResidenceReportPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Halls</p>
@@ -95,7 +93,6 @@ export default function ResidenceReportPage() {
         </div>
       </div>
 
-      {/* Hall Breakdown Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
         <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
           Hall Performance & Summary Roster

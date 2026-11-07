@@ -5,13 +5,12 @@ import { queryDb } from 'src/lib/database/db';
 import { LIVE_CHAT_TOKEN, SITE_NAME } from 'src/lib/database/secret';
 
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
-const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours in seconds
+const COOKIE_MAX_AGE = 60 * 60 * 24; 
 
 function parseCookieData(cookieVal) {
   if (!cookieVal) return null;
   try {
     const parsed = JSON.parse(cookieVal);
-    // Check 24-hour expiration window
     if (parsed.createdAt && Date.now() - parsed.createdAt > COOKIE_MAX_AGE * 1000) {
       return null;
     }
@@ -36,13 +35,11 @@ function parseCookieData(cookieVal) {
   }
 }
 
-// GET: Retrieve active 24-hour live chat session and messages for guest
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const cookieStore = await cookies();
 
-    // Check cookie from request cookies, cookieStore, or query params
     const rawCookie =
       request.cookies.get(COOKIE_NAME)?.value ||
       cookieStore.get(COOKIE_NAME)?.value;
@@ -64,7 +61,6 @@ export async function GET(request) {
       chat = res.rows[0] || null;
     }
 
-    // If chat does not exist or has been ended/closed, clear cookie
     if (!chat || String(chat.status || '').toUpperCase() === 'CLOSED') {
       const response = NextResponse.json({ success: true, chat: null, messages: [], device: null });
       try {
@@ -74,13 +70,11 @@ export async function GET(request) {
       return response;
     }
 
-    // Fetch messages for this chat session
     const msgRes = await queryDb(
       'SELECT id, chat_id, sender_type, sender_name, message, created_at FROM live_chat_messages WHERE chat_id = $1 ORDER BY created_at ASC',
       [chat.id]
     );
 
-    // Sanitize messages so internal staff/developer personal information is not exposed to visitors
     const sanitizedMessages = msgRes.rows.map((msg) => ({
       ...msg,
       sender_name: msg.sender_type === 'ADMIN' ? 'Support' : msg.sender_name,
@@ -102,14 +96,12 @@ export async function GET(request) {
   }
 }
 
-// POST: Start chat, send message, or end chat
 export async function POST(request) {
   try {
     const body = await request.json();
     const { action } = body;
     const cookieStore = await cookies();
 
-    // 1. START A NEW LIVE CHAT SESSION (24-hour cookie)
     if (action === 'start_chat' || (!action && body.visitor_name)) {
       const visitorName = (body.visitor_name || '').trim();
       const visitorEmail = (body.visitor_email || '').trim().toLowerCase() || null;
@@ -122,7 +114,6 @@ export async function POST(request) {
         );
       }
 
-      // Collect client IP and request details
       const ip =
         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
         request.headers.get('x-real-ip') ||
@@ -131,7 +122,6 @@ export async function POST(request) {
 
       const sessionId = generateToken(16);
 
-      // Insert live chat session adhering to schema.psql
       const chatRes = await queryDb(
         `INSERT INTO live_chats (visitor_name, visitor_email, session_id, status, ip_address, user_agent, started_at)
          VALUES ($1, $2, $3, 'OPEN', $4, $5, CURRENT_TIMESTAMP)
@@ -174,7 +164,6 @@ export async function POST(request) {
 
       const cookieVal = Buffer.from(JSON.stringify(cookieData)).toString('base64');
 
-      // Set cookie on cookieStore
       try {
         cookieStore.set(COOKIE_NAME, cookieVal, {
           maxAge: COOKIE_MAX_AGE,
@@ -185,7 +174,6 @@ export async function POST(request) {
         });
       } catch (_) { }
 
-      // Build JSON response and attach Set-Cookie header directly to ensure client browser sets it
       const response = NextResponse.json({
         success: true,
         chat,
@@ -200,13 +188,12 @@ export async function POST(request) {
         expires: new Date(expiresAt),
         path: '/',
         sameSite: 'lax',
-        httpOnly: false, // Accessible client & server
+        httpOnly: false, 
       });
 
       return response;
     }
 
-    // 2. GUEST VISITOR SENDS A MESSAGE
     if (action === 'send_message') {
       const chatId = Number(body.chat_id);
       const message = (body.message || '').trim();
@@ -219,7 +206,6 @@ export async function POST(request) {
         );
       }
 
-      // Check that chat session exists and is active
       const chatCheck = await queryDb('SELECT id, status FROM live_chats WHERE id = $1 LIMIT 1', [chatId]);
       if (chatCheck.rows.length === 0) {
         return NextResponse.json(
@@ -235,7 +221,6 @@ export async function POST(request) {
         );
       }
 
-      // Insert message adhering to schema.psql
       const msgRes = await queryDb(
         `INSERT INTO live_chat_messages (chat_id, sender_type, sender_name, message)
          VALUES ($1, 'VISITOR', $2, $3)
@@ -243,7 +228,6 @@ export async function POST(request) {
         [chatId, senderName, message]
       );
 
-      // Touch chat updated_at and ensure status is at least OPEN
       await queryDb('UPDATE live_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [chatId]);
 
       return NextResponse.json({
@@ -252,7 +236,6 @@ export async function POST(request) {
       });
     }
 
-    // 3. END CHAT SESSION (clear 24-hour cookie and close session)
     if (action === 'end_chat' || action === 'clear') {
       const chatId = body.chat_id ? Number(body.chat_id) : null;
       if (chatId) {

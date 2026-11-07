@@ -12,10 +12,6 @@ function slugify(text) {
     .replace(/\-\-+/g, '-');
 }
 
-/**
- * GET /api/developer/permissions
- * List all developer module_permissions, combining developer with module.
- */
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, ['modules', 'developers']);
@@ -28,7 +24,6 @@ export async function GET(request) {
     const roleId = searchParams.get('roleId') || searchParams.get('role_id');
     const search = (searchParams.get('search') || searchParams.get('q') || '').trim().toLowerCase();
 
-    // If querying by role_id
     if (roleId) {
       let rolePermsSql = `
         SELECT drp.id, drp.role_id, r.name AS role_name, r.slug AS role_slug,
@@ -99,10 +94,6 @@ export async function GET(request) {
   }
 }
 
-/**
- * POST /api/developer/permissions
- * Grant or update a developer module_permission.
- */
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, ['modules', 'developers']);
@@ -113,13 +104,11 @@ export async function POST(request) {
     const body = await request.json();
     const { roleId, developerId, moduleId, can_view = true, can_create = false, can_edit = false, can_delete = false } = body;
 
-    // Assign role to developer directly
     if (developerId && roleId && !moduleId) {
       await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [roleId, developerId]);
       return NextResponse.json({ success: true, message: 'Developer role assigned successfully.' });
     }
 
-    // Role-based permission update
     if (roleId && moduleId) {
       const insertRes = await queryDb(
         `INSERT INTO developer_role_permissions (role_id, module_id, can_view, can_create, can_edit, can_delete, updated_at)
@@ -168,10 +157,6 @@ export async function POST(request) {
   }
 }
 
-/**
- * PUT /api/developer/permissions
- * Update an existing developer module permission.
- */
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, ['modules', 'developers']);
@@ -209,10 +194,6 @@ export async function PUT(request) {
   }
 }
 
-/**
- * DELETE /api/developer/permissions
- * Revoke a developer module permission.
- */
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, ['modules', 'developers']);

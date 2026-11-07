@@ -41,7 +41,6 @@ export default function VerifyIDCardPage() {
     <div className="w-full min-h-[75vh] py-10 md:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
       <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -62,7 +61,6 @@ export default function VerifyIDCardPage() {
           </p>
         </motion.div>
 
-        {/* Search Input Box */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -101,7 +99,6 @@ export default function VerifyIDCardPage() {
           </form>
         </motion.div>
 
-        {/* Error Output */}
         {searched && errorMsg && (
           <div className="bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 text-secondary-dark dark:text-secondary-light p-4 rounded-2xl text-xs font-medium">
             <span className="font-semibold mr-1.5">[Notice]</span>
@@ -109,7 +106,6 @@ export default function VerifyIDCardPage() {
           </div>
         )}
 
-        {/* Verification Result Card */}
         {result && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}

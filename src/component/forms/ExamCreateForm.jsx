@@ -22,7 +22,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
 
-  // Fetch initial classes, subjects, and class-subject mappings
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -41,7 +40,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
           if (exam) {
             setName(exam.name);
             setTerm(exam.term || '');
-            // format date string for HTML date input (YYYY-MM-DD)
             setStartDate(new Date(exam.start_date).toISOString().split('T')[0]);
             setEndDate(new Date(exam.end_date).toISOString().split('T')[0]);
             setStatus(exam.status);
@@ -72,7 +70,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
     loadInitialData();
   }, [examId]);
 
-  // Filter subjects assigned to selected target class
   const availableSubjects = React.useMemo(() => {
     if (!classId) return subjects;
     const mappedIds = classSubjects
@@ -167,7 +164,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-8">
         
-        {/* Core Exam Parameters */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="flex flex-col gap-1.5 md:col-span-2">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -276,7 +272,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
           </div>
         </div>
 
-        {/* Schedules Routine Section */}
         <div className="flex flex-col gap-4 border-t border-slate-50 pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -301,7 +296,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
               {schedules.map((schedule, index) => (
                 <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
                   
-                  {/* Subject Selection */}
                   <div className="flex flex-col gap-1.5 md:col-span-3">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       <FiBook className="text-primary" /> Subject *
@@ -317,7 +311,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     </select>
                   </div>
 
-                  {/* Exam Date */}
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       <FiCalendar className="text-primary" /> Exam Date *
@@ -331,7 +324,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     />
                   </div>
 
-                  {/* Start Time */}
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       <FiClock className="text-primary" /> Start Time *
@@ -346,7 +338,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     />
                   </div>
 
-                  {/* End Time */}
                   <div className="flex flex-col gap-1.5 md:col-span-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       <FiClock className="text-primary" /> End Time *
@@ -361,7 +352,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     />
                   </div>
 
-                  {/* Room Number */}
                   <div className="flex flex-col gap-1.5 md:col-span-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       <FiMapPin className="text-primary" /> Room
@@ -375,7 +365,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     />
                   </div>
 
-                  {/* Full Marks */}
                   <div className="flex flex-col gap-1.5 md:col-span-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                       Full Marks
@@ -391,7 +380,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
                     />
                   </div>
 
-                  {/* Delete Button */}
                   <div className="flex items-center justify-end md:col-span-1">
                     <button
                       type="button"
@@ -408,7 +396,6 @@ const ExamCreateForm = ({ examId, onSuccess, onCancel }) => {
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex justify-end gap-3 border-t border-slate-50 pt-6">
           <button
             type="button"

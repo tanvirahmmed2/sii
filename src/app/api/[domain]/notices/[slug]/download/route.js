@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getDriveDetails } from 'src/lib/utils/drive.js';
 
-// GET: Direct download handler for a notice's attached PDF or drive file
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -53,13 +52,11 @@ export async function GET(request, context) {
       );
     }
 
-    // If Cloudinary URL, use fl_attachment transformation for direct download
     if (fileUrl.includes('cloudinary.com') && fileUrl.includes('/upload/')) {
       const downloadTarget = fileUrl.replace('/upload/', '/upload/fl_attachment/');
       return NextResponse.redirect(downloadTarget, 302);
     }
 
-    // Google Drive URL handling
     const details = getDriveDetails(fileUrl);
     const targetDownloadUrl = details?.downloadUrl || fileUrl;
 

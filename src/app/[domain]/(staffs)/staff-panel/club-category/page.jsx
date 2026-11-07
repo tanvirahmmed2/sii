@@ -13,7 +13,6 @@ export default function ClubCategoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Inline Form State (NO popup)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [formName, setFormName] = useState('');
@@ -21,11 +20,9 @@ export default function ClubCategoryPage() {
   const [formIsActive, setFormIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Inline Delete State
   const [deletingId, setDeletingId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  // Alert Banner
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -157,14 +154,12 @@ export default function ClubCategoryPage() {
     }
   };
 
-  // KPI Calculations
   const totalRecords = categories.length;
   const activeRecords = categories.filter((c) => c.is_active).length;
   const totalClubsBound = categories.reduce((acc, c) => acc + (parseInt(c.clubs_count, 10) || 0), 0);
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Notification */}
       {toastMessage && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>
@@ -178,7 +173,6 @@ export default function ClubCategoryPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Categories</p>
@@ -213,7 +207,6 @@ export default function ClubCategoryPage() {
         </div>
       </div>
 
-      {/* Inline Create / Edit Workstation Panel (NO popup) */}
       {isFormOpen && (
         <div className="bg-white dark:bg-slate-900 border border-primary/30 rounded p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -293,9 +286,7 @@ export default function ClubCategoryPage() {
         </div>
       )}
 
-      {/* Main Interactive Workstation Area */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -333,7 +324,6 @@ export default function ClubCategoryPage() {
           </div>
         </div>
 
-        {/* High-Density Data Table (NO slug column) */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">

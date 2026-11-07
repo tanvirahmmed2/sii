@@ -4,14 +4,6 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/admissions/admit-card?query=...&admission_id=...
- * Public lookup for candidate Admit Card.
- * Eligibility:
- * - Admission circular must be 'exam' based
- * - Applicant status must be 'completed', 'selected', or 'enrolled'
- * - Staff must have issued admit card (is_admit_card_issued = true) OR CURRENT_TIMESTAMP >= admit_publish_date
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -81,7 +73,6 @@ export async function GET(request, context) {
 
     const applicant = res.rows[0];
 
-    // Check circular method
     if (applicant.selection_method !== 'exam') {
       return NextResponse.json({
         success: false,
@@ -89,7 +80,6 @@ export async function GET(request, context) {
       }, { status: 400 });
     }
 
-    // Check completion status
     if (!['completed', 'selected', 'enrolled', 'accepted'].includes(applicant.status)) {
       return NextResponse.json({
         success: false,
@@ -98,7 +88,6 @@ export async function GET(request, context) {
       }, { status: 400 });
     }
 
-    // Check admit card issuance eligibility
     const admitPublishDate = applicant.admit_publish_date ? new Date(applicant.admit_publish_date) : null;
     const isDateReached = admitPublishDate ? new Date() >= admitPublishDate : false;
     const isIssued = Boolean(applicant.is_admit_card_issued || isDateReached);
@@ -120,7 +109,6 @@ export async function GET(request, context) {
       }, { status: 403 });
     }
 
-    // Fetch exam subjects
     const subjectsRes = await queryDb(`
       SELECT id, title, mark, time
       FROM website_admission_exam_subjects
@@ -128,7 +116,6 @@ export async function GET(request, context) {
       ORDER BY id ASC
     `, [applicant.admission_id, website.id]);
 
-    // Fetch active admit card template for this website (or default system template)
     let activeTemplate = null;
     let compiledHtml = null;
 

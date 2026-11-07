@@ -28,7 +28,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET /api/[domain]/staff/panel/posters/[id]
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -85,7 +84,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT /api/[domain]/staff/panel/posters/[id]
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -161,7 +159,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE /api/[domain]/staff/panel/posters/[id]
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

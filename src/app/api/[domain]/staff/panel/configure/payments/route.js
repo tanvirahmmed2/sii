@@ -1,427 +1,177 @@
-import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import {
-  verifyStaffPaymentAccess,
-  maskAccountCredentials,
-  mergeCredentials,
-  ensureWebsiteCurrencies,
-  FEE_PURPOSES
-} from 'src/lib/database/paymentGateways.js';
+import { NextResponse } from "next/server";
+import pool from "@/lib/database/db";
 
-/**
- * GET /api/[domain]/staff/panel/configure/payments
- * Fetches configured gateway accounts, available gateway providers, active routing assignments, currency settings, and metrics.
- */
-export async function GET(request, context) {
+async function getWebsiteByDomain(client, domain) {
+  const res = await client.query(
+    `SELECT id, name, currency, creator_id FROM websites WHERE subdomain = $1 OR domain = $1 LIMIT 1`,
+    [domain]
+  );
+  if (res.rows.length === 0) throw new Error("Institution website not found.");
+  return res.rows[0];
+}
+
+export async function GET(request, { params }) {
+  const { domain } = await params;
+  const client = await pool.connect();
   try {
-    const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-    }
+    const website = await getWebsiteByDomain(client, domain);
 
-    const websiteId = auth.website.id;
-
-    // 1. Fetch all supported gateway definitions
-    const gatewaysRes = await queryDb(`
-      SELECT id, code, name, category, description, logo_icon, website_url,
-             supported_currencies, credential_schema, is_active
-      FROM website_payment_gateways
-      WHERE is_active = TRUE
-      ORDER BY id ASC
-    `);
-
-    // 2. Fetch tenant's configured gateway accounts
-    const accountsRes = await queryDb(`
-      SELECT a.id, a.website_id, a.gateway_code, a.account_name, a.account_number,
-             a.environment, a.currency, a.credentials, a.is_active, a.is_default,
-             a.notes, a.created_at, a.updated_at,
-             g.name AS gateway_name, g.category AS gateway_category, g.logo_icon,
-             g.credential_schema
-      FROM website_payment_gateway_accounts a
-      JOIN website_payment_gateways g ON g.code = a.gateway_code
-      WHERE a.website_id = $1
-      ORDER BY a.created_at DESC
-    `, [websiteId]);
-
-    // Map and mask account credentials
-    const accounts = accountsRes.rows.map(acc => {
-      const maskedCreds = maskAccountCredentials(acc.credentials, acc.credential_schema);
-      return {
-        id: acc.id,
-        website_id: acc.website_id,
-        gateway_code: acc.gateway_code,
-        gateway_name: acc.gateway_name,
-        gateway_category: acc.gateway_category,
-        logo_icon: acc.logo_icon,
-        account_name: acc.account_name,
-        account_number: acc.account_number,
-        environment: acc.environment,
-        currency: acc.currency,
-        is_active: Boolean(acc.is_active),
-        is_default: Boolean(acc.is_default),
-        notes: acc.notes,
-        credentials: maskedCreds,
-        created_at: acc.created_at,
-        updated_at: acc.updated_at
-      };
-    });
-
-    // 3. Fetch task/fee routing assignments (including any hall-specific routes)
-    const assignmentsRes = await queryDb(`
-      SELECT pa.id, pa.website_id, pa.purpose, pa.hostel_id, pa.title, pa.description,
-             pa.gateway_account_id, pa.fallback_gateway_account_id,
-             pa.is_active, pa.allow_student_portal, pa.allow_public_checkout,
-             pa.created_at, pa.updated_at,
-             h.name AS hostel_name, h.type AS hostel_type,
-             ga.account_name, ga.gateway_code, ga.environment, ga.currency,
-             fga.account_name AS fallback_account_name, fga.gateway_code AS fallback_gateway_code,
-             fga.environment AS fallback_environment
-      FROM website_payment_purpose_assignments pa
-      LEFT JOIN website_hostels h ON h.id = pa.hostel_id
-      LEFT JOIN website_payment_gateway_accounts ga ON ga.id = pa.gateway_account_id
-      LEFT JOIN website_payment_gateway_accounts fga ON fga.id = pa.fallback_gateway_account_id
-      WHERE pa.website_id = $1
-      ORDER BY pa.purpose ASC, pa.hostel_id ASC NULLS FIRST, pa.id ASC
-    `, [websiteId]);
-
-    // 4. Fetch residential halls/hostels for per-hall fee routing options
-    const hostelsRes = await queryDb(`
-      SELECT id, name, type, status, capacity, monthly_fee
-      FROM website_hostels
-      WHERE website_id = $1
-      ORDER BY name ASC
-    `, [websiteId]);
-
-    // 5. Fetch and ensure institutional currencies from website_currencies table
-    const websiteBaseCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
-    const portalCurrencies = await ensureWebsiteCurrencies(websiteId, websiteBaseCurrency);
-
-    // Compute metrics
-    const totalAccounts = accounts.length;
-    const activeAccounts = accounts.filter(a => a.is_active).length;
-    const sandboxAccounts = accounts.filter(a => a.environment === 'sandbox').length;
-    const liveAccounts = accounts.filter(a => a.environment === 'live').length;
-    const assignedRoutes = assignmentsRes.rows.filter(r => r.is_active).length;
-
-    // Fetch recent 10 transactions
-    const txRes = await queryDb(`
-      SELECT id, gateway_code, purpose, invoice_ref, payer_name, amount, currency,
-             environment, transaction_id, status, created_at
-      FROM website_payment_transactions
-      WHERE website_id = $1
-      ORDER BY created_at DESC
-      LIMIT 10
-    `, [websiteId]);
+    const [gatewaysRes, accountsRes, purposesRes, currenciesRes] = await Promise.all([
+      client.query(`SELECT code, name, category, description, supported_currencies, credential_schema FROM website_payment_gateways WHERE is_active = TRUE ORDER BY id ASC`),
+      client.query(
+        `SELECT id, gateway_code, account_name, account_number, account_type, environment, currency,
+                payout_details, available_balance, pending_escrow_balance, total_platform_fees_paid, is_active, is_default, created_at
+         FROM website_payment_gateway_accounts
+         WHERE website_id = $1
+         ORDER BY is_default DESC, id ASC`,
+        [website.id]
+      ),
+      client.query(
+        `SELECT pa.id, pa.purpose, pa.hostel_id, pa.title, pa.gateway_account_id,
+                pa.fallback_gateway_account_id, pa.is_active,
+                ga.account_name AS primary_account_name, ga.gateway_code AS primary_gateway_code
+         FROM website_payment_purpose_assignments pa
+         LEFT JOIN website_payment_gateway_accounts ga ON ga.id = pa.gateway_account_id
+         WHERE pa.website_id = $1
+         ORDER BY pa.id ASC`,
+        [website.id]
+      ),
+      client.query(`SELECT code, name, symbol, exchange_rate, is_base_currency, is_active FROM website_currencies WHERE website_id = $1 ORDER BY is_base_currency DESC, code ASC`, [website.id]),
+    ]);
 
     return NextResponse.json({
-      success: true,
-      website_currency: websiteBaseCurrency,
-      website: {
-        id: auth.website.id,
-        name: auth.website.name,
-        currency: websiteBaseCurrency
-      },
-      currencies: portalCurrencies,
+      websiteCurrency: website.currency,
       gateways: gatewaysRes.rows,
-      accounts,
-      assignments: assignmentsRes.rows,
-      hostels: hostelsRes.rows,
-      fee_purposes: FEE_PURPOSES,
-      metrics: {
-        totalAccounts,
-        activeAccounts,
-        sandboxAccounts,
-        liveAccounts,
-        assignedRoutes,
-        totalRoutes: FEE_PURPOSES.length
-      },
-      recentTransactions: txRes.rows
+      accounts: accountsRes.rows,
+      purposeAssignments: purposesRes.rows,
+      currencies: currenciesRes.rows,
     });
   } catch (error) {
-    console.error('Error in GET /staff/panel/configure/payments:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  } finally {
+    client.release();
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/configure/payments
- * Creates a new gateway account for the tenant.
- */
-export async function POST(request, context) {
+export async function POST(request, { params }) {
+  const { domain } = await params;
+  const client = await pool.connect();
   try {
-    const auth = await verifyStaffPaymentAccess(request, context, null, 'create');
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+    const website = await getWebsiteByDomain(client, domain);
+    const body = await request.json();
+    const { action } = body;
+
+    await client.query("BEGIN");
+
+    if (action === "SET_WEBSITE_CURRENCY") {
+      const { currencyCode, symbol = "৳", exchangeRate = 1.0 } = body;
+      await client.query(`UPDATE websites SET currency = $1 WHERE id = $2`, [currencyCode.toUpperCase(), website.id]);
+
+      await client.query(
+        `UPDATE website_currencies SET is_base_currency = FALSE WHERE website_id = $1`,
+        [website.id]
+      );
+      await client.query(
+        `INSERT INTO website_currencies (website_id, code, name, symbol, exchange_rate, is_base_currency, is_active)
+         VALUES ($1, $2, $2, $3, $4, TRUE, TRUE)
+         ON CONFLICT (website_id, code)
+         DO UPDATE SET is_base_currency = TRUE, is_active = TRUE, exchange_rate = EXCLUDED.exchange_rate`,
+        [website.id, currencyCode.toUpperCase(), symbol, exchangeRate]
+      );
+
+      await client.query("COMMIT");
+      return NextResponse.json({ success: true, baseCurrency: currencyCode.toUpperCase() });
     }
 
-    const body = await request.json().catch(() => ({}));
-    const {
-      gateway_code,
-      account_name,
-      account_number,
-      environment = 'sandbox',
-      currency = 'BDT',
-      credentials = {},
-      is_active = true,
-      is_default = false,
-      notes = ''
-    } = body;
+    if (action === "ADD_MERCHANT_ACCOUNT") {
+      const {
+        gatewayCode,      
+        accountName,      
+        accountNumber,    
+        accountType = "merchant_payout",
+        currency = website.currency || "BDT",
+        payoutDetails = {}, 
+        purposes = [],      
+        isDefault = false,
+      } = body;
 
-    if (!gateway_code) {
-      return NextResponse.json({ success: false, error: 'Gateway selection (gateway_code) is required.' }, { status: 400 });
-    }
+      const normalizedGatewayCode = gatewayCode === 'stripe_connect' || gatewayCode === 'stripe' ? 'paddle' : gatewayCode;
 
-    if (!account_name || !account_name.trim()) {
-      return NextResponse.json({ success: false, error: 'Account Nickname/Label is required.' }, { status: 400 });
-    }
-
-    // Verify gateway exists in catalog
-    const gwCheck = await queryDb(`SELECT code, name, credential_schema, supported_currencies FROM website_payment_gateways WHERE code = $1 AND is_active = TRUE`, [gateway_code]);
-    if (gwCheck.rows.length === 0) {
-      return NextResponse.json({ success: false, error: `Invalid or unsupported gateway code: ${gateway_code}` }, { status: 400 });
-    }
-
-    const gateway = gwCheck.rows[0];
-    const websiteCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
-    const cleanCurrency = String(currency || websiteCurrency).toUpperCase().trim();
-    const supportedCurrencies = Array.isArray(gateway.supported_currencies) ? gateway.supported_currencies : ['BDT'];
-
-    // 1. Verify currency is supported by the gateway provider
-    if (!supportedCurrencies.includes(cleanCurrency)) {
-      return NextResponse.json({
-        success: false,
-        error: `Gateway '${gateway.name}' does not support currency '${cleanCurrency}'. Supported currencies: ${supportedCurrencies.join(', ')}.`
-      }, { status: 400 });
-    }
-
-    // 2. Validate required credential fields according to credential schema
-    let parsedSchema = gateway.credential_schema;
-    if (typeof parsedSchema === 'string') {
-      try { parsedSchema = JSON.parse(parsedSchema); } catch { parsedSchema = []; }
-    }
-    if (Array.isArray(parsedSchema)) {
-      for (const field of parsedSchema) {
-        if (field && field.required) {
-          const val = credentials ? credentials[field.key] : undefined;
-          if (val === undefined || val === null || String(val).trim() === '') {
-            return NextResponse.json({
-              success: false,
-              error: `Missing required credential: '${field.label || field.key}' is required for ${gateway.name}.`
-            }, { status: 400 });
-          }
-        }
+      if (!["surjopay", "paypal", "paddle"].includes(normalizedGatewayCode)) {
+        throw new Error("Invalid gateway_code. Must be surjopay, paypal, or paddle.");
       }
-    }
 
-    const cleanEnv = environment === 'live' ? 'live' : 'sandbox';
-
-    // If marked default, unset existing default
-    if (is_default) {
-      await queryDb(`UPDATE website_payment_gateway_accounts SET is_default = FALSE WHERE website_id = $1`, [auth.website.id]);
-    }
-
-    const staffId = auth.user?.id || null;
-
-    const insertRes = await queryDb(`
-      INSERT INTO website_payment_gateway_accounts (
-        website_id, gateway_code, account_name, account_number, environment,
-        currency, credentials, is_active, is_default, notes, created_by_staff_id
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7::jsonb, $8, $9, $10, $11
-      ) RETURNING *
-    `, [
-      auth.website.id,
-      gateway_code,
-      account_name.trim(),
-      account_number ? account_number.trim() : null,
-      cleanEnv,
-      cleanCurrency,
-      JSON.stringify(credentials),
-      Boolean(is_active),
-      Boolean(is_default),
-      notes ? notes.trim() : null,
-      staffId
-    ]);
-
-    const created = insertRes.rows[0];
-    const maskedCreds = maskAccountCredentials(created.credentials, gateway.credential_schema);
-
-    return NextResponse.json({
-      success: true,
-      message: `Payment gateway account '${account_name}' created successfully with currency ${cleanCurrency}.`,
-      account: {
-        ...created,
-        credentials: maskedCreds
+      if (isDefault) {
+        await client.query(`UPDATE website_payment_gateway_accounts SET is_default = FALSE WHERE website_id = $1`, [website.id]);
       }
-    });
+
+      const accInsert = await client.query(
+        `INSERT INTO website_payment_gateway_accounts (
+           website_id, gateway_code, account_name, account_number, account_type,
+           environment, currency, payout_details, credentials, is_active, is_default, is_verified
+         ) VALUES ($1, $2, $3, $4, $5, 'live', $6, $7, $7, TRUE, $8, TRUE)
+         RETURNING *`,
+        [
+          website.id,
+          normalizedGatewayCode,
+          accountName,
+          accountNumber,
+          accountType,
+          currency.toUpperCase(),
+          JSON.stringify(payoutDetails),
+          Boolean(isDefault),
+        ]
+      );
+      const newAccount = accInsert.rows[0];
+
+      for (const purpose of purposes) {
+        await client.query(
+          `INSERT INTO website_payment_purpose_assignments (
+             website_id, purpose, title, gateway_account_id, is_active
+           ) VALUES ($1, $2, $3, $4, TRUE)
+           ON CONFLICT (website_id, purpose, COALESCE(hostel_id, 0))
+           DO UPDATE SET gateway_account_id = EXCLUDED.gateway_account_id, is_active = TRUE`,
+          [website.id, purpose, `${purpose.replace("_", " ").toUpperCase()} Route`, newAccount.id]
+        );
+      }
+
+      await client.query("COMMIT");
+      return NextResponse.json({ success: true, account: newAccount });
+    }
+
+    if (action === "ASSIGN_PURPOSES") {
+      const { assignments } = body; 
+
+      for (const item of assignments) {
+        await client.query(
+          `INSERT INTO website_payment_purpose_assignments (
+             website_id, purpose, hostel_id, title, gateway_account_id, fallback_gateway_account_id, is_active
+           ) VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+           ON CONFLICT (website_id, purpose, COALESCE(hostel_id, 0))
+           DO UPDATE SET
+             gateway_account_id = EXCLUDED.gateway_account_id,
+             fallback_gateway_account_id = EXCLUDED.fallback_gateway_account_id,
+             is_active = TRUE`,
+          [
+            website.id,
+            item.purpose,
+            item.hostelId || null,
+            item.title || `${item.purpose} Routing`,
+            item.gatewayAccountId,
+            item.fallbackGatewayAccountId || null,
+          ]
+        );
+      }
+
+      await client.query("COMMIT");
+      return NextResponse.json({ success: true });
+    }
+
+    throw new Error("Unsupported action.");
   } catch (error) {
-    console.error('Error in POST /staff/panel/configure/payments:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-/**
- * PUT /api/[domain]/staff/panel/configure/payments
- * Updates an existing gateway account.
- */
-export async function PUT(request, context) {
-  try {
-    const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-    }
-
-    const body = await request.json().catch(() => ({}));
-    const {
-      id,
-      account_name,
-      account_number,
-      environment,
-      currency,
-      credentials,
-      is_active,
-      is_default,
-      notes
-    } = body;
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Account ID is required.' }, { status: 400 });
-    }
-
-    // Verify ownership
-    const checkRes = await queryDb(`
-      SELECT a.*, g.name AS gateway_name, g.credential_schema, g.supported_currencies
-      FROM website_payment_gateway_accounts a
-      JOIN website_payment_gateways g ON g.code = a.gateway_code
-      WHERE a.id = $1 AND a.website_id = $2
-    `, [id, auth.website.id]);
-
-    if (checkRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Payment gateway account not found.' }, { status: 404 });
-    }
-
-    const existing = checkRes.rows[0];
-    const websiteCurrency = String(auth.website.currency || 'BDT').toUpperCase().trim();
-    const newCurrency = currency !== undefined ? String(currency).toUpperCase().trim() : String(existing.currency || 'BDT').toUpperCase().trim();
-    const supportedCurrencies = Array.isArray(existing.supported_currencies)
-      ? existing.supported_currencies.map(c => String(c).toUpperCase().trim())
-      : ['BDT'];
-
-    if (currency !== undefined) {
-      if (!supportedCurrencies.includes(newCurrency)) {
-        return NextResponse.json({
-          success: false,
-          error: `Gateway '${existing.gateway_name}' does not support currency '${newCurrency}'. Supported currencies: ${supportedCurrencies.join(', ')}.`
-        }, { status: 400 });
-      }
-    }
-
-    // Merge credentials carefully so masked values don't overwrite secrets
-    const mergedCreds = credentials ? mergeCredentials(existing.credentials, credentials) : existing.credentials;
-
-    const newName = account_name !== undefined ? account_name.trim() : existing.account_name;
-    const newNumber = account_number !== undefined ? (account_number ? account_number.trim() : null) : existing.account_number;
-    const newEnv = environment !== undefined ? (environment === 'live' ? 'live' : 'sandbox') : existing.environment;
-    const newActive = is_active !== undefined ? Boolean(is_active) : existing.is_active;
-    const newDefault = is_default !== undefined ? Boolean(is_default) : existing.is_default;
-    const newNotes = notes !== undefined ? (notes ? notes.trim() : null) : existing.notes;
-
-    if (newDefault && !existing.is_default) {
-      await queryDb(`UPDATE website_payment_gateway_accounts SET is_default = FALSE WHERE website_id = $1`, [auth.website.id]);
-    }
-
-    const updateRes = await queryDb(`
-      UPDATE website_payment_gateway_accounts
-      SET account_name = $1,
-          account_number = $2,
-          environment = $3,
-          currency = $4,
-          credentials = $5::jsonb,
-          is_active = $6,
-          is_default = $7,
-          notes = $8,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9 AND website_id = $10
-      RETURNING *
-    `, [
-      newName,
-      newNumber,
-      newEnv,
-      newCurrency,
-      JSON.stringify(mergedCreds),
-      newActive,
-      newDefault,
-      newNotes,
-      id,
-      auth.website.id
-    ]);
-
-    const updated = updateRes.rows[0];
-    const maskedCreds = maskAccountCredentials(updated.credentials, existing.credential_schema);
-
-    return NextResponse.json({
-      success: true,
-      message: `Account '${updated.account_name}' updated successfully.`,
-      account: {
-        ...updated,
-        credentials: maskedCreds
-      }
-    });
-  } catch (error) {
-    console.error('Error in PUT /staff/panel/configure/payments:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
-
-/**
- * DELETE /api/[domain]/staff/panel/configure/payments
- * Deletes a gateway account.
- */
-export async function DELETE(request, context) {
-  try {
-    const auth = await verifyStaffPaymentAccess(request, context, null, 'delete');
-    if (auth.error) {
-      return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Account ID parameter is required.' }, { status: 400 });
-    }
-
-    // Check account existence
-    const checkRes = await queryDb(`
-      SELECT id, account_name, gateway_code FROM website_payment_gateway_accounts
-      WHERE id = $1 AND website_id = $2
-    `, [id, auth.website.id]);
-
-    if (checkRes.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Payment gateway account not found.' }, { status: 404 });
-    }
-
-    const account = checkRes.rows[0];
-
-    // Remove any route assignments referencing this account
-    await queryDb(`
-      DELETE FROM website_payment_purpose_assignments
-      WHERE website_id = $1 AND (gateway_account_id = $2 OR fallback_gateway_account_id = $2)
-    `, [auth.website.id, id]);
-
-    // Delete the account
-    await queryDb(`
-      DELETE FROM website_payment_gateway_accounts
-      WHERE id = $1 AND website_id = $2
-    `, [id, auth.website.id]);
-
-    return NextResponse.json({
-      success: true,
-      message: `Account '${account.account_name}' and its routing assignments have been deleted.`
-    });
-  } catch (error) {
-    console.error('Error in DELETE /staff/panel/configure/payments:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    await client.query("ROLLBACK");
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  } finally {
+    client.release();
   }
 }

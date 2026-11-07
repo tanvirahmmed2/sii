@@ -61,7 +61,6 @@ export default function SearchFilteredStudentsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Advanced Multi-Criteria Student Search
@@ -71,7 +70,6 @@ export default function SearchFilteredStudentsPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -80,7 +78,6 @@ export default function SearchFilteredStudentsPage() {
         description="Select session, class, and section to initiate query"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🔍"
@@ -89,7 +86,6 @@ export default function SearchFilteredStudentsPage() {
         />
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-          {/* Active Filter Bar & Additional Refinements */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">

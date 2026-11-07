@@ -61,7 +61,6 @@ export default function SingleSupportTicketPage() {
     scrollToBottom();
   }, [messages, imagePreview]);
 
-  // Fetch ticket and message thread
   const fetchTicketDetails = useCallback(async () => {
     if (!ticketId) return;
     try {
@@ -85,11 +84,9 @@ export default function SingleSupportTicketPage() {
   }, [ticketId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTicketDetails();
   }, [fetchTicketDetails]);
 
-  // Live polling every 5s for updates
   useEffect(() => {
     if (!ticketId) return;
     const interval = setInterval(() => {
@@ -105,7 +102,6 @@ export default function SingleSupportTicketPage() {
     setRefreshing(false);
   };
 
-  // Change ticket status
   const handleStatusChange = async (newStatus) => {
     if (!ticketId || statusLoading) return;
     setStatusLoading(true);
@@ -130,7 +126,6 @@ export default function SingleSupportTicketPage() {
     }
   };
 
-  // Assign developer
   const handleAssignDeveloper = async (devId) => {
     if (!ticketId) return;
     try {
@@ -204,7 +199,6 @@ export default function SingleSupportTicketPage() {
     }
   };
 
-  // Send developer reply
   const handleSendReply = async (e) => {
     if (e) e.preventDefault();
     const hasText = Boolean(replyMessage.trim());
@@ -250,7 +244,6 @@ export default function SingleSupportTicketPage() {
     }
   };
 
-  // Delete ticket
   const handleDeleteTicket = async () => {
     if (!canDelete) {
       notify('Permission denied: support permission required to delete tickets.', 'error');
@@ -321,7 +314,6 @@ export default function SingleSupportTicketPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
@@ -340,7 +332,6 @@ export default function SingleSupportTicketPage() {
         </div>
       )}
 
-      {/* Top Touch-Swipeable Ticket Senders Bar */}
       <ChatUsersSwipeBar
         users={allTickets.map((t) => ({
           id: t.id,
@@ -353,7 +344,6 @@ export default function SingleSupportTicketPage() {
         activeId={ticketId}
       />
 
-      {/* Top Header & Actions Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -401,9 +391,7 @@ export default function SingleSupportTicketPage() {
           </div>
         </div>
 
-        {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100 dark:border-slate-800">
-          {/* Status Selector */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-slate-500">Status:</span>
             <select
@@ -420,7 +408,6 @@ export default function SingleSupportTicketPage() {
             </select>
           </div>
 
-          {/* Assignee Selector */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-slate-500">Assigned:</span>
             <select
@@ -459,9 +446,7 @@ export default function SingleSupportTicketPage() {
         </div>
       </div>
 
-      {/* Conversation Thread & Live Stream Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[600px]">
-        {/* Messages Stream */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50 dark:bg-slate-950/30">
           {messages.length === 0 ? (
             <div className="py-24 text-center text-slate-400 space-y-1">
@@ -506,7 +491,6 @@ export default function SingleSupportTicketPage() {
                           <p className="whitespace-pre-wrap break-words">{m.message}</p>
                         )}
 
-                        {/* Render attached images */}
                         {messageImages.length > 0 && (
                           <div className="space-y-2 pt-1">
                             {messageImages.map((img, idx) => {
@@ -540,9 +524,7 @@ export default function SingleSupportTicketPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Composer Form */}
         <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 space-y-2">
-          {/* Selected Image Preview Bar */}
           {selectedImage && imagePreview && (
             <div className="p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-between gap-3 animate-in fade-in duration-150">
               <div className="flex items-center gap-2.5 overflow-hidden">
@@ -587,7 +569,6 @@ export default function SingleSupportTicketPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
-                {/* File Upload Trigger */}
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -636,7 +617,6 @@ export default function SingleSupportTicketPage() {
         </div>
       </div>
 
-      {/* Lightbox / Full-Size Image Preview Modal */}
       {previewModalImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"

@@ -127,7 +127,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
 
   return (
     <div className="w-full space-y-4 text-slate-800 text-xs pb-16">
-      {/* Action Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
         <Link
           href={`/creator/${creatorId}/payments`}
@@ -162,11 +161,8 @@ export default function CreatorPaymentInvoicePage({ params }) {
         </div>
       </div>
 
-      {/* Official Receipt Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden p-6 sm:p-10 space-y-8">
-        {/* Receipt Header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-slate-200 pb-6">
-          {/* Platform Info */}
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="w-3 h-3 rounded-full bg-blue-600 inline-block" />
@@ -181,7 +177,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
             </div>
           </div>
 
-          {/* Receipt Status & Meta */}
           <div className="sm:text-right space-y-2">
             <span
               className={`inline-block text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
@@ -205,7 +200,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
           </div>
         </div>
 
-        {/* Billed To / Creator Details */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/70 p-5 rounded-xl border border-slate-200/70">
           <div>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-2">
@@ -249,7 +243,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
           </div>
         </div>
 
-        {/* Subscription Package Info Table (all necessary details: website, teacher, student, storage; NO modules) */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -281,7 +274,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
                       </span>
                     </div>
 
-                    {/* All necessary details: website, teacher, students, storage; no internal modules */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                       <div className="p-2 rounded bg-slate-50 border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 uppercase block font-semibold">Websites Allowed</span>
@@ -320,9 +312,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
           </div>
         </div>
 
-        {/* Financial Summary & Amount in Words */}
         <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pt-2">
-          {/* Amount In Words & Digital Verification */}
           <div className="w-full sm:w-7/12 space-y-4">
             <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/70">
               <span className="text-[10px] uppercase font-bold text-blue-900 tracking-wider block mb-1">
@@ -340,7 +330,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
             </div>
           </div>
 
-          {/* Subtotal & Total */}
           <div className="w-full sm:w-5/12 bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-2.5">
             <div className="flex justify-between text-slate-600">
               <span>Subscription Subtotal:</span>
@@ -361,7 +350,6 @@ export default function CreatorPaymentInvoicePage({ params }) {
           </div>
         </div>
 
-        {/* Receipt Footer with Digital Seal */}
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-[11px] text-slate-400 text-center sm:text-left">
             <div>Support inquiries: {PLATFORM_INFO.SITE_MAIL} | Helpline: {PLATFORM_INFO.SITE_CONTACT}</div>

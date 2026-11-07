@@ -9,7 +9,6 @@ import { FiSave, FiList, FiTrash2, FiSearch, FiRefreshCw } from 'react-icons/fi'
 export default function TestimonialPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'generate' or 'archive'
   const [activeTab, setActiveTab] = useState('generate');
 
   const [students, setStudents] = useState([]);
@@ -18,11 +17,9 @@ export default function TestimonialPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Active Template
   const [activeTemplate, setActiveTemplate] = useState(null);
   const printDocRef = useRef(null);
 
-  // Testimonial Specific Fields
   const [testimonialNo, setTestimonialNo] = useState(`TEST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [examName, setExamName] = useState('Secondary School Certificate (SSC)');
   const [passingYear, setPassingYear] = useState(new Date().getFullYear().toString());
@@ -32,12 +29,10 @@ export default function TestimonialPage() {
   const [fatherName, setFatherName] = useState('');
   const [motherName, setMotherName] = useState('');
 
-  // Archive state
   const [issuedTestimonials, setIssuedTestimonials] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
 
-  // Fetch template and students
   useEffect(() => {
     async function initData() {
       try {
@@ -63,7 +58,6 @@ export default function TestimonialPage() {
     initData();
   }, [getApiEndpoint]);
 
-  // Fetch issued testimonials archive from website_student_testimonials
   const fetchIssuedTestimonials = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -97,7 +91,6 @@ export default function TestimonialPage() {
     setSessionName(student.session_name || '2024 - 2026');
   };
 
-  // Compile Testimonial document HTML
   const compileTestimonial = () => {
     if (!activeTemplate || !selectedStudent) return null;
     let html = activeTemplate.html_content || '';
@@ -126,7 +119,6 @@ export default function TestimonialPage() {
     return { html, css };
   };
 
-  // Issue & Save Testimonial in Database
   const handleIssueAndSaveTestimonial = async () => {
     if (!selectedStudent) {
       toast.error('Please select a student.');
@@ -219,7 +211,6 @@ export default function TestimonialPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -231,7 +222,6 @@ export default function TestimonialPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mode Switcher */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -267,7 +257,6 @@ export default function TestimonialPage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED TESTIMONIALS ARCHIVE ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative w-full sm:w-72">
@@ -362,11 +351,8 @@ export default function TestimonialPage() {
           </div>
         </div>
       ) : (
-        /* ================= GENERATE TESTIMONIAL ================= */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Form */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Student Selector Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 1. Select Graduate Student
@@ -401,7 +387,6 @@ export default function TestimonialPage() {
               </div>
             </div>
 
-            {/* Testimonial Parameters */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 2. Testimonial Particulars
@@ -482,7 +467,6 @@ export default function TestimonialPage() {
             </div>
           </div>
 
-          {/* Right Preview Surface */}
           <div className="lg:col-span-7 flex flex-col items-center space-y-3">
             <div className="w-full flex items-center justify-end gap-2">
               <button

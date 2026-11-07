@@ -8,17 +8,14 @@ import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 export default function StudentRegistrationPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Active tab: 'single', 'bulk' (directory removed per requirements)
   const [activeTab, setActiveTab] = useState('single');
 
-  // Academic references
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [sections, setSections] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [loadingMetadata, setLoadingMetadata] = useState(false);
 
-  // Single Registration Form State
   const [singleRegNo, setSingleRegNo] = useState('');
   const [singleEmail, setSingleEmail] = useState('');
   const [singleDepartmentId, setSingleDepartmentId] = useState('');
@@ -29,7 +26,6 @@ export default function StudentRegistrationPage() {
   const [submittingSingle, setSubmittingSingle] = useState(false);
   const [singleSuccessResult, setSingleSuccessResult] = useState(null);
 
-  // Bulk Upload State
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkRows, setBulkRows] = useState([]);
   const [parsingBulk, setParsingBulk] = useState(false);
@@ -37,7 +33,6 @@ export default function StudentRegistrationPage() {
   const [bulkResults, setBulkResults] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Fetch departments, classes, sections, sessions
   useEffect(() => {
     const fetchAcademicData = async () => {
       setLoadingMetadata(true);
@@ -80,18 +75,15 @@ export default function StudentRegistrationPage() {
     fetchAcademicData();
   }, [getApiEndpoint]);
 
-  // Filter classes by Department if chosen
   const availableClasses = classes.filter((c) => {
     if (singleDepartmentId && c.department_id && String(c.department_id) !== String(singleDepartmentId)) return false;
     return true;
   });
 
-  // Filter sections by singleClassId
   const availableSections = sections.filter(
     (sec) => !singleClassId || String(sec.class_id) === String(singleClassId)
   );
 
-  // Single Student Registration Handler
   const handleSingleRegister = async (e) => {
     e.preventDefault();
 
@@ -140,7 +132,6 @@ export default function StudentRegistrationPage() {
       toast.success(data.message || 'Student registered successfully in website_students!');
       setSingleSuccessResult(data.payload);
 
-      // Reset form
       setSingleRegNo('');
       setSingleEmail('');
       setSingleRollNo('');
@@ -151,7 +142,6 @@ export default function StudentRegistrationPage() {
     }
   };
 
-  // Bulk Excel File Selector & Parser
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -169,7 +159,6 @@ export default function StudentRegistrationPage() {
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-        // Normalize rows (primarily registration number, department, session, class, and email)
         const normalized = jsonRows.map((row, idx) => {
           const regNo = (row['Registration No'] || row.Registration || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
           const email = (row['Email Address'] || row.Email || row['Student Email'] || row.email || '').trim().toLowerCase();
@@ -209,7 +198,6 @@ export default function StudentRegistrationPage() {
     reader.readAsBinaryString(file);
   };
 
-  // Dispatch Bulk Upload
   const handleBulkUpload = async () => {
     if (!bulkFile) {
       toast.error('Please select an Excel or CSV file.');
@@ -250,7 +238,6 @@ export default function StudentRegistrationPage() {
     }
   };
 
-  // Download Excel Template
   const handleDownloadTemplate = () => {
     const templateEndpoint = getApiEndpoint('staff/panel/students/template');
     window.open(templateEndpoint, '_blank');
@@ -263,7 +250,6 @@ export default function StudentRegistrationPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Page Title & Navigation Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -274,7 +260,6 @@ export default function StudentRegistrationPage() {
           </p>
         </div>
 
-        {/* Global Action Shortcut */}
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownloadTemplate}
@@ -285,7 +270,6 @@ export default function StudentRegistrationPage() {
         </div>
       </div>
 
-      {/* Main Tab Navigation (Directory Removed) */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 text-xs">
         {[
           { id: 'single', label: 'Single Student Registration', icon: '👤' },
@@ -306,7 +290,6 @@ export default function StudentRegistrationPage() {
         ))}
       </div>
 
-      {/* TAB 1: SINGLE STUDENT REGISTRATION */}
       {activeTab === 'single' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-5">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -318,7 +301,6 @@ export default function StudentRegistrationPage() {
             </p>
           </div>
 
-          {/* Success Banner if just created */}
           {singleSuccessResult && (
             <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
               <div className="flex items-center justify-between font-bold">
@@ -370,7 +352,6 @@ export default function StudentRegistrationPage() {
 
           <form onSubmit={handleSingleRegister} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Department Selection */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Department *
@@ -391,7 +372,6 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Assigned academic department</span>
               </div>
 
-              {/* Academic Session */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Academic Session *
@@ -412,7 +392,6 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Term / enrollment academic year</span>
               </div>
 
-              {/* Class Selection */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Academic Class *
@@ -435,7 +414,6 @@ export default function StudentRegistrationPage() {
                 </span>
               </div>
 
-              {/* Section */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Section (Optional)
@@ -455,7 +433,6 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Class division group</span>
               </div>
 
-              {/* Registration Number */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Registration Number *
@@ -471,7 +448,6 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>
               </div>
 
-              {/* Roll Number */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Roll Number (Optional)
@@ -486,7 +462,6 @@ export default function StudentRegistrationPage() {
                 <span className="text-[10px] text-slate-400 mt-1 block">Class roster sequence</span>
               </div>
 
-              {/* Student Email Address */}
               <div className="sm:col-span-2 lg:col-span-3">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Student Email Address (Required for Brevo OTP Setup Verification)
@@ -523,7 +498,6 @@ export default function StudentRegistrationPage() {
         </div>
       )}
 
-      {/* TAB 2: BULK EXCEL / CSV IMPORT */}
       {activeTab === 'bulk' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-5">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -543,7 +517,6 @@ export default function StudentRegistrationPage() {
             </button>
           </div>
 
-          {/* Drag & Drop File Zone */}
           <div
             onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-primary dark:hover:border-primary rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer bg-slate-50/50 dark:bg-slate-950/50 transition-colors"
@@ -564,7 +537,6 @@ export default function StudentRegistrationPage() {
             </span>
           </div>
 
-          {/* Parsed Rows Preview */}
           {bulkRows.length > 0 && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-xs">
@@ -646,7 +618,6 @@ export default function StudentRegistrationPage() {
             </div>
           )}
 
-          {/* Bulk Results Summary */}
           {bulkResults && (
             <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
               <h3 className="font-semibold text-slate-900 dark:text-white">Batch Import Results</h3>

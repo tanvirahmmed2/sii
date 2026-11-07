@@ -12,7 +12,7 @@ export default function StudentMonthlyAttendanceReportPage() {
   const [hasFiltered, setHasFiltered] = useState(false);
   const [filterInfo, setFilterInfo] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [targetMonth, setTargetMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
+  const [targetMonth, setTargetMonth] = useState(new Date().toISOString().substring(0, 7)); 
   const [summaryData, setSummaryData] = useState([]);
   const [students, setStudents] = useState([]);
 
@@ -72,7 +72,6 @@ export default function StudentMonthlyAttendanceReportPage() {
     </div>
   );
 
-  // Group summary by date
   const dateMap = {};
   summaryData.forEach((item) => {
     const dStr = String(item.date).substring(0, 10);
@@ -94,7 +93,6 @@ export default function StudentMonthlyAttendanceReportPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Monthly Student Attendance Report
@@ -104,7 +102,6 @@ export default function StudentMonthlyAttendanceReportPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -115,7 +112,6 @@ export default function StudentMonthlyAttendanceReportPage() {
         description="Select session, class, section, and month to generate analytics"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🗓️"
@@ -124,7 +120,6 @@ export default function StudentMonthlyAttendanceReportPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Monthly KPI Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Month Target</span>
@@ -144,7 +139,6 @@ export default function StudentMonthlyAttendanceReportPage() {
             </div>
           </div>
 
-          {/* Date-wise Matrix Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
               Daily Breakdown for {filterInfo?.className} ({filterInfo?.sectionName}) - {targetMonth}

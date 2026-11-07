@@ -5,9 +5,6 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { validateSubmissionPayload } from '@/lib/form-criteria-engine';
 
-/**
- * GET: Fetches student setup context, pre-populated carry-over info, and student-only form fields
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -68,7 +65,6 @@ export async function GET(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Fetch active student-facing form fields, guardians, addresses, media
     const [fieldsRes, addrRes, guardRes, picRes, sigRes] = await Promise.all([
       queryDb(`
         SELECT id AS form_field_id, target_scope, field_key, label, field_type,
@@ -128,9 +124,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST: Either verifies 6-digit email OTP OR finalizes student setup (protecting non-editable carry-overs)
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -164,7 +157,6 @@ export async function POST(request, context) {
     const cleanToken = token?.trim() || null;
     const targetStudentId = student_id ? parseInt(student_id, 10) : null;
 
-    // Look up student
     const studentRes = await queryDb(`
       SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
              s.email, s.phone, s.number, s.gender, s.date_of_birth,
@@ -189,10 +181,8 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // BRANCH 1: Finalize Setup (action === 'finalize' or password / student-only onboarding fields submitted)
     if (action === 'finalize' || body.finalize === true || password || Object.keys(custom_fields).length > 0 || Object.keys(info).length > 0) {
       return await withTenantTransaction(website.id, async (client) => {
-        // Fetch existing info and non-editable fields
         const infoRes = await client.query(
           `SELECT data, admission_snapshot FROM website_student_info WHERE student_id = $1 AND website_id = $2`,
           [student.id, website.id]
@@ -211,7 +201,6 @@ export async function POST(request, context) {
             .map((f) => f.field_key)
         );
 
-        // Merge submitted data, protecting fields where is_editable_by_student = FALSE
         const submittedInfo = {
           ...existingData,
           ...(info && typeof info === 'object' ? info : {}),
@@ -224,7 +213,6 @@ export async function POST(request, context) {
           ...(religion ? { religion } : {})
         };
 
-        // Enforce protection of immutable carry-over fields
         for (const lockedKey of nonEditableKeys) {
           if (existingData[lockedKey] !== undefined) {
             submittedInfo[lockedKey] = existingData[lockedKey];
@@ -243,7 +231,6 @@ export async function POST(request, context) {
           addresses: { ...(addresses || {}), ...(body.address_data || {}) }
         };
 
-        // Validate student submission payload
         const validation = await validateSubmissionPayload({
           clientOrPool: client,
           websiteId: website.id,
@@ -259,7 +246,6 @@ export async function POST(request, context) {
           throw valError;
         }
 
-        // Hash password if updating credentials
         let hashedPassword = null;
         if (password) {
           if (String(password).length < 6) {
@@ -271,7 +257,6 @@ export async function POST(request, context) {
           hashedPassword = await hashPassword(String(password).trim());
         }
 
-        // Update website_student_info with merged data and verification_status = 'submitted'
         await client.query(`
           INSERT INTO website_student_info (
             website_id, student_id, data, is_registered, verification_status, updated_at
@@ -283,7 +268,6 @@ export async function POST(request, context) {
             updated_at = CURRENT_TIMESTAMP
         `, [website.id, student.id, JSON.stringify(submittedInfo)]);
 
-        // Update core student row
         const studentUpdates = [
           'updated_at = CURRENT_TIMESTAMP',
           "verification_status = 'submitted'",
@@ -311,7 +295,6 @@ export async function POST(request, context) {
           WHERE id = $1 AND website_id = $2
         `, studentParams);
 
-        // Upsert guardians and addresses if provided
         if (Object.keys(mergedPayload.guardians).length > 0) {
           await client.query(`
             INSERT INTO website_student_guardians (website_id, student_id, data, updated_at)
@@ -341,7 +324,6 @@ export async function POST(request, context) {
       });
     }
 
-    // BRANCH 2: Verify 6-digit Email OTP Code
     if (!code?.trim()) {
       return NextResponse.json({ success: false, error: '6-digit verification code is required.' }, { status: 400 });
     }
@@ -355,7 +337,6 @@ export async function POST(request, context) {
       }
     }
 
-    // Fallback: Check website_email_verifications
     if (!isCodeValid && cleanEmail) {
       const verCheck = await queryDb(`
         SELECT id FROM website_email_verifications
@@ -374,7 +355,6 @@ export async function POST(request, context) {
       }, { status: 400 });
     }
 
-    // Clear temporary OTP code
     await queryDb(`
       UPDATE website_students
       SET two_factor_code = NULL,
@@ -384,7 +364,6 @@ export async function POST(request, context) {
       WHERE id = $2 AND website_id = $3
     `, [cleanEmail || student.email, student.id, website.id]);
 
-    // Fetch student-facing form fields
     const fieldsRes = await queryDb(`
       SELECT id AS form_field_id, target_scope, field_key, label, field_type,
              options, validation_regex, is_unique, is_editable_by_student,

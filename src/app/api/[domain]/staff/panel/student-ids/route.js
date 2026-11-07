@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 
-// GET: List issued student ID cards with rich student JOIN metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -56,7 +55,6 @@ export async function GET(request, context) {
       LEFT JOIN website_student_id_templates tpl ON sid.template_id = tpl.id
     `;
 
-    // Single card fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE sid.website_id = $1 AND sid.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -65,7 +63,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { id_card: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['sid.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -144,7 +141,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Issue new student ID card(s)
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -175,7 +171,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Please select at least one student.' }, { status: 400 });
     }
 
-    // Fetch students metadata
     const studentsRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id,
@@ -203,7 +198,6 @@ export async function POST(request, context) {
       const cardNumber = `ID-${stu.registration_no || stu.student_unique_id || stu.id}`;
       const barcodeData = stu.student_unique_id || stu.registration_no || cardNumber;
 
-      // Upsert into website_student_ids
       const insertRes = await queryDb(
         `INSERT INTO website_student_ids (
             website_id, student_id, card_number, template_id,
@@ -259,7 +253,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update card status or particulars
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'update');
@@ -302,7 +295,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Revoke/delete an issued ID card
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'delete');

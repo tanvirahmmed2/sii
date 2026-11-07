@@ -7,7 +7,6 @@ import staffNavDataDefault, { staffNavData as staffNavDataNamed } from 'src/comp
 
 const staffNavData = staffNavDataDefault || staffNavDataNamed || [];
 
-// Build a fast lookup map from route paths to their assigned module
 const routeToModuleMap = (() => {
   const map = {};
 
@@ -37,7 +36,6 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
       return { allowed: true };
     }
 
-    // Dashboard root and personal profile are always accessible
     if (
       pathname === '/staff-panel' ||
       pathname === '/staff-panel/' ||
@@ -48,11 +46,9 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
       return { allowed: true };
     }
 
-    // Check exact path match or prefix match in route-to-module map
     let targetModule = routeToModuleMap[pathname];
 
     if (!targetModule) {
-      // Check if pathname starts with any known path
       for (const [pathKey, mod] of Object.entries(routeToModuleMap)) {
         if (pathname === pathKey || pathname.startsWith(`${pathKey}/`)) {
           targetModule = mod;
@@ -62,7 +58,6 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
     }
 
     if (!targetModule) {
-      // Route has no specific module restriction
       return { allowed: true };
     }
 

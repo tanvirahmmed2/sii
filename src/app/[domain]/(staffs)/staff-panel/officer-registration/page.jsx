@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -53,11 +52,9 @@ export default function OfficerRegistrationPage() {
 
   const fileInputRef = useRef(null);
 
-  // Available payroll scales
   const [payrolls, setPayrolls] = useState([]);
   const [loadingPayrolls, setLoadingPayrolls] = useState(true);
 
-  // Form states
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -80,14 +77,12 @@ export default function OfficerRegistrationPage() {
     is_active: true
   });
 
-  // Uploading and photo states
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Feedback Toasts
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -101,7 +96,6 @@ export default function OfficerRegistrationPage() {
     }
   }, []);
 
-  // Fetch officer payroll scales
   useEffect(() => {
     async function loadPayrolls() {
       if (!domain) return;
@@ -121,10 +115,8 @@ export default function OfficerRegistrationPage() {
     loadPayrolls();
   }, [domain]);
 
-  // Selected payroll details
   const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
 
-  // Handle Photo selection
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,7 +147,6 @@ export default function OfficerRegistrationPage() {
     }
   };
 
-  // Form input change
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -164,7 +155,6 @@ export default function OfficerRegistrationPage() {
     }));
   };
 
-  // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -205,7 +195,6 @@ export default function OfficerRegistrationPage() {
       submissionData.append('bio', formData.bio.trim());
       submissionData.append('is_active', formData.is_active);
 
-      // Direct payroll assignment: sends selected payroll scale ID
       if (formData.payroll_id) {
         submissionData.append('payroll_id', formData.payroll_id);
       }
@@ -275,7 +264,6 @@ export default function OfficerRegistrationPage() {
 
   return (
     <div className="w-full space-y-6 pb-16">
-      {/* Toast Notifications */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-medium rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
           <FiCheck className="w-4 h-4 shrink-0" />
@@ -289,7 +277,6 @@ export default function OfficerRegistrationPage() {
         </div>
       )}
 
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
@@ -330,7 +317,6 @@ export default function OfficerRegistrationPage() {
         </div>
       </div>
 
-      {/* Success Notification Banner */}
       {successData && (
         <div className="p-5 rounded-xl border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/90 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-100 shadow-xs space-y-4">
           <div className="flex items-start gap-3">
@@ -382,12 +368,9 @@ export default function OfficerRegistrationPage() {
         </div>
       )}
 
-      {/* Main Full-Page Form (NO POPUP MODAL) */}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column (2 Cols wide on desktop): Personal & Institutional Profile */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Card 1: Core Identification */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <FiUser className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -397,7 +380,6 @@ export default function OfficerRegistrationPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Full Name */}
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Officer Full Name <span className="text-rose-500">*</span>
@@ -413,7 +395,6 @@ export default function OfficerRegistrationPage() {
                   />
                 </div>
 
-                {/* Email */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Official Email <span className="text-rose-500">*</span>
@@ -432,7 +413,6 @@ export default function OfficerRegistrationPage() {
                   </div>
                 </div>
 
-                {/* Contact Phone */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Primary Contact Phone <span className="text-rose-500">*</span>
@@ -451,7 +431,6 @@ export default function OfficerRegistrationPage() {
                   </div>
                 </div>
 
-                {/* NID Number */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     National ID (NID / Smart Card)
@@ -466,7 +445,6 @@ export default function OfficerRegistrationPage() {
                   />
                 </div>
 
-                {/* Date of Birth */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Date of Birth
@@ -483,7 +461,6 @@ export default function OfficerRegistrationPage() {
                   </div>
                 </div>
 
-                {/* Gender */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Gender
@@ -502,7 +479,6 @@ export default function OfficerRegistrationPage() {
                   </select>
                 </div>
 
-                {/* Blood Group */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Blood Group
@@ -522,7 +498,6 @@ export default function OfficerRegistrationPage() {
                   </select>
                 </div>
 
-                {/* Religion */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Religion
@@ -543,7 +518,6 @@ export default function OfficerRegistrationPage() {
               </div>
             </div>
 
-            {/* Card 2: Department, Designation & Joining */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <FiBriefcase className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -553,7 +527,6 @@ export default function OfficerRegistrationPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Department Selection */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Department Unit <span className="text-rose-500">*</span>
@@ -573,7 +546,6 @@ export default function OfficerRegistrationPage() {
                   </select>
                 </div>
 
-                {/* Designation */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Designation Title <span className="text-rose-500">*</span>
@@ -589,7 +561,6 @@ export default function OfficerRegistrationPage() {
                   />
                 </div>
 
-                {/* Joining Date */}
                 <div>
                   <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Date of Joining
@@ -605,7 +576,6 @@ export default function OfficerRegistrationPage() {
               </div>
             </div>
 
-            {/* Card 3: Address & Bio */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <FiMapPin className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -660,9 +630,7 @@ export default function OfficerRegistrationPage() {
             </div>
           </div>
 
-          {/* Right Column: Direct Payroll Scale Assignment & Photo */}
           <div className="space-y-6">
-            {/* Card 4: DIRECT PAYROLL SCALE ASSIGNMENT (NO SEPARATE SALARY STEP) */}
             <div className="p-5 rounded-xl border-2 border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20 shadow-xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-indigo-100 dark:border-indigo-950">
                 <div className="flex items-center gap-2">
@@ -707,7 +675,6 @@ export default function OfficerRegistrationPage() {
                 </p>
               </div>
 
-              {/* Live Payroll Breakdown Preview */}
               {selectedPayroll ? (
                 <div className="p-3.5 rounded-lg border border-indigo-200/80 dark:border-indigo-800/80 bg-white/90 dark:bg-slate-800/90 space-y-2.5 text-xs animate-in fade-in duration-200">
                   <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700 pb-2">
@@ -763,7 +730,6 @@ export default function OfficerRegistrationPage() {
               )}
             </div>
 
-            {/* Card 5: Profile Photo Upload */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <FiUpload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -816,7 +782,6 @@ export default function OfficerRegistrationPage() {
               </div>
             </div>
 
-            {/* Card 6: Account Access & Status */}
             <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <FiLock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -863,7 +828,6 @@ export default function OfficerRegistrationPage() {
           </div>
         </div>
 
-        {/* Action Bottom Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
           <Link
             href={`/${domain}/staff-panel/officer-list`}

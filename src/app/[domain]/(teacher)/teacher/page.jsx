@@ -67,7 +67,6 @@ const TeacherHomePage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Welcome Banner */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-base font-bold text-slate-800">
@@ -80,7 +79,6 @@ const TeacherHomePage = () => {
         <span className="text-xs text-slate-400">{profile?.number}</span>
       </div>
 
-      {/* Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
@@ -98,7 +96,6 @@ const TeacherHomePage = () => {
         })}
       </div>
 
-      {/* Shortcuts */}
       <div className="bg-white border border-slate-200 rounded-xl p-4">
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <FiActivity className="text-primary" /> Quick Access

@@ -9,7 +9,6 @@ import { FiSave, FiList, FiTrash2, FiSearch, FiRefreshCw } from 'react-icons/fi'
 export default function CertificatesPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'generate' or 'archive'
   const [activeTab, setActiveTab] = useState('generate');
 
   const [students, setStudents] = useState([]);
@@ -25,13 +24,11 @@ export default function CertificatesPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Archive state
   const [issuedCerts, setIssuedCerts] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveType, setArchiveType] = useState('all');
 
-  // Template
   const [activeTemplate, setActiveTemplate] = useState(null);
   const printDocRef = useRef(null);
 
@@ -61,7 +58,6 @@ export default function CertificatesPage() {
     initData();
   }, [getApiEndpoint]);
 
-  // Fetch issued certificates archive
   const fetchIssuedCerts = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -116,7 +112,6 @@ export default function CertificatesPage() {
     return { html, css };
   };
 
-  // Issue & Save in Database
   const handleIssueAndSaveCert = async () => {
     if (!selectedStudent) {
       toast.error('Please select a student.');
@@ -212,7 +207,6 @@ export default function CertificatesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -224,7 +218,6 @@ export default function CertificatesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mode Switcher */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -260,7 +253,6 @@ export default function CertificatesPage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED CERTIFICATES ARCHIVE ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -373,9 +365,7 @@ export default function CertificatesPage() {
           </div>
         </div>
       ) : (
-        /* ================= GENERATE NEW CERTIFICATE ================= */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Form */}
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3.5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -476,7 +466,6 @@ export default function CertificatesPage() {
             </div>
           </div>
 
-          {/* Right Preview */}
           <div className="lg:col-span-8 flex flex-col items-center space-y-3">
             <div className="w-full flex items-center justify-end gap-2">
               <button

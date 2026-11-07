@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyResidenceStaffAccess } from 'src/lib/middleware/residence-auth.js';
 
-// GET: List rooms for a hall or website with seat metrics
 export async function GET(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'view');
@@ -37,7 +36,6 @@ export async function GET(request, context) {
         return NextResponse.json({ success: false, error: 'Room not found.' }, { status: 404 });
       }
 
-      // Also fetch seats of this room
       const seatsRes = await queryDb(
         `SELECT s.*,
                 a.id AS allocation_id, a.student_id, a.allocated_date,
@@ -117,7 +115,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create room (with optional automated seat generator)
 export async function POST(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'create');
@@ -149,7 +146,6 @@ export async function POST(request, context) {
 
     const cleanRoomNo = room_number.trim();
 
-    // Verify hall exists and belongs to this website
     const hallRes = await queryDb(
       `SELECT id, name FROM website_halls WHERE website_id = $1 AND id = $2 LIMIT 1`,
       [website.id, hall_id]
@@ -158,7 +154,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Selected hall not found.' }, { status: 404 });
     }
 
-    // Check duplicate room_number in this hall
     const dupCheck = await queryDb(
       `SELECT id FROM website_hall_rooms WHERE hall_id = $1 AND LOWER(room_number) = LOWER($2) LIMIT 1`,
       [hall_id, cleanRoomNo]
@@ -194,7 +189,6 @@ export async function POST(request, context) {
 
     const newRoom = insertRoom.rows[0];
 
-    // Auto-generate seats if requested
     if (auto_generate_seats) {
       for (let s = 1; s <= numCapacity; s++) {
         const seatLabel = `Seat-${s}`;
@@ -220,7 +214,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update room
 export async function PUT(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'update');
@@ -301,7 +294,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete room
 export async function DELETE(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'delete');
@@ -317,7 +309,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Room ID is required.' }, { status: 400 });
     }
 
-    // Check active allocations in this room
     const activeAlloc = await queryDb(
       `SELECT id FROM website_hall_seat_allocations WHERE website_id = $1 AND room_id = $2 AND status = 'active' LIMIT 1`,
       [website.id, id]

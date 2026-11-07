@@ -14,7 +14,6 @@ function EnrollmentContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Modal State
   const [enrollingCandidate, setEnrollingCandidate] = useState(null);
   const [enrollForm, setEnrollForm] = useState({
     registration_no: '',
@@ -26,7 +25,6 @@ function EnrollmentContent() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrolledSuccessData, setEnrolledSuccessData] = useState(null);
 
-  // Load circulars
   useEffect(() => {
     fetch(`${apiBase}/staff/panel/admissions`).then(async res => {
       if (!res.ok) return {
@@ -40,7 +38,6 @@ function EnrollmentContent() {
     }).catch(err => console.error(err));
   }, [apiBase]);
 
-  // Fetch candidates awaiting enrollment
   const fetchCandidates = async () => {
     setLoading(true);
     try {
@@ -67,7 +64,6 @@ function EnrollmentContent() {
   }, [selectedCircularId, apiBase]);
   const openEnrollModal = cand => {
     setEnrollingCandidate(cand);
-    // Generate suggested registration number without REG- prefix: 2026-xxxx
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     setEnrollForm({
       registration_no: `${new Date().getFullYear()}-${randSuffix}`,
@@ -129,7 +125,6 @@ function EnrollmentContent() {
     });
   }, [candidates, searchTerm]);
   return <div className="w-full space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -151,7 +146,6 @@ function EnrollmentContent() {
         </div>
       </div>
 
-      {/* KPI Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
@@ -189,7 +183,6 @@ function EnrollmentContent() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           
@@ -206,7 +199,6 @@ function EnrollmentContent() {
         </div>
       </div>
 
-      {/* Candidates List Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -278,7 +270,6 @@ function EnrollmentContent() {
         </div>
       </div>
 
-      {/* Enrollment Confirmation Modal */}
       {enrollingCandidate && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-lg w-full p-5 shadow-xl text-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
@@ -341,7 +332,6 @@ function EnrollmentContent() {
           </div>
         </div>}
 
-      {/* Enrollment Success Slip Modal */}
       {enrolledSuccessData && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-lg w-full p-5 shadow-xl text-xs space-y-4">
             <div className="text-center space-y-1">

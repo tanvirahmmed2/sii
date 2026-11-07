@@ -17,7 +17,7 @@ export default function TeacherIDCardPage() {
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+  const [cardSideView, setCardSideView] = useState('both'); 
 
   const cardFrontRef = useRef(null);
   const cardBackRef = useRef(null);
@@ -52,7 +52,6 @@ export default function TeacherIDCardPage() {
   const issueDateFormatted = card?.issue_date ? new Date(card.issue_date).toLocaleDateString('en-GB') : 'Active Session';
   const expiryDateFormatted = card?.valid_upto || (card?.expiry_date ? new Date(card.expiry_date).toLocaleDateString('en-GB') : 'December 2028');
 
-  // Compile card HTML using active template
   const compileCard = () => {
     if (!template) return null;
     let frontHtml = template.custom_html || template.html_content || '';
@@ -142,7 +141,6 @@ export default function TeacherIDCardPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full pb-12 animate-fade-up">
-      {/* Header */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/70 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
@@ -180,7 +178,6 @@ export default function TeacherIDCardPage() {
         )}
       </div>
 
-      {/* Faculty Summary Card */}
       {teacher && (
         <div className="bg-white border border-slate-200/70 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center gap-4">
@@ -213,10 +210,8 @@ export default function TeacherIDCardPage() {
         </div>
       )}
 
-      {/* ID Card Display */}
       {teacher && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Visual Card Canvas Preview */}
           <div className="lg:col-span-7 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-xs space-y-4">
             <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
               <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1">
@@ -254,13 +249,11 @@ export default function TeacherIDCardPage() {
               </div>
             </div>
 
-            {/* Template CSS */}
             {cardCompiled && (
               <style dangerouslySetInnerHTML={{ __html: cardCompiled.css }} />
             )}
 
             <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-50 rounded-2xl w-full overflow-x-auto">
-              {/* FRONT SIDE */}
               {(cardSideView === 'both' || cardSideView === 'front') && (
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Front</span>
@@ -283,7 +276,6 @@ export default function TeacherIDCardPage() {
                 </div>
               )}
 
-              {/* BACK SIDE */}
               {(cardSideView === 'both' || cardSideView === 'back') && cardCompiled?.backHtml && (
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Back</span>
@@ -302,7 +294,6 @@ export default function TeacherIDCardPage() {
             </div>
           </div>
 
-          {/* Credentials Table */}
           <div className="lg:col-span-5 bg-white border border-slate-200/70 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-800">Faculty Credential Parameters</h3>

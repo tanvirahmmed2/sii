@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Public list of active academic departments for this website
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

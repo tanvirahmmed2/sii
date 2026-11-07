@@ -3,11 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { generateToken } from 'src/lib/utils/random';
 
-/**
- * API Route: /api/creator/purchases
- * Dedicated to the `purchases` table.
- */
-
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -24,7 +19,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
-    // If single purchase requested
     if (purchaseIdParam) {
       const singleRes = await queryDb(
         `SELECT pu.*, 
@@ -55,7 +49,6 @@ export async function GET(request) {
       return NextResponse.json({ success: true, purchase: singleRes.rows[0] });
     }
 
-    // All purchases for this creator
     const res = await queryDb(
       `SELECT pu.*, 
               p.name AS package_name, 
@@ -98,10 +91,9 @@ export async function handlePurchasesAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Create Purchase Order (creates pending purchase and pending payment invoice)
   if (action === 'create_order' || !action) {
     const packageId = Number(body.packageId);
-    const paymentMethod = (body.paymentMethod || 'PADDLE').toUpperCase();
+    const paymentMethod = String(body.paymentMethod || 'surjopay').toLowerCase();
     const billingCycle = (body.billingInterval || body.billingCycle || 'monthly').toLowerCase();
     const subdomain = (body.subdomain || '').trim().toLowerCase();
     const websiteName = (body.websiteName || '').trim();
@@ -121,13 +113,12 @@ export async function handlePurchasesAction(body, sessionCreator) {
     let baseAmount = 0;
     let currency = 'USD';
 
-    if (paymentMethod === 'BKASH') {
+    if (paymentMethod === 'surjopay') {
       currency = 'BDT';
       baseAmount = isYearly
         ? Number(pkg.yearly_price_bdt || 0)
         : Number(pkg.monthly_price_bdt || 0);
     } else {
-      // Paddle (USD)
       currency = 'USD';
       baseAmount = isYearly 
         ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0)
@@ -139,7 +130,6 @@ export async function handlePurchasesAction(body, sessionCreator) {
 
     const purchaseCode = generateToken(12);
 
-    // Metadata for provisioning website upon payment
     const purchaseNotes = JSON.stringify({
       notes: notes || 'Package checkout order',
       subdomain: subdomain || '',
@@ -147,7 +137,6 @@ export async function handlePurchasesAction(body, sessionCreator) {
       billingCycle: isYearly ? 'yearly' : 'monthly',
     });
 
-    // 1. Create pending purchase record first
     const puRes = await queryDb(
       `INSERT INTO purchases (creator_id, package_id, purchase_code, billing_cycle, base_amount, total_amount, status, notes)
        VALUES ($1, $2, $3, $4, $5, $5, 'pending', $6)
@@ -156,7 +145,6 @@ export async function handlePurchasesAction(body, sessionCreator) {
     );
     const purchase = puRes.rows[0];
 
-    // 2. Generate unique transaction identifier and create pending payment linked to purchase
     const transactionId = generateToken(12);
     const payRes = await queryDb(
       `INSERT INTO payments (purchase_id, creator_id, transaction_id, amount, currency, payment_method, status, payment_date)
@@ -181,7 +169,6 @@ export async function handlePurchasesAction(body, sessionCreator) {
     });
   }
 
-  // 2. Update Purchase Status
   if (action === 'update_status') {
     const { purchaseId, status } = body;
     if (!purchaseId || !status) {

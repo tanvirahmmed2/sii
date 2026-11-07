@@ -22,7 +22,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all subjects with assigned class counts
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -48,7 +47,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create subject
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -96,7 +94,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update subject
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -146,7 +143,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove subject
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

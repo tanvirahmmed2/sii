@@ -40,18 +40,16 @@ export default function TeacherClassroomWorkstationPage() {
 
   const [classroom, setClassroom] = useState(null);
   const [subjects, setSubjects] = useState([]);
-  const [activeTab, setActiveTab] = useState('syllabus'); // 'syllabus' | 'assignments' | 'lectures' | 'notes'
+  const [activeTab, setActiveTab] = useState('syllabus'); 
   const [loading, setLoading] = useState(true);
 
-  // Lists
   const [syllabusList, setSyllabusList] = useState([]);
   const [assignmentsList, setAssignmentsList] = useState([]);
   const [lecturesList, setLecturesList] = useState([]);
   const [notesList, setNotesList] = useState([]);
 
-  // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [modalMode, setModalMode] = useState('create'); 
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -65,11 +63,9 @@ export default function TeacherClassroomWorkstationPage() {
   const [formError, setFormError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Delete modal
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch classroom details & subjects
   const fetchClassroomDetails = useCallback(async () => {
     try {
       const res = await fetch(getApiEndpoint(`teacher/classrooms/${id}`));
@@ -83,7 +79,6 @@ export default function TeacherClassroomWorkstationPage() {
     }
   }, [getApiEndpoint, id]);
 
-  // Fetch active tab items
   const fetchTabItems = useCallback(async () => {
     setLoading(true);
     try {
@@ -119,7 +114,6 @@ export default function TeacherClassroomWorkstationPage() {
     fetchTabItems();
   }, [fetchTabItems]);
 
-  // Open modal handlers
   const openCreateModal = () => {
     setModalMode('create');
     setEditingItem(null);
@@ -240,7 +234,6 @@ export default function TeacherClassroomWorkstationPage() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Top Breadcrumb & Classroom Banner */}
       <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         <Link href="/teacher/classrooms" className="hover:text-emerald-600 flex items-center gap-1 font-semibold">
           <FiArrowLeft /> Back to Classrooms
@@ -286,7 +279,6 @@ export default function TeacherClassroomWorkstationPage() {
         </div>
       </div>
 
-      {/* Notification */}
       {statusMessage && (
         <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 shadow-xs animate-in fade-in">
           <FiCheck className="text-emerald-500 shrink-0 text-base" />
@@ -294,7 +286,6 @@ export default function TeacherClassroomWorkstationPage() {
         </div>
       )}
 
-      {/* Navigation Tabs */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-1.5 flex flex-wrap gap-1 shadow-2xs">
         <button
           type="button"
@@ -345,7 +336,6 @@ export default function TeacherClassroomWorkstationPage() {
         </button>
       </div>
 
-      {/* Content Stream */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -409,7 +399,6 @@ export default function TeacherClassroomWorkstationPage() {
                     {activeTab === 'assignments' ? item.topic_name : item.title}
                   </h3>
 
-                  {/* Rendered Description using Prose and HTML */}
                   {item.description && (
                     <div
                       className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 prose prose-slate dark:prose-invert max-w-none leading-relaxed bg-slate-50/70 dark:bg-slate-800/30 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800"
@@ -418,7 +407,6 @@ export default function TeacherClassroomWorkstationPage() {
                   )}
                 </div>
 
-                {/* Right Actions */}
                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
                   {item.pdf_url && (
                     <a
@@ -456,7 +444,6 @@ export default function TeacherClassroomWorkstationPage() {
         </div>
       )}
 
-      {/* Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 my-8">
@@ -486,7 +473,6 @@ export default function TeacherClassroomWorkstationPage() {
                 </div>
               )}
 
-              {/* Subject Select */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Subject <span className="text-rose-500">*</span>
@@ -506,7 +492,6 @@ export default function TeacherClassroomWorkstationPage() {
                 </select>
               </div>
 
-              {/* Title / Topic Name */}
               {activeTab === 'assignments' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
@@ -551,7 +536,6 @@ export default function TeacherClassroomWorkstationPage() {
                 </div>
               )}
 
-              {/* PDF or Resource Link */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   PDF or Resource Document URL (Optional)
@@ -565,7 +549,6 @@ export default function TeacherClassroomWorkstationPage() {
                 />
               </div>
 
-              {/* Rich Description using Tiptap */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Description &amp; Guidelines (Tiptap Rich Text)
@@ -578,7 +561,6 @@ export default function TeacherClassroomWorkstationPage() {
                 />
               </div>
 
-              {/* Actions */}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
@@ -600,7 +582,6 @@ export default function TeacherClassroomWorkstationPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">

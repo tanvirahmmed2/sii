@@ -20,7 +20,6 @@ export default function AdmitCardIssuer() {
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // 1. Fetch available exams on mount
   const fetchExams = async () => {
     setLoadingExams(true);
     try {
@@ -39,7 +38,6 @@ export default function AdmitCardIssuer() {
     fetchExams();
   }, []);
 
-  // 2. Fetch paid students when an exam is selected
   const handleSelectExam = async (exam) => {
     setSelectedExam(exam);
     setSelectedStudentIds([]);
@@ -57,7 +55,6 @@ export default function AdmitCardIssuer() {
     }
   };
 
-  // Toggle single student checkbox
   const toggleStudentSelection = (studentId) => {
     if (selectedStudentIds.includes(studentId)) {
       setSelectedStudentIds(selectedStudentIds.filter(id => id !== studentId));
@@ -66,7 +63,6 @@ export default function AdmitCardIssuer() {
     }
   };
 
-  // Filtered student list by search
   const filteredStudents = students.filter(st => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -77,7 +73,6 @@ export default function AdmitCardIssuer() {
     );
   });
 
-  // Toggle select all eligible students
   const toggleSelectAll = () => {
     if (selectedStudentIds.length === filteredStudents.length) {
       setSelectedStudentIds([]);
@@ -86,7 +81,6 @@ export default function AdmitCardIssuer() {
     }
   };
 
-  // 3. Submit Admit Cards generation
   const handleIssueAdmitCards = async () => {
     if (!selectedExam) { toast.error('Please select an exam.'); return; }
     if (selectedStudentIds.length === 0) { toast.error('Please select at least one student.'); return; }
@@ -111,7 +105,6 @@ export default function AdmitCardIssuer() {
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-6xl mx-auto pb-16 animate-fade-up">
-      {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-1">
@@ -131,7 +124,6 @@ export default function AdmitCardIssuer() {
         )}
       </div>
 
-      {/* STEP 1: EXAM SELECTION (When no exam is selected) */}
       {!selectedExam && (
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
@@ -181,10 +173,8 @@ export default function AdmitCardIssuer() {
         </div>
       )}
 
-      {/* STEP 2 & 3: PAID STUDENTS LIST & ADMIT CARD ISSUANCE */}
       {selectedExam && (
         <div className="space-y-6">
-          {/* Selected Exam Overview Card */}
           <div className="bg-primary/5 border border-primary/20 p-5 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -211,7 +201,6 @@ export default function AdmitCardIssuer() {
             </div>
           </div>
 
-          {/* Paid Students Roster */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">

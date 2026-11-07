@@ -91,7 +91,6 @@ export default function TransferCertificateIssuer() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Student Selector */}
         <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-3xl p-5 shadow-2xs space-y-4">
           <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
             <FiSearch className="text-amber-600" /> Select Active Student
@@ -132,7 +131,6 @@ export default function TransferCertificateIssuer() {
           )}
         </div>
 
-        {/* Right Column: TC Form */}
         <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-2xs">
           <form onSubmit={handleIssueTC} className="space-y-4">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">

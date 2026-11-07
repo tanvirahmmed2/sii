@@ -18,7 +18,7 @@ import LoadingScreen from 'src/component/common/LoadingScreen';
 export default function PoliciesPage() {
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openIndex, setOpenIndex] = useState(0); // Open first policy by default like FAQ
+  const [openIndex, setOpenIndex] = useState(0); 
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState(null);
 
@@ -81,10 +81,8 @@ export default function PoliciesPage() {
     }
   };
 
-
   return (
     <div className="w-full min-h-screen bg-slate-50/60 dark:bg-slate-950 py-14 md:py-20 px-4 sm:px-6 lg:px-8 space-y-12">
-      {/* Hero Header */}
       <div className="max-w-4xl mx-auto text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 shadow-2xs">
           <BiCheckShield className="text-sm" /> Compliance &amp; Trust Center
@@ -98,7 +96,6 @@ export default function PoliciesPage() {
           Transparency and security are foundational to our platform. Browse our official policies, terms of service, and compliance agreements below.
         </p>
 
-        {/* Search Bar */}
         <div className="pt-2 max-w-xl mx-auto">
           <div className="relative">
             <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base" />
@@ -122,9 +119,7 @@ export default function PoliciesPage() {
         </div>
       </div>
 
-      {/* Main Policies List / Accordion Section */}
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Controls Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -147,13 +142,11 @@ export default function PoliciesPage() {
           </button>
         </div>
 
-        {/* Loading State */}
         {loading ? (
           <div className="pt-4">
             <LoadingScreen fullScreen={false} label="Loading platform policies..." />
           </div>
         ) : filteredPolicies.length === 0 ? (
-          /* Empty State */
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto space-y-3">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-2xl">
               <BiFile />
@@ -177,7 +170,6 @@ export default function PoliciesPage() {
             )}
           </div>
         ) : (
-          /* List View with Accordion Expansion (Like FAQ, No Slugs) */
           <div className="space-y-4 pt-2">
             {filteredPolicies.map((policy, index) => {
               const isOpen = openIndex === index;
@@ -198,7 +190,6 @@ export default function PoliciesPage() {
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
-                  {/* Clickable Header Row */}
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
@@ -240,10 +231,8 @@ export default function PoliciesPage() {
                     </span>
                   </button>
 
-                  {/* Expanded Policy Details (Like FAQ) */}
                   {isOpen && (
                     <div className="px-5 sm:px-7 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-5">
-                      {/* Document Actions Bar */}
                       <div className="flex justify-end pt-2">
                         <button
                           type="button"
@@ -265,12 +254,10 @@ export default function PoliciesPage() {
                         </button>
                       </div>
 
-                      {/* Full Policy Description Text */}
                       <div className="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-sans">
                         {policy.description}
                       </div>
 
-                      {/* Footer Note */}
                       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
                         <p>
                           By using our platform services, you acknowledge having read and agreed to these terms.
@@ -291,7 +278,6 @@ export default function PoliciesPage() {
         )}
       </div>
 
-      {/* Support Box */}
       <div className="max-w-4xl mx-auto pt-6">
         <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left shadow-xs">
           <div className="space-y-1">

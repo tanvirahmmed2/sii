@@ -1,8 +1,5 @@
-// Default Production-Ready Document & Visual Templates
-// Preloaded across 7 core institutional document types
 
 export const DEFAULT_TEMPLATES = [
-  // 1. Student ID Card (CR80 Portrait - 54mm x 86mm)
   {
     name: 'Classic Academic Blue Student ID',
     slug: 'classic-academic-blue-student-id',
@@ -189,7 +186,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 2. Teacher ID Card (CR80 Landscape - 86mm x 54mm)
   {
     name: 'Executive Slate Faculty & Teacher ID',
     slug: 'executive-slate-faculty-teacher-id',
@@ -361,7 +357,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 2B. Officer & Administrative Staff ID Card (CR80 Landscape - 86mm x 54mm)
   {
     name: 'Corporate Navy Officer & Staff ID',
     slug: 'corporate-navy-officer-staff-id',
@@ -544,7 +539,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 3. Transfer Certificate (TC) - A4 Portrait (210mm x 297mm)
   {
     name: 'Formal Royal Transfer Certificate (TC)',
     slug: 'formal-royal-transfer-certificate-tc',
@@ -756,7 +750,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 4. Testimonial - A4 Portrait (210mm x 297mm)
   {
     name: 'Presidential Academic Testimonial',
     slug: 'presidential-academic-testimonial',
@@ -928,7 +921,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 5. Academic & Merit Certificate - A4 Landscape (297mm x 210mm)
   {
     name: 'Gold Excellence Award Certificate',
     slug: 'gold-excellence-award-certificate',
@@ -1105,7 +1097,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 6. Payment Receipt - Half-A4 / POS (210mm x 148mm)
   {
     name: 'Institutional Fee Payment Receipt',
     slug: 'institutional-fee-payment-receipt',
@@ -1312,7 +1303,6 @@ export const DEFAULT_TEMPLATES = [
 }`,
   },
 
-  // 7. Website Poster - Square Social Banner (1080px x 1080px)
   {
     name: 'Modern Campus Admission & Event Poster',
     slug: 'modern-campus-admission-event-poster',

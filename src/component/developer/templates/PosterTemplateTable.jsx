@@ -11,7 +11,6 @@ export default function PosterTemplateTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // New Template Modal State with manual dimensions
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -139,7 +138,6 @@ export default function PosterTemplateTable() {
         </div>
       </div>
 
-      {/* Staff Panel Transition Notice */}
       <div className="p-3.5 rounded bg-sky-950/40 border border-sky-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sky-200">
         <div>
           <span className="font-semibold text-sky-300">Staff Portal Feature Available:</span> Institutional staff can design, customize, save, and download posters as PDF and high-res JPEG directly inside their campus staff portal.
@@ -291,7 +289,6 @@ export default function PosterTemplateTable() {
                 />
               </div>
 
-              {/* Manual dimensions controls */}
               <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <span className="font-semibold text-slate-700 dark:text-slate-300 block">
                   Manual Size &amp; Orientation

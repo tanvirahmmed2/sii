@@ -7,10 +7,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/staff/panel/configure/payments/currencies
- * Returns the list of institutional currencies configured for the tenant.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
@@ -32,10 +28,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/configure/payments/currencies
- * Adds or updates an institutional currency for the tenant.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
@@ -64,7 +56,6 @@ export async function POST(request, context) {
     const isBase = Boolean(is_base_currency);
     const isActive = is_active !== false;
 
-    // If marked as base currency, unset previous base currencies and update website base currency
     if (isBase) {
       await queryDb(`UPDATE website_currencies SET is_base_currency = FALSE WHERE website_id = $1`, [auth.website.id]);
       await queryDb(`UPDATE websites SET currency = $1 WHERE id = $2`, [cleanCode, auth.website.id]);
@@ -106,10 +97,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/staff/panel/configure/payments/currencies
- * Updates currency properties (active toggle, exchange rate, base currency status).
- */
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
@@ -168,10 +155,6 @@ export async function PUT(request, context) {
   }
 }
 
-/**
- * DELETE /api/[domain]/staff/panel/configure/payments/currencies
- * Removes a non-base institutional currency.
- */
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'edit');
@@ -203,7 +186,6 @@ export async function DELETE(request, context) {
       }, { status: 400 });
     }
 
-    // Check if any gateway accounts use this currency
     const accUsage = await queryDb(
       `SELECT COUNT(*) FROM website_payment_gateway_accounts WHERE website_id = $1 AND currency = $2`,
       [auth.website.id, cur.code]

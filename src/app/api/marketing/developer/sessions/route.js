@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-/**
- * Developer Active Login Sessions API Route
- * Path: /api/marketing/developer/sessions
- * Provides list and revocation of active devices/sessions for developers.
- */
-
 export async function GET(request) {
   try {
     const authUser = await getAuthenticatedUser(request);

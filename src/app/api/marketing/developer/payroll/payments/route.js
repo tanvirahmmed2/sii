@@ -3,9 +3,6 @@ import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 import { generateToken } from 'src/lib/utils/random';
 
-// ============================================================================
-// GET: List recent payroll payments
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -44,9 +41,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Record a payment for a developer salary allocation (ADMIN ONLY)
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -67,7 +61,6 @@ export async function POST(request) {
       );
     }
 
-    // Fetch the developer_payroll record to get payroll_id and developer_id
     const itemRes = await queryDb(
       'SELECT id, payroll_id, developer_id, net_salary, payment_status FROM developer_payrolls WHERE id = $1',
       [developer_payroll_id]
@@ -97,13 +90,11 @@ export async function POST(request) {
       ]
     );
 
-    // Update developer_payroll payment status to PAID
     await queryDb(
       "UPDATE developer_payrolls SET payment_status = 'PAID' WHERE id = $1",
       [item.id]
     );
 
-    // Check if all items in this payroll run are now PAID
     const unpaidCheck = await queryDb(
       "SELECT COUNT(*)::int AS count FROM developer_payrolls WHERE payroll_id = $1 AND payment_status != 'PAID'",
       [item.payroll_id]

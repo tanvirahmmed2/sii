@@ -60,7 +60,6 @@ export default function StudentLoginPage() {
     <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-6 sm:p-8 shadow-xs space-y-6">
         
-        {/* Header */}
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
          
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -71,7 +70,6 @@ export default function StudentLoginPage() {
           </p>
         </div>
 
-        {/* Verification Status Feedback Alert */}
         {statusFeedback && (
           <div
             className={`p-3 rounded text-xs space-y-1 border ${
@@ -101,7 +99,6 @@ export default function StudentLoginPage() {
           </div>
         )}
 
-        {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">

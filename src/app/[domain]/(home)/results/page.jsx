@@ -8,13 +8,12 @@ import AdmissionResultsContent from './admission/page.jsx';
 import AcademicResultsContent from './academic/page.jsx';
 
 export default function ResultsHubPage() {
-  const [activeTab, setActiveTab] = useState('admission'); // 'admission' | 'academic'
+  const [activeTab, setActiveTab] = useState('admission'); 
 
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
-        {/* Hub Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -31,7 +30,6 @@ export default function ResultsHubPage() {
             Select an evaluation category below to query official individual candidate dossiers and academic examination transcripts.
           </p>
 
-          {/* Quick Category Cards / Navigation */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 text-left">
             <button
               onClick={() => setActiveTab('admission')}
@@ -93,7 +91,6 @@ export default function ResultsHubPage() {
           </div>
         </motion.div>
 
-        {/* Embedded Active Results Component */}
         <div className="pt-2">
           {activeTab === 'admission' ? (
             <AdmissionResultsContent />

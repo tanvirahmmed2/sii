@@ -31,7 +31,6 @@ export default function CareerDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // Application form state
   const [form, setForm] = useState({
     applicant_name: '',
     applicant_email: '',
@@ -73,7 +72,6 @@ export default function CareerDetailPage({ params }) {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert('File size must be under 10MB');
         return;
@@ -175,7 +173,6 @@ export default function CareerDetailPage({ params }) {
   return (
     <div className="w-full min-h-screen bg-slate-50/50 dark:bg-slate-950 py-10 md:py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
-        {/* Back Link */}
         <Link
           href="/careers"
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -183,7 +180,6 @@ export default function CareerDetailPage({ params }) {
           <BiArrowBack className="text-lg" /> Back to All Openings
         </Link>
 
-        {/* Job Header Card */}
         <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
@@ -227,11 +223,8 @@ export default function CareerDetailPage({ params }) {
           </div>
         </div>
 
-        {/* Content & Application Form Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Left Column: Job Details */}
           <div className="lg:col-span-7 space-y-8">
-            {/* Overview */}
             <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <BiStar className="text-indigo-600" />
@@ -242,7 +235,6 @@ export default function CareerDetailPage({ params }) {
               </div>
             </div>
 
-            {/* Responsibilities */}
             {responsibilities.length > 0 && (
               <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -262,7 +254,6 @@ export default function CareerDetailPage({ params }) {
               </div>
             )}
 
-            {/* Requirements */}
             {requirements.length > 0 && (
               <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -282,7 +273,6 @@ export default function CareerDetailPage({ params }) {
               </div>
             )}
 
-            {/* Benefits & Perks */}
             {benefits.length > 0 && (
               <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -303,7 +293,6 @@ export default function CareerDetailPage({ params }) {
             )}
           </div>
 
-          {/* Right Column: Application Form */}
           <div className="lg:col-span-5 sticky top-6">
             <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-lg space-y-6">
               {submitSuccess ? (
@@ -342,7 +331,6 @@ export default function CareerDetailPage({ params }) {
                   )}
 
                   <form onSubmit={handleSubmitApplication} className="space-y-4">
-                    {/* Full Name */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Full Name <span className="text-rose-500">*</span>
@@ -362,7 +350,6 @@ export default function CareerDetailPage({ params }) {
                       </div>
                     </div>
 
-                    {/* Email */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Email Address <span className="text-rose-500">*</span>
@@ -382,7 +369,6 @@ export default function CareerDetailPage({ params }) {
                       </div>
                     </div>
 
-                    {/* Phone */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Phone Number
@@ -401,7 +387,6 @@ export default function CareerDetailPage({ params }) {
                       </div>
                     </div>
 
-                    {/* Resume Upload / Link */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Resume / CV (PDF or DOC) <span className="text-rose-500">*</span>
@@ -438,7 +423,6 @@ export default function CareerDetailPage({ params }) {
                       </div>
                     </div>
 
-                    {/* Portfolio / GitHub */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Portfolio / GitHub Profile
@@ -454,7 +438,6 @@ export default function CareerDetailPage({ params }) {
                       />
                     </div>
 
-                    {/* LinkedIn */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         LinkedIn Profile
@@ -470,7 +453,6 @@ export default function CareerDetailPage({ params }) {
                       />
                     </div>
 
-                    {/* Cover Letter */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                         Cover Letter / Why You?
@@ -486,7 +468,6 @@ export default function CareerDetailPage({ params }) {
                       />
                     </div>
 
-                    {/* Submit Button */}
                     <button
                       type="submit"
                       disabled={submitting}

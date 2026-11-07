@@ -23,7 +23,6 @@ export default function ResidenceListPage() {
   const [selectedGender, setSelectedGender] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingHall, setEditingHall] = useState(null);
@@ -165,7 +164,6 @@ export default function ResidenceListPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Page Title & Actions Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -207,7 +205,6 @@ export default function ResidenceListPage() {
         </div>
       </div>
 
-      {/* IN-PAGE CREATE / EDIT FORM */}
       {isModalOpen && (
         <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -391,7 +388,6 @@ export default function ResidenceListPage() {
         </div>
       )}
 
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Halls</p>
@@ -434,9 +430,7 @@ export default function ResidenceListPage() {
         </div>
       </div>
 
-      {/* Main Interactive Workstation Area */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -479,7 +473,6 @@ export default function ResidenceListPage() {
           </div>
         </div>
 
-        {/* Halls Roster Table */}
         {loading ? (
           <TenantLoader fullScreen={false} size="sm" />
         ) : halls.length === 0 ? (

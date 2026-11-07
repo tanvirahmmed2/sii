@@ -9,15 +9,13 @@ export default function StudentAssignmentsPage() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, pending, submitted, graded
+  const [statusFilter, setStatusFilter] = useState('all'); 
 
-  // Modal State for Submission
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [submissionText, setSubmissionText] = useState('');
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch assignments from API
   const fetchAssignments = async () => {
     setLoading(true);
     try {
@@ -83,7 +81,6 @@ export default function StudentAssignmentsPage() {
     }
   };
 
-  // Filtered assignments
   const filteredAssignments = assignments.filter((a) => {
     const matchesSearch =
       a.topic_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -104,7 +101,6 @@ export default function StudentAssignmentsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded inline-block mb-1">
@@ -127,7 +123,6 @@ export default function StudentAssignmentsPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5 space-y-0.5">
           <span className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">Total Coursework</span>
@@ -154,7 +149,6 @@ export default function StudentAssignmentsPage() {
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <input
           type="text"
@@ -179,7 +173,6 @@ export default function StudentAssignmentsPage() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
@@ -313,7 +306,6 @@ export default function StudentAssignmentsPage() {
         </div>
       </div>
 
-      {/* Submission Modal */}
       {selectedAssignment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md max-w-lg w-full p-5 space-y-4 shadow-lg">

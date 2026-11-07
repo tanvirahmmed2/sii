@@ -212,7 +212,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Payment ID is required.' }, { status: 400 });
     }
 
-    // Get current record
     const currRes = await queryDb(
       `SELECT * FROM website_exam_fee_payments WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]

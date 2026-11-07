@@ -42,31 +42,28 @@ export default function SubscriptionDetailsPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'payments' | 'history'
+  const [activeTab, setActiveTab] = useState('overview'); 
 
-  // Renewal Modal State
   const [renewalModalOpen, setRenewalModalOpen] = useState(false);
   const [renewalSubmitting, setRenewalSubmitting] = useState(false);
   const [linkingWebsite, setLinkingWebsite] = useState(false);
   const [copiedKey, setCopiedKey] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
-  // Renewal form state
   const [renewForm, setRenewForm] = useState({
     package_id: '',
-    duration_type: 'monthly', // 'monthly', 'yearly', 'multiple_months', 'multiple_years', 'custom'
+    duration_type: 'monthly', 
     duration_multiplier: 1,
     custom_period_end: '',
-    extend_from: 'period_end', // 'period_end' or 'now'
+    extend_from: 'period_end', 
     amount: '',
     currency: 'BDT',
-    payment_status: 'PAID', // 'PAID' or 'UNPAID'
+    payment_status: 'PAID', 
     payment_method: 'BKASH',
     transaction_id: '',
     notes: '',
   });
 
-  // Existing website editing state
   const [editingWebsite, setEditingWebsite] = useState(false);
   const [websiteUpdating, setWebsiteUpdating] = useState(false);
   const [websiteForm, setWebsiteForm] = useState({
@@ -104,7 +101,6 @@ export default function SubscriptionDetailsPage({ params }) {
       const json = await res.json();
       if (json.success) {
         setData(json);
-        // Prepopulate renew form defaults from fetched subscription
         const subCurr = json.subscription?.payment_currency || (Number(json.subscription?.total_amount) > 500 ? 'BDT' : 'BDT');
         const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'PADDLE';
         setRenewForm((prev) => ({
@@ -193,7 +189,6 @@ export default function SubscriptionDetailsPage({ params }) {
     };
   }, [isAuthorized, subId]);
 
-  // Handle renewal form submission
   const handleRenewSubmit = async (e) => {
     e.preventDefault();
     setRenewalSubmitting(true);
@@ -232,7 +227,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Handle updating existing website information
   const handleUpdateWebsite = async (e) => {
     e.preventDefault();
     const targetWebsiteId = data?.website?.id || data?.subscription?.website_id;
@@ -261,7 +255,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Handle linking or unlinking website container
   const handleLinkWebsite = async (selectedWebId) => {
     setLinkingWebsite(true);
     try {
@@ -288,7 +281,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Quick Action: Update Status (e.g. active, cancelled, past_due)
   const handleUpdateStatus = async (newStatus) => {
     if (!confirm(`Are you sure you want to change subscription status to "${newStatus}"?`)) return;
     try {
@@ -312,7 +304,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Quick Action: Settle Pending Payment / Invoice
   const handleSettlePayment = async (paymentId) => {
     if (!confirm('Mark this pending payment as PAID and activate the subscription term?')) return;
     try {
@@ -336,7 +327,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Quick Action: Toggle Auto-Renew
   const handleToggleAutoRenew = async () => {
     try {
       const res = await fetch(`/api/marketing/developer/subscriptions/${subId}`, {
@@ -356,7 +346,6 @@ export default function SubscriptionDetailsPage({ params }) {
     }
   };
 
-  // Calculate renewal preview dates
   const calculateRenewalPreview = () => {
     const pkg = data?.available_packages?.find((p) => p.id === Number(renewForm.package_id)) || data?.package;
     const now = new Date();
@@ -382,7 +371,6 @@ export default function SubscriptionDetailsPage({ params }) {
       end.setMonth(end.getMonth() + 1);
     }
 
-    // Default amount calculation
     let calculatedCost = 0;
     const isYearly = renewForm.duration_type === 'yearly' || renewForm.duration_type === 'multiple_years';
     const yearCount = renewForm.duration_type === 'multiple_years' ? multiplier : 1;
@@ -464,7 +452,6 @@ export default function SubscriptionDetailsPage({ params }) {
 
   return (
     <div className="w-full space-y-5 pb-12">
-      {/* Top Breadcrumb Navigation */}
       <div className="flex items-center justify-between">
         <Link
           href="/developer/subscriptions"
@@ -483,7 +470,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Global Feedback Banner */}
       {feedback && (
         <div
           className={`p-3 rounded text-xs font-medium border flex items-center justify-between ${
@@ -502,7 +488,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Header Inspection Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -515,7 +500,6 @@ export default function SubscriptionDetailsPage({ params }) {
                   Ref: {subscription.purchase_code}
                 </span>
               )}
-              {/* Status Badge */}
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
                   isActive
@@ -529,7 +513,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 {subscription.status || 'Active'}
               </span>
 
-              {/* Payment Status Badge */}
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
                   isPaid
@@ -549,7 +532,6 @@ export default function SubscriptionDetailsPage({ params }) {
             </p>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -591,7 +573,6 @@ export default function SubscriptionDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Quick Highlights Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <div className="p-3 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80">
             <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Billing Interval</span>
@@ -641,7 +622,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Tabs Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           type="button"
@@ -678,12 +658,9 @@ export default function SubscriptionDetailsPage({ params }) {
         </button>
       </div>
 
-      {/* TAB 1: OVERVIEW & CONTAINERS */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Column 1 & 2: Package & Website details */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Package Specifications Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -743,7 +720,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 </div>
               </div>
 
-              {/* Package Features List */}
               {Array.isArray(pkg?.features) && pkg.features.length > 0 && (
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                   <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-2">Included Features</span>
@@ -759,7 +735,6 @@ export default function SubscriptionDetailsPage({ params }) {
               )}
             </div>
 
-            {/* Linked Website Container Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -809,7 +784,6 @@ export default function SubscriptionDetailsPage({ params }) {
 
               {website ? (
                 editingWebsite ? (
-                  /* Form to Update Existing Website Info */
                   <form onSubmit={handleUpdateWebsite} className="space-y-3.5 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
@@ -981,7 +955,6 @@ export default function SubscriptionDetailsPage({ params }) {
                     </div>
                   </form>
                 ) : (
-                  /* Read-Only View of Existing Website Info */
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="p-3 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40">
@@ -1061,9 +1034,7 @@ export default function SubscriptionDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* Column 3: Creator Profile & Contract Meta */}
           <div className="space-y-5">
-            {/* Creator Profile Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-3">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -1125,7 +1096,6 @@ export default function SubscriptionDetailsPage({ params }) {
               </div>
             </div>
 
-            {/* Quick Actions Panel */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-3">
               <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">Developer Controls</h3>
               <div className="space-y-2">
@@ -1161,7 +1131,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       )}
 
-      {/* TAB 2: PAYMENTS LEDGER */}
       {activeTab === 'payments' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1239,7 +1208,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       )}
 
-      {/* TAB 3: PURCHASES HISTORY */}
       {activeTab === 'history' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1306,9 +1274,6 @@ export default function SubscriptionDetailsPage({ params }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* RENEWAL MODAL (HANDLES PAYMENT TO PURCHASE RENEW) */}
-      {/* ========================================================================= */}
       {renewalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-2xl w-full p-6 shadow-2xl space-y-5 my-8">
@@ -1331,7 +1296,6 @@ export default function SubscriptionDetailsPage({ params }) {
             </div>
 
             <form onSubmit={handleRenewSubmit} className="space-y-4">
-              {/* Package Selection */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Select Package Plan
@@ -1370,7 +1334,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 </select>
               </div>
 
-              {/* Renewal Duration & Term */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1470,7 +1433,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 )}
               </div>
 
-              {/* Payment Handling Options */}
               <div className="p-4 rounded border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-3">
                 <span className="text-xs font-bold text-slate-900 dark:text-white block uppercase tracking-wider">
                   Payment Processing &amp; Settlement
@@ -1594,7 +1556,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 </div>
               </div>
 
-              {/* Renewal Notes */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Renewal Order Notes
@@ -1608,7 +1569,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 />
               </div>
 
-              {/* Calculated Real-time Preview Banner */}
               <div className="p-3.5 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 space-y-1">
                 <div className="font-semibold flex items-center justify-between">
                   <span>Calculated Term Preview:</span>
@@ -1623,7 +1583,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 </div>
               </div>
 
-              {/* Modal Buttons */}
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"

@@ -10,7 +10,6 @@ export default function AcademicYearPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Inline Workstation Form State (NO popup modal)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [formData, setFormData] = useState({
@@ -22,7 +21,6 @@ export default function AcademicYearPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Inline Delete State (NO popup modal)
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const formSectionRef = useRef(null);
@@ -170,7 +168,6 @@ export default function AcademicYearPage() {
     }
   };
   return <div className="w-full space-y-4">
-      {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Sessions</p>
@@ -211,7 +208,6 @@ export default function AcademicYearPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       {successMsg && <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             
@@ -227,7 +223,6 @@ export default function AcademicYearPage() {
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
         </div>}
 
-      {/* Inline Delete Confirmation Alert (NO popup modal) */}
       {deleteConfirmId && <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
             
@@ -256,7 +251,6 @@ export default function AcademicYearPage() {
           </div>
         </div>}
 
-      {/* Inline Workstation Form (NO popup modal) */}
       {isFormOpen && <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
@@ -335,16 +329,13 @@ export default function AcademicYearPage() {
           </form>
         </div>}
 
-      {/* Control Bar: Search, Filters, Refresh, Create Action */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Search Input */}
           <div className="relative flex-1 sm:w-64">
             
             <input type="text" placeholder="Search session..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden" />
           </div>
 
-          {/* Status Filter */}
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -366,7 +357,6 @@ export default function AcademicYearPage() {
         </div>
       </div>
 
-      {/* Sessions Data Table (Wide single row format) */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">

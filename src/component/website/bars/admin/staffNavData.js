@@ -1,4 +1,3 @@
-// Auto-generated staff panel navigation data with explicit module mappings
 export const staffNavData = [
   {
     "title": "Class",
@@ -1119,6 +1118,11 @@ export const staffNavData = [
             "path": "/payment-residence-unpaid"
           }
         ]
+      },
+      {
+        "title": "Transactions & Split Audit",
+        "module": "fees",
+        "path": "/transactions"
       }
     ]
   },

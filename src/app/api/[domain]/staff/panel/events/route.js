@@ -22,14 +22,12 @@ async function parseEventRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// Verify access for either staff or officer
 async function verifyStaffOrOfficerAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Check Tenant Subscription Package Allowance
   const hasAllowance = await hasTenantModuleAllowance(website, 'events');
   if (!hasAllowance) {
     return {
@@ -40,7 +38,6 @@ async function verifyStaffOrOfficerAccess(request, context, action = 'view') {
     };
   }
 
-  // 2. Staff session
   try {
     const staffSession = await getStaffSession(request);
     if (staffSession) {
@@ -75,7 +72,6 @@ async function verifyStaffOrOfficerAccess(request, context, action = 'view') {
     console.warn('Error checking staff session:', e?.message);
   }
 
-  // 3. Officer session
   try {
     const officerSession = await getOfficerSession(request);
     if (officerSession) {
@@ -112,7 +108,6 @@ function slugify(text) {
   return base || `event-${Date.now()}`;
 }
 
-// GET: List events OR applicants for a given event
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context);
@@ -124,7 +119,6 @@ export async function GET(request, context) {
     const eventId = searchParams.get('event_id') || searchParams.get('id');
     const applicantsMode = searchParams.get('applicants') === 'true' || searchParams.get('view') === 'applicants';
 
-    // 1. Fetch Applicants for a specific event
     if (applicantsMode && eventId) {
       const eventRes = await queryDb(
         `SELECT * FROM website_events WHERE id = $1 AND website_id = $2 LIMIT 1`,
@@ -171,7 +165,6 @@ export async function GET(request, context) {
       });
     }
 
-    // 2. Fetch Events List
     const search = searchParams.get('search')?.trim();
     const isApplicableFilter = searchParams.get('is_applicable');
     const statusFilter = searchParams.get('status');
@@ -222,7 +215,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new event
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context, 'create');
@@ -262,7 +254,6 @@ export async function POST(request, context) {
     const isApplicableVal = is_applicable !== undefined ? (is_applicable === 'true' || is_applicable === true) : true;
     const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : true;
 
-    // 1. Create table row first
     const insertResult = await queryDb(
       `INSERT INTO website_events (
         website_id,
@@ -290,8 +281,8 @@ export async function POST(request, context) {
         location || '',
         event_date,
         end_date || null,
-        null, // image initially null
-        null, // image_id initially null
+        null, 
+        null, 
         isApplicableVal,
         isActiveVal,
         auth.userType,
@@ -302,7 +293,6 @@ export async function POST(request, context) {
 
     let createdEvent = insertResult.rows[0];
 
-    // 2. Upload image if provided, then update the created table row
     const hasImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
     if (hasImageFile) {
       try {
@@ -340,7 +330,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing event
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context, 'edit');
@@ -395,7 +384,6 @@ export async function PUT(request, context) {
     const isApplicableVal = is_applicable !== undefined ? (is_applicable === 'true' || is_applicable === true) : null;
     const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : null;
 
-    // 1. Update website_events table first
     const updateRes = await queryDb(
       `UPDATE website_events
        SET title = COALESCE($1, title),
@@ -425,7 +413,6 @@ export async function PUT(request, context) {
 
     let updatedEvent = updateRes.rows[0];
 
-    // 2. Handle image removal or replacement
     const shouldRemoveImage = remove_image === 'true' || remove_image === true;
     const hasNewImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
 
@@ -450,7 +437,6 @@ export async function PUT(request, context) {
         );
         if (updated.rowCount > 0) updatedEvent = updated.rows[0];
 
-        // Delete old image from Cloudinary if existed
         if (current.image_id && current.image_id !== newPublicId) {
           await deleteImage(current.image_id).catch(() => {});
         }
@@ -476,7 +462,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove an event
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffOrOfficerAccess(request, context, 'delete');

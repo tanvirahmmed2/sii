@@ -39,7 +39,6 @@ export default function CreatorLayout({ children, params }) {
   const [loadError, setLoadError] = useState(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  // New website form state inside modal
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteSubdomain, setNewSiteSubdomain] = useState('');
   const [newSiteCustomDomain, setNewSiteCustomDomain] = useState('');
@@ -170,7 +169,6 @@ export default function CreatorLayout({ children, params }) {
   return (
     <CreatorContext.Provider value={contextValue}>
       <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex">
-        {/* Creator Sidebar */}
         <CreatorSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -180,7 +178,6 @@ export default function CreatorLayout({ children, params }) {
           stats={data.stats}
         />
 
-        {/* Main Content Area */}
         <div className="flex-1 flex flex-col min-w-0 w-full">
           <CreatorNavbar
             creator={data.creator}
@@ -197,7 +194,6 @@ export default function CreatorLayout({ children, params }) {
           </main>
         </div>
 
-        {/* Create Website Modal */}
         {createModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
             <div className="max-w-md w-full bg-white border border-slate-200 p-5 rounded space-y-4 text-xs text-slate-800">

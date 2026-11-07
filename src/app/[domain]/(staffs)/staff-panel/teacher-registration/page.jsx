@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -39,7 +38,6 @@ export default function TeacherRegistrationPage() {
 
   const fileInputRef = useRef(null);
 
-  // Available designations, departments & payroll scales
   const [designations, setDesignations] = useState([]);
   const [loadingDesignations, setLoadingDesignations] = useState(true);
   const [departments, setDepartments] = useState([]);
@@ -47,7 +45,6 @@ export default function TeacherRegistrationPage() {
   const [payrolls, setPayrolls] = useState([]);
   const [loadingPayrolls, setLoadingPayrolls] = useState(true);
 
-  // Form states
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -69,18 +66,15 @@ export default function TeacherRegistrationPage() {
     is_active: false
   });
 
-  // Multiple Qualifications rows
   const [qualifications, setQualifications] = useState([
     { degree: '', institute: '', board: '', passing_year: '', result: '' }
   ]);
 
-  // Uploading and photo states
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Feedback Toasts
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -94,7 +88,6 @@ export default function TeacherRegistrationPage() {
     }
   }, []);
 
-  // Fetch designations, departments & payroll scales
   useEffect(() => {
     async function loadDesignations() {
       if (!domain) return;
@@ -163,7 +156,6 @@ export default function TeacherRegistrationPage() {
     }));
   };
 
-  // Qualifications list handlers
   const handleQualChange = (index, field, value) => {
     setQualifications((prev) => {
       const updated = [...prev];
@@ -183,7 +175,6 @@ export default function TeacherRegistrationPage() {
     setQualifications((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Photo select (Local preview only - does not upload to Cloudinary until teacher record exists)
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -198,7 +189,6 @@ export default function TeacherRegistrationPage() {
       return;
     }
 
-    // Revoke previous object URL if any
     if (photoPreview && photoPreview.startsWith('blob:')) {
       URL.revokeObjectURL(photoPreview);
     }
@@ -224,7 +214,6 @@ export default function TeacherRegistrationPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Form submission: 1. Create table row first -> 2. Upload photo to Cloudinary and link to table
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -246,7 +235,6 @@ export default function TeacherRegistrationPage() {
       return;
     }
 
-    // Filter out blank qualification rows
     const validQuals = qualifications.filter(
       (q) => q.degree && q.degree.trim() && q.institute && q.institute.trim()
     );
@@ -261,7 +249,7 @@ export default function TeacherRegistrationPage() {
         else if (key === 'payroll_id') {
           if (formData.payroll_id) postData.append('payroll_id', Number(formData.payroll_id));
         }
-        else if (key === 'salary') { /* Connected via website_teacher_payrolls */ }
+        else if (key === 'salary') {  }
         else if (formData[key] !== null && formData[key] !== undefined) postData.append(key, formData[key]);
       });
       postData.append('qualifications', JSON.stringify(validQuals));
@@ -295,7 +283,6 @@ export default function TeacherRegistrationPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -309,7 +296,6 @@ export default function TeacherRegistrationPage() {
         </div>
       )}
 
-      {/* Top Header & Breadcrumbs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
@@ -347,9 +333,7 @@ export default function TeacherRegistrationPage() {
         </div>
       </div>
 
-      {/* Main Registration Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Section 1: Basic Information & Profile Photo */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
             <FiUser className="w-4 h-4 text-blue-600" />
@@ -357,7 +341,6 @@ export default function TeacherRegistrationPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Left: Profile Photo Card */}
             <div className="md:col-span-1 flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/40 text-center">
               {formData.photo_url ? (
                 <div className="relative group w-32 h-32 rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-sm">
@@ -404,7 +387,6 @@ export default function TeacherRegistrationPage() {
               </p>
             </div>
 
-            {/* Right: Personal Details Inputs */}
             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -544,7 +526,6 @@ export default function TeacherRegistrationPage() {
             </div>
           </div>
 
-          {/* Present and Permanent Address */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div>
               <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
@@ -578,7 +559,6 @@ export default function TeacherRegistrationPage() {
           </div>
         </div>
 
-        {/* Section 2: Institutional & Employment Details */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
             <FiAward className="w-4 h-4 text-emerald-600" />
@@ -705,7 +685,6 @@ export default function TeacherRegistrationPage() {
             </div>
           </div>
 
-          {/* Connected Payroll Scale Details Breakdown */}
           {(() => {
             const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
             if (!selectedPayroll) return null;
@@ -769,7 +748,6 @@ export default function TeacherRegistrationPage() {
           })()}
         </div>
 
-        {/* Section 3: Academic Qualifications */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -877,7 +855,6 @@ export default function TeacherRegistrationPage() {
           </div>
         </div>
 
-        {/* Form Submission Actions */}
         <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
           <Link
             href={`/${domain}/staff-panel/teacher-list`}

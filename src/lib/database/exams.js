@@ -1,11 +1,5 @@
 import { query } from './db.js';
 
-/**
- * Automatically synchronizes exam statuses based on system date (CURRENT_DATE)
- * - 'upcoming': CURRENT_DATE < start_date
- * - 'current': start_date <= CURRENT_DATE <= end_date
- * - 'previous': CURRENT_DATE > end_date
- */
 export async function syncExamStatuses() {
   try {
     await query(`

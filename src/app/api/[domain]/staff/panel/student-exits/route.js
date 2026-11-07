@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 
-// GET: Fetch student exit and transfer records with student JOIN metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -15,7 +14,7 @@ export async function GET(request, context) {
 
     const id = searchParams.get('id');
     const studentId = searchParams.get('student_id');
-    const exitType = searchParams.get('exit_type'); // 'graduated', 'transferred', 'dropped_out', 'rusticated', 'all'
+    const exitType = searchParams.get('exit_type'); 
     const classId = searchParams.get('class_id');
     const sessionId = searchParams.get('session_id');
     const search = searchParams.get('search')?.trim();
@@ -52,7 +51,6 @@ export async function GET(request, context) {
       LEFT JOIN website_student_tcs tc ON e.tc_id = tc.id
     `;
 
-    // Single exit dossier fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE e.website_id = $1 AND e.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -61,7 +59,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { exit: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['e.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -136,7 +133,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Record student exit (graduation, transfer, drop out, rustication)
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -151,7 +147,7 @@ export async function POST(request, context) {
 
     const {
       student_id,
-      exit_type, // 'graduated', 'transferred', 'dropped_out', 'rusticated'
+      exit_type, 
       exit_date = new Date().toISOString().split('T')[0],
       reason = '',
       destination_institution = '',
@@ -178,7 +174,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Student is required.' }, { status: 400 });
     }
 
-    // Verify student exists
     const stuRes = await client.query(
       `SELECT s.id, s.class_id, s.section_id, s.session_id, COALESCE(s.name, i.data->>'name') AS name
        FROM website_students s
@@ -196,7 +191,6 @@ export async function POST(request, context) {
 
     await client.query('BEGIN');
 
-    // 1. Insert exit record
     const insertRes = await client.query(
       `INSERT INTO website_student_exits (
           website_id, student_id, exit_type, exit_date,
@@ -227,7 +221,6 @@ export async function POST(request, context) {
       ]
     );
 
-    // 2. Mark student as inactive (departed)
     await client.query(
       `UPDATE website_students
        SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
@@ -251,7 +244,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update exit details or clearance notes
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'update');
@@ -322,7 +314,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Re-admit / reactivate student and cancel exit record
 export async function DELETE(request, context) {
   const client = await pool.connect();
   try {
@@ -353,7 +344,6 @@ export async function DELETE(request, context) {
 
     const studentId = exitRes.rows[0].student_id;
 
-    // Reactivate student account
     await client.query(
       `UPDATE website_students SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE website_id = $1 AND id = $2`,
       [website.id, studentId]

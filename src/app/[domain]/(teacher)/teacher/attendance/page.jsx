@@ -7,17 +7,14 @@ import { FiCalendar, FiSearch, FiRefreshCw, FiFileText, FiDownload } from 'react
 import * as XLSX from 'xlsx';
 
 const AttendanceViewPage = () => {
-  // Filters
   const [filterDate, setFilterDate] = useState('');
   const [filterClassId, setFilterClassId] = useState('');
   const [filterSubjectId, setFilterSubjectId] = useState('');
   const [filterPeriodId, setFilterPeriodId] = useState('');
 
-  // Data
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Dropdown options
   const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);
   const [periodOptions, setPeriodOptions] = useState([]);
@@ -83,7 +80,6 @@ const AttendanceViewPage = () => {
     fetchRecords();
   }, [fetchRecords]);
 
-  // Export records to XLSX
   const handleExportXLSX = () => {
     if (records.length === 0) {
       toast.error('No attendance records to export.');
@@ -116,7 +112,6 @@ const AttendanceViewPage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
           <h1 className="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
@@ -145,7 +140,6 @@ const AttendanceViewPage = () => {
         </div>
       </div>
 
-      {/* Simple Controls & Filters */}
       <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
           <input
@@ -206,7 +200,6 @@ const AttendanceViewPage = () => {
         </div>
       </div>
 
-      {/* Attendance Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
         {loading ? (
           <div className="w-full py-16 flex justify-center items-center">

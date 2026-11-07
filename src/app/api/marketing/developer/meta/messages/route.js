@@ -5,9 +5,6 @@ import { sendPlatformMessage } from 'src/lib/meta/graph';
 
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats'];
 
-/**
- * GET /api/developer/meta/messages?conversationId=
- */
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -23,7 +20,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'Valid integer conversationId is required' }, { status: 400 });
     }
 
-    // Reset unread count when viewing thread
     await pool.query('UPDATE meta_conversations SET unread_count = 0 WHERE id = $1', [convId]);
 
     const { rows } = await pool.query(
@@ -44,9 +40,6 @@ export async function GET(request) {
   }
 }
 
-/**
- * POST /api/developer/meta/messages
- */
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -75,7 +68,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'messageText cannot exceed 4096 characters' }, { status: 400 });
     }
 
-    // 1. Fetch conversation details
     const convRes = await pool.query(
       `SELECT id, platform, recipient_id, recipient_name, recipient_phone
        FROM meta_conversations
@@ -97,7 +89,6 @@ export async function POST(request) {
     let errorMessage = null;
     let apiWarning = null;
 
-    // 2. Dispatch via Meta Graph API
     try {
       const recipient = conv.platform === 'whatsapp' ? (conv.recipient_phone || conv.recipient_id) : conv.recipient_id;
       const metaResult = await sendPlatformMessage({
@@ -113,7 +104,6 @@ export async function POST(request) {
       apiWarning = `Message saved locally, but Meta Graph API dispatch failed: ${metaErr.message}`;
     }
 
-    // 3. Persist to database
     const insertRes = await pool.query(
       `INSERT INTO meta_messages (
          conversation_id, platform, sender_type, sender_id, sender_name,
@@ -135,7 +125,6 @@ export async function POST(request) {
 
     const savedMessage = insertRes.rows[0];
 
-    // 4. Update conversation's last_message and timestamp
     await pool.query(
       `UPDATE meta_conversations
        SET last_message = $1, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP

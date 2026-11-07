@@ -21,11 +21,9 @@ export default function ResidenceAllocationsPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Allocate Seat Modal
   const [isAllocModalOpen, setIsAllocModalOpen] = useState(false);
   const [allocSubmitting, setAllocSubmitting] = useState(false);
 
-  // Cascading options for Allocate modal
   const [modalHalls, setModalHalls] = useState([]);
   const [selectedModalHall, setSelectedModalHall] = useState('');
   const [modalRooms, setModalRooms] = useState([]);
@@ -33,7 +31,6 @@ export default function ResidenceAllocationsPage() {
   const [modalSeats, setModalSeats] = useState([]);
   const [selectedModalSeat, setSelectedModalSeat] = useState('');
 
-  // Student search for allocation
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [searchingStudents, setSearchingStudents] = useState(false);
   const [studentSearchResults, setStudentSearchResults] = useState([]);
@@ -46,13 +43,11 @@ export default function ResidenceAllocationsPage() {
     remarks: '',
   });
 
-  // Vacate Modal
   const [vacateTarget, setVacateTarget] = useState(null);
   const [vacateDate, setVacateDate] = useState(new Date().toISOString().split('T')[0]);
   const [vacateReason, setVacateReason] = useState('Completed semester / left hall.');
   const [vacateSubmitting, setVacateSubmitting] = useState(false);
 
-  // Fetch halls
   const fetchHalls = async () => {
     try {
       const url = getApiEndpoint('/staff/panel/residence/halls');
@@ -67,7 +62,6 @@ export default function ResidenceAllocationsPage() {
     }
   };
 
-  // Fetch allocations
   const fetchAllocations = async () => {
     try {
       setLoading(true);
@@ -101,7 +95,6 @@ export default function ResidenceAllocationsPage() {
     fetchAllocations();
   }, [selectedHallFilter, selectedStatusFilter]);
 
-  // When modal hall changes -> load rooms
   useEffect(() => {
     if (!selectedModalHall) {
       setModalRooms([]);
@@ -129,7 +122,6 @@ export default function ResidenceAllocationsPage() {
     loadRooms();
   }, [selectedModalHall]);
 
-  // When modal room changes -> load available seats
   useEffect(() => {
     if (!selectedModalRoom) {
       setModalSeats([]);
@@ -151,7 +143,6 @@ export default function ResidenceAllocationsPage() {
             setSelectedModalSeat('');
           }
 
-          // Prepopulate monthly fee from room rent
           const roomObj = modalRooms.find((r) => String(r.id) === String(selectedModalRoom));
           if (roomObj && roomObj.rent_monthly) {
             setAllocFormData((prev) => ({ ...prev, fee_monthly: roomObj.rent_monthly }));
@@ -164,7 +155,6 @@ export default function ResidenceAllocationsPage() {
     loadSeats();
   }, [selectedModalRoom]);
 
-  // Search students dynamically
   const handleStudentSearch = async () => {
     if (!studentSearchQuery.trim()) return;
     try {
@@ -240,7 +230,6 @@ export default function ResidenceAllocationsPage() {
     }
   };
 
-  // Submit vacate
   const handleVacateSubmit = async (e) => {
     e.preventDefault();
     if (!vacateTarget) return;
@@ -276,7 +265,6 @@ export default function ResidenceAllocationsPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -313,7 +301,6 @@ export default function ResidenceAllocationsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-indigo-600 dark:text-indigo-400 tracking-wider">Active Residents</p>
@@ -348,7 +335,6 @@ export default function ResidenceAllocationsPage() {
         </div>
       </div>
 
-      {/* IN-PAGE ALLOCATE SEAT FORM */}
       {isAllocModalOpen && (
         <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -370,7 +356,6 @@ export default function ResidenceAllocationsPage() {
           </div>
 
           <form onSubmit={handleAllocateSubmit} className="space-y-4 text-xs">
-            {/* Step 1: Hall, Room & Available Seat */}
             <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                 1. Select Facility & Seat
@@ -441,7 +426,6 @@ export default function ResidenceAllocationsPage() {
               </div>
             </div>
 
-            {/* Step 2: Student Search & Selection */}
             <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5">
               <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
                 2. Select Enrolled Student
@@ -507,7 +491,6 @@ export default function ResidenceAllocationsPage() {
               )}
             </div>
 
-            {/* Step 3: Terms, Dates & Rent */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -563,7 +546,6 @@ export default function ResidenceAllocationsPage() {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -584,7 +566,6 @@ export default function ResidenceAllocationsPage() {
         </div>
       )}
 
-      {/* IN-PAGE VACATE / DISALLOCATE FORM */}
       {vacateTarget && (
         <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/40 rounded-lg p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -667,9 +648,7 @@ export default function ResidenceAllocationsPage() {
         </div>
       )}
 
-      {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-sm">
             <input
@@ -712,7 +691,6 @@ export default function ResidenceAllocationsPage() {
           </div>
         </div>
 
-        {/* Allocations Table */}
         {loading ? (
           <TenantLoader fullScreen={false} size="sm" />
         ) : allocations.length === 0 ? (

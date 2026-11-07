@@ -10,7 +10,7 @@ export async function GET(request, context) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'students'; // 'students' | 'teachers' | 'books'
+    const type = searchParams.get('type') || 'students'; 
     const q = (searchParams.get('q') || '').trim();
     const inStockOnly = searchParams.get('in_stock_only') === 'true';
 

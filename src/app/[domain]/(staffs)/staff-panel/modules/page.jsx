@@ -9,7 +9,7 @@ import Link from 'next/link';
 export default function TenantModulesPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
-  const [activeTab, setActiveTab] = useState('control'); // 'control' | 'home'
+  const [activeTab, setActiveTab] = useState('control'); 
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
 
@@ -84,7 +84,6 @@ export default function TenantModulesPage() {
     }
   };
 
-  // Distinct categories
   const homeCategories = useMemo(() => {
     return Array.from(new Set(homeModules.map((m) => m.category).filter(Boolean))).sort();
   }, [homeModules]);
@@ -93,7 +92,6 @@ export default function TenantModulesPage() {
     return Array.from(new Set(controlModules.map((m) => m.category).filter(Boolean))).sort();
   }, [controlModules]);
 
-  // Filtered Home Modules
   const filteredHomeModules = useMemo(() => {
     return homeModules.filter((m) => {
       const matchesSearch =
@@ -110,7 +108,6 @@ export default function TenantModulesPage() {
     });
   }, [homeModules, searchTerm, selectedCategory]);
 
-  // Filtered Control Modules
   const filteredControlModules = useMemo(() => {
     return controlModules.filter((m) => {
       const matchesSearch =
@@ -141,7 +138,6 @@ export default function TenantModulesPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Top Banner Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -168,7 +164,6 @@ export default function TenantModulesPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
@@ -217,7 +212,6 @@ export default function TenantModulesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-0">
         <button
           type="button"
@@ -258,7 +252,6 @@ export default function TenantModulesPage() {
         </button>
       </div>
 
-      {/* Filter and Search Controls */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <label className="text-xs font-semibold text-slate-500">Filter Category:</label>
@@ -287,7 +280,6 @@ export default function TenantModulesPage() {
         </div>
       </div>
 
-      {/* Modules List Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">

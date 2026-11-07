@@ -3,12 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getTeacherSession, requireTeacher } from 'src/lib/middleware/teacher.js';
 
-/**
- * API Route: /api/[domain]/teacher/me
- * Retrieves or updates authenticated teacher profile information.
- */
-
-// GET: Current authenticated teacher profile
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -51,7 +45,6 @@ export async function GET(request, context) {
 
     const teacher = teacherRes.rows[0];
 
-    // Fetch assigned subjects count and pending leaves for quick stats
     const [statsRes, qualRes] = await Promise.all([
       queryDb(
         `SELECT 
@@ -89,7 +82,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Update teacher personal profile
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

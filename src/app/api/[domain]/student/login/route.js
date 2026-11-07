@@ -26,8 +26,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Lookup student joining website_students with website_student_info
-    // Lookup student using website_students as the primary account table
     let res = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id, s.is_active,
@@ -55,7 +53,6 @@ export async function POST(request, context) {
       [website.id, identifier]
     );
 
-    // Fallback lookup in legacy students table
     if (res.rows.length === 0) {
       res = await queryDb(
         `SELECT id, name, email, registration_number AS registration_no,
@@ -81,7 +78,6 @@ export async function POST(request, context) {
 
     const student = res.rows[0];
 
-    // Password comparison
     const passwordMatch = await comparePassword(password, student.password);
     if (!passwordMatch) {
       return NextResponse.json(
@@ -90,7 +86,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Account status verifications
     if (!student.is_registered || student.verification_status === 'pending_setup') {
       return NextResponse.json(
         {
@@ -131,7 +126,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Issue JWT Token
     const token = generateToken({
       id: student.id,
       email: student.email,
@@ -162,10 +156,8 @@ export async function POST(request, context) {
       },
     });
 
-    // Set HTTP-Only Cookie
     await setStudentSessionCookie(response, token);
 
-    // Record session tracking
     await createStudentLoginSession(student.id, student.website_id, token, request);
 
     return response;

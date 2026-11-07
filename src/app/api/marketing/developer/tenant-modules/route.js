@@ -45,7 +45,6 @@ export async function GET(request) {
       });
     }
 
-    // Default: control modules (Staff, Teacher, Student, Officer)
     let sql = 'SELECT * FROM website_control_modules';
     const conds = [];
     const params = [];

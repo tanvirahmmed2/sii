@@ -3,9 +3,6 @@
 import React from 'react';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-/**
- * Extracts a clean short form / monogram / initials from an institution or website name.
- */
 export function getWebsiteShortName(name) {
   if (!name || typeof name !== 'string') return 'EDU';
   const clean = name.trim().replace(/[^a-zA-Z0-9\s-]/g, '');
@@ -22,12 +19,6 @@ export function getWebsiteShortName(name) {
     .toUpperCase();
 }
 
-/**
- * TenantLoader: Specialized loader for tenant educational websites.
- * Uses the system animated loader style tinted with the institution's color theme
- * from the `websites` table (`primary_color`).
- * No icons, no text.
- */
 export default function TenantLoader({
   website: propWebsite,
   primaryColor: propPrimaryColor,
@@ -44,7 +35,6 @@ export default function TenantLoader({
       contextWebsite = ctx.website;
     }
   } catch {
-    // Outside provider context
   }
 
   const website = propWebsite || contextWebsite;

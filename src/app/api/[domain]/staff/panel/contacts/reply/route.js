@@ -51,7 +51,6 @@ async function verifyContactsStaffAccess(request, context, action = 'view') {
   return { website, staffSession, allowed: true, canReply, canView };
 }
 
-// GET: Fetch replies history for a contact
 export async function GET(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'view');
@@ -95,7 +94,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Send an email reply and persist it
 export async function POST(request, context) {
   try {
     const auth = await verifyContactsStaffAccess(request, context, 'create');
@@ -119,7 +117,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Contact ID and reply message body are required.' }, { status: 400 });
     }
 
-    // Fetch original contact inquiry
     const contactRes = await queryDb(
       `SELECT id, name, email, subject, message FROM website_contacts WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [contactId, website.id]
@@ -131,16 +128,13 @@ export async function POST(request, context) {
 
     const finalSubject = replySubject || `Re: ${contact.subject || 'Your Inquiry'}`;
 
-    // Determine staff info
     const staffId = staffSession?.staff?.id || staffSession?.staff_id || null;
     const staffName = staffSession?.staff?.name || staffSession?.user?.name || 'Staff Desk';
 
-    // Mailer configuration resolution: website mailer or main mailer fallback
     const brevoConfig = await getWebsiteBrevoConfig(website.id);
     let effectiveMailerType = brevoConfig.isCustom ? 'website' : 'main';
     let effectiveSenderEmail = brevoConfig.senderEmail || 'mailer@sii.edu';
 
-    // Format HTML email content
     const htmlEmail = buildStyledEmail({
       title: finalSubject,
       previewText: replyBody.slice(0, 100),
@@ -184,7 +178,6 @@ export async function POST(request, context) {
       errorMessage = mailErr.message;
     }
 
-    // Persist reply to website_contact_replies matching website_tables.psql schema
     const insertReplyRes = await queryDb(
       `INSERT INTO website_contact_replies (
         website_id, contact_id, staff_id, staff_name, reply_subject, reply_body, 
@@ -205,7 +198,6 @@ export async function POST(request, context) {
       ]
     );
 
-    // Update contact status to 'replied'
     await queryDb(
       `UPDATE website_contacts SET status = 'replied', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND website_id = $2`,
       [contact.id, website.id]

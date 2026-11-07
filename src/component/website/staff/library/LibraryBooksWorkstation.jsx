@@ -11,33 +11,27 @@ export default function LibraryBooksWorkstation() {
   const [shelves, setShelves] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedShelf, setSelectedShelf] = useState('');
   const [selectedAvailability, setSelectedAvailability] = useState('all');
   const [feedback, setFeedback] = useState(null);
 
-  // Modals
   const [bookModalOpen, setBookModalOpen] = useState(false);
-  const [bookModalMode, setBookModalMode] = useState('add'); // 'add' | 'edit'
+  const [bookModalMode, setBookModalMode] = useState('add'); 
   const [currentBook, setCurrentBook] = useState(null);
   const [bookForm, setBookForm] = useState({});
 
-  // Quick Stock / Availability Modal
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockBook, setStockBook] = useState(null);
   const [stockForm, setStockForm] = useState({ total_copies: 1, available_copies: 1, is_available: true });
 
-  // Delete Modal
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch dropdown lookup options
   const loadLookups = useCallback(async () => {
     try {
       const [catRes, wriRes, pubRes, shelfRes] = await Promise.all([
@@ -235,7 +229,6 @@ export default function LibraryBooksWorkstation() {
 
   return (
     <div className="w-full space-y-4">
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -286,7 +279,6 @@ export default function LibraryBooksWorkstation() {
         </div>
       </div>
 
-      {/* Feedback Banner */}
       {feedback && (
         <div
           className={`p-3 rounded text-xs border flex items-center justify-between ${
@@ -305,9 +297,7 @@ export default function LibraryBooksWorkstation() {
         </div>
       )}
 
-      {/* Main Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -366,7 +356,6 @@ export default function LibraryBooksWorkstation() {
           </div>
         </div>
 
-        {/* Catalog Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -506,7 +495,6 @@ export default function LibraryBooksWorkstation() {
           </table>
         </div>
 
-        {/* Pagination Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
           <div>
             Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
@@ -547,7 +535,6 @@ export default function LibraryBooksWorkstation() {
         </div>
       </div>
 
-      {/* Add / Edit Book Modal */}
       {bookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-lg w-full p-4 shadow-lg space-y-3 my-8">
@@ -709,7 +696,6 @@ export default function LibraryBooksWorkstation() {
                 </div>
               </div>
 
-              {/* Stock Controls */}
               <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-200 dark:border-slate-800 space-y-2">
                 <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 block">
                   Inventory Stock & Availability
@@ -790,7 +776,6 @@ export default function LibraryBooksWorkstation() {
         </div>
       )}
 
-      {/* Quick Stock & Availability Editor Modal */}
       {stockModalOpen && stockBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-lg space-y-3">
@@ -878,7 +863,6 @@ export default function LibraryBooksWorkstation() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-lg space-y-3">

@@ -5,10 +5,6 @@ import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateway
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay/residential-fees
- * Look up student hall seat rent and residential fees using website_hall_fee_payments.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -19,7 +15,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const identifier = (searchParams.get('identifier') || '').trim();
 
-    // Fetch assigned gateways specifically for residential fees
     const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'residential_fees');
 
     if (!identifier) {
@@ -90,7 +85,6 @@ export async function GET(request, context) {
       masked_phone: maskPhone(row.raw_phone)
     };
 
-    // Query website_hall_fee_payments
     const feeRes = await queryDb(`
       SELECT p.id, p.invoice_no, p.title, p.month_name, p.amount, p.fine_amount,
              p.paid_amount, p.currency, p.due_date, p.payment_status,
@@ -115,7 +109,6 @@ export async function GET(request, context) {
       net_due: parseFloat(r.net_due)
     }));
 
-    // If no existing invoice, check active hall seat allocation
     if (residentialDues.length === 0) {
       const allocRes = await queryDb(`
         SELECT a.id, a.fee_monthly, h.name AS hall_name, r.room_number, s.seat_number
@@ -174,10 +167,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/pay/residential-fees
- * Settle dormitory seat rent in website_hall_fee_payments.
- */
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -205,7 +194,6 @@ export async function POST(request, context) {
     const txnId = `TXN-${gw.toUpperCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     const payerPhone = payment_details.account_number || payment_details.phone || null;
 
-    // Case 1: Existing invoice in website_hall_fee_payments
     if (!String(invoice_id).startsWith('alloc-')) {
       const invRes = await client.query(`
         SELECT p.*, s.student_unique_id, s.full_name, s.email, s.mobile_number,
@@ -244,7 +232,6 @@ export async function POST(request, context) {
         WHERE id = $3
       `, [gw, txnId, inv.id]);
     }
-    // Case 2: Dynamic allocation invoice creation
     else {
       const allocId = parseInt(String(invoice_id).replace('alloc-', ''), 10);
       const allocRes = await client.query(`
@@ -305,7 +292,6 @@ export async function POST(request, context) {
       if (match) finalAccountId = match.id;
     }
 
-    // Record in transaction audit
     await client.query(`
       INSERT INTO website_payment_transactions (
         website_id, gateway_account_id, gateway_code, purpose, invoice_ref,

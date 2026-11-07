@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET ALL SUPPORT TICKETS
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'support');
@@ -70,7 +69,6 @@ export async function GET(request) {
       ORDER BY s.updated_at DESC
     `, queryParams).catch(() => ({ rows: [] }));
 
-    // Calculate stats
     const statsRes = await queryDb(`
       SELECT 
         COUNT(*)::int AS total,
@@ -94,7 +92,6 @@ export async function GET(request) {
   }
 }
 
-// UPDATE SUPPORT TICKET STATUS / ASSIGNMENT / PRIORITY
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'support');
@@ -139,7 +136,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE SUPPORT TICKET
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'support');

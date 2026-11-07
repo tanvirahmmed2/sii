@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Fetch personal salary records & payouts for the logged-in developer
-// Accessible to developers with 'my-salaries' permission
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'my-salaries');
@@ -18,7 +14,6 @@ export async function GET(request) {
       return NextResponse.json({ success: false, error: 'User identifier not found.' }, { status: 401 });
     }
 
-    // 1. Fetch developer salary periods
     const salariesRes = await queryDb(`
       SELECT 
         dp.id,
@@ -51,7 +46,6 @@ export async function GET(request) {
       ORDER BY p.pay_period_start DESC, dp.id DESC
     `, [currentDevId]).catch(() => ({ rows: [] }));
 
-    // 2. Compute aggregate metrics for this developer
     const statsRes = await queryDb(`
       SELECT 
         COALESCE(SUM(CASE WHEN payment_status = 'PAID' THEN net_salary ELSE 0 END), 0)::numeric(12,2) AS total_paid,

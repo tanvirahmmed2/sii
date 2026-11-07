@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { clearTeacherSessionCookie } from 'src/lib/middleware/teacher.js';
 
-/**
- * API Route: /api/[domain]/teacher/logout
- * Clears teacher session cookies and terminates session.
- */
 export async function POST() {
   try {
     const response = NextResponse.json({

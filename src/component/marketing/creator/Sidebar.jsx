@@ -69,7 +69,6 @@ export default function CreatorSidebar({
 
   const navContent = (
     <div className="flex flex-col h-full overflow-y-auto bg-white text-slate-800 text-xs">
-      {/* Top Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-slate-200 bg-white sticky top-0 z-10">
         <Link href={basePath} className="font-semibold text-slate-900 tracking-tight text-sm">
           Creator Panel
@@ -87,7 +86,6 @@ export default function CreatorSidebar({
         )}
       </div>
 
-      {/* Navigation Sections */}
       <div className="p-2 space-y-4 flex-1">
         {CREATOR_NAV_SECTIONS.map((section) => (
           <div key={section.title} className="space-y-0.5">
@@ -123,7 +121,6 @@ export default function CreatorSidebar({
         ))}
       </div>
 
-      {/* Plan Quota Widget */}
       <div className="p-3 m-2 rounded border border-slate-200 bg-slate-50 space-y-1.5 text-xs">
         <div className="flex items-center justify-between text-[11px] font-medium">
           <span className="text-slate-600">Websites Quota</span>
@@ -147,7 +144,6 @@ export default function CreatorSidebar({
         </div>
       </div>
 
-      {/* Footer Actions */}
       <div className="p-2 border-t border-slate-200 bg-white space-y-1 sticky bottom-0">
         <Link
           href="/"
@@ -169,7 +165,6 @@ export default function CreatorSidebar({
 
   return (
     <>
-      {/* Mobile Backdrop overlay */}
       <div
         className={`fixed inset-0 bg-black/30 z-50 md:hidden transition-opacity duration-200 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -178,7 +173,6 @@ export default function CreatorSidebar({
         aria-hidden="true"
       />
 
-      {/* Mobile Drawer */}
       <aside
         className={`fixed top-0 left-0 bottom-0 w-64 max-w-[85vw] bg-white z-50 md:hidden flex flex-col justify-between border-r border-slate-200 transition-transform duration-200 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -188,7 +182,6 @@ export default function CreatorSidebar({
         {navContent}
       </aside>
 
-      {/* Desktop Persistent Sidebar */}
       <aside
         className="hidden md:flex md:w-56 md:flex-col md:shrink-0 bg-white border-r border-slate-200 h-screen sticky top-0 z-30"
         aria-label="Creator Desktop Navigation"

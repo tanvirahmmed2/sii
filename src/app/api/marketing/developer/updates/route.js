@@ -27,9 +27,6 @@ async function generateUniqueSlug(baseTitle, excludeId = null) {
   }
 }
 
-// ============================================================================
-// GET: Fetch product updates (all, or single by ID/slug)
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'updates');
@@ -78,9 +75,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new product update
-// ============================================================================
 export async function POST(request) {
   try {
     const authCheck = await hasModulePermission(request, 'updates');
@@ -125,9 +119,6 @@ export async function POST(request) {
   }
 }
 
-// ============================================================================
-// PUT: Update an existing product update
-// ============================================================================
 export async function PUT(request) {
   try {
     const authCheck = await hasModulePermission(request, 'updates');
@@ -183,9 +174,6 @@ export async function PUT(request) {
   }
 }
 
-// ============================================================================
-// PATCH: Quick status toggle (is_published)
-// ============================================================================
 export async function PATCH(request) {
   try {
     const authCheck = await hasModulePermission(request, 'updates');
@@ -228,9 +216,6 @@ export async function PATCH(request) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete an update
-// ============================================================================
 export async function DELETE(request) {
   try {
     const authCheck = await hasModulePermission(request, 'updates');

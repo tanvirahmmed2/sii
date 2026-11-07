@@ -20,11 +20,10 @@ export default function StaffCategoryTemplatePicker({
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
-  const [previewSide, setPreviewSide] = useState('front'); // 'front' | 'back' | 'both'
+  const [previewSide, setPreviewSide] = useState('front'); 
 
   const hasBackSide = category.includes('id_card');
 
-  // Fetch templates for category
   const loadTemplates = async () => {
     setLoading(true);
     try {
@@ -53,7 +52,6 @@ export default function StaffCategoryTemplatePicker({
     loadTemplates();
   }, [category]);
 
-  // Activate selected template as default for this school
   const handleActivate = async (templateId) => {
     setActivating(true);
     try {
@@ -84,7 +82,6 @@ export default function StaffCategoryTemplatePicker({
     activeTemplate ||
     systemTemplates[0];
 
-  // Helper to compile HTML with sample replacements and responsive SVG rules
   const renderPreviewHtml = (tpl, side = 'front') => {
     if (!tpl) return '';
     let html = '';
@@ -96,7 +93,6 @@ export default function StaffCategoryTemplatePicker({
 
     const css = tpl.css_content || tpl.custom_css || '';
 
-    // Merge default institution variables with category-specific sample replacements
     const defaultVars = {
       '{{school_name}}': website?.name || 'Academic Institution',
       '{{institution_name}}': website?.name || 'Academic Institution',
@@ -154,7 +150,6 @@ export default function StaffCategoryTemplatePicker({
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -177,7 +172,6 @@ export default function StaffCategoryTemplatePicker({
         )}
       </div>
 
-      {/* KPI Stats / Status Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs">
@@ -213,7 +207,6 @@ export default function StaffCategoryTemplatePicker({
         </div>
       </div>
 
-      {/* Main Split View: Template Cards & Live Sample Preview */}
       {loading ? (
         <div className="p-12 flex items-center justify-center">
           <div className="loader loader-md" />
@@ -229,7 +222,6 @@ export default function StaffCategoryTemplatePicker({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left Column: Template Selection Cards with Visual Thumbnails */}
           <div className="lg:col-span-5 space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Available Master Designs ({systemTemplates.length})
@@ -252,7 +244,6 @@ export default function StaffCategoryTemplatePicker({
                     }`}
                   >
                     <div className="flex gap-3 items-center">
-                      {/* Mini Thumbnail */}
                       <div
                         className={`rounded border border-slate-200 dark:border-slate-700 bg-white overflow-hidden shadow-2xs shrink-0 ${
                           isLand ? 'w-24 h-15' : 'w-15 h-22'
@@ -266,7 +257,6 @@ export default function StaffCategoryTemplatePicker({
                         />
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -314,7 +304,6 @@ export default function StaffCategoryTemplatePicker({
             </div>
           </div>
 
-          {/* Right Column: Live Sample Preview Pane */}
           <div className="lg:col-span-7 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -385,7 +374,6 @@ export default function StaffCategoryTemplatePicker({
               )}
             </div>
 
-            {/* Bottom Actions */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <span className="text-slate-500">
                 Ready to customize recipient records with this template?

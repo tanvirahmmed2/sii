@@ -122,7 +122,6 @@ export default function CreatorTicketsPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -162,7 +161,6 @@ export default function CreatorTicketsPage() {
         </div>
       )}
 
-      {/* Create Ticket Form */}
       {showCreateForm && (
         <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
           <div className="border-b border-slate-100 pb-2">
@@ -226,7 +224,6 @@ export default function CreatorTicketsPage() {
               />
             </div>
 
-            {/* Optional Image Attachment */}
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">Attachment (Optional)</label>
               {imagePreview ? (
@@ -291,7 +288,6 @@ export default function CreatorTicketsPage() {
         </div>
       )}
 
-      {/* Tickets List */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <h2 className="text-sm font-semibold text-slate-900">

@@ -12,10 +12,9 @@ export default function CBTExamsStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('papers'); // papers | banks | proctoring
+  const [activeTab, setActiveTab] = useState('papers'); 
   const [data, setData] = useState({ question_banks: [], exam_papers: [], proctor_logs: [], classes: [], subjects: [] });
 
-  // Paper modal state
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
   const [paperTitle, setPaperTitle] = useState('');
   const [paperClassId, setPaperClassId] = useState('');
@@ -26,7 +25,6 @@ export default function CBTExamsStaffPage() {
   const [paperProctoring, setPaperProctoring] = useState(true);
   const [submittingPaper, setSubmittingPaper] = useState(false);
 
-  // Bank modal state
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [bankTitle, setBankTitle] = useState('');
   const [bankClassId, setBankClassId] = useState('');
@@ -142,7 +140,6 @@ export default function CBTExamsStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -169,7 +166,6 @@ export default function CBTExamsStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('papers')}
@@ -203,7 +199,6 @@ export default function CBTExamsStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Exam Papers */}
       {activeTab === 'papers' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -273,7 +268,6 @@ export default function CBTExamsStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Question Banks */}
       {activeTab === 'banks' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -306,7 +300,6 @@ export default function CBTExamsStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Proctoring Logs */}
       {activeTab === 'proctoring' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 dark:border-slate-800">
@@ -361,7 +354,6 @@ export default function CBTExamsStaffPage() {
         </div>
       )}
 
-      {/* Create Paper Modal */}
       {isPaperModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -434,7 +426,6 @@ export default function CBTExamsStaffPage() {
         </div>
       )}
 
-      {/* Create Bank Modal */}
       {isBankModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

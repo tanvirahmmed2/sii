@@ -12,7 +12,6 @@ export default function CreatorReviewsPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState('');
@@ -117,7 +116,6 @@ export default function CreatorReviewsPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -154,7 +152,6 @@ export default function CreatorReviewsPage() {
         </div>
       )}
 
-      {/* Review Content Card */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <h2 className="text-sm font-semibold text-slate-900">Your Testimonial</h2>
@@ -230,7 +227,6 @@ export default function CreatorReviewsPage() {
         )}
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white border border-slate-200 rounded max-w-md w-full p-5 space-y-4 text-xs text-slate-800 shadow-xl max-h-[90vh] overflow-y-auto">

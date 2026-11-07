@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET all FAQs or a single FAQ by ID
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'faqs');
@@ -33,7 +32,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE FAQ (POST)
 export async function POST(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');
@@ -67,7 +65,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE FAQ (PUT)
 export async function PUT(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');
@@ -106,7 +103,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE FAQ (DELETE)
 export async function DELETE(request) {
   try {
     const authCheck = await hasModulePermission(request, 'faqs');

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Fetch comments for a specific task
-// ============================================================================
 export async function GET(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tasks');
@@ -31,9 +28,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// ============================================================================
-// POST: Add a new comment to a task (All developers)
-// ============================================================================
 export async function POST(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tasks');
@@ -51,7 +45,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: 'Comment text is required.' }, { status: 400 });
     }
 
-    // Verify task exists in developer_tasks or tasks
     let taskCheck = await queryDb('SELECT id FROM developer_tasks WHERE id = $1', [id]).catch(() => null);
     if (!taskCheck || taskCheck.rows.length === 0) {
       taskCheck = await queryDb('SELECT id FROM tasks WHERE id = $1', [id]).catch(() => ({ rows: [] }));
@@ -82,9 +75,6 @@ export async function POST(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete a comment (Author, Manager, or Admin)
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await authenticateStaff(request);

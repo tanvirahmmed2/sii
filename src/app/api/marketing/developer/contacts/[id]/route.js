@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET SINGLE CONTACT DETAILS
 export async function GET(request, context) {
   try {
     const auth = await hasModulePermission(request, 'contacts');
@@ -57,7 +56,6 @@ export async function GET(request, context) {
   }
 }
 
-// DELETE SINGLE CONTACT
 export async function DELETE(request, context) {
   try {
     const auth = await hasModulePermission(request, 'contacts');

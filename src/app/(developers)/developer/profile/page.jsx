@@ -15,7 +15,6 @@ export default function DeveloperProfilePage() {
   const [revokingSessionId, setRevokingSessionId] = useState(null);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  // Edit Profile Modal States
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -204,7 +203,6 @@ export default function DeveloperProfilePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Notification */}
       {feedback.message && (
         <div
           className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
@@ -224,7 +222,6 @@ export default function DeveloperProfilePage() {
         </div>
       )}
 
-      {/* Header Banner Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {profile?.avatar_url ? (
@@ -273,7 +270,6 @@ export default function DeveloperProfilePage() {
         </div>
       </div>
 
-      {/* KPI Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
           <div className="text-xs font-normal text-slate-500">Active Sessions</div>
@@ -299,9 +295,7 @@ export default function DeveloperProfilePage() {
         </div>
       </div>
 
-      {/* Main Grid: Details + Sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Profile Details */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <h2 className="text-sm font-medium text-slate-900 dark:text-white pb-2 border-b border-slate-100 dark:border-slate-800">
             Account Information
@@ -361,7 +355,6 @@ export default function DeveloperProfilePage() {
           </div>
         </div>
 
-        {/* Sessions & Audit */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <h2 className="text-sm font-medium text-slate-900 dark:text-white">
@@ -422,7 +415,6 @@ export default function DeveloperProfilePage() {
             )}
           </div>
 
-          {/* Recent Logins */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <h3 className="text-xs font-medium text-slate-700 dark:text-slate-300">Recent Login Activity</h3>
             <div className="overflow-x-auto">
@@ -459,7 +451,6 @@ export default function DeveloperProfilePage() {
         </div>
       </div>
 
-      {/* Edit Profile Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 max-w-lg w-full p-4 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -581,7 +572,6 @@ export default function DeveloperProfilePage() {
                 />
               </div>
 
-              {/* Password Toggle */}
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                 <label className="inline-flex items-center gap-2 text-xs font-normal text-slate-700 dark:text-slate-300 cursor-pointer">
                   <input

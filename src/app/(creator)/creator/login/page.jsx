@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
 import LoadingScreen from 'src/component/common/LoadingScreen';
-import GoogleAuthButton from 'src/component/marketing/creator/GoogleAuthButton';
 
 function CreatorLoginForm() {
   const router = useRouter();
@@ -26,7 +25,6 @@ function CreatorLoginForm() {
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
 
-  // Check if creator is already logged in
   useEffect(() => {
     let ignore = false;
     async function checkExistingAuth() {
@@ -196,22 +194,7 @@ function CreatorLoginForm() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <GoogleAuthButton
-            mode="login"
-            redirectUrl={redirectParam}
-            onError={(msg) => setError(msg)}
-          />
-
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 w-full"></div>
-            <span className="bg-white px-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium shrink-0">
-              or sign in with password
-            </span>
-            <div className="border-t border-slate-200 w-full"></div>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-3">
+        <form onSubmit={handleLogin} className="space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Email Address *
@@ -219,7 +202,6 @@ function CreatorLoginForm() {
             <input
               type="email"
               required
-              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -242,7 +224,6 @@ function CreatorLoginForm() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"
@@ -266,7 +247,6 @@ function CreatorLoginForm() {
                 type="text"
                 required
                 maxLength={6}
-                placeholder="123456"
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest text-center focus:outline-none focus:border-slate-800"
@@ -274,15 +254,14 @@ function CreatorLoginForm() {
             </div>
           )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-          </form>
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+        </form>
       )}
 
       <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">

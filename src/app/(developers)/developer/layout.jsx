@@ -35,7 +35,6 @@ export default function DeveloperLayout({ children }) {
 
   const isSuperAdmin = user?.id === 1 || user?.email === 'tanvir004006@gmail.com';
   const userPerms = Array.isArray(user?.permissions) ? user.permissions : null;
-  // If user has permissions list from module_permissions, use it; otherwise fallback to general pages
   const allowedModules = (userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'])
     .map((m) => String(m).toLowerCase());
 
@@ -82,7 +81,6 @@ export default function DeveloperLayout({ children }) {
     );
   }
 
-  // If in Fabric.js Studio builder, render full screen for optimum canvas space
   const isBuilder = pathname.includes('/builder');
   if (isBuilder) {
     return <div className="h-screen w-screen overflow-hidden">{children}</div>;
@@ -90,14 +88,12 @@ export default function DeveloperLayout({ children }) {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
-      {/* Sidebar: persistent on desktop, drawer on mobile */}
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         currentUser={user}
       />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 w-full">
         <Navbar
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}

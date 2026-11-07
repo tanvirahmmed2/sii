@@ -1,15 +1,7 @@
-// High-Resolution Client-Side PDF & JPEG Document Export Pipeline
-// Powered by html2canvas and jsPDF
 
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-/**
- * Exports a single DOM node as a crisp, high-resolution JPEG image.
- * @param {HTMLElement} element - Target DOM node to capture
- * @param {string} filename - Download filename (without extension)
- * @param {number} scale - DPI resolution scale multiplier (default 3 = ~300 DPI)
- */
 export async function exportElementAsJpeg(element, filename = 'document', scale = 3) {
   if (!element) throw new Error('Target element is required for JPEG export.');
 
@@ -32,12 +24,6 @@ export async function exportElementAsJpeg(element, filename = 'document', scale 
   return imgData;
 }
 
-/**
- * Exports a DOM node as a vector-accurate, print-grade PDF.
- * @param {HTMLElement} element - Target DOM node to capture
- * @param {string} filename - Download filename (without extension)
- * @param {Object} options - Dimension options { widthMm, heightMm, orientation }
- */
 export async function exportElementAsPdf(element, filename = 'document', options = {}) {
   if (!element) throw new Error('Target element is required for PDF export.');
 
@@ -69,12 +55,6 @@ export async function exportElementAsPdf(element, filename = 'document', options
   return pdf;
 }
 
-/**
- * Exports multiple card elements into a multi-page PDF document.
- * @param {Array<HTMLElement>} elements - Array of card DOM elements
- * @param {string} filename - PDF filename
- * @param {Object} options - Card dimensions
- */
 export async function exportMultipleCardsAsPdf(elements = [], filename = 'batch_id_cards', options = {}) {
   if (!elements || elements.length === 0) throw new Error('No elements provided for batch export.');
 

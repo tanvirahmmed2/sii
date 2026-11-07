@@ -1,14 +1,6 @@
-/**
- * Pure JavaScript random generation helpers (replaces Node crypto module).
- * Format rule: Strictly letters or numbers without any prefix or suffix (e.g., 123D1).
- */
 
 const ALPHANUMERIC_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-/**
- * Generates pure uppercase alphanumeric tokens with no prefix and no suffix.
- * Example: 123D1, 8K9L2M, 4A7B9C1D
- */
 export function generateToken(length = 8) {
   const len = typeof length === 'number' && length > 0 ? length : 8;
   let token = '';

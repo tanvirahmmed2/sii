@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
@@ -9,7 +8,6 @@ import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to avoid SSR hydration issues
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -22,26 +20,21 @@ const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor
 export default function BoardMembersPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [boardMembers, setBoardMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+  const [statusFilter, setStatusFilter] = useState('all'); 
 
-  // In-Page Form State (NO POPUP MODAL)
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [editingMember, setEditingMember] = useState(null);
 
-  // In-Page Delete Confirmation (NO POPUP MODAL)
   const [memberToDelete, setMemberToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Form states
   const [formName, setFormName] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formDesignation, setFormDesignation] = useState('');
@@ -54,10 +47,8 @@ export default function BoardMembersPage() {
 
   const fileInputRef = useRef(null);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/board-members'), [getApiEndpoint]);
 
-  // Fetch members
   const fetchBoardMembers = useCallback(
     async (showToast = false) => {
       if (!apiEndpoint) return;
@@ -91,7 +82,6 @@ export default function BoardMembersPage() {
     };
   }, [fetchBoardMembers]);
 
-  // Open Create in-page form
   const handleOpenCreate = () => {
     setFormMode('create');
     setEditingMember(null);
@@ -109,7 +99,6 @@ export default function BoardMembersPage() {
     setIsFormOpen(true);
   };
 
-  // Open Edit in-page form
   const handleOpenEdit = (member) => {
     setFormMode('edit');
     setEditingMember(member);
@@ -132,7 +121,6 @@ export default function BoardMembersPage() {
     setEditingMember(null);
   };
 
-  // Handle Image Selection
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -152,7 +140,6 @@ export default function BoardMembersPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Handle Form Submit
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -207,7 +194,6 @@ export default function BoardMembersPage() {
     }
   };
 
-  // Toggle Status
   const handleToggleStatus = async (member) => {
     try {
       const formData = new FormData();
@@ -239,7 +225,6 @@ export default function BoardMembersPage() {
     }
   };
 
-  // Delete Action (in-page confirmation)
   const handleConfirmDelete = async () => {
     if (!memberToDelete) return;
     setDeleting(true);
@@ -260,7 +245,6 @@ export default function BoardMembersPage() {
     }
   };
 
-  // Filtered List
   const filteredMembers = useMemo(() => {
     return boardMembers.filter((item) => {
       const matchesSearch =
@@ -278,14 +262,12 @@ export default function BoardMembersPage() {
     });
   }, [boardMembers, searchTerm, statusFilter]);
 
-  // Metrics
   const totalCount = boardMembers.length;
   const activeCount = boardMembers.filter((m) => m.is_active).length;
   const inactiveCount = boardMembers.filter((m) => !m.is_active).length;
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Workstation Bar */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -318,7 +300,6 @@ export default function BoardMembersPage() {
         </div>
       </div>
 
-      {/* KPI Metric Strip */}
       <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 p-3.5 rounded-md border border-slate-200 dark:border-slate-800">
           <div className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
@@ -357,7 +338,6 @@ export default function BoardMembersPage() {
         </div>
       </div>
 
-      {/* IN-PAGE DELETE CONFIRMATION BANNER (NO POPUP MODAL) */}
       {memberToDelete && (
         <div className="w-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-md p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -391,7 +371,6 @@ export default function BoardMembersPage() {
         </div>
       )}
 
-      {/* IN-PAGE FORM SECTION (NO POPUP MODAL) */}
       {isFormOpen && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -469,7 +448,6 @@ export default function BoardMembersPage() {
               </div>
             </div>
 
-            {/* Biography & Profile Summary */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Biography / Profile Summary
@@ -482,7 +460,6 @@ export default function BoardMembersPage() {
               />
             </div>
 
-            {/* Photo Upload Section */}
             <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block">
                 Official Portrait Photo
@@ -527,7 +504,6 @@ export default function BoardMembersPage() {
               </div>
             </div>
 
-            {/* Active Toggle */}
             <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               <input
                 type="checkbox"
@@ -544,7 +520,6 @@ export default function BoardMembersPage() {
               </label>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -565,7 +540,6 @@ export default function BoardMembersPage() {
         </div>
       )}
 
-      {/* Filter & Search Bar */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-md border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="sm:col-span-8">
           <input
@@ -590,7 +564,6 @@ export default function BoardMembersPage() {
         </div>
       </div>
 
-      {/* Content Table */}
       {loading ? (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-12 flex flex-col items-center justify-center gap-2">
           <Loader />

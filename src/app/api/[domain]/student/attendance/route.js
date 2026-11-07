@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // 1. Fetch attendance records
     const historyRes = await queryDb(
       `SELECT a.id, a.date, a.status, a.in_time, a.out_time, a.remark,
               c.name AS class_name,
@@ -41,7 +40,6 @@ export async function GET(request, context) {
       [website.id, studentId]
     );
 
-    // 2. Fetch Summary Statistics
     const sumRes = await queryDb(
       `SELECT 
          COUNT(*)::int AS total,
@@ -75,7 +73,6 @@ export async function GET(request, context) {
       success: true,
       summary,
       history: historyRes.rows,
-      // Backwards-compatible payload
       payload: {
         summary,
         history: historyRes.rows

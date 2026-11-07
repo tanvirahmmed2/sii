@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET ALL SUBSCRIBERS
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'subscribers');
@@ -37,7 +36,6 @@ export async function GET(request) {
   }
 }
 
-// POST: MANUAL CREATION DISABLED
 export async function POST() {
   return NextResponse.json(
     {
@@ -48,7 +46,6 @@ export async function POST() {
   );
 }
 
-// PUT: UPDATE STATUS
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'subscribers');
@@ -84,7 +81,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE SUBSCRIBER
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'subscribers');

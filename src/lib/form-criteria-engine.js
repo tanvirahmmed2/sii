@@ -16,13 +16,9 @@ const COMPARATORS = {
     !b.map((x) => String(x).trim().toLowerCase()).includes(String(a ?? '').trim().toLowerCase()),
 };
 
-/**
- * Recursively evaluates nested AND ("all") / OR ("any") criteria nodes
- */
 export function evaluateCriteriaAST(node, contextData) {
   if (!node || typeof node !== 'object') return { passed: true, errors: [] };
 
-  // AND Group
   if (Array.isArray(node.all)) {
     const errors = [];
     for (const child of node.all) {
@@ -34,7 +30,6 @@ export function evaluateCriteriaAST(node, contextData) {
     return { passed: errors.length === 0, errors };
   }
 
-  // OR Group
   if (Array.isArray(node.any)) {
     if (node.any.length === 0) return { passed: true, errors: [] };
     const anyPassed = node.any.some((child) => evaluateCriteriaAST(child, contextData).passed);
@@ -44,7 +39,6 @@ export function evaluateCriteriaAST(node, contextData) {
     };
   }
 
-  // Leaf Rule: { field: "info.ssc_gpa", op: "gte", value: 4.50, msg: "Minimum SSC GPA is 4.50" }
   if (node.field && node.op) {
     const [scope, key] = node.field.includes('.') ? node.field.split('.') : ['info', node.field];
     const actualValue =
@@ -65,10 +59,6 @@ export function evaluateCriteriaAST(node, contextData) {
   return { passed: true, errors: [] };
 }
 
-/**
- * Computes and saves the immutable form_schema_snapshot on website_admissions
- * Call this inside a transaction whenever staff creates or updates an admission circular.
- */
 export async function syncAdmissionFormSnapshot(client, websiteId, admissionId) {
   const runner = typeof client?.query === 'function'
     ? client
@@ -108,12 +98,6 @@ export async function syncAdmissionFormSnapshot(client, websiteId, admissionId) 
   return res.rows[0]?.form_schema_snapshot || [];
 }
 
-/**
- * Validates either:
- *   - Public Candidate Application (`mode = 'admission'`)
- *   - Student Portal Onboarding (`mode = 'student'`)
- * Fetches schema & criteria in ONE single SQL query.
- */
 export async function validateSubmissionPayload({
   clientOrPool = { query },
   websiteId,
@@ -121,14 +105,13 @@ export async function validateSubmissionPayload({
   applicantId = null,
   studentId = null,
   mode = 'admission',
-  payload, // { core: { date_of_birth, gender, ... }, info: {}, guardians: {}, addresses: {} }
+  payload, 
 }) {
   const runner = typeof clientOrPool?.query === 'function'
     ? clientOrPool
     : (typeof clientOrPool === 'function' ? { query: clientOrPool } : { query });
   const errors = [];
 
-  // 1. Single-Roundtrip Query for Circular Snapshot/Rules OR Student Form Fields
   const metaSql = `
     SELECT
       (
@@ -167,13 +150,11 @@ export async function validateSubmissionPayload({
     if (circular.status !== 'open') return { valid: false, errors: ['This admission circular is not currently open.'] };
   }
 
-  // Use frozen circular snapshot if available in admission mode; otherwise fall back to live fields
   const activeFields =
     mode === 'admission' && Array.isArray(circular?.form_schema_snapshot) && circular.form_schema_snapshot.length > 0
       ? circular.form_schema_snapshot
       : (Array.isArray(liveFields) ? liveFields : []);
 
-  // 2. Validate Dynamic Fields
   const uniqueChecks = [];
 
   for (const field of activeFields) {
@@ -212,7 +193,6 @@ export async function validateSubmissionPayload({
     }
   }
 
-  // 3. Evaluate Admission Eligibility Criteria (Age + Recursive AST Rules)
   if (mode === 'admission' && circular?.criteria_rules) {
     const { age, rules } = circular.criteria_rules;
     const contextData = {
@@ -222,7 +202,6 @@ export async function validateSubmissionPayload({
       addresses: { ...(payload.addresses || {}) },
     };
 
-    // Calculate candidate age in years
     if (payload.core?.date_of_birth) {
       const dob = new Date(payload.core.date_of_birth);
       const refDate = age?.as_of_date ? new Date(age.as_of_date) : new Date();
@@ -241,7 +220,6 @@ export async function validateSubmissionPayload({
       errors.push('Date of birth is required to verify age eligibility.');
     }
 
-    // Evaluate nested AND / OR rules
     if (rules) {
       const astResult = evaluateCriteriaAST(rules, contextData);
       if (!astResult.passed) {
@@ -250,10 +228,8 @@ export async function validateSubmissionPayload({
     }
   }
 
-  // 4. Concurrency-Safe JSONB Uniqueness Check
   if (uniqueChecks.length > 0 && errors.length === 0) {
     for (const check of uniqueChecks) {
-      // Acquire transaction advisory lock if running inside a transaction client
       await runner.query(
         `SELECT pg_advisory_xact_lock(hashtext($1::text || ':' || $2::text || ':' || $3::text))`,
         [websiteId, check.key, check.value]

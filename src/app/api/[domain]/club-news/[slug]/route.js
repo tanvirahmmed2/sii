@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Single club news dispatch
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

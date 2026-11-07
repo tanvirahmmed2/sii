@@ -2,11 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 
-/**
- * API Route: /api/marketing/creator/website-settings
- * Directly queries and updates the `websites` table from schema.psql.
- */
-
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -19,7 +14,6 @@ export async function GET(request) {
 
     const websiteId = Number(websiteIdParam);
 
-    // Verify creator ownership
     if (sessionCreator) {
       const ownerCheck = await queryDb('SELECT id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1', [websiteId, sessionCreator.id]);
       if (ownerCheck.rows.length === 0) {
@@ -71,7 +65,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'websiteId is required' }, { status: 400 });
     }
 
-    // Verify ownership
     if (sessionCreator) {
       const ownerCheck = await queryDb('SELECT id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1', [websiteId, sessionCreator.id]);
       if (ownerCheck.rows.length === 0) {
@@ -79,7 +72,6 @@ export async function POST(request) {
       }
     }
 
-    // Update websites table attributes
     const websiteUpdates = [];
     const websiteValues = [];
     let wIdx = 1;

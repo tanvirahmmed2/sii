@@ -12,9 +12,6 @@ function generateSlug(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// ============================================================================
-// GET: Fetch single career by ID
-// ============================================================================
 export async function GET(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -61,9 +58,6 @@ export async function GET(request, context) {
   }
 }
 
-// ============================================================================
-// PUT: Update single career by ID
-// ============================================================================
 export async function PUT(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -126,7 +120,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // Slug check if changed
     let finalSlug = currentJob.slug;
     if (slug && slug.trim() && generateSlug(slug) !== currentJob.slug) {
       const baseSlug = generateSlug(slug);
@@ -197,9 +190,6 @@ export async function PUT(request, context) {
   }
 }
 
-// ============================================================================
-// DELETE: Remove single career by ID
-// ============================================================================
 export async function DELETE(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');

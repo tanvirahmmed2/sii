@@ -22,9 +22,8 @@ export default function StaffClassroomsPage() {
   const [filterClass, setFilterClass] = useState('');
   const [filterSession, setFilterSession] = useState('');
 
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [modalMode, setModalMode] = useState('create'); 
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     class_id: '',
@@ -38,11 +37,9 @@ export default function StaffClassroomsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Delete modal state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Fetch metadata
   const fetchMeta = useCallback(async () => {
     try {
       const res = await fetch(getApiEndpoint('staff/classrooms/meta'));
@@ -56,7 +53,6 @@ export default function StaffClassroomsPage() {
     }
   }, [getApiEndpoint]);
 
-  // Fetch classrooms list
   const fetchClassrooms = useCallback(async () => {
     setLoading(true);
     try {
@@ -176,14 +172,12 @@ export default function StaffClassroomsPage() {
     }
   };
 
-  // Filtered display
   const filteredClassrooms = classrooms.filter(cr => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return cr.name?.toLowerCase().includes(q) || cr.class_name?.toLowerCase().includes(q) || cr.session_name?.toLowerCase().includes(q) || cr.room_number?.toLowerCase().includes(q);
   });
   return <div className="space-y-6 pb-12">
-      {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-sm border border-slate-800 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -203,13 +197,11 @@ export default function StaffClassroomsPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       {successMessage && <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3 rounded-xl text-xs flex items-center gap-2 shadow-xs animate-in fade-in">
           
           <span>{successMessage}</span>
         </div>}
 
-      {/* Controls & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-3 min-w-[240px]">
           <div className="relative flex-1 max-w-md">
@@ -239,7 +231,6 @@ export default function StaffClassroomsPage() {
         </div>
       </div>
 
-      {/* Classrooms Grid / List */}
       {loading ? <div className="py-16 flex justify-center items-center">
           <div className="loader loader-md" />
         </div> : filteredClassrooms.length === 0 ? <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-3">
@@ -282,7 +273,6 @@ export default function StaffClassroomsPage() {
             __html: cr.description
           }} />}
 
-                {/* Sub-resource Badges */}
                 <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
                     <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Syllabus</p>
@@ -311,7 +301,6 @@ export default function StaffClassroomsPage() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                 <span className="text-[10px] text-slate-400">
                   ID: #{cr.id}
@@ -329,7 +318,6 @@ export default function StaffClassroomsPage() {
             </div>)}
         </div>}
 
-      {/* Create / Edit Modal */}
       {isModalOpen && <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 my-8">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40">
@@ -350,7 +338,6 @@ export default function StaffClassroomsPage() {
                   <span>{errorMessage}</span>
                 </div>}
 
-              {/* Class & Session (Editable on Create, Locked or Display on Edit) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -383,7 +370,6 @@ export default function StaffClassroomsPage() {
                 </div>
               </div>
 
-              {/* Classroom Name & Room Number */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -406,7 +392,6 @@ export default function StaffClassroomsPage() {
                 </div>
               </div>
 
-              {/* Description Input using Tiptap Editor */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Classroom Overview &amp; Instructions (Tiptap Rich Text)
@@ -417,7 +402,6 @@ export default function StaffClassroomsPage() {
             })} placeholder="Describe learning objectives, rules, and expectations for students in this classroom..." minHeight="140px" />
               </div>
 
-              {/* Status Toggle */}
               <div className="flex items-center gap-3 pt-2">
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={formData.is_active} onChange={e => setFormData({
@@ -431,7 +415,6 @@ export default function StaffClassroomsPage() {
                 </span>
               </div>
 
-              {/* Footer */}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
                   Cancel
@@ -444,7 +427,6 @@ export default function StaffClassroomsPage() {
           </div>
         </div>}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl">

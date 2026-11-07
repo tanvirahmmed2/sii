@@ -8,14 +8,12 @@ import staffNavDataDefault, { staffNavData as staffNavDataNamed } from './staffN
 
 const staffNavData = staffNavDataDefault || staffNavDataNamed || [];
 
-// Normalize path by stripping query params, hash, and trailing slashes
 const normalizePath = (p) => {
   if (!p) return '';
   const clean = p.split('?')[0].split('#')[0].replace(/\/+$/, '');
   return clean || '/';
 };
 
-// Helper to convert route to clean staff-panel path
 const getStaffUrl = (rawPath) => {
   if (!rawPath) return '#';
   const clean = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
@@ -23,22 +21,17 @@ const getStaffUrl = (rawPath) => {
   return clean.startsWith('/staff-panel') ? clean : `/staff-panel${clean}`;
 };
 
-// Check if a path matches current pathname
 const checkIsActive = (itemPath, currentPathname) => {
   if (!itemPath) return false;
   const target = normalizePath(getStaffUrl(itemPath));
   const current = normalizePath(currentPathname);
 
-  // Exact match
   if (current === target) return true;
 
-  // Prefix match for nested dynamic sub-pages (e.g. /staff-panel/news-list/[slug])
-  // Special exception: don't match root /staff-panel for every page!
   if (target !== '/staff-panel' && current.startsWith(`${target}/`)) {
     return true;
   }
 
-  // Handle route aliases
   if (
     target === '/staff-panel/board-members' &&
     (current === '/staff-panel/institutional-board-members' ||
@@ -56,7 +49,6 @@ const checkIsActive = (itemPath, currentPathname) => {
   return false;
 };
 
-// Check if any descendant path matches current pathname
 const hasActiveChild = (item, pathname) => {
   if (item.path && checkIsActive(item.path, pathname)) {
     return true;
@@ -67,7 +59,6 @@ const hasActiveChild = (item, pathname) => {
   return false;
 };
 
-// Sub-level collapsible group (for nested menus like Update, Migration, ID Card, etc.)
 const SubCollapsibleGroup = ({ group, pathname, onCloseMobile, forceOpenState = null }) => {
   const isInitiallyActive = useMemo(() => hasActiveChild(group, pathname), [group, pathname]);
   const [userToggled, setUserToggled] = useState(null);
@@ -144,7 +135,6 @@ const SubCollapsibleGroup = ({ group, pathname, onCloseMobile, forceOpenState = 
   );
 };
 
-// Top-level accordion module
 const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = null }) => {
   const isInitiallyActive = useMemo(() => hasActiveChild(module, pathname), [module, pathname]);
   const [userToggled, setUserToggled] = useState(null);
@@ -157,7 +147,6 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
 
   const isOpen = userToggled !== null ? userToggled : (forceOpenState !== null ? forceOpenState : isInitiallyActive);
 
-  // If module is a direct link without children
   if (module.path && (!module.children || module.children.length === 0)) {
     const target = getStaffUrl(module.path);
     const isActive = checkIsActive(module.path, pathname);
@@ -209,7 +198,6 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
       {isOpen && (
         <div className="flex flex-col space-y-0.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 ml-2 py-0.5">
           {module.children?.map((item, idx) => {
-            // Nested group with its own children
             if (item.children && Array.isArray(item.children)) {
               return (
                 <SubCollapsibleGroup
@@ -222,7 +210,6 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
               );
             }
 
-            // Direct leaf link inside top accordion
             const target = getStaffUrl(item.path);
             const isActive = checkIsActive(item.path, pathname);
 
@@ -254,10 +241,9 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
   const { adminSidebar, setAdminSidebar, staffSidebar, setStaffSidebar, tenantUrl } = context;
 
   const [filterQuery, setFilterQuery] = useState('');
-  const [globalExpandState, setGlobalExpandState] = useState(null); // null = auto, true = expand all, false = collapse all
+  const [globalExpandState, setGlobalExpandState] = useState(null); 
   const scrollContainerRef = useRef(null);
 
-  // Safe handler to close mobile drawer
   const closeMobile = () => {
     if (typeof setAdminSidebar === 'function') setAdminSidebar(false);
     if (typeof setStaffSidebar === 'function') setStaffSidebar(false);
@@ -265,9 +251,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
 
   const isMobileOpen = Boolean(adminSidebar || staffSidebar);
 
-  // Filter navigation items by allowedModules if specified
   const filteredNavData = useMemo(() => {
-    // If dev admin, no restrictions provided, or empty array, allow all modules
     if (isDevAdmin || !Array.isArray(allowedModules) || allowedModules.length === 0) {
       return staffNavData;
     }
@@ -275,7 +259,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
     const allowedSet = new Set(allowedModules.map((m) => String(m).toLowerCase().trim()));
 
     const filterItem = (item) => {
-      // If item has a specific module, check if allowed (supports array or comma-separated)
       let isSelfAllowed = !item.module;
       if (item.module) {
         if (Array.isArray(item.module)) {
@@ -290,7 +273,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
       if (item.children && Array.isArray(item.children)) {
         const allowedChildren = item.children.map(filterItem).filter(Boolean);
 
-        // If at least one child is allowed, keep the group with allowed children
         if (allowedChildren.length > 0) {
           return {
             ...item,
@@ -298,7 +280,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
           };
         }
 
-        // If no children allowed, keep only if item itself has direct path and is allowed
         if (item.path && isSelfAllowed) {
           return { ...item, children: [] };
         }
@@ -306,14 +287,12 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
         return null;
       }
 
-      // Leaf item
       return isSelfAllowed ? item : null;
     };
 
     return staffNavData.map(filterItem).filter(Boolean);
   }, [allowedModules, isDevAdmin]);
 
-  // Extract flat list of links for quick search from filteredNavData
   const flatSearchList = useMemo(() => {
     if (!filterQuery.trim()) return [];
     const q = filterQuery.toLowerCase().trim();
@@ -355,7 +334,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
 
   return (
     <>
-      {/* Mobile Backdrop */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 top-14 bg-slate-950/60 backdrop-blur-xs z-30 md:hidden transition-opacity"
@@ -363,18 +341,15 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
         />
       )}
 
-      {/* Main Sidebar Shell */}
       <aside
         className={`fixed md:sticky top-14 left-0 z-30 h-[calc(100vh-3.5rem)] w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Scrollable Navigation Container */}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto p-3 space-y-1.5 scrollbar-thin"
         >
-          {/* Quick Search / Filter Input */}
           <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
             <input
               type="text"
@@ -385,7 +360,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
             />
           </div>
 
-          {/* If filtering, show quick results */}
           {filterQuery.trim() ? (
             <div className="space-y-1 pt-1">
               <div className="flex items-center justify-between px-1 pb-1">
@@ -431,7 +405,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
             </div>
           ) : (
             <>
-              {/* Primary Dashboard Link */}
               <div className="pt-0.5">
                 <Link
                   href="/staff-panel"
@@ -455,7 +428,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
                 </Link>
               </div>
 
-              {/* Dynamic Module Tree */}
               <div className="pt-2 space-y-1">
                 <div className="flex items-center justify-between px-2 pb-1">
                   <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -484,7 +456,6 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }) => {
           )}
         </div>
 
-        {/* Footer Quick Return */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shrink-0">
           <Link
             href={typeof tenantUrl === 'function' ? tenantUrl('/') : '/'}

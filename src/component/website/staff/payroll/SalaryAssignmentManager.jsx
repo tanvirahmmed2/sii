@@ -17,10 +17,9 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'assigned', 'unassigned', 'active', 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Assignment Modal
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [selectedPayrollId, setSelectedPayrollId] = useState('');
@@ -136,13 +135,11 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
     }
   };
 
-  // Preview of currently selected scale inside modal
   const selectedPayrollPreview = useMemo(() => {
     if (!selectedPayrollId) return null;
     return payrolls.find((p) => String(p.id) === String(selectedPayrollId));
   }, [payrolls, selectedPayrollId]);
 
-  // Metrics
   const metrics = useMemo(() => {
     const total = personnel.length;
     const assigned = personnel.filter((p) => p.salary_id).length;
@@ -153,7 +150,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -165,7 +161,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
         </div>
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
         <div
           className={`p-3 text-xs rounded border ${
@@ -183,7 +178,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Total {isTeacher ? 'Teachers' : 'Officers'}</p>
@@ -205,7 +199,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5">
         <div className="flex flex-1 items-center gap-2">
           <input
@@ -232,7 +225,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
         </span>
       </div>
 
-      {/* Table of Roster & Assignments */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-x-auto shadow-2xs">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
@@ -352,7 +344,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
         </table>
       </div>
 
-      {/* Assignment Modal */}
       {assignModalOpen && selectedPerson && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-2xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -369,7 +360,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
             </div>
 
             <form onSubmit={handleSaveAssignment} className="p-4 space-y-4 text-xs">
-              {/* Personnel summary pill */}
               <div className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                 <span className="block font-semibold text-slate-900 dark:text-white">
                   {isTeacher ? selectedPerson.teacher_name : selectedPerson.officer_name}
@@ -379,7 +369,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
                 </span>
               </div>
 
-              {/* Select Payroll Scale */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Select Payroll Scale *
@@ -405,7 +394,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
                 )}
               </div>
 
-              {/* Live Preview of Selected Scale */}
               {selectedPayrollPreview && (
                 <div className="border border-slate-200 dark:border-slate-800 rounded p-3 bg-slate-50/50 dark:bg-slate-800/30 space-y-2">
                   <div className="flex justify-between items-center text-[11px] font-semibold text-slate-700 dark:text-slate-300">
@@ -421,7 +409,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
                 </div>
               )}
 
-              {/* Status & Effective Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -451,7 +438,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
                 </div>
               </div>
 
-              {/* Remarks */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Remarks / Notes
@@ -465,7 +451,6 @@ export default function SalaryAssignmentManager({ roleType = 'teacher', title, s
                 />
               </div>
 
-              {/* Form Actions */}
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"

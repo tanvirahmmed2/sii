@@ -19,7 +19,6 @@ export default function SupportDetailsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deletingId, setDeletingId] = useState(null);
 
-  // Fetch all support tickets
   const fetchTickets = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
@@ -40,7 +39,6 @@ export default function SupportDetailsPage() {
     fetchTickets(true);
   }, [fetchTickets]);
 
-  // Background polling every 5s
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTickets(false);
@@ -48,7 +46,6 @@ export default function SupportDetailsPage() {
     return () => clearInterval(interval);
   }, [fetchTickets]);
 
-  // Delete ticket
   const handleDelete = async (id, e) => {
     if (e) e.stopPropagation();
     if (!confirm('Are you sure you want to permanently delete this support ticket and thread?')) return;
@@ -70,7 +67,6 @@ export default function SupportDetailsPage() {
     }
   };
 
-  // Filter tickets
   const filteredTickets = tickets.filter((t) => {
     let matchesStatus = true;
     const st = String(t.status || 'open').toLowerCase();
@@ -100,7 +96,6 @@ export default function SupportDetailsPage() {
     );
   });
 
-  // Calculate metrics
   const totalCount = tickets.length;
   const openCount = tickets.filter((t) => String(t.status).toLowerCase() === 'open').length;
   const inProgressCount = tickets.filter((t) => String(t.status).toLowerCase() === 'in_progress').length;
@@ -109,7 +104,6 @@ export default function SupportDetailsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div className="flex items-center gap-3">
           <Link
@@ -149,7 +143,6 @@ export default function SupportDetailsPage() {
         </div>
       </div>
 
-      {/* Metrics Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div
           onClick={() => setStatusFilter('ALL')}
@@ -208,9 +201,7 @@ export default function SupportDetailsPage() {
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Search */}
         <div className="w-full sm:w-80">
           <input
             type="text"
@@ -221,7 +212,6 @@ export default function SupportDetailsPage() {
           />
         </div>
 
-        {/* Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { id: 'ALL', label: 'All' },
@@ -247,7 +237,6 @@ export default function SupportDetailsPage() {
         </div>
       </div>
 
-      {/* Tickets List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && tickets.length === 0 ? (
           <LoadingScreen fullScreen={false} label="Loading support tickets..." />

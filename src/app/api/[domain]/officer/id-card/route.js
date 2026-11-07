@@ -25,7 +25,6 @@ export async function GET(request, context) {
       );
     }
 
-    // 1. Fetch issued card record if exists, or generate fallback card
     let card = null;
     try {
       const cardRes = await queryDb(
@@ -49,7 +48,6 @@ export async function GET(request, context) {
       };
     }
 
-    // 2. Fetch active Officer ID Card template
     let template = null;
     try {
       const webTplRes = await queryDb(

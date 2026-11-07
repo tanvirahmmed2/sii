@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 
-/**
- * POST /api/[domain]/staff/panel/admissions/exam-marks/process
- * Calculates total scores, computes merit ranking, and auto-selects top candidates up to class seat limit.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -14,7 +10,7 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { admission_id, mark_unselected_as = 'rejected' } = body; // 'rejected' | 'waiting'
+    const { admission_id, mark_unselected_as = 'rejected' } = body; 
 
     if (!admission_id) {
       return NextResponse.json({ success: false, error: 'admission_id is required.' }, { status: 400 });
@@ -22,7 +18,6 @@ export async function POST(request, context) {
 
     const admId = parseInt(admission_id, 10);
 
-    // 1. Fetch circular and class seat capacity
     const circularRes = await queryDb(`
       SELECT a.id, a.title, a.capacity, a.selection_method,
              c.id AS class_id, c.name AS class_name, c.max_seats AS class_max_seats
@@ -37,13 +32,10 @@ export async function POST(request, context) {
 
     const circular = circularRes.rows[0];
 
-    // Determine seats limit: capacity cannot exceed class max_seats
     const circCapacity = parseInt(circular.capacity, 10) || 50;
     const classMaxSeats = circular.class_max_seats ? parseInt(circular.class_max_seats, 10) : circCapacity;
     const effectiveSeats = Math.min(circCapacity, classMaxSeats);
 
-    // 2. Determine ordering based on circular.selection_method ('exam' vs 'merit')
-    // STRICT RULE: Only completed applicants are evaluated for cutoff/selection
     let applicantsRes;
     if (circular.selection_method === 'merit') {
       applicantsRes = await queryDb(`
@@ -55,7 +47,6 @@ export async function POST(request, context) {
         ORDER BY a.last_class_grade DESC NULLS LAST, a.created_at ASC
       `, [admId, auth.website.id]);
     } else {
-      // Exam-based: Compute each candidate's sum of exam marks and update applicant score
       await queryDb(`
         UPDATE website_admission_applicants a
         SET score = COALESCE((
@@ -67,7 +58,6 @@ export async function POST(request, context) {
         WHERE a.admission_id = $1 AND a.website_id = $2 AND a.status = 'completed'
       `, [admId, auth.website.id]);
 
-      // Fetch candidates ordered by highest exam score
       applicantsRes = await queryDb(`
         SELECT a.id, a.application_no, a.roll_no, a.applicant_name, a.score
         FROM website_admission_applicants a
@@ -92,7 +82,6 @@ export async function POST(request, context) {
       const isWithinSeatLimit = i < effectiveSeats;
 
       if (isWithinSeatLimit) {
-        // Auto-select candidate
         await queryDb(`
           UPDATE website_admission_applicants
           SET status = 'selected',
@@ -109,7 +98,6 @@ export async function POST(request, context) {
           app.id
         ]);
 
-        // Sync into website_admission_results
         await queryDb(`
           INSERT INTO website_admission_results (
             website_id, admission_id, applicant_id, roll_no, applicant_name,
@@ -142,7 +130,6 @@ export async function POST(request, context) {
         rank++;
         selectedCount++;
       } else {
-        // Beyond capacity: mark as rejected or waiting
         const fallbackStatus = mark_unselected_as === 'waiting' ? 'pending' : 'rejected';
         await queryDb(`
           UPDATE website_admission_applicants
@@ -158,7 +145,6 @@ export async function POST(request, context) {
           app.id
         ]);
 
-        // Remove from results if previously selected
         await queryDb(`
           DELETE FROM website_admission_results
           WHERE admission_id = $1 AND applicant_id = $2

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// PUT: Update tutorial
-// ============================================================================
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');
@@ -47,9 +44,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete tutorial
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');

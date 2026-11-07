@@ -147,7 +147,6 @@ export default function UpdateDetailPage({ params }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
@@ -197,7 +196,6 @@ export default function UpdateDetailPage({ params }) {
         </div>
       )}
 
-      {/* Edit Form */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <form onSubmit={handleSaveEdit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">

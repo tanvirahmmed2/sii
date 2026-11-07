@@ -21,7 +21,6 @@ export default function Page() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Club Officers</p>
@@ -56,9 +55,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Main Interactive Workstation Area */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -100,7 +97,6 @@ export default function Page() {
           </div>
         )}
 
-        {/* High-Density Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -150,7 +146,6 @@ export default function Page() {
           </table>
         </div>
 
-        {/* Micro Pagination Footer */}
         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
           <span>Showing 1 to 4 of 48 entries</span>
           <div className="flex items-center gap-1 font-mono">

@@ -162,7 +162,6 @@ export async function GET(request) {
       });
     }
 
-    // List all active public packages (strictly hide custom / private plans)
     const listQuery = `
       ${baseQuery}
       WHERE p.is_active = TRUE AND p.is_public = TRUE

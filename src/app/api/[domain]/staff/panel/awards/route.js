@@ -34,7 +34,6 @@ async function parseAwardRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// GET: List all awards or fetch a single award by slug
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'view');
@@ -46,7 +45,6 @@ export async function GET(request, context) {
     const year = searchParams.get('year');
     const status = searchParams.get('status');
 
-    // Single award by slug
     if (slug) {
       const singleRes = await queryDb(
         `SELECT 
@@ -136,7 +134,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create award (supports instant demo creation & auto-slugify)
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'create');
@@ -150,7 +147,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Award title is required.' }, { status: 400 });
     }
 
-    // Auto-generate unique slug via slugify on server (hidden from frontend)
     let baseSlug = slugify(title);
     let finalSlug = baseSlug;
 
@@ -169,7 +165,6 @@ export async function POST(request, context) {
     const description = body.description || (isDemo ? '<p>Details and recognition citations for this achievement.</p>' : '');
     const isActive = body.is_active !== undefined ? (body.is_active === 'true' || body.is_active === true) : (isDemo ? false : true);
 
-    // 1. Create table row first
     const awardResult = await queryDb(
       `INSERT INTO website_awards 
         (website_id, title, slug, description, year, issuer, is_active)
@@ -180,7 +175,6 @@ export async function POST(request, context) {
 
     const createdAward = awardResult.rows[0];
 
-    // 2. Upload photo if provided and insert into website_award_images
     let savedImage = null;
     const hasImageFile = body.imageFile && typeof body.imageFile === 'object' && body.imageFile.name;
     if (hasImageFile) {
@@ -247,7 +241,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update award (by ID or current slug)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'edit');
@@ -278,7 +271,6 @@ export async function PUT(request, context) {
     const awardId = targetAward.id;
     let finalSlug = targetAward.slug;
 
-    // If title changed and slug wasn't explicitly locked, re-slugify on server
     if (title && String(title).trim() !== targetAward.title) {
       const candidateSlug = slugify(title);
       const collision = await queryDb(
@@ -288,7 +280,6 @@ export async function PUT(request, context) {
       finalSlug = collision.rowCount > 0 ? `${candidateSlug}-${Math.floor(1000 + Math.random() * 9000)}` : candidateSlug;
     }
 
-    // 1. Update website_awards table first
     const isActiveVal = is_active !== undefined ? (is_active === 'true' || is_active === true) : null;
     await queryDb(
       `UPDATE website_awards
@@ -312,7 +303,6 @@ export async function PUT(request, context) {
       ]
     );
 
-    // 2. Fetch existing image record if any
     const existingImgRes = await queryDb(
       `SELECT * FROM website_award_images WHERE award_id = $1 AND website_id = $2`,
       [awardId, auth.website.id]
@@ -382,7 +372,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // 3. Refreshed record
     const fullAward = await queryDb(
       `SELECT 
         a.id, a.website_id, a.title, a.slug, a.description, a.year, a.issuer, a.is_active, a.created_at, a.updated_at,
@@ -404,7 +393,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete award
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'delete');
@@ -421,7 +409,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Award ID or slug is required for deletion.' }, { status: 400 });
     }
 
-    // Find image ID before deletion
     let existingImgId = null;
     if (id) {
       const imgRes = await queryDb(

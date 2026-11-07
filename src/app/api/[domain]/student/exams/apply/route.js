@@ -25,7 +25,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Examination ID is required.' }, { status: 400 });
     }
 
-    // 1. Fetch Student Info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no,
               s.class_id, s.section_id, s.session_id
@@ -40,7 +39,6 @@ export async function POST(request, context) {
     }
     const student = studentRes.rows[0];
 
-    // 2. Fetch & Validate Exam for Student's Class
     const examRes = await queryDb(
       `SELECT e.*, c.name AS class_name
        FROM website_exams e
@@ -70,7 +68,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'This examination has been cancelled.' }, { status: 400 });
     }
 
-    // Check application dates if set
     const today = new Date().toISOString().split('T')[0];
     if (exam.application_end_date && today > exam.application_end_date.toISOString?.()?.split('T')[0]) {
       return NextResponse.json(
@@ -79,7 +76,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 3. Check duplicate application
     const existingCand = await queryDb(
       `SELECT id, candidate_status FROM website_exam_candidates 
        WHERE website_id = $1 AND exam_id = $2 AND student_id = $3`,
@@ -96,7 +92,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 4. Create Candidate record with status 'pending'
     const candInsert = await queryDb(
       `INSERT INTO website_exam_candidates (
         website_id, exam_id, student_id, class_id, session_id,
@@ -116,7 +111,6 @@ export async function POST(request, context) {
 
     const candidate = candInsert.rows[0];
 
-    // 5. Query fees for this exam
     const feesRes = await queryDb(
       `SELECT id, fee_title, amount 
        FROM website_exam_fees 
@@ -149,7 +143,6 @@ export async function POST(request, context) {
         createdPayments.push(payRes.rows[0]);
       }
     } else {
-      // Create a default pending payment entry with 0 amount for tracking
       const invoiceNo = `INV-EXM-${exam.id}-${student.id}-${Date.now().toString().slice(-4)}`;
       const payRes = await queryDb(
         `INSERT INTO website_exam_fee_payments (

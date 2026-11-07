@@ -93,7 +93,6 @@ function AcademicResultsContent() {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="w-full max-w-5xl mx-auto space-y-8 sm:space-y-10">
         
-        {/* Navigation Breadcrumb / Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-2">
             <Link
@@ -119,7 +118,6 @@ function AcademicResultsContent() {
           </div>
         </div>
 
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -137,7 +135,6 @@ function AcademicResultsContent() {
           </p>
         </motion.div>
 
-        {/* Inquiry Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -198,7 +195,6 @@ function AcademicResultsContent() {
           </form>
         </motion.div>
 
-        {/* Loading */}
         {loading ? (
           <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 p-12 rounded-3xl text-center shadow-xs">
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400 animate-pulse">
@@ -208,7 +204,6 @@ function AcademicResultsContent() {
         ) : data?.student ? (
           <div className="space-y-6 sm:space-y-8">
             
-            {/* Student Individual Dossier Card */}
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xs">
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-primary block mb-1">
@@ -241,7 +236,6 @@ function AcademicResultsContent() {
               )}
             </div>
 
-            {/* Performance Metric Strip */}
             {data.selectedResult?.result && (
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 p-4 sm:p-5 rounded-2xl shadow-xs">
@@ -299,7 +293,6 @@ function AcademicResultsContent() {
               </div>
             )}
 
-            {/* Subject Marks Breakdown Table */}
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-xs overflow-hidden">
               <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <div>

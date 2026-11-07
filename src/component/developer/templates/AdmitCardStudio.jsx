@@ -33,7 +33,6 @@ function computeCanvasPixels(w, h, unit) {
 
   if (unit === 'px') return { pxW: Math.round(widthVal), pxH: Math.round(heightVal) };
   if (unit === 'in') return { pxW: Math.round(widthVal * 96), pxH: Math.round(heightVal * 96) };
-  // mm: scale factor ~2.85 for A4 (210x297 -> ~600x848px)
   const factor = 600 / 210;
   return { pxW: Math.round(widthVal * factor), pxH: Math.round(heightVal * factor) };
 }
@@ -47,15 +46,14 @@ export default function AdmitCardStudio({
   const fabricCanvasRef = useRef(null);
   const fabricRef = useRef(null);
 
-  const [activeTab, setActiveTab] = useState('elements'); // 'elements' | 'tags' | 'presets'
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [activeTab, setActiveTab] = useState('elements'); 
+  const [mobileView, setMobileView] = useState('canvas'); 
   const [zoomLevel, setZoomLevel] = useState(0.85);
   const [selectedObject, setSelectedObject] = useState(null);
   const [canvasObjects, setCanvasObjects] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Ready');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 210);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 297);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
@@ -158,7 +156,6 @@ export default function AdmitCardStudio({
       isMounted = false;
       if (fabricCanvasRef.current) fabricCanvasRef.current.dispose();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addHeading = () => {
@@ -556,7 +553,6 @@ export default function AdmitCardStudio({
         </div>
       </header>
 
-      {/* Manual Dimensions Bar */}
       <div className="min-h-9 py-1 bg-slate-900/70 border-b border-slate-800/80 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-none gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-[11px] font-semibold text-slate-300">Dimensions:</span>
@@ -810,7 +806,6 @@ export default function AdmitCardStudio({
         </aside>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

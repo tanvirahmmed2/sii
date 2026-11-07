@@ -52,21 +52,22 @@ export function isTenantScope(pathname = '') {
     const baseDomain = (process.env.NEXT_PUBLIC_BASE_DOMAIN || 'localhost:3000').toLowerCase().trim();
     const baseHost = baseDomain.split(':')[0];
 
-    // Subdomain of baseDomain or baseHost (e.g. afit.localhost:3000, afit.localhost, afit.educraft.io)
     if (rawHostWithPort.endsWith(`.${baseDomain}`)) {
-      const sub = rawHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+      let sub = rawHostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+      if (sub.startsWith('www.')) sub = sub.slice(4).trim();
       if (sub && sub !== 'www') return true;
     }
     if (rawHost.endsWith(`.${baseHost}`)) {
-      const sub = rawHost.slice(0, -(baseHost.length + 1)).trim();
+      let sub = rawHost.slice(0, -(baseHost.length + 1)).trim();
+      if (sub.startsWith('www.')) sub = sub.slice(4).trim();
       if (sub && sub !== 'www') return true;
     }
     if (rawHost.endsWith('.localhost')) {
-      const sub = rawHost.replace('.localhost', '').trim();
+      let sub = rawHost.replace('.localhost', '').trim();
+      if (sub.startsWith('www.')) sub = sub.slice(4).trim();
       if (sub && sub !== 'www') return true;
     }
 
-    // Custom domain: when host does not match baseHost or localhost/127.0.0.1
     if (
       rawHost &&
       rawHost !== baseHost &&
@@ -78,7 +79,6 @@ export function isTenantScope(pathname = '') {
     }
   }
 
-  // Path-based tenant check on localhost / base domain
   const path = (pathname || '').toLowerCase();
 
   for (const prefix of TENANT_DIRECT_PREFIXES) {
@@ -87,7 +87,6 @@ export function isTenantScope(pathname = '') {
     }
   }
 
-  // Preview path: /[domain]/...
   const segments = path.split('/').filter(Boolean);
   if (segments.length > 0) {
     const firstSegment = segments[0];
@@ -103,17 +102,14 @@ export const ContextProvider = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Main SaaS marketing website sidebar (mobile nav toggle)
   const [sidebar, setSidebar] = useState(false);
 
-  // Theme management (light / dark)
   const [theme, setThemeState] = useState('light');
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
 
-  // Initialize theme from localStorage or system preference
   useEffect(() => {
     try {
       const storedTheme = localStorage.getItem('theme');
@@ -162,7 +158,6 @@ export const ContextProvider = ({ children }) => {
   };
 
   const fetchCurrentUser = useCallback(async () => {
-    // If the visitor is on a tenant website or tenant panel, do not make marketing auth calls
     if (isTenantScope(pathname)) {
       setUser(null);
       setLoading(false);
@@ -170,7 +165,6 @@ export const ContextProvider = ({ children }) => {
     }
 
     try {
-      // Check developer/staff session
       const devRes = await fetch('/api/marketing/developer/me').catch(() => null);
       if (devRes && devRes.ok) {
         const devData = await devRes.json();
@@ -181,7 +175,6 @@ export const ContextProvider = ({ children }) => {
         }
       }
 
-      // Check creator session
       const creatorRes = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,7 +189,6 @@ export const ContextProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      // In guest mode, ignore session fetch error
     } finally {
       setLoading(false);
     }

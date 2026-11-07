@@ -13,7 +13,6 @@ export default function Review({ review }) {
   return (
     <div className="w-[320px] sm:w-[380px] bg-slate-50 dark:bg-slate-800/90 border border-slate-200/90 dark:border-slate-700/80 rounded-3xl p-6 flex flex-col justify-between gap-4 shrink-0 shadow-xs hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all">
       <div className="space-y-3">
-        {/* Star Rating & Verified Pill */}
         <div className="flex items-center justify-between">
           <div className="flex text-amber-400 text-sm">
             {[1, 2, 3, 4, 5].map((s) => (
@@ -40,7 +39,6 @@ export default function Review({ review }) {
         </p>
       </div>
 
-      {/* Author Details */}
       <div className="pt-3 border-t border-slate-200/70 dark:border-slate-700/80 flex items-center gap-3">
         {avatar ? (
           <Image

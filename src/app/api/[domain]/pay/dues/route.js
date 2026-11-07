@@ -2,14 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * GET /api/[domain]/pay/dues
- * Public search endpoint for students and admission applicants to query unpaid fees.
- * Query Parameters:
- *   - identifier: Registration No / Roll No / Application No / Student ID / Email
- *   - type: 'all' | 'education' | 'exam' | 'admission' | 'residential'
- *   - id: Direct applicant ID or student ID
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -22,7 +14,6 @@ export async function GET(request, context) {
     const type = (searchParams.get('type') || 'all').toLowerCase();
     const directId = searchParams.get('id');
 
-    // Fetch active payment gateway accounts configured for this institution
     const gatewayRes = await queryDb(`
       SELECT ga.id, ga.gateway_code, ga.account_name, ga.account_number,
              ga.environment, ga.currency, ga.is_default,
@@ -43,7 +34,6 @@ export async function GET(request, context) {
       is_default: gw.is_default
     }));
 
-    // Masking helpers to prevent personal data scraping in public dues searches
     const maskEmail = (email) => {
       if (!email || typeof email !== 'string') return null;
       const parts = email.split('@');
@@ -61,7 +51,6 @@ export async function GET(request, context) {
       return `${clean.slice(0, 3)}*****${clean.slice(-3)}`;
     };
 
-    // If neither identifier nor id is provided, return gateway availability
     if (!identifier && !directId) {
       return NextResponse.json({
         success: true,
@@ -80,7 +69,6 @@ export async function GET(request, context) {
     let student = null;
     let applicant = null;
 
-    // 1. Look up student if not exclusively requesting admission
     if (type !== 'admission') {
       const studentQuery = `
         SELECT s.id, s.registration_no, s.roll_no, s.student_unique_id,
@@ -124,7 +112,6 @@ export async function GET(request, context) {
       }
     }
 
-    // 2. Look up admission applicant if not exclusively student fee types
     if (type === 'admission' || type === 'all' || !student) {
       const applicantQuery = `
         SELECT a.id, a.admission_id, a.application_no, a.roll_no, a.applicant_name,
@@ -176,7 +163,6 @@ export async function GET(request, context) {
       residential: []
     };
 
-    // A. FETCH EDUCATION / TUITION DUES
     if (student && (type === 'all' || type === 'education')) {
       const eduRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.title, p.fee_type, p.month_name,
@@ -206,7 +192,6 @@ export async function GET(request, context) {
       }));
     }
 
-    // B. FETCH EXAM FEES DUES
     if (student && (type === 'all' || type === 'exam')) {
       const examRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.exam_id, p.amount, p.fine_amount, p.paid_amount,
@@ -239,7 +224,6 @@ export async function GET(request, context) {
       }));
     }
 
-    // C. FETCH ADMISSION INTAKE DUES
     if (applicant && (type === 'all' || type === 'admission')) {
       const admRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.admission_id, p.amount, p.currency, p.payment_status,
@@ -272,9 +256,7 @@ export async function GET(request, context) {
       }));
     }
 
-    // D. FETCH RESIDENTIAL / HOSTEL DUES
     if (student && (type === 'all' || type === 'residential')) {
-      // 1. Check existing records in website_hall_fee_payments
       const resFeeRes = await queryDb(`
         SELECT p.id, p.invoice_no, p.title, p.month_name, p.amount, p.fine_amount,
                p.paid_amount, p.currency, p.due_date, p.payment_status,
@@ -308,7 +290,6 @@ export async function GET(request, context) {
         payment_status: row.payment_status
       }));
 
-      // 2. If no residential payment records exist yet, check active hall seat allocation
       if (resDues.length === 0) {
         const allocRes = await queryDb(`
           SELECT a.id, a.fee_monthly, a.allocated_date,
@@ -354,7 +335,6 @@ export async function GET(request, context) {
       dues.residential = resDues;
     }
 
-    // Calculate Summary
     const allDuesList = [
       ...dues.education,
       ...dues.exam,

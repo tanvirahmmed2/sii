@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyStudentClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: List classrooms for this student's class & session
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentClassroomAccess(request, context);

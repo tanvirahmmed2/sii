@@ -61,7 +61,6 @@ export async function GET(request, context) {
       mother_name: rawStudent.mother_name
     };
 
-    // Fetch exams for student's class
     let exams = [];
     try {
       const examsRes = await queryDb(
@@ -77,7 +76,6 @@ export async function GET(request, context) {
         [studentId, website.id, rawStudent.class_id]
       );
 
-      // Fetch class subjects to form default exam schedules
       const subjectsRes = await queryDb(
         `SELECT sub.id, sub.name, sub.code
          FROM website_subjects sub
@@ -89,7 +87,6 @@ export async function GET(request, context) {
       const classSubjects = subjectsRes.rows;
 
       exams = examsRes.rows.map((exam) => {
-        // Admit card is provided if candidate is approved, or admit_card_number exists, or default provided for published exam
         const isProvided = exam.candidate_status === 'approved' || 
                            exam.candidate_status === 'admit_issued' || 
                            Boolean(exam.admit_card_number);
@@ -117,7 +114,7 @@ export async function GET(request, context) {
           end_date: exam.end_date,
           candidate_status: exam.candidate_status || 'not_applied',
           admit_card_number: exam.admit_card_number || `AC-${exam.id}-${rawStudent.registration_no || rawStudent.id}`,
-          isProvided: isProvided || true, // Allow student to download/print admit card for class exams
+          isProvided: isProvided || true, 
           schedules
         };
       });

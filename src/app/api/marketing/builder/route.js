@@ -40,7 +40,6 @@ export async function POST(request) {
     const body = await request.json();
     const { action, portfolioId } = body;
 
-    // 1. Reorder sections
     if (action === 'reorder_sections') {
       const orderedIds = body.orderedSectionIds || [];
       for (let i = 0; i < orderedIds.length; i++) {
@@ -53,7 +52,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, sections: sRes.rows });
     }
 
-    // 2. Add new section
     if (action === 'add_section') {
       const { moduleType = 'HERO', title = 'New Section', contentData = {}, styles = {}, sortOrder = 0 } = body.sectionData || {};
       const res = await queryDb(
@@ -65,7 +63,6 @@ export async function POST(request) {
       return NextResponse.json({ success: true, section: res.rows[0] });
     }
 
-    // 3. Update section content or styles
     if (action === 'update_section') {
       const updates = body.updates || {};
       const fields = [];
@@ -101,13 +98,11 @@ export async function POST(request) {
       return NextResponse.json({ success: true, section: res.rows[0] });
     }
 
-    // 4. Delete section
     if (action === 'delete_section') {
       const res = await queryDb('DELETE FROM portfolio_sections WHERE id = $1 RETURNING *', [body.id]).catch(() => ({ rows: [{ id: body.id }] }));
       return NextResponse.json({ success: true, removed: res.rows[0] });
     }
 
-    // 5. Publish portfolio
     if (action === 'publish_portfolio') {
       const res = await queryDb(
         'UPDATE portfolios SET is_published = $1 WHERE id = $2 RETURNING *',

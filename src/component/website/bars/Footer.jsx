@@ -24,7 +24,6 @@ const Footer = () => {
   const eiin = website?.eiin_number || websiteSettings?.eiin || '';
   const mapUrl = websiteSettings?.map_url || null;
 
-  // Social URLs
   const facebookUrl = website?.facebook_url || websiteSettings?.facebook_url || '';
   const twitterUrl = website?.twitter_url || websiteSettings?.twitter_url || '';
   const instagramUrl = website?.instagram_url || websiteSettings?.instagram_url || '';
@@ -39,7 +38,6 @@ const Footer = () => {
     { name: 'LinkedIn', url: linkedinUrl, icon: FaLinkedinIn },
   ];
 
-  // Secondary brand background color
   const footerBg = secondaryColor || website?.secondary_color || '#CC3A63';
 
   const renderFooterMap = () => {
@@ -81,7 +79,6 @@ const Footer = () => {
       className="w-full text-white/90 border-t border-white/10 transition-colors"
       style={{ backgroundColor: footerBg }}
     >
-      {/* Top Bar: Follow us on */}
       <div className="w-full border-b border-white/10 bg-secondary-dark">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -142,7 +139,6 @@ const Footer = () => {
           )}
         </div>
 
-        {/* Theme Switcher */}
         <div className="flex flex-wrap items-center gap-2 pt-2">
           <button
             type="button"
@@ -155,9 +151,7 @@ const Footer = () => {
         </div>
       </div>
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12 space-y-10 bg-secondary-dark">
-        {/* Top Tier: Institution Profile & Navigation Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Col 1 & 2: Institution Meta */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               About
@@ -179,7 +173,6 @@ const Footer = () => {
 
             </div>
           </div>
-          {/* Col 3: Academic Departments & Admissions */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               Academic Departments
@@ -215,7 +208,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Col 4: Campus Life */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               Campus Life
@@ -245,7 +237,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Col 5: Verification & Portals */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/15 pb-1.5">
               Verification &amp; Portals
@@ -273,14 +264,12 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Middle Tier: Campus Map (if configured) */}
         {mapUrl && (
           <div className="w-full aspect-[21/9] max-h-52 rounded-xl border border-white/15 overflow-hidden bg-black/20 shadow-md">
             {renderFooterMap()}
           </div>
         )}
 
-        {/* Bottom Tier: Copyright & Disclaimers */}
         <div className="pt-6 border-t border-white/15 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/70">
           <p>
             Copyright &copy; {new Date().getFullYear()} {schoolName}. All rights reserved.

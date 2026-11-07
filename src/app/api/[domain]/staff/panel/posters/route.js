@@ -28,8 +28,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET /api/[domain]/staff/panel/posters
-// Returns all posters created by staff for their school website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -39,7 +37,6 @@ export async function GET(request, context) {
 
     const { website } = auth;
 
-    // Fetch existing posters for this website
     const res = await queryDb(
       `SELECT id, website_id, system_template_id, name, description,
               dimension_width, dimension_height, dimension_unit,
@@ -51,7 +48,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // If no posters exist yet for this school, seed a default starter poster automatically
     if (res.rows.length === 0) {
       const starterJSON = generateStarterFabricJSON('poster');
       const defaultName = `${website.name || 'Campus'} Admissions & Event Poster`;
@@ -92,8 +88,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST /api/[domain]/staff/panel/posters
-// Creates a new poster for the school website
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

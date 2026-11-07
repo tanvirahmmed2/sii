@@ -2,11 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword, comparePassword } from 'src/lib/middleware/creator';
 
-/**
- * API Route: /api/creator/profile
- * Dedicated to the `creators` table for profile & security settings.
- */
-
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -54,7 +49,6 @@ export async function handleProfileAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Update Creator Profile
   if (action === 'update_profile' || !action) {
     const res = await queryDb(
       `UPDATE creators 
@@ -83,7 +77,6 @@ export async function handleProfileAction(body, sessionCreator) {
     return NextResponse.json({ success: true, creator: res.rows[0], message: 'Profile updated successfully.' });
   }
 
-  // 2. Change Creator Password
   if (action === 'change_password') {
     const { currentPassword, newPassword } = body;
 
@@ -110,7 +103,6 @@ export async function handleProfileAction(body, sessionCreator) {
     return NextResponse.json({ success: true, message: 'Password updated successfully.' });
   }
 
-  // 3. Toggle 2FA
   if (action === 'toggle_2fa') {
     const enabled = Boolean(body.enabled);
     const res = await queryDb(
@@ -128,7 +120,6 @@ export async function handleProfileAction(body, sessionCreator) {
     });
   }
 
-  // 4. List Active Sessions
   if (action === 'list_sessions') {
     const currentToken = sessionCreator?.token || '';
     const sessionRes = await queryDb(
@@ -142,7 +133,6 @@ export async function handleProfileAction(body, sessionCreator) {
     return NextResponse.json({ success: true, sessionsList: sessionRes.rows || [] });
   }
 
-  // 5. Revoke Single Session
   if (action === 'revoke_session') {
     const { sessionId } = body;
     if (!sessionId) {
@@ -157,7 +147,6 @@ export async function handleProfileAction(body, sessionCreator) {
     return NextResponse.json({ success: true, message: 'Device session logged out successfully.' });
   }
 
-  // 6. Revoke Other Sessions
   if (action === 'revoke_other_sessions') {
     const currentToken = sessionCreator?.token || '';
     await queryDb(

@@ -29,7 +29,6 @@ async function parseClubRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// GET: List clubs with relations, metrics, and search
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -120,7 +119,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryStr, params);
 
-    // Fetch categories and teachers for selection
     const categoriesRes = await queryDb(
       `SELECT id, name, slug FROM website_clubs_category WHERE website_id = $1 AND is_active = true ORDER BY name ASC`,
       [website.id]
@@ -144,7 +142,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new club
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -160,7 +157,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Club name is required.' }, { status: 400 });
     }
 
-    // Check unique name for website
     const existing = await queryDb(
       `SELECT id FROM website_clubs WHERE website_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
       [website.id, name]
@@ -207,7 +203,6 @@ export async function POST(request, context) {
 
     const newClub = insertRes.rows[0];
 
-    // If chat box creation is requested upon club creation
     if (body.create_chat_box === true || body.create_chat_box === 'true') {
       await queryDb(
         `INSERT INTO website_club_chats (website_id, club_id, title, description, created_by_teacher_id)
@@ -233,7 +228,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing club
 export async function PUT(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -260,7 +254,6 @@ export async function PUT(request, context) {
 
     const name = body.name?.trim() || currentClub.name;
 
-    // Check unique name if changed
     if (name.toLowerCase() !== currentClub.name.toLowerCase()) {
       const dupCheck = await queryDb(
         `SELECT id FROM website_clubs WHERE website_id = $1 AND LOWER(name) = LOWER($2) AND id != $3 LIMIT 1`,
@@ -331,7 +324,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a club
 export async function DELETE(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);

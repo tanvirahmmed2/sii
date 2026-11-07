@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession, comparePassword, hashPassword } from 'src/lib/middleware/students.js';
 
-/**
- * GET /api/[domain]/student/profile
- * Retrieves full authenticated student profile with academic, guardian, address, media, and form fields.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -138,10 +134,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/student/profile
- * Updates student profile details, addresses, guardians, media, and security settings.
- */
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -159,7 +151,6 @@ export async function PUT(request, context) {
 
     const body = await request.json().catch(() => ({}));
 
-    // Retrieve current student database record
     const studentRes = await queryDb(
       `SELECT s.id, s.password, s.name, s.number, s.email, i.data AS info_data
        FROM website_students s
@@ -175,7 +166,6 @@ export async function PUT(request, context) {
 
     const currentStudent = studentRes.rows[0];
 
-    // Password Update Verification
     let newHashedPassword = null;
     if (body.new_password) {
       if (!body.current_password) {
@@ -200,7 +190,6 @@ export async function PUT(request, context) {
       newHashedPassword = await hashPassword(body.new_password);
     }
 
-    // Dynamic field scope mapping
     const formFieldsRes = await queryDb(
       `SELECT field_key, target_scope FROM website_form_fields WHERE website_id = $1`,
       [website.id]
@@ -226,7 +215,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // 1. Update Core Students table
     const coreUpdates = ['updated_at = CURRENT_TIMESTAMP'];
     const coreVals = [];
     let idx = 1;
@@ -268,7 +256,6 @@ export async function PUT(request, context) {
       coreVals
     );
 
-    // 2. Upsert website_student_info (Personal & Custom)
     const existingInfoData = currentStudent.info_data || {};
     const updatedInfoData = {
       ...existingInfoData,
@@ -295,7 +282,6 @@ export async function PUT(request, context) {
       [website.id, session.id, JSON.stringify(updatedInfoData)]
     );
 
-    // 3. Upsert website_student_addresses
     const presentAddress = body.present_address?.trim() || body.address?.trim() || null;
     const permanentAddress = body.permanent_address?.trim() || presentAddress || null;
 
@@ -322,7 +308,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // 4. Upsert website_student_guardians
     if (
       body.father_name || body.mother_name || body.guardian_name ||
       body.father_phone || body.mother_phone || body.guardian_phone ||
@@ -356,7 +341,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // 5. Update Profile Image if provided
     const photoUrl = body.photo_url?.trim() || body.image?.trim();
     if (photoUrl) {
       await queryDb(
@@ -367,7 +351,6 @@ export async function PUT(request, context) {
       );
     }
 
-    // 6. Update Signature if provided
     const signatureUrl = body.signature_url?.trim();
     if (signatureUrl) {
       await queryDb(

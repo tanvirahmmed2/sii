@@ -57,7 +57,6 @@ const Navbar = ({ staffUser = null }) => {
   return (
     <nav className="fixed top-0 left-0 right-0 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 md:px-6 z-40 transition-colors">
       <div className="flex items-center gap-3">
-        {/* Mobile Hamburger Menu Toggle */}
         <button
           type="button"
           onClick={() => setAdminSidebar(!adminSidebar)}
@@ -67,7 +66,6 @@ const Navbar = ({ staffUser = null }) => {
           <BiMenu />
         </button>
 
-        {/* Brand / Title */}
         <div className="flex items-center gap-2">
           <Link href="/staff-panel" className="flex items-center gap-2">
             <span className="font-semibold text-slate-900 dark:text-white text-xs sm:text-sm">
@@ -79,7 +77,6 @@ const Navbar = ({ staffUser = null }) => {
 
       <div className="flex items-center gap-2">
 
-        {/* Mode Toggle */}
         <button
           type="button"
           onClick={toggleTheme}
@@ -89,7 +86,6 @@ const Navbar = ({ staffUser = null }) => {
           {isDark ? 'Light' : 'Dark'}
         </button>
 
-        {/* Profile Link */}
         <Link
           href="/staff-panel/staff-profile"
           className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
@@ -97,7 +93,6 @@ const Navbar = ({ staffUser = null }) => {
           {staff ? staff.name : 'Staff Profile'}
         </Link>
 
-        {/* Logout Button */}
         <button
           type="button"
           onClick={handleLogout}

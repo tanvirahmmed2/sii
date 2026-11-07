@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyTeacherClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: List syllabus for classroom
 export async function GET(request, context) {
   try {
     const { params } = context;
@@ -37,7 +36,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add syllabus item
 export async function POST(request, context) {
   try {
     const { params } = context;
@@ -89,7 +87,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update syllabus item
 export async function PUT(request, context) {
   try {
     const { params } = context;
@@ -143,7 +140,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete syllabus item
 export async function DELETE(request, context) {
   try {
     const { params } = context;

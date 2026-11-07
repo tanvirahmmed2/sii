@@ -3,11 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { generateToken } from 'src/lib/utils/random';
 
-/**
- * Helper to fetch complete subscription details by ID or purchase ID
- */
 async function fetchFullSubscription(idNum) {
-  // 1. Try by subscriptions.id first
   let subRes = await queryDb(
     `SELECT s.*,
             pu.id AS purchase_id,
@@ -86,7 +82,6 @@ async function fetchFullSubscription(idNum) {
     [idNum]
   ).catch(() => ({ rows: [] }));
 
-  // 2. If not found by subscriptions.id, try finding where s.purchase_id = idNum OR pu.id = idNum
   if (subRes.rows.length === 0) {
     subRes = await queryDb(
       `SELECT COALESCE(s.id, pu.id) AS id,
@@ -199,11 +194,6 @@ export async function GET(request, { params }) {
     const creatorId = Number(subscription.creator_id);
     const purchaseId = Number(subscription.purchase_id);
 
-    // Parallel fetch related lists:
-    // 1. Payments linked to this purchase or creator
-    // 2. All purchases for this creator
-    // 3. Available packages
-    // 4. Websites owned by this creator
     const [paymentsRes, purchasesRes, packagesRes, websitesRes] = await Promise.all([
       queryDb(
         `SELECT pay.*, 
@@ -256,7 +246,6 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
     ]);
 
-    // Calculate days remaining
     let daysRemaining = 0;
     const periodEnd = subscription.current_period_end || subscription.purchase_period_end;
     if (periodEnd) {
@@ -331,11 +320,6 @@ export async function GET(request, { params }) {
   }
 }
 
-/**
- * POST handler for actions on Subscription:
- * - action: 'renew' (Renew subscription with full payment handling)
- * - action: 'update_status' (Toggle status / cancel_at_period_end)
- */
 export async function POST(request, { params }) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
@@ -357,30 +341,23 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const action = body.action || 'renew';
 
-    // ------------------------------------------------------------------------
-    // ACTION 1: RENEW SUBSCRIPTION (HANDLES PAYMENT & PURCHASE RENEWAL)
-    // ------------------------------------------------------------------------
     if (action === 'renew') {
       const creatorId = Number(currentSub.creator_id);
       const selectedPkgId = Number(body.package_id || currentSub.package_id);
 
-      // Verify Package
       const pkgRes = await queryDb('SELECT * FROM packages WHERE id = $1 LIMIT 1', [selectedPkgId]);
       const pkg = pkgRes.rows[0];
       if (!pkg) {
         return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
       }
 
-      // Calculate Duration and Period Dates
-      // duration_type: 'monthly', 'yearly', 'multiple_months', 'multiple_years', 'custom'
       const durationType = (body.duration_type || 'monthly').toLowerCase();
       const durationMultiplier = Math.max(1, parseInt(body.duration_multiplier, 10) || 1);
-      const extendFrom = body.extend_from || 'period_end'; // 'period_end' or 'now'
+      const extendFrom = body.extend_from || 'period_end'; 
 
       const now = new Date();
       let periodStart = new Date();
 
-      // Check current expiration
       const currentEnd = currentSub.current_period_end || currentSub.purchase_period_end;
       if (extendFrom === 'period_end' && currentEnd && new Date(currentEnd) > now) {
         periodStart = new Date(currentEnd);
@@ -406,13 +383,11 @@ export async function POST(request, { params }) {
         billingCycle = 'custom';
         periodEnd = new Date(body.custom_period_end);
       } else {
-        // default 1 month
         billingCycle = 'monthly';
         monthsSpan = 1;
         periodEnd.setMonth(periodEnd.getMonth() + 1);
       }
 
-      // Amount & Currency
       const currency = (body.currency || 'USD').toUpperCase();
       let calculatedAmount = 0;
 
@@ -437,7 +412,6 @@ export async function POST(request, { params }) {
         }
       }
 
-      // Payment Handling: PAID vs UNPAID
       const isPaid =
         String(body.payment_status || '').toUpperCase() === 'PAID' ||
         Boolean(body.is_paid) === true;
@@ -461,7 +435,6 @@ export async function POST(request, { params }) {
       const paymentStatus = isPaid ? 'successful' : 'pending';
       const subStatus = isPaid ? 'active' : 'past_due';
 
-      // 1. Insert Renewal Purchase Record
       const puRes = await queryDb(
         `INSERT INTO purchases (
           creator_id, website_id, package_id, purchase_code, billing_cycle,
@@ -488,7 +461,6 @@ export async function POST(request, { params }) {
       );
       const newPurchase = puRes.rows[0];
 
-      // 2. Insert Payment Record
       const payRes = await queryDb(
         `INSERT INTO payments (
           purchase_id, creator_id, transaction_id, amount, currency,
@@ -512,7 +484,6 @@ export async function POST(request, { params }) {
       );
       const newPayment = payRes.rows[0];
 
-      // 3. Update or Insert Subscriptions Record
       let updatedSub = null;
       if (currentSub.subscription_table_id || currentSub.id) {
         const actualSubId = currentSub.subscription_table_id || currentSub.id;
@@ -532,7 +503,6 @@ export async function POST(request, { params }) {
         );
         updatedSub = subRes.rows[0];
       } else {
-        // Create subscriptions entry if not existing
         const subRes = await queryDb(
           `INSERT INTO subscriptions (
             creator_id, package_id, website_id, purchase_id, status, billing_cycle,
@@ -556,7 +526,6 @@ export async function POST(request, { params }) {
         updatedSub = subRes.rows[0];
       }
 
-      // 4. Update Website Expiration if website exists and payment is successful
       if (isPaid) {
         if (currentSub.website_id) {
           await queryDb(
@@ -566,7 +535,6 @@ export async function POST(request, { params }) {
             [periodEnd, updatedSub?.id || null, currentSub.website_id]
           ).catch(() => {});
         } else {
-          // Update all websites for this creator
           await queryDb(
             `UPDATE websites
              SET subscription_expires_at = $1, subscription_id = $2, updated_at = CURRENT_TIMESTAMP
@@ -589,9 +557,6 @@ export async function POST(request, { params }) {
       });
     }
 
-    // ------------------------------------------------------------------------
-    // ACTION 2: UPDATE STATUS (ACTIVE, PAST_DUE, CANCELLED, EXPIRED)
-    // ------------------------------------------------------------------------
     if (action === 'update_status') {
       const newStatus = (body.status || '').toLowerCase();
       const validStatuses = ['active', 'trailing', 'past_due', 'cancelled', 'expired'];
@@ -608,7 +573,6 @@ export async function POST(request, { params }) {
         [newStatus, actualSubId]
       );
 
-      // If cancelled or expired, also update website status if appropriate
       if (newStatus === 'expired' && currentSub.website_id) {
         await queryDb(`UPDATE websites SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [currentSub.website_id]).catch(() => {});
       }
@@ -621,9 +585,6 @@ export async function POST(request, { params }) {
       });
     }
 
-    // ------------------------------------------------------------------------
-    // ACTION 3: TOGGLE CANCEL AT PERIOD END
-    // ------------------------------------------------------------------------
     if (action === 'toggle_cancel') {
       const actualSubId = currentSub.subscription_table_id || currentSub.id;
       const res = await queryDb(
@@ -641,9 +602,6 @@ export async function POST(request, { params }) {
       });
     }
 
-    // ------------------------------------------------------------------------
-    // ACTION 4: SETTLE PENDING INVOICE / PAYMENT
-    // ------------------------------------------------------------------------
     if (action === 'settle_payment') {
       const paymentId = Number(body.payment_id);
       if (!paymentId) {
@@ -714,9 +672,6 @@ export async function POST(request, { params }) {
   }
 }
 
-/**
- * PUT handler to update subscription record metadata directly
- */
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
@@ -756,21 +711,16 @@ export async function PUT(request, { params }) {
       );
     }
 
-    // Bidirectional sync for website_id
     if (data.website_id !== undefined) {
       const targetWebsiteId = data.website_id ? Number(data.website_id) : null;
       if (targetWebsiteId) {
-        // Unlink other subscriptions claiming this website
         await queryDb(`UPDATE subscriptions SET website_id = NULL WHERE website_id = $1 AND id != $2`, [targetWebsiteId, actualSubId]).catch(() => {});
-        // Unlink other websites claiming this subscription
         await queryDb(`UPDATE websites SET subscription_id = NULL WHERE subscription_id = $1 AND id != $2`, [actualSubId, targetWebsiteId]).catch(() => {});
-        // Connect website to this subscription
         await queryDb(
           `UPDATE websites SET subscription_id = $1, subscription_expires_at = COALESCE($2, subscription_expires_at), updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
           [actualSubId, data.current_period_end || currentSub.current_period_end, targetWebsiteId]
         ).catch(() => {});
       } else {
-        // Detached website from this subscription
         await queryDb(`UPDATE websites SET subscription_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE subscription_id = $1`, [actualSubId]).catch(() => {});
       }
     } else if (data.current_period_end) {
@@ -795,9 +745,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-/**
- * DELETE handler to remove subscription and linked purchase/payments
- */
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, ['subscriptions', 'creators']);

@@ -5,10 +5,6 @@ import {
   FEE_PURPOSES
 } from 'src/lib/database/paymentGateways.js';
 
-/**
- * GET /api/[domain]/staff/panel/configure/payments/assign
- * Returns all fee task assignments for this tenant.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
@@ -61,10 +57,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST or PUT /api/[domain]/staff/panel/configure/payments/assign
- * Assigns or updates the gateway account routing for a task/purpose (including specific residential hall routing).
- */
 export async function POST(request, context) {
   return handleAssignRoute(request, context);
 }
@@ -135,7 +127,6 @@ async function handleAssignRoute(request, context) {
       return NextResponse.json({ success: false, error: 'Primary gateway account selection is required.' }, { status: 400 });
     }
 
-    // If hostel_id is provided, verify it belongs to this website
     let hostelName = null;
     let finalHostelId = null;
     if (purpose === 'residential_fees' && hostel_id) {
@@ -151,7 +142,6 @@ async function handleAssignRoute(request, context) {
       hostelName = hostelCheck.rows[0].name;
     }
 
-    // Verify gateway_account_id belongs to this website and check currency compatibility
     const accCheck = await queryDb(`
       SELECT a.id, a.account_name, a.gateway_code, a.environment, a.currency, a.is_active,
              g.name AS gateway_name, g.supported_currencies
@@ -169,7 +159,6 @@ async function handleAssignRoute(request, context) {
     const accCurrency = String(primaryAcc.currency || 'BDT').toUpperCase().trim();
     const supportedCurrencies = Array.isArray(primaryAcc.supported_currencies) ? primaryAcc.supported_currencies : ['BDT'];
 
-    // Find default title if not provided
     const purposeMeta = FEE_PURPOSES.find(p => p.code === purpose);
     let defaultTitle = purposeMeta ? purposeMeta.label : purpose;
     if (hostelName) {
@@ -177,7 +166,6 @@ async function handleAssignRoute(request, context) {
     }
     const finalTitle = title ? title.trim() : defaultTitle;
 
-    // Validate gateway currency compatibility with portal currency
     if (!supportedCurrencies.includes(websiteCurrency)) {
       return NextResponse.json({
         success: false,
@@ -192,7 +180,6 @@ async function handleAssignRoute(request, context) {
       }, { status: 400 });
     }
 
-    // If fallback account is specified, verify it too
     if (fallback_gateway_account_id) {
       const fbCheck = await queryDb(`
         SELECT a.id, a.account_name, a.currency, g.supported_currencies
@@ -217,7 +204,6 @@ async function handleAssignRoute(request, context) {
     const finalDesc = description !== undefined ? (description ? description.trim() : null) : (purposeMeta ? purposeMeta.description : null);
     const staffId = auth.user?.id || null;
 
-    // Upsert the purpose routing assignment (matching composite index on website_id, purpose, COALESCE(hostel_id, 0))
     const upsertRes = await queryDb(`
       INSERT INTO website_payment_purpose_assignments (
         website_id, purpose, hostel_id, title, description,

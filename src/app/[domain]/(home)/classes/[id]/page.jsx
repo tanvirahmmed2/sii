@@ -95,7 +95,6 @@ const ClassDetailsPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-6xl mx-auto space-y-8">
 
-        {/* Top bar */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -129,7 +128,6 @@ const ClassDetailsPage = () => {
             className="space-y-8"
           >
             
-            {/* Header Banner */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -176,7 +174,6 @@ const ClassDetailsPage = () => {
               )}
             </div>
 
-            {/* Subjects Roster */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
                 <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
@@ -198,7 +195,6 @@ const ClassDetailsPage = () => {
               )}
             </div>
 
-            {/* Teachers Assigned */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
                 <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">

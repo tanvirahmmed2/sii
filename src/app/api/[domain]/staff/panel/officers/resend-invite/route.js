@@ -4,32 +4,11 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, isGeneralStaff } from 'src/lib/middleware/staff.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 function buildOfficerVerificationUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  const rawCustom = (website?.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  const rawSub = (website?.subdomain || website?.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  const cleanHostNoPort = baseHost.split(':')[0];
-  const parts = cleanHostNoPort.split('.');
-  const baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : cleanHostNoPort;
-  const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-
-  return `${protocol}://${cleanSub}.${baseDomain}${port}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
 }
 
 export async function POST(request, context) {

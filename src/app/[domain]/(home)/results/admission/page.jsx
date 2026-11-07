@@ -55,7 +55,6 @@ function AdmissionResultsContent() {
           setResults(list);
           if (data.circulars) setCirculars(data.circulars);
 
-          // If searching or list has entries, pick the first as individual candidate
           if (searchParam.trim() && list.length > 0) {
             setSelectedCandidate(list[0]);
           } else if (searchParam.trim()) {
@@ -94,7 +93,6 @@ function AdmissionResultsContent() {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
-        {/* Navigation Breadcrumb / Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-2">
             <Link
@@ -120,7 +118,6 @@ function AdmissionResultsContent() {
           </div>
         </div>
 
-        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -138,7 +135,6 @@ function AdmissionResultsContent() {
           </p>
         </motion.div>
 
-        {/* Search Toolbar */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -183,14 +179,12 @@ function AdmissionResultsContent() {
           </form>
         </motion.div>
 
-        {/* Individual Candidate Dossier Card (Always Showing Individual Data) */}
         {selectedCandidate ? (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-slate-900 border border-primary/30 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6"
           >
-            {/* Dossier Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
               <div className="flex items-start sm:items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-2xl shrink-0">
@@ -223,7 +217,6 @@ function AdmissionResultsContent() {
               </div>
             </div>
 
-            {/* Performance Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
                 <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Merit Rank</span>
@@ -254,7 +247,6 @@ function AdmissionResultsContent() {
               </div>
             </div>
 
-            {/* Candidate Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs bg-slate-50/70 dark:bg-slate-800/30 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="space-y-1">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Personal Profile</span>
@@ -306,7 +298,6 @@ function AdmissionResultsContent() {
               </div>
             </div>
 
-            {/* Student Portal Setup Direct Banner */}
             <div className="p-5 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-emerald-900 dark:text-emerald-200">
               <div>
                 <strong className="text-sm font-semibold flex items-center gap-1.5">
@@ -338,7 +329,6 @@ function AdmissionResultsContent() {
           </div>
         ) : null}
 
-        {/* Published Ranking List Table (Click Any Candidate to View Individual Data) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
           <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div>

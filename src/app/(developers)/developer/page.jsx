@@ -7,7 +7,6 @@ import { SITE_NAME } from 'src/lib/database/secret';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
 const ALL_MODULES = [
-  // Workspace & Management
   {
     slug: 'overview',
     label: 'Platform Overview',
@@ -37,7 +36,6 @@ const ALL_MODULES = [
     desc: 'Real-time internal team discussions, channels, and developer chat.',
   },
 
-  // Websites & Audience
   {
     slug: 'websites',
     label: 'Websites',
@@ -74,7 +72,6 @@ const ALL_MODULES = [
     desc: 'Newsletter subscribers and email distribution lists.',
   },
 
-  // Commerce & Billing
   {
     slug: 'packages',
     label: 'Packages',
@@ -111,7 +108,6 @@ const ALL_MODULES = [
     desc: 'Revenue transactions, payment gateway settlements, and invoices.',
   },
 
-  // Content & Resources
   {
     slug: 'blogs',
     label: 'Blogs',
@@ -148,7 +144,6 @@ const ALL_MODULES = [
     desc: 'Frequently asked questions and client troubleshooting entries.',
   },
 
-  // Support & Comms
   {
     slug: 'support',
     label: 'Support Tickets',
@@ -185,7 +180,6 @@ const ALL_MODULES = [
     desc: 'Creator reviews, star ratings moderation, and testimonials.',
   },
 
-  // Meta Channels
   {
     slug: 'facebook-messages',
     label: 'Facebook Messages',
@@ -208,7 +202,6 @@ const ALL_MODULES = [
     desc: 'WhatsApp Business API threads and notifications.',
   },
 
-  // Team & Governance
   {
     slug: 'developers',
     label: 'Developers Team',
@@ -231,7 +224,6 @@ const ALL_MODULES = [
     desc: 'Personal compensation history, pay vouchers, and payment records.',
   },
 
-  // Platform & Settings
   {
     slug: 'modules',
     label: 'Database Modules',
@@ -325,7 +317,6 @@ export default function DeveloperOverviewPage() {
     };
   }, []);
 
-  // Compute allowed modules for this specific developer
   const allowedModules = useMemo(() => {
     const dev = developer || contextUser;
     if (!dev) return [];
@@ -342,7 +333,6 @@ export default function DeveloperOverviewPage() {
     return ALL_MODULES.filter((mod) => isAllowed(mod.slug));
   }, [developer, contextUser]);
 
-  // Filtered allowed modules based on search query
   const filteredModules = useMemo(() => {
     if (!searchQuery.trim()) return allowedModules;
     const q = searchQuery.toLowerCase().trim();
@@ -421,7 +411,6 @@ export default function DeveloperOverviewPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Developer Profile Header Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
@@ -468,7 +457,6 @@ export default function DeveloperOverviewPage() {
           </div>
         </div>
 
-        {/* High-density developer contact / metadata row */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-xs text-slate-600 dark:text-slate-400">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>
@@ -514,7 +502,6 @@ export default function DeveloperOverviewPage() {
         </div>
       </div>
 
-      {/* Developer Data / Metrics Boxes Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {developerDataCards.map((card, idx) => (
           <div
@@ -534,7 +521,6 @@ export default function DeveloperOverviewPage() {
         ))}
       </div>
 
-      {/* Allowed Module Grids and Boxes */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -549,7 +535,6 @@ export default function DeveloperOverviewPage() {
             </p>
           </div>
 
-          {/* Quick Search */}
           <div className="w-full sm:w-60">
             <input
               type="text"
@@ -561,7 +546,6 @@ export default function DeveloperOverviewPage() {
           </div>
         </div>
 
-        {/* Allowed Modules Grid Boxes */}
         {filteredModules.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filteredModules.map((item) => (

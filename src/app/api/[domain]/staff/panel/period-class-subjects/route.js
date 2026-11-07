@@ -22,7 +22,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List routine timetable allocations
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -102,7 +101,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Allocate class subject to period
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -122,7 +120,6 @@ export async function POST(request, context) {
       room_number = ''
     } = body;
 
-    // Smart resolve: if period_id is missing but day_id and period_name are provided, lookup or create period
     if (!period_id && day_id && period_name) {
       const existingPeriod = await queryDb(
         `SELECT id FROM website_periods WHERE website_id = $1 AND day_id = $2 AND LOWER(name) = LOWER($3) LIMIT 1`,
@@ -153,7 +150,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Both Period and Class Subject are required.' }, { status: 400 });
     }
 
-    // Verify period and class_subject belong to tenant
     const verifyPeriod = await queryDb(
       `SELECT id FROM website_periods WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [period_id, auth.website.id]
@@ -196,7 +192,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update routine allocation
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -245,7 +240,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove routine allocation
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

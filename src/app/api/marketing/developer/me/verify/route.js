@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET: Direct verification link handler from email
- * Example: /api/marketing/developer/me/verify?token=...&email=...
- */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -43,7 +39,6 @@ export async function GET(request) {
 
     const dev = devRes.rows[0];
 
-    // Check expiration
     const expiry = dev.verification_token_expires || dev.two_factor_expires;
     if (expiry && new Date(expiry) < new Date()) {
       return NextResponse.redirect(
@@ -51,7 +46,6 @@ export async function GET(request) {
       );
     }
 
-    // Mark verified
     await queryDb(
       `UPDATE developers 
        SET email_verified = TRUE,
@@ -76,10 +70,6 @@ export async function GET(request) {
   }
 }
 
-/**
- * POST: API verification handler (called from frontend verify form)
- * Accepts { token, email } or { code, email }
- */
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -110,7 +100,6 @@ export async function POST(request) {
     );
 
     if (devRes.rows.length === 0) {
-      // Check if already verified
       if (email) {
         const checkEmail = await queryDb(
           `SELECT id, email_verified FROM developers WHERE LOWER(email) = $1 LIMIT 1`,
@@ -134,7 +123,6 @@ export async function POST(request) {
 
     const dev = devRes.rows[0];
 
-    // Check expiration
     const expiry = dev.verification_token_expires || dev.two_factor_expires;
     if (expiry && new Date(expiry) < new Date()) {
       return NextResponse.json(
@@ -143,7 +131,6 @@ export async function POST(request) {
       );
     }
 
-    // Mark verified and active
     await queryDb(
       `UPDATE developers 
        SET email_verified = TRUE,

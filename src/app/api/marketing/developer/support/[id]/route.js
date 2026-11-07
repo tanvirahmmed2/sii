@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET SINGLE SUPPORT TICKET & THREAD (Developer)
 export async function GET(request, context) {
   try {
     const auth = await hasModulePermission(request, 'support');
@@ -44,7 +43,6 @@ export async function GET(request, context) {
 
     const ticket = ticketRes.rows[0];
 
-    // Fetch messages
     const messagesRes = await queryDb(`
       SELECT 
         m.id,
@@ -69,7 +67,6 @@ export async function GET(request, context) {
       ORDER BY m.created_at ASC
     `, [ticket.id]);
 
-    // Fetch images joined through support_messages
     const imagesRes = await queryDb(`
       SELECT si.*, sm.support_id 
       FROM support_images si
@@ -89,7 +86,6 @@ export async function GET(request, context) {
       images: imagesByMessage[m.id] || [],
     }));
 
-    // Fetch staff developers for assignment dropdown
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name 
       FROM developers d
@@ -112,7 +108,6 @@ export async function GET(request, context) {
   }
 }
 
-// UPDATE TICKET (Status, Priority, Assignment)
 export async function PUT(request, context) {
   try {
     const auth = await hasModulePermission(request, 'support');
@@ -160,7 +155,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE TICKET
 export async function DELETE(request, context) {
   try {
     const auth = await hasModulePermission(request, 'support');

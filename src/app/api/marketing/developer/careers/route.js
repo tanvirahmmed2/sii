@@ -12,9 +12,6 @@ function generateSlug(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// ============================================================================
-// GET: List all careers with application metrics for developer panel
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -27,7 +24,7 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || ''; // 'active', 'draft', or ''
+    const status = searchParams.get('status') || ''; 
 
     const conditions = [];
     const params = [];
@@ -72,7 +69,6 @@ export async function GET(request) {
 
     const res = await queryDb(query, params);
 
-    // Global stats
     const statsRes = await queryDb(`
       SELECT 
         (SELECT COUNT(*)::int FROM career) AS total_jobs,
@@ -98,9 +94,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new career job post
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -150,7 +143,6 @@ export async function POST(request) {
       );
     }
 
-    // Generate unique slug
     let baseSlug = body.slug ? generateSlug(body.slug) : generateSlug(title);
     if (!baseSlug) baseSlug = 'job-opening';
 

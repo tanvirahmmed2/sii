@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyStaffClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: List all classrooms for this tenant website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffClassroomAccess(request, context, 'view');
@@ -55,7 +54,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new classroom
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffClassroomAccess(request, context, 'create');
@@ -73,7 +71,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Check if classroom already exists for this class and session
     const existing = await query(
       `SELECT id FROM website_classrooms 
        WHERE website_id = $1 AND class_id = $2 AND session_id = $3 LIMIT 1`,
@@ -117,7 +114,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update classroom
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffClassroomAccess(request, context, 'edit');
@@ -166,7 +162,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove classroom
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffClassroomAccess(request, context, 'delete');

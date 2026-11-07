@@ -80,7 +80,6 @@ export default function AdmissionPortalPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors max-w-6xl mx-auto overflow-hidden">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -127,7 +126,6 @@ export default function AdmissionPortalPage() {
         </div>
       </motion.div>
 
-      {/* Search and Filters */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex flex-1 items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1">
@@ -172,7 +170,6 @@ export default function AdmissionPortalPage() {
         </div>
       </div>
 
-      {/* Admission Circulars List View */}
       <div className="space-y-6">
         {loading ? (
           <div className="space-y-4">
@@ -202,25 +199,20 @@ export default function AdmissionPortalPage() {
                   key={circ.id}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col space-y-5"
                 >
-                  {/* Top Header: Badges & Status */}
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      {/* Selection Method Badge */}
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">
                         {isExam ? 'Exam Based Admission' : isMerit ? 'Merit Based (GPA)' : 'Direct Review'}
                       </span>
 
-                      {/* Class Badge */}
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
                         {circ.class_name || 'All Classes'}
                       </span>
 
-                      {/* Academic Session */}
                       <span className="text-xs text-slate-500 font-mono">
                         Session: <strong>{circ.session_name || '2026-2027'}</strong>
                       </span>
 
-                      {/* Department */}
                       {circ.department_name && (
                         <span className="text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                           {circ.department_name}
@@ -228,7 +220,6 @@ export default function AdmissionPortalPage() {
                       )}
                     </div>
 
-                    {/* Status Badge */}
                     <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -245,16 +236,13 @@ export default function AdmissionPortalPage() {
                     </div>
                   </div>
 
-                  {/* Circular Title */}
                   <div>
                     <h2 className="font-serif text-lg sm:text-xl font-semibold text-slate-900 dark:text-white leading-tight">
                       {circ.title}
                     </h2>
                   </div>
 
-                  {/* Key Meta Specifications Bar */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-3.5 px-4 bg-slate-50/80 dark:bg-slate-850/60 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs">
-                    {/* Application Window */}
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1">
                         <FiCalendar className="w-3 h-3 text-primary" /> Application Deadline
@@ -267,7 +255,6 @@ export default function AdmissionPortalPage() {
                       </span>
                     </div>
 
-                    {/* Capacity & Age */}
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1">
                         <FiUsers className="w-3 h-3 text-primary" /> Seats &amp; Age
@@ -280,7 +267,6 @@ export default function AdmissionPortalPage() {
                       </span>
                     </div>
 
-                    {/* Exam or Merit Schedule */}
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1">
                         <FiClock className="w-3 h-3 text-primary" /> {isExam ? 'Exam Date' : 'Results Published'}
@@ -299,7 +285,6 @@ export default function AdmissionPortalPage() {
                       )}
                     </div>
 
-                    {/* Prerequisites */}
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1">
                         <FiAward className="w-3 h-3 text-primary" /> Prerequisite
@@ -317,9 +302,7 @@ export default function AdmissionPortalPage() {
                     </div>
                   </div>
 
-                  {/* Actions & Fee Row */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-2">
-                    {/* Fee Display */}
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs text-slate-400 font-medium">Application Fee:</span>
                       <span className="text-lg font-bold font-mono text-slate-900 dark:text-white">
@@ -330,9 +313,7 @@ export default function AdmissionPortalPage() {
                       </span>
                     </div>
 
-                    {/* Action Buttons: Show Description & Apply */}
                     <div className="flex items-center gap-3">
-                      {/* Show / Hide Description Toggle Button */}
                       <button
                         type="button"
                         onClick={() => toggleDescription(circ.id)}
@@ -355,7 +336,6 @@ export default function AdmissionPortalPage() {
                         )}
                       </button>
 
-                      {/* Direct Apply Button */}
                       <Link
                         href={tenantUrl(`/admission/apply?admission_id=${circ.id}`)}
                         className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow-md hover:shadow-primary/20 transition-all hover:-translate-y-0.5"
@@ -366,7 +346,6 @@ export default function AdmissionPortalPage() {
                     </div>
                   </div>
 
-                  {/* Expandable Description Section - Hidden by default */}
                   {isExpanded && (
                     <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800 space-y-4 transition-all">
                       <div className="flex items-center justify-between">
@@ -377,7 +356,6 @@ export default function AdmissionPortalPage() {
                         <span className="text-[10px] text-slate-400 font-mono">Tiptap Formatted</span>
                       </div>
 
-                      {/* Rich Text HTML Rendering */}
                       {circ.description ? (
                         <div
                           className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-relaxed [&_p]:mb-2.5 [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mb-2 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:mb-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2.5 [&_li]:mb-1 [&_strong]:font-bold [&_strong]:text-slate-900 dark:[&_strong]:text-white [&_a]:text-primary [&_a]:underline bg-slate-50/70 dark:bg-slate-950/60 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-inner"
@@ -390,7 +368,6 @@ export default function AdmissionPortalPage() {
                         </div>
                       )}
 
-                      {/* Exam Schedule & Subjects Breakdown if Exam-based */}
                       {isExam && (
                         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 space-y-3">
                           <div className="flex items-center justify-between">

@@ -17,7 +17,6 @@ export default function StudentIDCardIssuer() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Default expiry date
   const [idCardExpiry, setIdCardExpiry] = useState(`${new Date().getFullYear()}-12-31`);
   const [submitting, setSubmitting] = useState(false);
 
@@ -67,7 +66,6 @@ export default function StudentIDCardIssuer() {
     }
   };
 
-  // Issue / Update ID Cards
   const handleIssueIDCards = async (overrideIds = null) => {
     const targetIds = overrideIds || selectedStudentIds;
     if (targetIds.length === 0) {
@@ -105,7 +103,6 @@ export default function StudentIDCardIssuer() {
     }
   };
 
-  // Revoke / Remove ID Cards
   const handleRemoveIDCards = async (overrideIds = null) => {
     const targetIds = overrideIds || selectedStudentIds;
     if (targetIds.length === 0) {
@@ -137,7 +134,6 @@ export default function StudentIDCardIssuer() {
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-6xl mx-auto pb-20 animate-fade-up">
-      {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-2xs">
         <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold uppercase tracking-wider mb-1">
           <FiCreditCard /> Document Issuance
@@ -148,10 +144,8 @@ export default function StudentIDCardIssuer() {
         </p>
       </div>
 
-      {/* Filter & Date Controls */}
       <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto flex-1">
-          {/* Class Filter */}
           <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 text-xs font-bold text-slate-700">
             <FiFilter className="text-indigo-600" />
             <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}
@@ -163,7 +157,6 @@ export default function StudentIDCardIssuer() {
             </select>
           </div>
 
-          {/* Search Box */}
           <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px]">
             <input type="text" placeholder="Search student name, roll..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-slate-200 rounded-xl px-3 py-2 pl-8 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30" />
@@ -171,7 +164,6 @@ export default function StudentIDCardIssuer() {
           </form>
         </div>
 
-        {/* Expiry Date */}
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs font-bold text-slate-500">Expiry Date:</span>
           <input type="date" value={idCardExpiry} onChange={(e) => setIdCardExpiry(e.target.value)}
@@ -179,7 +171,6 @@ export default function StudentIDCardIssuer() {
         </div>
       </div>
 
-      {/* Clean Table View */}
       <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-2xs">
         {loading ? (
           <div className="py-16 flex justify-center items-center">
@@ -268,7 +259,6 @@ export default function StudentIDCardIssuer() {
         )}
       </div>
 
-      {/* Floating Action Bar when students are selected */}
       {selectedStudentIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl z-50 flex items-center gap-4 animate-bounce-short border border-slate-700">
           <span className="text-xs font-bold text-slate-300">

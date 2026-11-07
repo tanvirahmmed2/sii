@@ -127,7 +127,6 @@ export default function CareersPage() {
         </div>
       </div>
 
-      {/* Culture & Perks Grid */}
       <div id="culture" className="max-w-6xl mx-auto space-y-8 scroll-mt-24">
         <div className="text-center max-w-2xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
@@ -161,7 +160,6 @@ export default function CareersPage() {
         </div>
       </div>
 
-      {/* Job Openings Section */}
       <div id="openings" className="max-w-6xl mx-auto space-y-6 scroll-mt-24">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div>
@@ -177,9 +175,7 @@ export default function CareersPage() {
           </span>
         </div>
 
-        {/* Filter Toolbar */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-3">
-          {/* Search Input */}
           <div className="relative">
             <BiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
             <input
@@ -191,7 +187,6 @@ export default function CareersPage() {
             />
           </div>
 
-          {/* Department Pills */}
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-1">
               Department:
@@ -223,7 +218,6 @@ export default function CareersPage() {
             ))}
           </div>
 
-          {/* Type & Workplace filters */}
           <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -275,7 +269,6 @@ export default function CareersPage() {
           </div>
         </div>
 
-        {/* Listings Grid */}
         {loading ? (
           <LoadingScreen fullScreen={false} label="Loading open positions..." />
         ) : filteredCareers.length === 0 ? (
@@ -297,7 +290,6 @@ export default function CareersPage() {
                 key={job.id}
                 className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 shadow-xs hover:shadow-md transition-all p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 group"
               >
-                {/* Details */}
                 <div className="space-y-3 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
@@ -343,7 +335,6 @@ export default function CareersPage() {
                   </div>
                 </div>
 
-                {/* CTA */}
                 <div className="shrink-0 pt-2 md:pt-0">
                   <Link
                     href={`/careers/${job.slug}`}

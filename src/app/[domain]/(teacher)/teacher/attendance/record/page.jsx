@@ -20,7 +20,6 @@ const STATUS_CONFIG = {
 
 const ALL_STATUSES = ['Present', 'Absent', 'Late', 'On Leave'];
 
-// ── Status badge ─────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Present;
   return (
@@ -30,7 +29,6 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// ── Status toggle buttons ─────────────────────────────────────────────────────
 const StatusToggle = ({ value, onChange }) => (
   <div className="flex gap-1">
     {ALL_STATUSES.map((st) => (
@@ -50,11 +48,9 @@ const StatusToggle = ({ value, onChange }) => (
   </div>
 );
 
-// ── Main page ─────────────────────────────────────────────────────────────────
 const AttendanceRecordPage = () => {
-  const [tab, setTab] = useState('manual'); // 'manual' | 'sheet'
+  const [tab, setTab] = useState('manual'); 
 
-  // Shared selectors
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [dayName, setDayName] = useState('');
   const [assignments, setAssignments] = useState([]);
@@ -65,18 +61,15 @@ const AttendanceRecordPage = () => {
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
   const [dropdownError, setDropdownError] = useState('');
 
-  // Manual mode state
   const [studentRows, setStudentRows] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Sheet mode state
   const [parsedRecords, setParsedRecords] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [sheetSaving, setSheetSaving] = useState(false);
   const fileInputRef = useRef(null);
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
   const selectedClassObj = classOptions.find((c) => c.key === selectedClassKey) || null;
   const subjectsForClass = assignments.filter((a) => {
     const key = `${a.class_id}|${a.section_id ?? 'null'}`;
@@ -84,7 +77,6 @@ const AttendanceRecordPage = () => {
   });
   const canProceed = selectedClassObj && selectedPeriodId && date;
 
-  // ── Date change ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!date) { setDayName(''); resetSelections(); return; }
     const [y, m, d] = date.split('-').map(Number);
@@ -93,7 +85,6 @@ const AttendanceRecordPage = () => {
     fetchDropdowns(date);
   }, [date]);
 
-  // ── Class options ────────────────────────────────────────────────────────────
   useEffect(() => {
     const seen = new Set();
     const opts = [];
@@ -133,7 +124,6 @@ const AttendanceRecordPage = () => {
     finally { setLoadingDropdowns(false); }
   };
 
-  // ── Load students for manual mode when class/period selected ─────────────────
   useEffect(() => {
     if (!selectedClassObj) { setStudentRows([]); return; }
     loadStudents();
@@ -158,7 +148,6 @@ const AttendanceRecordPage = () => {
     finally { setLoadingStudents(false); }
   };
 
-  // ── Update single student status ──────────────────────────────────────────────
   const updateStatus = (idx, newStatus) => {
     setStudentRows((prev) => {
       const updated = [...prev];
@@ -167,12 +156,10 @@ const AttendanceRecordPage = () => {
     });
   };
 
-  // ── Bulk toggle: set all to same status ───────────────────────────────────────
   const setAllStatuses = (status) => {
     setStudentRows((prev) => prev.map((r) => ({ ...r, status })));
   };
 
-  // ── Save manual attendance ────────────────────────────────────────────────────
   const handleSaveManual = async () => {
     if (!canProceed) { toast.error('Select date, class and period first.'); return; }
     if (studentRows.length === 0) { toast.error('No students loaded.'); return; }
@@ -206,7 +193,6 @@ const AttendanceRecordPage = () => {
     finally { setSaving(false); }
   };
 
-  // ── Download XLSX template ────────────────────────────────────────────────────
   const handleDownloadTemplate = async () => {
     if (!canProceed) { toast.error('Select date, class and period first.'); return; }
     try {
@@ -230,7 +216,6 @@ const AttendanceRecordPage = () => {
     } catch { toast.error('Failed to download template.'); }
   };
 
-  // ── Parse uploaded XLSX/CSV ───────────────────────────────────────────────────
   const processFile = (file) => {
     if (!file) return;
     setUploading(true);
@@ -281,7 +266,6 @@ const AttendanceRecordPage = () => {
     reader.readAsArrayBuffer(file);
   };
 
-  // ── Save sheet-parsed records ─────────────────────────────────────────────────
   const handleSaveSheet = async () => {
     if (!canProceed) { toast.error('Select date, class and period first.'); return; }
     if (parsedRecords.length === 0) { toast.error('Upload an XLSX sheet first.'); return; }
@@ -313,11 +297,9 @@ const AttendanceRecordPage = () => {
     finally { setSheetSaving(false); }
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="w-full space-y-5">
 
-      {/* Back Link & Header */}
       <div className="flex flex-col gap-2 pb-3 border-b border-slate-200">
         <Link href="/teacher/attendance" className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-primary">
           <FiArrowLeft className="text-xs" /> Back to Attendance Sheet
@@ -330,7 +312,6 @@ const AttendanceRecordPage = () => {
         </div>
       </div>
 
-      {/* Tab Switcher */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
         {[{ id: 'manual', label: 'Manual Entry' }, { id: 'sheet', label: 'Sheet Upload' }].map((t) => (
           <button
@@ -345,7 +326,6 @@ const AttendanceRecordPage = () => {
         ))}
       </div>
 
-      {/* Shared Control Bar: Date + Class + Period */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
 
@@ -407,10 +387,8 @@ const AttendanceRecordPage = () => {
 
       {dropdownError && <p className="text-xs text-rose-500 font-medium px-1">{dropdownError}</p>}
 
-      {/* ─────────────────── MANUAL TAB ─────────────────── */}
       {tab === 'manual' && (
         <>
-          {/* Actions */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 font-medium">Set all:</span>
@@ -482,10 +460,8 @@ const AttendanceRecordPage = () => {
         </>
       )}
 
-      {/* ─────────────────── SHEET TAB ─────────────────── */}
       {tab === 'sheet' && (
         <>
-          {/* Actions */}
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
             <button
               onClick={handleDownloadTemplate}

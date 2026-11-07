@@ -43,8 +43,6 @@ const DepartmentDetailPage = () => {
             setDepartment(dept);
             setImageError(false);
 
-            // Canonical slug redirect: if user accessed via [id] (e.g. /departments/3),
-            // replace URL with the canonical [slug] (e.g. /departments/electrical-electronics-engineering)
             if (dept.slug && String(rawIdentifier).toLowerCase() !== String(dept.slug).toLowerCase()) {
               router.replace(tenantUrl(`/departments/${dept.slug}`));
             }
@@ -68,7 +66,6 @@ const DepartmentDetailPage = () => {
   const deptHead = department?.dept_head;
   const descriptionHtml = department?.description || department?.detailed_description || '';
 
-  // Get head initials if image not present
   const headInitials = deptHead?.name
     ? deptHead.name
         .split(' ')
@@ -83,7 +80,6 @@ const DepartmentDetailPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="w-full max-w-5xl mx-auto space-y-6">
 
-        {/* Top Breadcrumbs & Department Tag */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -121,17 +117,12 @@ const DepartmentDetailPage = () => {
             className="space-y-6"
           >
 
-            {/* ========================================================================= */}
-            {/* DEPARTMENT HEAD PROFILE CARD (image, name, designation, title)           */}
-            {/* ========================================================================= */}
             {deptHead ? (
               <div className="w-full bg-linear-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-slate-700/80 shadow-2xl overflow-hidden relative">
-                {/* Background ambient lighting */}
                 <div className="absolute top-0 right-0 -mt-12 -mr-12 w-80 h-80 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-64 h-64 rounded-full bg-secondary/15 blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 sm:gap-8">
-                  {/* Head Profile Image & Status Pill */}
                   <div className="shrink-0 flex flex-col items-center">
                     <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-slate-800 flex items-center justify-center ring-4 ring-white/5">
                       {deptHead.image && !imageError ? (
@@ -161,10 +152,8 @@ const DepartmentDetailPage = () => {
                     </div>
                   </div>
 
-                  {/* Profile Details */}
                   <div className="flex-1 text-center md:text-left space-y-3.5 min-w-0">
                     <div>
-                      {/* Designation and Title badges */}
                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1.5">
                         {deptHead.designation && (
                           <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary-light border border-primary/30">
@@ -178,13 +167,11 @@ const DepartmentDetailPage = () => {
                         )}
                       </div>
 
-                      {/* Head Name */}
                       <h2 className="text-2xl sm:text-3xl font-serif font-normal tracking-tight text-white">
                         {deptHead.name}
                       </h2>
                     </div>
 
-                    {/* Department Head's Welcome Note / Message */}
                     {deptHead.message ? (
                       <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs sm:text-sm text-slate-200 leading-relaxed italic relative">
                         <FiMessageSquare className="w-4 h-4 text-primary-light mb-1.5 opacity-80" />
@@ -201,7 +188,6 @@ const DepartmentDetailPage = () => {
                       </p>
                     )}
 
-                    {/* Contact & Tenure Credentials */}
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-1 text-xs text-slate-300 border-t border-white/10">
                       {deptHead.email && (
                         <a
@@ -238,7 +224,6 @@ const DepartmentDetailPage = () => {
                 </div>
               </div>
             ) : (
-              /* Fallback when no department head is configured */
               <div className="w-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                   <FiUser className="w-6 h-6" />
@@ -254,12 +239,8 @@ const DepartmentDetailPage = () => {
               </div>
             )}
 
-            {/* ========================================================================= */}
-            {/* DEPARTMENT OVERVIEW & DANGEROUSLY RENDERED DESCRIPTION                   */}
-            {/* ========================================================================= */}
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
               
-              {/* Header Badges & Discipline Meta */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                 <div className="flex items-center gap-2">
                   {department.code && (
@@ -287,7 +268,6 @@ const DepartmentDetailPage = () => {
                 )}
               </div>
 
-              {/* Title and Motto */}
               <div>
                 <h1 className="text-3xl sm:text-4xl font-serif font-normal text-slate-900 dark:text-white tracking-tight">
                   {department.name}
@@ -299,7 +279,6 @@ const DepartmentDetailPage = () => {
                 )}
               </div>
 
-              {/* Department Summary Scope Box */}
               {department.summary && (
                 <div className="p-5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed space-y-1">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-primary block">
@@ -309,7 +288,6 @@ const DepartmentDetailPage = () => {
                 </div>
               )}
 
-              {/* DANGEROUSLY RENDERED DESCRIPTION (HTML content) */}
               {descriptionHtml ? (
                 <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div
@@ -334,7 +312,6 @@ const DepartmentDetailPage = () => {
               )}
             </div>
 
-            {/* Department Faculty Members (if any exist) */}
             {department.teachers && department.teachers.length > 0 && (
               <div className="bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -385,7 +362,6 @@ const DepartmentDetailPage = () => {
               </div>
             )}
 
-            {/* Bottom Inquiries CTA */}
             <div className="bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
               <div className="space-y-1.5 text-center md:text-left">
                 <h3 className="text-base sm:text-lg font-serif font-medium text-slate-900 dark:text-white">

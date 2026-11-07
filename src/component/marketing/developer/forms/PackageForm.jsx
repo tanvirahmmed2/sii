@@ -59,7 +59,7 @@ export default function PackageForm({
   const [controlModules, setControlModules] = useState([]);
   const [selectedHomeIds, setSelectedHomeIds] = useState([]);
   const [selectedControlIds, setSelectedControlIds] = useState([]);
-  const [activeModuleTab, setActiveModuleTab] = useState('control'); // 'control' | 'home'
+  const [activeModuleTab, setActiveModuleTab] = useState('control'); 
   const [loadingModules, setLoadingModules] = useState(true);
   const [homeSearch, setHomeSearch] = useState('');
   const [controlSearch, setControlSearch] = useState('');
@@ -67,7 +67,6 @@ export default function PackageForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch available Home and Control Modules
   useEffect(() => {
     let isMounted = true;
     setLoadingModules(true);
@@ -95,7 +94,6 @@ export default function PackageForm({
     };
   }, []);
 
-  // Sync initial module assignments
   useEffect(() => {
     if (initialData) {
       if (Array.isArray(initialData.home_module_ids)) {
@@ -110,7 +108,6 @@ export default function PackageForm({
         setSelectedControlIds(initialData.control_modules.map((m) => Number(m.id || m)).filter(Boolean));
       }
     } else if (!isEditing) {
-      // Default new package: select all active modules
       if (homeModules.length > 0 && selectedHomeIds.length === 0) {
         setSelectedHomeIds(homeModules.filter((m) => m.is_active).map((m) => Number(m.id)));
       }
@@ -269,7 +266,6 @@ export default function PackageForm({
 
   return (
     <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">
-      {/* Form Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -299,7 +295,6 @@ export default function PackageForm({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 1. BASIC INFORMATION & SHORT DESCRIPTION */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -342,7 +337,6 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 2. DUAL-CURRENCY PRICING CONFIGURATION (USD & BDT) */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
             <div>
@@ -369,7 +363,6 @@ export default function PackageForm({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* USD Monthly */}
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -392,7 +385,6 @@ export default function PackageForm({
               <p className="text-[10px] text-slate-400 mt-1">Dollar rate per month</p>
             </div>
 
-            {/* USD Yearly */}
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -415,7 +407,6 @@ export default function PackageForm({
               <p className="text-[10px] text-slate-400 mt-1">Annual dollar billing</p>
             </div>
 
-            {/* BDT Monthly */}
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -438,7 +429,6 @@ export default function PackageForm({
               <p className="text-[10px] text-slate-400 mt-1">Taka rate per month</p>
             </div>
 
-            {/* BDT Yearly */}
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -463,7 +453,6 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 3. INSTITUTION CAPACITY & QUOTAS (NO MAX WEBSITES) */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -538,7 +527,6 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 4. PLATFORM PANELS & CUSTOM DOMAIN ENTITLEMENTS */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -603,7 +591,6 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 5. LINKED HOME & CONTROL MODULES (TWO SEPARATE TABS / SECTIONS) */}
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-700">
             <div>
@@ -615,7 +602,6 @@ export default function PackageForm({
               </p>
             </div>
 
-            {/* Tab switchers */}
             <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
@@ -642,7 +628,6 @@ export default function PackageForm({
             </div>
           </div>
 
-          {/* TAB 1: CONTROL MODULES */}
           {activeModuleTab === 'control' && (
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -731,7 +716,6 @@ export default function PackageForm({
             </div>
           )}
 
-          {/* TAB 2: HOME MODULES */}
           {activeModuleTab === 'home' && (
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -807,7 +791,6 @@ export default function PackageForm({
           )}
         </div>
 
-        {/* 6. EXTENDED DESCRIPTION, GRACE PERIOD & METADATA */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2 space-y-1">
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -894,7 +877,6 @@ export default function PackageForm({
           </div>
         </div>
 
-        {/* 7. ACTION BUTTONS */}
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
           {onCancel && (
             <button

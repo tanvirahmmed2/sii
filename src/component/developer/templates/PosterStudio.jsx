@@ -40,11 +40,10 @@ export default function PosterStudio({ initialTemplate, onSave, onExitUrl = '/de
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [canvasBg, setCanvasBg] = useState('#0f172a');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 1080);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 1080);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'px');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
 
   const [templateName, setTemplateName] = useState(initialTemplate?.name || 'Campus Event Promotional Poster');
   const [description, setDescription] = useState(initialTemplate?.description || '');
@@ -330,7 +329,6 @@ export default function PosterStudio({ initialTemplate, onSave, onExitUrl = '/de
         </div>
       </header>
 
-      {/* Manual Dimensions Bar */}
       <div className="min-h-9 bg-slate-900/70 border-b border-slate-800/80 px-3 py-1 flex items-center justify-between text-xs text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-none gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <span className="text-[11px] font-semibold text-slate-300">Dimensions:</span>
@@ -515,7 +513,6 @@ export default function PosterStudio({ initialTemplate, onSave, onExitUrl = '/de
         </aside>
       </div>
 
-      {/* Mobile Navigation Tab Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

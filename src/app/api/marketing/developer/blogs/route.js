@@ -115,14 +115,9 @@ async function getFullBlog(blogId) {
   return res.rows[0] || null;
 }
 
-/**
- * Synchronize images for a blog: handles newly uploaded files,
- * library selections, order/primary updates, and deletions.
- */
 async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
   const newUploaded = [];
 
-  // 1. Upload new image files
   if (Array.isArray(newFiles) && newFiles.length > 0) {
     for (const file of newFiles) {
       if (file && typeof file === 'object' && typeof file.arrayBuffer === 'function' && file.size > 0) {
@@ -143,7 +138,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
     }
   }
 
-  // 2. If existingImages array was provided, sync with current database records
   if (Array.isArray(existingImages)) {
     const curRowsRes = await queryDb('SELECT * FROM blog_images WHERE blog_id = $1', [blogId]);
     const curRows = curRowsRes.rows;
@@ -154,7 +148,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
         .filter(Boolean)
     );
 
-    // Delete any currently stored images that are omitted from existingImages
     for (const cur of curRows) {
       if (!keepIds.has(String(cur.id))) {
         await queryDb('DELETE FROM blog_images WHERE id = $1', [cur.id]);
@@ -166,7 +159,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
       }
     }
 
-    // Update kept images or stage new library items
     for (let i = 0; i < existingImages.length; i++) {
       const item = existingImages[i];
       if (item && item.id) {
@@ -179,7 +171,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
           [Boolean(item.is_primary), item.caption || null, item.display_order ?? i, item.id, blogId]
         );
       } else if (item && item.image && !item.id) {
-        // Fresh image object added from Cloudinary library
         newUploaded.push({
           image: item.image || item.secure_url,
           image_id: item.image_id || item.public_id || null,
@@ -191,7 +182,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
     }
   }
 
-  // 3. Insert newly uploaded or added images
   for (let i = 0; i < newUploaded.length; i++) {
     const img = newUploaded[i];
     await queryDb(
@@ -201,7 +191,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
     );
   }
 
-  // 4. Ensure at least one image is primary if images exist
   const checkCurrent = await queryDb(
     'SELECT id, is_primary FROM blog_images WHERE blog_id = $1 ORDER BY is_primary DESC, display_order ASC, id ASC',
     [blogId]
@@ -214,9 +203,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
   }
 }
 
-// ============================================================================
-// GET: List blogs or get single blog by ID / slug
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -232,7 +218,6 @@ export async function GET(request) {
     const category = searchParams.get('category');
     const listCloudinary = searchParams.get('cloudinary_assets');
 
-    // Return Cloudinary asset library for media picker
     if (listCloudinary === 'true') {
       try {
         const cloudRes = await cloudinary.api.resources({
@@ -304,7 +289,6 @@ export async function GET(request) {
       return NextResponse.json({ success: true, record, blog: record, ...record });
     }
 
-    // Categories list for filters
     const catRes = await queryDb(
       'SELECT DISTINCT category FROM blogs WHERE category IS NOT NULL AND category != \'\' ORDER BY category ASC'
     ).catch(() => ({ rows: [] }));
@@ -322,9 +306,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new blog article
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -363,7 +344,6 @@ export async function POST(request) {
         published_at = new Date(formData.get('published_at')).toISOString();
       }
 
-      // Collect multiple uploaded image files
       const collectedFiles = [
         ...formData.getAll('files'),
         ...formData.getAll('imageFiles'),
@@ -371,7 +351,6 @@ export async function POST(request) {
       ].filter((f) => f && typeof f === 'object' && typeof f.arrayBuffer === 'function' && f.size > 0);
       newFiles = collectedFiles;
 
-      // Collect any library images (passed as JSON string)
       const rawImages = formData.get('images') || formData.get('existing_images');
       if (rawImages && typeof rawImages === 'string') {
         try {
@@ -412,7 +391,6 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Article body content is required.' }, { status: 400 });
     }
 
-    // API strictly generates unique slug from article title
     const slug = await generateUniqueSlug(title);
 
     const developerId = auth.user?.id || auth.staff?.id || null;
@@ -448,7 +426,6 @@ export async function POST(request) {
 
     const newBlogId = insertRes.rows[0].id;
 
-    // Sync / insert images into blog_images
     await syncBlogImages(newBlogId, initialImages, newFiles);
 
     const newBlog = await getFullBlog(newBlogId);
@@ -468,9 +445,6 @@ export async function POST(request) {
   }
 }
 
-// ============================================================================
-// PUT: Update an existing blog article
-// ============================================================================
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -489,7 +463,7 @@ export async function PUT(request) {
     let is_published = null;
     let published_at = null;
     let newFiles = [];
-    let imagesPayload = null; // null if untouched, array if provided
+    let imagesPayload = null; 
 
     const contentType = request.headers.get('content-type') || '';
     if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
@@ -620,7 +594,6 @@ export async function PUT(request) {
       ]
     );
 
-    // Sync images if imagesPayload or new files provided
     if (imagesPayload !== null || newFiles.length > 0) {
       await syncBlogImages(blogId, imagesPayload, newFiles);
     }
@@ -639,9 +612,6 @@ export async function PUT(request) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete a blog article OR delete a specific image
-// ============================================================================
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -654,7 +624,6 @@ export async function DELETE(request) {
     const blogId = searchParams.get('id');
     const slug = searchParams.get('slug');
 
-    // 1. Specific image deletion
     if (blogImageId) {
       const imgRes = await queryDb('SELECT * FROM blog_images WHERE id = $1 LIMIT 1', [Number(blogImageId)]);
       if (imgRes.rows.length === 0) {
@@ -668,7 +637,6 @@ export async function DELETE(request) {
       }
       await queryDb('DELETE FROM blog_images WHERE id = $1', [img.id]);
 
-      // If removed image was primary, set another as primary
       if (img.is_primary) {
         await queryDb(`
           UPDATE blog_images
@@ -681,7 +649,6 @@ export async function DELETE(request) {
       return NextResponse.json({ success: true, message: 'Image deleted successfully' });
     }
 
-    // 2. Full blog deletion
     if (!blogId && !slug) {
       return NextResponse.json({ success: false, error: 'Blog ID or slug is required.' }, { status: 400 });
     }
@@ -696,7 +663,6 @@ export async function DELETE(request) {
 
     const targetBlog = checkRes.rows[0];
 
-    // Clean up all Cloudinary assets associated with this blog
     const imagesRes = await queryDb('SELECT image_id FROM blog_images WHERE blog_id = $1', [targetBlog.id]);
     for (const row of imagesRes.rows) {
       if (row.image_id) {
@@ -708,7 +674,6 @@ export async function DELETE(request) {
       }
     }
 
-    // Cascades deletion to blog_images
     await queryDb('DELETE FROM blogs WHERE id = $1', [targetBlog.id]);
 
     return NextResponse.json({ success: true, message: 'Blog article and media deleted successfully.' });

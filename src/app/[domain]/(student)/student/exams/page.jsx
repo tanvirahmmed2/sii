@@ -74,7 +74,6 @@ export default function StudentExamsPage() {
 
   return (
     <div className="w-full space-y-4 pb-8">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">

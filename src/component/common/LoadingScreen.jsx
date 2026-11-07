@@ -2,11 +2,6 @@
 
 import React from 'react';
 
-/**
- * System Loading Screen conforming to the global loader style.
- * Displays only the clean custom animated loader.
- * No icons, no text. Uses globals.css color palette (--primary).
- */
 export default function LoadingScreen({
   fullScreen = true,
   label = '',

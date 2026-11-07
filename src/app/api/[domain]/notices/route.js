@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server.js';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Public notices list (supports ?limit=N, ?home=true, ?audience=..., ?search=...)
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

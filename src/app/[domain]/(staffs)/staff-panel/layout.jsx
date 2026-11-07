@@ -19,14 +19,11 @@ const StaffPanelLayout = async ({ children }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
-      {/* Top Navbar */}
       <Navbar staffUser={staffUser} />
 
       <div className="flex flex-1 pt-14 min-h-[calc(100vh-3.5rem)]">
-        {/* Left Sidebar */}
         <Sidebar allowedModules={allowedModules} isDevAdmin={false} />
 
-        {/* Main Content Area */}
         <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8 transition-all duration-200">
           <StaffModuleRouteGuard allowedModules={allowedModules}>
             {children}

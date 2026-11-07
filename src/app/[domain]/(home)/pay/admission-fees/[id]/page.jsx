@@ -18,7 +18,6 @@ export default function CandidateAdmissionPaymentPage() {
   const [availableGateways, setAvailableGateways] = useState([]);
   const [isPaid, setIsPaid] = useState(false);
 
-  // Gateway Modal
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const fetchCandidateInvoice = async () => {
@@ -118,7 +117,6 @@ export default function CandidateAdmissionPaymentPage() {
     );
   }
 
-  // ALREADY PAID VIEW
   if (isPaid) {
     return (
       <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors">
@@ -135,7 +133,6 @@ export default function CandidateAdmissionPaymentPage() {
             </p>
           </div>
 
-          {/* Candidate Summary Table */}
           <div className="max-w-xl mx-auto bg-slate-50/80 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-5 text-xs sm:text-sm text-left space-y-2.5">
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Applicant:</span>
@@ -168,12 +165,10 @@ export default function CandidateAdmissionPaymentPage() {
     );
   }
 
-  // UNPAID CHECKOUT VIEW
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors">
       <div className="max-w-7xl mx-auto space-y-8 sm:space-y-10">
         
-        {/* 1. Header & Navigation */}
         <div className="flex flex-col items-start gap-2 border-b border-slate-200 dark:border-slate-800 pb-8">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Link
@@ -205,7 +200,6 @@ export default function CandidateAdmissionPaymentPage() {
           </div>
         </div>
 
-        {/* Candidate Detail Card */}
         <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-primary block mb-1">
@@ -249,7 +243,6 @@ export default function CandidateAdmissionPaymentPage() {
           </div>
         </div>
 
-        {/* 2. Workflow Progression Indicator */}
         <div className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
           <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 pb-2">
             Admission Workflow Steps
@@ -271,7 +264,6 @@ export default function CandidateAdmissionPaymentPage() {
         </div>
       </div>
 
-      {/* 3. Checkout Modal */}
       <UniversalGatewayCheckout
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}

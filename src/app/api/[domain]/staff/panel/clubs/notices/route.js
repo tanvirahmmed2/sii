@@ -29,7 +29,6 @@ async function generateUniqueNoticeSlug(websiteId, clubId, baseTitle, excludeId 
   }
 }
 
-// GET: List club notices
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -75,7 +74,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryStr, params);
 
-    // Clubs list for dropdown
     const clubsRes = await queryDb(
       `SELECT id, name, category FROM website_clubs WHERE website_id = $1 AND is_active = true ORDER BY name ASC`,
       [website.id]
@@ -93,7 +91,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new club notice (Slug auto-generated in API)
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -110,7 +107,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Club and Notice Title are required.' }, { status: 400 });
     }
 
-    // Verify club
     const clubCheck = await queryDb(
       `SELECT id, name FROM website_clubs WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [clubId, website.id]
@@ -119,7 +115,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Selected club not found.' }, { status: 404 });
     }
 
-    // Auto-generate slug in API
     const slug = await generateUniqueNoticeSlug(website.id, clubId, title);
     const description = body.description?.trim() || null;
     const attachmentUrl = body.attachment_url?.trim() || null;
@@ -145,7 +140,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing club notice (Slug auto-updated in API)
 export async function PUT(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -199,7 +193,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a club notice
 export async function DELETE(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);

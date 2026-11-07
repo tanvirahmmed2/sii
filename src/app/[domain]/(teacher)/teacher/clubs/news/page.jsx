@@ -5,14 +5,12 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiFileText, FiTrash2, FiEdit2, FiAlertCircle, FiPlus } from 'react-icons/fi';
 
-
 const TeacherClubNewsPage = () => {
   const [loading, setLoading] = useState(true);
   const [isClubAdmin, setIsClubAdmin] = useState(false);
   const [clubs, setClubs] = useState([]);
   const [selectedClubId, setSelectedClubId] = useState('');
 
-  // News states
   const [editingNewsId, setEditingNewsId] = useState(null);
   const [newsTitle, setNewsTitle] = useState('');
   const [newsContent, setNewsContent] = useState('');
@@ -55,7 +53,6 @@ const TeacherClubNewsPage = () => {
     }
   }, [selectedClubId]);
 
-  // Image handler
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -71,7 +68,6 @@ const TeacherClubNewsPage = () => {
     }
   };
 
-  // Manage News
   const handleSaveNews = async (e) => {
     e.preventDefault();
     if (!newsTitle || !newsContent) {
@@ -102,7 +98,6 @@ const TeacherClubNewsPage = () => {
     }
   };
 
-  // Delete News
   const handleDeleteNews = async (newsId) => {
     if (!confirm('Delete this news article?')) return;
     try {
@@ -145,7 +140,6 @@ const TeacherClubNewsPage = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Page Header */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{currentClub?.name || 'Club Admin'}</h1>
@@ -169,7 +163,6 @@ const TeacherClubNewsPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Publish/Edit News Form */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
@@ -231,7 +224,6 @@ const TeacherClubNewsPage = () => {
           </form>
         </div>
 
-        {/* News Posts List */}
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">

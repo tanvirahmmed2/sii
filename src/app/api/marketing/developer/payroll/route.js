@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: List all payrolls and summary statistics
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -15,7 +12,6 @@ export async function GET(request) {
       );
     }
 
-    // 1. Fetch Payroll Runs with developer count & paid count
     const payrollsRes = await queryDb(`
       SELECT 
         p.id,
@@ -37,7 +33,6 @@ export async function GET(request) {
       ORDER BY p.pay_period_start DESC, p.id DESC
     `).catch(() => ({ rows: [] }));
 
-    // 2. Aggregate metrics
     const statsRes = await queryDb(`
       SELECT 
         COALESCE(SUM(amount), 0)::numeric(12,2) AS total_disbursed,
@@ -48,7 +43,6 @@ export async function GET(request) {
       WHERE status = 'COMPLETED'
     `).catch(() => ({ rows: [] }));
 
-    // 3. List active developers for new payroll creation modal
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name
       FROM developers d
@@ -73,9 +67,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new payroll run with developer salary allocations (ADMIN ONLY)
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -96,7 +87,6 @@ export async function POST(request) {
       );
     }
 
-    // Calculate total net amount across allocations
     let totalAmount = 0;
     const sanitizedItems = items.map((item) => {
       const base = parseFloat(item.base_salary) || 0;
@@ -115,7 +105,6 @@ export async function POST(request) {
       };
     });
 
-    // Insert payroll record
     const payrollRes = await queryDb(
       `INSERT INTO payrolls (title, pay_period_start, pay_period_end, status, total_amount, notes, created_by_developer_id)
        VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6)
@@ -125,7 +114,6 @@ export async function POST(request) {
 
     const newPayroll = payrollRes.rows[0];
 
-    // Insert developer payroll line items
     for (const itm of sanitizedItems) {
       if (!itm.developer_id) continue;
       await queryDb(

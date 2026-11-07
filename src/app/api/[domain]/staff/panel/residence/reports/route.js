@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyResidenceStaffAccess } from 'src/lib/middleware/residence-auth.js';
 
-// GET: Comprehensive residence vacancy and occupancy reports
 export async function GET(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'view');
@@ -14,7 +13,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const hallId = searchParams.get('hall_id');
 
-    // 1. Overview KPIs
     const kpiRes = await queryDb(
       `SELECT
          COUNT(DISTINCT h.id)::int AS total_halls,
@@ -33,7 +31,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // 2. Hall Breakdown
     const hallBreakdownRes = await queryDb(
       `SELECT
          h.id, h.name, h.code, h.gender, h.provost_name, h.contact_number, h.total_floors,
@@ -56,7 +53,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // 3. Room Details for Vacancy Inspector
     const roomConditions = ['r.website_id = $1'];
     const roomValues = [website.id];
     if (hallId) {

@@ -4,7 +4,6 @@ import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentPortalUrl, buildStudentSetupUrl } from 'src/lib/student/urls.js';
 
-// GET: Fetch students submitted for verification with complete profile relations
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -15,7 +14,7 @@ export async function GET(request, context) {
     const { website } = auth;
     const { searchParams } = new URL(request.url);
 
-    const status = searchParams.get('status') || 'submitted'; // 'submitted', 'verified', 'rejected', 'pending_setup', 'all'
+    const status = searchParams.get('status') || 'submitted'; 
     const classId = searchParams.get('class_id');
     const sectionId = searchParams.get('section_id');
     const sessionId = searchParams.get('session_id');
@@ -124,7 +123,6 @@ export async function GET(request, context) {
 
     const res = await queryDb(query, [...values, limit, offset]);
 
-    // Counter stats
     const statsRes = await queryDb(
       `SELECT
          COUNT(*) FILTER (WHERE i.verification_status = 'submitted')::int AS submitted_count,
@@ -157,7 +155,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Approve/Verify or Reject a student profile
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'edit');
@@ -177,7 +174,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'action must be "approve" or "reject".' }, { status: 400 });
     }
 
-    // Verify student exists and belongs to website
     const checkRes = await queryDb(
       `SELECT s.id, s.registration_no, s.student_unique_id,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -198,7 +194,6 @@ export async function PUT(request, context) {
     const staffId = staffSession?.staff?.id || staffSession?.id || null;
 
     if (action === 'approve') {
-      // 1. Update website_student_info
       await queryDb(
         `UPDATE website_student_info
          SET is_verified = TRUE,
@@ -211,7 +206,6 @@ export async function PUT(request, context) {
         [staffId, notes || null, student_id, website.id]
       );
 
-      // 2. Update website_students: set is_active = TRUE and sync email if previously null
       const stuUpdate = await queryDb(
         `UPDATE website_students
          SET is_active = TRUE,
@@ -224,7 +218,6 @@ export async function PUT(request, context) {
 
       const updatedStudent = stuUpdate.rows[0];
 
-      // Dispatch Approval Notice Email via Brevo
       if (student.email) {
         try {
           const portalUrl = buildStudentPortalUrl(website, request);
@@ -268,7 +261,6 @@ export async function PUT(request, context) {
     }
 
     if (action === 'reject') {
-      // 1. Update website_student_info
       await queryDb(
         `UPDATE website_student_info
          SET is_verified = FALSE,
@@ -282,7 +274,6 @@ export async function PUT(request, context) {
         [staffId, notes || 'Profile rejected during staff verification.', student_id, website.id]
       );
 
-      // 2. Update website_students: set is_active = FALSE
       const stuUpdate = await queryDb(
         `UPDATE website_students
          SET is_active = FALSE,
@@ -294,7 +285,6 @@ export async function PUT(request, context) {
 
       const updatedStudent = stuUpdate.rows[0];
 
-      // Dispatch Rejection Notice Email via Brevo
       if (student.email) {
         try {
           const setupUrl = buildStudentSetupUrl(website, student.verification_token, request);

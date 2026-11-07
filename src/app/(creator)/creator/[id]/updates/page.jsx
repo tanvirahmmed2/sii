@@ -7,7 +7,6 @@ export default function CreatorUpdatesPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <h1 className="text-base font-semibold text-slate-900">Platform Updates & Changelog</h1>
         <p className="text-slate-500 text-xs mt-0.5">
@@ -15,7 +14,6 @@ export default function CreatorUpdatesPage() {
         </p>
       </div>
 
-      {/* Updates List */}
       {updates.length === 0 ? (
         <div className="p-8 rounded bg-white border border-slate-200 text-center text-xs text-slate-400">
           No platform update entries posted yet.

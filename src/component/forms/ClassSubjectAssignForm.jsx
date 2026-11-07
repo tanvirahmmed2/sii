@@ -15,7 +15,6 @@ const ClassSubjectAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
   const [filteredClassSubjects, setFilteredClassSubjects] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
 
-  // Fetch all class subjects mappings
   useEffect(() => {
     const fetchClassSubjects = async () => {
       try {
@@ -29,15 +28,12 @@ const ClassSubjectAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
     fetchClassSubjects();
   }, []);
 
-  // Fetch sections and filter class-subjects based on selected class
   useEffect(() => {
     if (classId) {
-      // Filter class subjects
       const filtered = allClassSubjects.filter(cs => String(cs.class_id) === String(classId));
       setFilteredClassSubjects(filtered);
       setClassSubjectId('');
 
-      // Fetch sections
       fetch(`/api/sections?class_id=${classId}`)
         .then((res) => {
           if (!res.ok) throw new Error();

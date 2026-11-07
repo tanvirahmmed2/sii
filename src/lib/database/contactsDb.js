@@ -3,9 +3,6 @@ import { hasStaffModulePermission } from '../middleware/staff.js';
 
 let _tablesEnsured = false;
 
-/**
- * Ensures website_contacts and website_contact_replies tables exist matching website_tables.psql schema.
- */
 export async function ensureContactsTables() {
   if (_tablesEnsured) return;
   try {
@@ -52,37 +49,24 @@ export async function ensureContactsTables() {
   }
 }
 
-/**
- * Checks whether an authenticated staff member is allowed to perform an action on contacts/inquiries.
- * Checks module permissions for 'communications', 'website-builder', and 'contacts'.
- *
- * @param {Object} staffSession
- * @param {'view'|'create'|'edit'|'delete'} [action='view']
- * @returns {boolean}
- */
 export function checkStaffContactsPermission(staffSession, action = 'view') {
   if (!staffSession) return false;
   const staff = staffSession.staff || staffSession.user || staffSession;
   if (!staff) return false;
 
   const perms = staff.permissions || staffSession.permissions || {};
-  // If no granular permissions have been explicitly assigned to this staff member,
-  // allow general staff access (default tenant administrator/staff)
   if (Object.keys(perms).length === 0) {
     return true;
   }
 
-  // Check 'communications' module permission (canonical module for contacts, mailer, and messaging)
   if (hasStaffModulePermission(staffSession, 'communications', action)) {
     return true;
   }
 
-  // Also check 'website-builder' module permission
   if (hasStaffModulePermission(staffSession, 'website-builder', action)) {
     return true;
   }
 
-  // Direct 'contacts' module slug if individually provisioned
   if (hasStaffModulePermission(staffSession, 'contacts', action)) {
     return true;
   }

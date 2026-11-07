@@ -6,7 +6,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
 
-// Dynamically import TiptapEditor to prevent SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -31,7 +30,6 @@ function CircularUpdateContent() {
   const [saving, setSaving] = useState(false);
   const [selectedCircular, setSelectedCircular] = useState(null);
 
-  // Form State
   const [form, setForm] = useState({
     title: '',
     selection_method: 'manual',
@@ -62,7 +60,6 @@ function CircularUpdateContent() {
     ]
   });
 
-  // Populate form with circular data
   const populateForm = useCallback(circ => {
     setSelectedCircular(circ);
     if (!circ) return;
@@ -97,7 +94,6 @@ function CircularUpdateContent() {
     });
   }, []);
 
-  // Fetch all circulars & metadata
   const fetchData = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true);
     try {
@@ -158,7 +154,6 @@ function CircularUpdateContent() {
     };
   }, [apiBase, initialId, populateForm]);
 
-  // Handle circular selection change
   const handleSelectCircular = id => {
     setSelectedId(id);
     const found = circulars.find(c => String(c.id) === String(id));
@@ -168,7 +163,6 @@ function CircularUpdateContent() {
     }
   };
 
-  // Form input change
   const handleChange = e => {
     const {
       name,
@@ -182,7 +176,6 @@ function CircularUpdateContent() {
     }));
   };
 
-  // Exam Subjects helper handlers
   const addSubjectRow = () => {
     setForm(prev => ({
       ...prev,
@@ -203,7 +196,6 @@ function CircularUpdateContent() {
     });
   };
 
-  // Submit update
   const handleSubmit = async e => {
     e.preventDefault();
     if (!selectedId) {
@@ -278,7 +270,6 @@ function CircularUpdateContent() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(data.message || 'Admission circular updated successfully!');
-        // Refresh circulars in state
         setCirculars(prev => prev.map(c => String(c.id) === String(selectedId) ? {
           ...c,
           ...payload
@@ -303,7 +294,6 @@ function CircularUpdateContent() {
       </div>;
   }
   return <div className="w-full space-y-5">
-      {/* Top Action Bar & Circular Selector */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1 max-w-lg space-y-1">
           <label className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 tracking-wider">
@@ -332,7 +322,6 @@ function CircularUpdateContent() {
         </div>
       </div>
 
-      {/* Selected Circular KPI Banner */}
       {selectedCircular && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
             <span className="text-[10px] uppercase font-bold text-slate-400">Total Applicants</span>
@@ -367,7 +356,6 @@ function CircularUpdateContent() {
           </div>
         </div>}
 
-      {/* Main Edit Form Workstation */}
       <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs space-y-6">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
@@ -387,7 +375,6 @@ function CircularUpdateContent() {
           </button>
         </div>
 
-        {/* Section 1: Core Details */}
         <div className="space-y-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">1. Core Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -442,7 +429,6 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 2: Timeline & Dates */}
         <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">2. Timeline &amp; Dates</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -462,7 +448,6 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 2B: Conditional Merit Requirements (Only when selection_method === 'merit') */}
         {form.selection_method === 'merit' && (
           <div className="p-3 bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-md space-y-2">
             <div className="flex items-center justify-between border-b border-amber-100 dark:border-amber-900/40 pb-1.5">
@@ -519,7 +504,6 @@ function CircularUpdateContent() {
           </div>
         )}
 
-        {/* Section 2C: Conditional Exam Configuration (Only when selection_method === 'exam') */}
         {form.selection_method === 'exam' && (
           <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 rounded-lg space-y-3">
             <div className="flex items-center justify-between border-b border-purple-100 dark:border-purple-900/40 pb-2">
@@ -629,7 +613,6 @@ function CircularUpdateContent() {
           </div>
         )}
 
-        {/* Section 2D: Manual Notice (When selection_method === 'manual') */}
         {form.selection_method === 'manual' && (
           <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-md">
             <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -638,7 +621,6 @@ function CircularUpdateContent() {
           </div>
         )}
 
-        {/* Section 3: Eligibility & Age Limits */}
         <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">3. Age Eligibility Criteria</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -660,7 +642,6 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 4: Application Fee & Gateway Routing */}
         <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">4. Application Fee Structure</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -699,7 +680,6 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 5: Status & Visibility */}
         <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">5. Status &amp; Visibility</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -723,7 +703,6 @@ function CircularUpdateContent() {
           </div>
         </div>
 
-        {/* Section 6: Instructions & Guidelines with Tiptap Editor */}
         <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -739,7 +718,6 @@ function CircularUpdateContent() {
           />
         </div>
 
-        {/* Bottom Form Actions */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
           <Link href="/staff-panel/admission-circulars" className="px-4 py-2 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
             Cancel

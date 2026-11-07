@@ -42,7 +42,6 @@ export default function Reviews() {
   return (
     <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
       <div className="w-full space-y-12">
-        {/* Section Heading & Navigation */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 max-w-7xl mx-auto">
           <div className="space-y-3 max-w-2xl">
             <span className="text-xs font-bold tracking-wider uppercase text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-full">
@@ -78,7 +77,6 @@ export default function Reviews() {
           )}
         </div>
 
-        {/* Reviews Horizontal Scrolling Carousel / Row */}
         {loading ? (
           <div className="w-full overflow-x-auto pb-4 pt-2 px-1 scrollbar-none flex flex-row gap-5 justify-start">
             {[1, 2, 3, 4].map((n) => (
@@ -105,7 +103,6 @@ export default function Reviews() {
           </div>
         )}
 
-        {/* Footer Link */}
         <div className="text-center pt-2">
           <Link
             href="/reviews"

@@ -19,7 +19,6 @@ function computeCanvasPixels(w, h, unit) {
 
   if (unit === 'px') return { pxW: Math.round(widthVal), pxH: Math.round(heightVal) };
   if (unit === 'in') return { pxW: Math.round(widthVal * 96), pxH: Math.round(heightVal * 96) };
-  // mm: scale factor 3.2 for certificates (297x210 -> ~950x672px)
   return { pxW: Math.round(widthVal * 3.2), pxH: Math.round(heightVal * 3.2) };
 }
 
@@ -29,7 +28,7 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
   const fabricRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('elements');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [selectedObject, setSelectedObject] = useState(null);
   const [canvasObjects, setCanvasObjects] = useState([]);
@@ -37,7 +36,6 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [canvasBg, setCanvasBg] = useState('#fffdf5');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 297);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 210);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
@@ -141,7 +139,6 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
       if (fabricCanvasRef.current) fabricCanvasRef.current.dispose();
     };
   }, []);
-
 
   const addHeading = () => {
     const canvas = fabricCanvasRef.current;
@@ -324,7 +321,6 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Zoom controls */}
           <div className="flex items-center bg-slate-950 rounded border border-slate-800 text-[11px] p-0.5">
             <button
               type="button"
@@ -354,7 +350,6 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
         </div>
       </header>
 
-      {/* Manual Dimensions Bar */}
       <div className="min-h-9 py-1 bg-slate-900/70 border-b border-slate-800/80 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-none gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-[11px] font-semibold text-slate-300">Dimensions:</span>
@@ -595,7 +590,6 @@ export default function StudentCertificateStudio({ initialTemplate, onSave, onEx
         </aside>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

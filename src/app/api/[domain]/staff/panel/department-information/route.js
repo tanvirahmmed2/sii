@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List or fetch department information profiles
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -39,7 +38,6 @@ export async function GET(request, context) {
     const departmentId = searchParams.get('department_id')?.trim();
     const id = searchParams.get('id')?.trim();
 
-    // 1. Fetch available departments for selection & metadata
     const departmentsResult = await queryDb(
       `SELECT d.id, d.name, d.code, d.is_active,
               COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.department_id = d.id), 0)::int AS class_count
@@ -49,7 +47,6 @@ export async function GET(request, context) {
       [auth.website.id]
     );
 
-    // 2. Query department information profiles with department details
     let query = `
       SELECT di.*,
              d.name AS department_name,
@@ -99,7 +96,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create or upsert department information
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -120,7 +116,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Please select a valid academic department.' }, { status: 400 });
     }
 
-    // Verify department belongs to this website
     const deptCheck = await queryDb(
       `SELECT id, name, code FROM website_departments WHERE id = $1 AND website_id = $2`,
       [department_id, auth.website.id]
@@ -160,7 +155,6 @@ export async function POST(request, context) {
 
     const savedRow = upsertResult.rows[0];
 
-    // Query joined record for full response
     const enrichedResult = await queryDb(
       `SELECT di.*,
               d.name AS department_name,
@@ -184,7 +178,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update existing department information
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -207,7 +200,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Record ID or Department ID is required for update.' }, { status: 400 });
     }
 
-    // Verify record exists for website
     const existingResult = await queryDb(
       `SELECT id, department_id FROM website_department_information 
        WHERE (id = $1 OR department_id = $1) AND website_id = $2`,
@@ -264,7 +256,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove department information record
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

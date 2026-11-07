@@ -11,29 +11,26 @@ export default function SubscriptionForm({
   const [packages, setPackages] = useState(() => (Array.isArray(initialPackages) ? initialPackages : []));
   const [loadingPackages, setLoadingPackages] = useState(() => !(Array.isArray(initialPackages) && initialPackages.length > 0));
 
-  // Creator Lookup States (Manual button check, NO live/debounced typing check)
   const [creatorEmail, setCreatorEmail] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [creatorFound, setCreatorFound] = useState(null);
   const [creatorError, setCreatorError] = useState('');
 
-  // Form Fields (Available after creator verification)
   const [selectedPackageId, setSelectedPackageId] = useState(() =>
     Array.isArray(initialPackages) && initialPackages.length > 0 ? String(initialPackages[0].id) : ''
   );
-  const [durationType, setDurationType] = useState('monthly'); // 'monthly', '2_months', '3_months', '6_months', 'yearly', '2_years', '3_years', 'custom'
-  const [customUnit, setCustomUnit] = useState('months'); // 'months' or 'years'
+  const [durationType, setDurationType] = useState('monthly'); 
+  const [customUnit, setCustomUnit] = useState('months'); 
   const [customMultiplier, setCustomMultiplier] = useState(1);
   const [currency, setCurrency] = useState('USD');
   const [customAmount, setCustomAmount] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState('PAID'); // 'PAID' or 'UNPAID'
+  const [paymentStatus, setPaymentStatus] = useState('PAID'); 
   const [notes, setNotes] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
 
-  // 1. Fetch available packages ONCE on mount
   useEffect(() => {
     if (Array.isArray(initialPackages) && initialPackages.length > 0) {
       setPackages(initialPackages);
@@ -62,9 +59,8 @@ export default function SubscriptionForm({
     return () => {
       isMounted = false;
     };
-  }, []); // Run strictly once on mount
+  }, []); 
 
-  // 2. Manual Creator Email Availability Check (Triggered ONLY by Check button or Enter)
   const handleCheckCreator = async (e) => {
     if (e) e.preventDefault();
     const trimmed = creatorEmail.trim().toLowerCase();
@@ -108,12 +104,10 @@ export default function SubscriptionForm({
     }
   };
 
-  // Selected package object
   const currentPackage = useMemo(() => {
     return packages.find((p) => String(p.id) === String(selectedPackageId)) || null;
   }, [packages, selectedPackageId]);
 
-  // Calculate duration parameters
   const durationInfo = useMemo(() => {
     const now = new Date();
     const end = new Date(now);
@@ -220,7 +214,6 @@ export default function SubscriptionForm({
     };
   }, [durationType, customUnit, customMultiplier]);
 
-  // Suggested price based on package & duration
   const autoPrice = useMemo(() => {
     if (!currentPackage) return 0;
     const isYearlyBased = durationInfo.years > 0;
@@ -234,7 +227,6 @@ export default function SubscriptionForm({
       return moPrice * durationInfo.months;
     }
 
-    // USD
     if (isYearlyBased) {
       const yrPrice = Number(currentPackage.yearly_price_usd ?? currentPackage.yearly_price ?? 0);
       return yrPrice * durationInfo.years;
@@ -243,7 +235,6 @@ export default function SubscriptionForm({
     return moPrice * durationInfo.months;
   }, [currentPackage, durationInfo, currency]);
 
-  // Effective price used
   const effectivePrice = customAmount !== '' ? Number(customAmount) : autoPrice;
 
   const handleSubmit = async (e) => {
@@ -274,7 +265,7 @@ export default function SubscriptionForm({
         period_end: durationInfo.endDate.toISOString(),
         currency,
         amount: Math.max(0, Number(effectivePrice) || 0),
-        payment_status: paymentStatus, // 'PAID' or 'UNPAID'
+        payment_status: paymentStatus, 
         notes: notes.trim() || undefined,
       };
 
@@ -311,7 +302,6 @@ export default function SubscriptionForm({
 
   return (
     <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4 mb-4">
-      {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2">
@@ -351,7 +341,6 @@ export default function SubscriptionForm({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* SECTION 1: CREATOR EMAIL INPUT & CHECK BUTTON */}
         <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <label className="block text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
             1. Creator Account Identification
@@ -401,7 +390,6 @@ export default function SubscriptionForm({
             </div>
           </div>
 
-          {/* BOX CONTAINING CREATOR DATA (WHEN FOUND) */}
           {creatorFound && (
             <div
               className={`p-3.5 rounded border text-xs space-y-2.5 transition-colors ${
@@ -483,7 +471,6 @@ export default function SubscriptionForm({
           )}
         </div>
 
-        {/* LOCKED STATE: IF CREATOR NOT YET CHECKED / UNAVAILABLE */}
         {!isCreatorReady ? (
           <div className="p-6 rounded bg-slate-50 dark:bg-slate-800/20 border border-dashed border-slate-200 dark:border-slate-700 text-center space-y-1">
             <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -494,9 +481,7 @@ export default function SubscriptionForm({
             </div>
           </div>
         ) : (
-          /* UNLOCKED STATE: SELECT OTHER DATA */
           <>
-            {/* SECTION 2: PACKAGE PLAN SELECTION */}
             <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2.5">
               <label className="block text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
                 2. Package Plan Tier
@@ -556,7 +541,6 @@ export default function SubscriptionForm({
               </div>
             </div>
 
-            {/* SECTION 3: DURATION & BILLING CYCLE */}
             <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2.5">
               <label className="block text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
                 3. Subscription Duration &amp; Term
@@ -629,14 +613,12 @@ export default function SubscriptionForm({
               </div>
             </div>
 
-            {/* SECTION 4: PAYMENT STATUS & PRICING */}
             <div className="p-3.5 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2.5">
               <label className="block text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
                 4. Payment Status &amp; Pricing
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Paid vs Unpaid Toggle */}
                 <div className="sm:col-span-1 space-y-1.5">
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
                     Payment State
@@ -690,7 +672,6 @@ export default function SubscriptionForm({
                   </div>
                 </div>
 
-                {/* Currency and Amount */}
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -756,7 +737,6 @@ export default function SubscriptionForm({
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               {onCancel && (
                 <button

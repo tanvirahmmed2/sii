@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
 
-// GET: Single department details with department head, curriculum, and faculty
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -43,7 +42,6 @@ export async function GET(request, context) {
 
     const dept = deptRes.rows[0];
 
-    // Department Head (like Board Members)
     const headRes = await queryDb(
       `SELECT dh.*,
               COALESCE(dh.image, t.photo_url) AS image,
@@ -58,7 +56,6 @@ export async function GET(request, context) {
 
     const deptHead = headRes.rows[0] || null;
 
-    // Classes under this department
     const classesRes = await queryDb(
       `SELECT id, name, code, max_seats, description
        FROM website_classes
@@ -67,7 +64,6 @@ export async function GET(request, context) {
       [website.id, dept.id]
     );
 
-    // Faculty under this department
     const teachersRes = await queryDb(
       `SELECT t.id,
               t.name,

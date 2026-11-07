@@ -5,7 +5,6 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { FiInfo, FiSave, FiAlertCircle } from 'react-icons/fi';
 
-
 const TeacherClubNoticePage = () => {
   const [loading, setLoading] = useState(true);
   const [isClubAdmin, setIsClubAdmin] = useState(false);
@@ -88,7 +87,6 @@ const TeacherClubNoticePage = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Page Header */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{currentClub?.name || 'Club Admin'}</h1>

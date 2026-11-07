@@ -20,19 +20,16 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
   const [payrolls, setPayrolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', message: string }
+  const [feedback, setFeedback] = useState(null); 
 
-  // In-page form state (NO POPUP MODAL)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPayroll, setEditingPayroll] = useState(null);
   const [saving, setSaving] = useState(false);
   const formRef = useRef(null);
 
-  // Inline delete confirmation state
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Form state
   const initialFormData = {
     title: '',
     basic_salary: '',
@@ -49,7 +46,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // Fetch payrolls
   const fetchPayrolls = useCallback(async () => {
     try {
       setLoading(true);
@@ -73,7 +69,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
     fetchPayrolls();
   }, [fetchPayrolls]);
 
-  // Calculations
   const calculatedValues = useMemo(() => {
     const basic = Math.max(0, parseFloat(formData.basic_salary) || 0);
     const houseRent = Math.max(0, parseFloat(formData.house_rent) || 0);
@@ -92,7 +87,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
     return { basic, gross, deductions, net };
   }, [formData]);
 
-  // Preview generated grade code
   const previewGradeCode = useMemo(() => {
     const raw = formData.title?.trim() || '';
     if (!raw) return 'AUTO-SLUG';
@@ -106,7 +100,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
     );
   }, [formData.title]);
 
-  // In-page form triggers
   const openCreateForm = () => {
     setEditingPayroll(null);
     setFormData(initialFormData);
@@ -198,7 +191,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
     }
   };
 
-  // Metrics
   const metrics = useMemo(() => {
     const total = payrolls.length;
     const active = payrolls.filter((p) => p.is_active).length;
@@ -215,7 +207,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -246,7 +237,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
         </div>
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
         <div
           className={`p-3 text-xs rounded border ${
@@ -267,7 +257,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
         </div>
       )}
 
-      {/* KPI Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Total Scales</p>
@@ -297,7 +286,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
         </div>
       </div>
 
-      {/* IN-PAGE WORKSTATION FORM (NO POPUP MODAL) */}
       {isFormOpen && (
         <div
           ref={formRef}
@@ -327,7 +315,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
           </div>
 
           <form onSubmit={handleSave} className="space-y-4 text-xs">
-            {/* Primary Info */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Scale Title *
@@ -348,7 +335,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Basic Salary */}
             <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded border border-slate-200 dark:border-slate-700/80">
               <label className="block text-[11px] font-bold text-slate-900 dark:text-white mb-1">
                 Basic Monthly Salary (৳) *
@@ -367,7 +353,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Allowances Section */}
             <div className="border border-slate-200 dark:border-slate-800 rounded p-3.5 bg-slate-50/40 dark:bg-slate-800/20 space-y-2.5">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -425,7 +410,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Deductions Section */}
             <div className="border border-slate-200 dark:border-slate-800 rounded p-3.5 bg-slate-50/40 dark:bg-slate-800/20 space-y-2.5">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
@@ -474,7 +458,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Live Computation Bar */}
             <div className="grid grid-cols-3 gap-3 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 text-center font-mono">
               <div className="p-1">
                 <span className="block text-[10px] text-slate-500 uppercase font-semibold">Gross Salary</span>
@@ -496,7 +479,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Notes & Active Status */}
             <div className="space-y-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -528,7 +510,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
               </div>
             </div>
 
-            {/* Form Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
@@ -555,7 +536,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
         </div>
       )}
 
-      {/* Filter / Search Bar */}
       <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5">
         <div className="relative w-full max-w-sm">
           <input
@@ -589,7 +569,6 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
         </div>
       </div>
 
-      {/* Table of Scales */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-x-auto shadow-2xs">
         <table className="w-full text-left border-collapse text-xs">
           <thead>

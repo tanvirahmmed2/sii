@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { runAllSeeds } from 'seed/index';
 
-/**
- * GET /api/marketing/developer/seed
- * Introspect current database setup status
- */
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'modules');
@@ -38,10 +34,6 @@ export async function GET(request) {
   }
 }
 
-/**
- * POST /api/marketing/developer/seed
- * Run full setup directly from developer panel
- */
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'modules');

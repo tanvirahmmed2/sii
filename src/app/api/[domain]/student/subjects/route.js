@@ -20,7 +20,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch student's class
     const studentRes = await queryDb(
       `SELECT class_id FROM website_students WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [studentId, website.id]
@@ -32,7 +31,6 @@ export async function GET(request, context) {
 
     const classId = studentRes.rows[0].class_id;
 
-    // Fetch subjects assigned to this class
     const subjectsRes = await queryDb(
       `SELECT cs.id AS class_subject_id,
               s.id AS subject_id,

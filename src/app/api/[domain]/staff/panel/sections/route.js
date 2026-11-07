@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List sections (under Classes and Departments)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -36,7 +35,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const classId = searchParams.get('class_id');
 
-    // 1. Fetch available classes with parent department info
     const classesResult = await queryDb(
       `SELECT c.id, c.name, c.code,
               dept.name AS department_name
@@ -47,7 +45,6 @@ export async function GET(request, context) {
       [auth.website.id]
     );
 
-    // 2. Query sections with class and department details
     let queryText = `
       SELECT s.*, 
              c.name AS class_name, 
@@ -81,7 +78,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create section
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -98,7 +94,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Section Name is required (e.g. Section A, Batch 1).' }, { status: 400 });
     }
 
-    // Verify class belongs to website
     const classCheck = await queryDb(
       `SELECT id FROM website_classes WHERE id = $1 AND website_id = $2`,
       [class_id, auth.website.id]
@@ -148,7 +143,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update section
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -207,7 +201,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete section
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

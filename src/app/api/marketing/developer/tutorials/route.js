@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: List all tutorials or fetch by ID
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');
@@ -54,9 +51,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create tutorial
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');
@@ -106,9 +100,6 @@ export async function POST(request) {
   }
 }
 
-// ============================================================================
-// PUT: Update tutorial
-// ============================================================================
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');
@@ -158,9 +149,6 @@ export async function PUT(request) {
   }
 }
 
-// ============================================================================
-// PATCH: Quick inline toggle for publish status
-// ============================================================================
 export async function PATCH(request) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');
@@ -194,9 +182,6 @@ export async function PATCH(request) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete tutorial
-// ============================================================================
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'tutorials');

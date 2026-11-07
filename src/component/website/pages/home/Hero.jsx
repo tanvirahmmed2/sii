@@ -53,7 +53,6 @@ const Hero = () => {
         className="w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24 flex flex-col items-center text-center space-y-6 max-w-6xl mx-auto"
       >
         
-        {/* Overline Category */}
         <motion.span
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -63,7 +62,6 @@ const Hero = () => {
           {institutionType}
         </motion.span>
 
-        {/* Institution Headline */}
         <motion.h1
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -73,7 +71,6 @@ const Hero = () => {
           {schoolName}
         </motion.h1>
 
-        {/* Institution Motto / Subtitle */}
         <motion.p
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -83,7 +80,6 @@ const Hero = () => {
           {motto}
         </motion.p>
 
-        {/* Primary Action Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +112,6 @@ const Hero = () => {
           </motion.div>
         </motion.div>
 
-        {/* High-Density Statistical KPI Strip */}
         <div className="w-full max-w-4xl pt-10 sm:pt-12 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <motion.div
             whileHover={{ y: -4, transition: { duration: 0.2 } }}

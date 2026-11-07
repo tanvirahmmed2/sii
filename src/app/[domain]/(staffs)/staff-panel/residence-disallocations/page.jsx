@@ -9,13 +9,12 @@ export default function ResidenceDisallocationsPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' or 'history'
+  const [activeTab, setActiveTab] = useState('active'); 
   const [records, setRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [halls, setHalls] = useState([]);
   const [selectedHall, setSelectedHall] = useState('');
 
-  // Vacate Modal
   const [selectedAlloc, setSelectedAlloc] = useState(null);
   const [vacateDate, setVacateDate] = useState(new Date().toISOString().split('T')[0]);
   const [vacateReason, setVacateReason] = useState('Course completed / departed hall');
@@ -101,7 +100,6 @@ export default function ResidenceDisallocationsPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -124,7 +122,6 @@ export default function ResidenceDisallocationsPage() {
         </button>
       </div>
 
-      {/* Tabs & Search */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1.5 text-xs">
@@ -181,7 +178,6 @@ export default function ResidenceDisallocationsPage() {
           </div>
         </div>
 
-        {/* IN-PAGE VACATE / DISALLOCATE FORM CARD */}
         {selectedAlloc && (
           <div className="bg-white dark:bg-slate-900 border-2 border-rose-500/40 rounded-lg p-4 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
@@ -264,7 +260,6 @@ export default function ResidenceDisallocationsPage() {
           </div>
         )}
 
-        {/* Records Table */}
         {loading ? (
           <TenantLoader fullScreen={false} size="sm" />
         ) : records.length === 0 ? (

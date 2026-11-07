@@ -8,7 +8,6 @@ export async function verifyClubStaffAccess(request, context) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Staff session
   try {
     const staffSession = await getStaffSession(request);
     if (staffSession) {
@@ -24,7 +23,6 @@ export async function verifyClubStaffAccess(request, context) {
     }
   } catch {}
 
-  // 2. Officer session
   try {
     const officerSession = await getOfficerSession(request);
     if (officerSession) {

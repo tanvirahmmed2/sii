@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load question banks, exam papers, attempts, and proctoring violation logs
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -34,7 +33,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Question Banks
     const banksRes = await queryDb(
       `SELECT qb.*, 
               (SELECT COUNT(*) FROM website_questions q WHERE q.bank_id = qb.id) AS question_count
@@ -44,7 +42,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 2. Exam Papers
     const papersRes = await queryDb(
       `SELECT ep.*, 
               (SELECT COUNT(*) FROM website_exam_attempts ea WHERE ea.paper_id = ep.id) AS attempt_count
@@ -54,7 +51,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 3. Proctor Logs (Recent 50 violations)
     const logsRes = await queryDb(
       `SELECT pl.*, ea.student_id, ep.title as paper_title
        FROM website_exam_proctor_logs pl
@@ -66,7 +62,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 4. Classes & Subjects for dropdowns
     const classesRes = await queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY id`, [websiteId]);
     const subjectsRes = await queryDb(`SELECT id, name, code FROM website_subjects WHERE website_id = $1 ORDER BY id`, [websiteId]);
 
@@ -84,7 +79,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create question bank, create question, create exam paper
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -124,7 +118,6 @@ export async function POST(request, context) {
 
       const questionId = qRes.rows[0].id;
 
-      // Add options if provided
       if (Array.isArray(options) && options.length > 0) {
         for (let i = 0; i < options.length; i++) {
           const opt = options[i];
@@ -176,7 +169,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove question bank or exam paper
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

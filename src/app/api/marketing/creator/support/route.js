@@ -3,11 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { uploadImage } from 'src/lib/database/cloudinary';
 
-/**
- * API Route: /api/creator/support
- * Dedicated to `support` and `support_messages` tables.
- */
-
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -53,7 +48,6 @@ export async function handleSupportAction(body, sessionCreator) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Create Support Ticket
   if (action === 'create_ticket' || !action) {
     const { subject, priority = 'medium', message, image, imageUrl: providedImageUrl, fileName, fileSize, mimeType } = body;
 
@@ -86,7 +80,6 @@ export async function handleSupportAction(body, sessionCreator) {
     );
     const initialMsg = msgRes.rows[0];
 
-    // Optional image attachment
     let finalImageUrl = providedImageUrl || null;
     let imageId = null;
     if (image && typeof image === 'string' && (image.startsWith('data:image') || image.startsWith('http'))) {
@@ -112,7 +105,6 @@ export async function handleSupportAction(body, sessionCreator) {
     return NextResponse.json({ success: true, ticket });
   }
 
-  // 2. Add Message to Ticket
   if (action === 'add_message') {
     const { ticketId, message } = body;
     if (!ticketId || !message) {

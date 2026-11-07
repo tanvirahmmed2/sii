@@ -38,23 +38,20 @@ export default function BlogForm({
       : '',
   });
 
-  // Multiple image gallery management
-  const [gallery, setGallery] = useState([]); // [{ id, image, image_id, caption, is_primary }]
-  const [pendingFiles, setPendingFiles] = useState([]); // [{ id: string, file: File, preview: string, is_primary: boolean }]
+  const [gallery, setGallery] = useState([]); 
+  const [pendingFiles, setPendingFiles] = useState([]); 
   const [customImageUrl, setCustomImageUrl] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Cloudinary Asset Picker state
   const [showCloudinaryLibrary, setShowCloudinaryLibrary] = useState(false);
   const [cloudinaryAssets, setCloudinaryAssets] = useState([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
 
   const fileInputRef = useRef(null);
 
-  // Sync state if initialData/blog changes
   useEffect(() => {
     if (currentBlog) {
       setFormData({
@@ -343,7 +340,6 @@ export default function BlogForm({
 
       <form onSubmit={(e) => handleSubmit(e, formData.is_published)} className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -411,9 +407,7 @@ export default function BlogForm({
             </div>
           </div>
 
-          {/* Sidebar Settings Column */}
           <div className="space-y-4">
-            {/* Publishing Status Card */}
             <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
               <h3 className="text-xs font-semibold text-slate-900">
                 Publishing Status
@@ -461,7 +455,6 @@ export default function BlogForm({
               )}
             </div>
 
-            {/* Multiple Images Gallery Card */}
             <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-slate-900">
@@ -477,7 +470,6 @@ export default function BlogForm({
                 </button>
               </div>
 
-              {/* Gallery Grid */}
               {totalImagesCount > 0 ? (
                 <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
                   {gallery.map((img, idx) => {
@@ -578,7 +570,6 @@ export default function BlogForm({
                 </div>
               )}
 
-              {/* Upload Input */}
               <div className="space-y-2">
                 <input
                   type="file"
@@ -624,7 +615,6 @@ export default function BlogForm({
               </div>
             </div>
 
-            {/* SEO Card */}
             <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
               <h3 className="text-xs font-semibold text-slate-900">
                 SEO &amp; Meta Tags
@@ -674,7 +664,6 @@ export default function BlogForm({
           </div>
         </div>
 
-        {/* Footer Actions Bar */}
         <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {onCancel && (
@@ -721,7 +710,6 @@ export default function BlogForm({
         </div>
       </form>
 
-      {/* Cloudinary Asset Picker Modal */}
       {showCloudinaryLibrary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white border border-slate-200 rounded shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">

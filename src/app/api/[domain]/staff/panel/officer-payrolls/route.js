@@ -101,7 +101,6 @@ export async function POST(request, context) {
     const notes = body.notes?.trim() || null;
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
 
-    // Check duplicate title
     const existing = await queryDb(
       `SELECT id FROM website_officer_payrolls WHERE website_id = $1 AND LOWER(title) = LOWER($2) LIMIT 1`,
       [website.id, title]
@@ -153,7 +152,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, message: 'Payroll title is required.' }, { status: 400 });
     }
 
-    // Check conflict
     const conflict = await queryDb(
       `SELECT id FROM website_officer_payrolls WHERE website_id = $1 AND LOWER(title) = LOWER($2) AND id != $3 LIMIT 1`,
       [website.id, title, id]
@@ -229,7 +227,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, message: 'Payroll scale ID is required.' }, { status: 400 });
     }
 
-    // Check if any officers are currently assigned
     const assignedCount = await queryDb(
       `SELECT COUNT(*)::int AS count FROM website_officer_salaries WHERE payroll_id = $1 AND website_id = $2`,
       [id, website.id]

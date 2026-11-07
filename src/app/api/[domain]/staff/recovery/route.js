@@ -4,30 +4,13 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword, revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { getWebsiteUrl } from 'src/lib/database/secret';
 
 function buildStaffRecoveryUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  const rawCustom = (website.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/staff/recovery?token=${encodeURIComponent(token)}`;
-  }
-
-  const rawSub = (website.subdomain || website.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/staff/recovery?token=${encodeURIComponent(token)}`;
-  }
-
-  return `${protocol}://${cleanSub}.${baseHost}/auth/access/staff/recovery?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/staff/recovery?token=${encodeURIComponent(token)}`;
 }
 
-// POST: Request password reset link
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -59,7 +42,6 @@ export async function POST(request, context) {
     );
 
     if (staffRes.rows.length === 0) {
-      // Return 404 so user knows email is not registered for this campus
       return NextResponse.json(
         { success: false, error: 'No staff account found with this email address on this campus.' },
         { status: 404 }
@@ -75,7 +57,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Rate limiting: 60-second cooldown on recovery requests
     if (staff.recovery_token_expires) {
       const remainingMs = new Date(staff.recovery_token_expires).getTime() - Date.now();
       if (remainingMs > 59 * 60 * 1000) {
@@ -134,7 +115,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Set new password using recovery token
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -197,7 +177,6 @@ export async function PUT(request, context) {
       [hashedPassword, staff.id]
     );
 
-    // Revoke all existing sessions for safety
     await revokeAllStaffSessions(staff.id, website.id);
 
     return NextResponse.json({

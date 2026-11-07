@@ -42,7 +42,6 @@ export default function MetaMessenger({
     scrollToBottom();
   }, [messages]);
 
-  // 1. Fetch conversations
   const fetchConversations = useCallback(
     async (silent = false) => {
       try {
@@ -52,7 +51,6 @@ export default function MetaMessenger({
         if (data.success && Array.isArray(data.records)) {
           setConversations(data.records);
 
-          // Sort latest sender first to pick active chat
           if (data.records.length > 0) {
             const sorted = [...data.records].sort((a, b) => {
               const timeA = a.last_message_at || a.updated_at || a.created_at;
@@ -84,7 +82,6 @@ export default function MetaMessenger({
     [platform, queryConvId]
   );
 
-  // 2. Fetch messages for active conversation
   const fetchMessages = useCallback(async (convId, silent = false) => {
     if (!convId) return;
     try {
@@ -121,7 +118,6 @@ export default function MetaMessenger({
     return () => clearInterval(interval);
   }, [selectedConv?.id, fetchConversations, fetchMessages]);
 
-  // Send message
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     const text = inputText.trim();
@@ -155,7 +151,6 @@ export default function MetaMessenger({
     }
   };
 
-  // Toggle status
   const handleToggleStatus = async () => {
     if (!selectedConv?.id || statusUpdating) return;
     const newStatus = selectedConv.status === 'OPEN' ? 'RESOLVED' : 'OPEN';
@@ -178,7 +173,6 @@ export default function MetaMessenger({
     }
   };
 
-  // Delete conversation
   const handleDeleteConversation = async () => {
     if (!selectedConv?.id) return;
     if (!confirm('Are you sure you want to delete this conversation and all associated message history?')) return;
@@ -210,7 +204,6 @@ export default function MetaMessenger({
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Touch-Swipeable Users Bar */}
       <ChatUsersSwipeBar
         users={conversations.map((c) => ({
           id: c.id,
@@ -224,7 +217,6 @@ export default function MetaMessenger({
         activeId={selectedConv?.id}
       />
 
-      {/* Main Content Area */}
       {loadingConvs && conversations.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-12 flex items-center justify-center">
           <div className="loader loader-md" />
@@ -246,7 +238,6 @@ export default function MetaMessenger({
         </div>
       ) : selectedConv ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[650px]">
-          {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-xs shrink-0">
@@ -314,7 +305,6 @@ export default function MetaMessenger({
             </div>
           </div>
 
-          {/* API notice */}
           {apiNotice && (
             <div className="mx-4 mt-2.5 p-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
               <span>{apiNotice}</span>
@@ -328,7 +318,6 @@ export default function MetaMessenger({
             </div>
           )}
 
-          {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
             {loadingMsgs && messages.length === 0 ? (
               <div className="h-full flex items-center justify-center p-8">
@@ -382,7 +371,6 @@ export default function MetaMessenger({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input Box */}
           <form
             onSubmit={handleSendMessage}
             className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"

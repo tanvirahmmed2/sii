@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Single teacher profile by username, email prefix, or ID
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -54,7 +53,6 @@ export async function GET(request, context) {
 
     const teacher = teacherRes.rows[0];
 
-    // Qualifications
     const qualRes = await queryDb(
       `SELECT id, degree, institute, board, passing_year, result
        FROM website_teacher_qualifications
@@ -63,7 +61,6 @@ export async function GET(request, context) {
       [website.id, teacher.id]
     );
 
-    // Subjects taught
     const subjRes = await queryDb(
       `SELECT s.id, s.name, s.code
        FROM website_teacher_subjects ts

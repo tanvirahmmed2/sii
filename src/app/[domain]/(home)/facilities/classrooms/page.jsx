@@ -27,7 +27,6 @@ const ClassroomFacilities = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -50,7 +49,6 @@ const ClassroomFacilities = () => {
           </p>
         </motion.div>
 
-        {/* Feature List */}
         <div className="space-y-4">
           {features.map((item, idx) => (
             <motion.div

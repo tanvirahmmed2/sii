@@ -22,7 +22,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List periods (filter optionally by day_id)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -63,7 +62,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create period or sync period structure across active days
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -71,9 +69,7 @@ export async function POST(request, context) {
 
     const body = await request.json().catch(() => ({}));
 
-    // Action: Sync period structure across all active working days
     if (body.action === 'sync_to_active_days') {
-      // 1. Get unique period templates configured for this institution
       const templatesRes = await queryDb(
         `SELECT DISTINCT ON (LOWER(name)) name, start_time, end_time, is_break
          FROM website_periods
@@ -89,7 +85,6 @@ export async function POST(request, context) {
         }, { status: 400 });
       }
 
-      // 2. Get active working days
       const daysRes = await queryDb(
         `SELECT id, name FROM website_days WHERE website_id = $1 AND status = 'on' ORDER BY day_order ASC`,
         [auth.website.id]
@@ -128,7 +123,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Day, Period Name, Start Time, and End Time are required.' }, { status: 400 });
     }
 
-    // Verify day exists for tenant
     const dayCheck = await queryDb(
       `SELECT id FROM website_days WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [day_id, auth.website.id]
@@ -191,7 +185,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update period
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -243,7 +236,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove period
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

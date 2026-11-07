@@ -46,10 +46,6 @@ export function maskSmsApiKey(val) {
   return str.slice(0, 4) + '••••••••••••••••' + str.slice(-4);
 }
 
-/**
- * Returns SMS sender configuration for a tenant website.
- * Always resolves to the central main website SMS sender with package quotas.
- */
 export async function getWebsiteSmsConfig(websiteId) {
   const usageLimits = websiteId ? await getWebsiteMonthlyUsageAndLimits(websiteId) : null;
   const mainApiKey = process.env.SMS_API_KEY || '';
@@ -69,13 +65,9 @@ export async function getWebsiteSmsConfig(websiteId) {
   };
 }
 
-/**
- * Format and normalize Bangladeshi and International phone numbers
- */
 export function normalizePhoneNumber(phone = '') {
   let cleaned = String(phone).replace(/[^\d+]/g, '').trim();
   if (!cleaned) return '';
-  // If starts with 01, prefix with 880 (standard BD mobile format)
   if (/^01[3-9]\d{8}$/.test(cleaned)) {
     return `88${cleaned}`;
   }
@@ -85,18 +77,6 @@ export function normalizePhoneNumber(phone = '') {
   return cleaned;
 }
 
-/**
- * Dispatches an SMS using the central main platform SMS sender,
- * enforcing the tenant website's monthly package quota limits.
- *
- * @param {string|number} websiteId - Website tenant ID
- * @param {Object} options
- * @param {string} options.to - Recipient mobile number
- * @param {string} options.message - SMS message text
- * @param {string} [options.senderId] - Optional custom sender ID
- * @param {string} [options.senderType] - Optional sender type ('masking' | 'non-masking')
- * @returns {Promise<Object>}
- */
 export async function sendWebsiteSms(websiteId, { to, message, senderId = null, senderType = null }) {
   const recipient = normalizePhoneNumber(to);
   if (!recipient) {
@@ -108,12 +88,10 @@ export async function sendWebsiteSms(websiteId, { to, message, senderId = null, 
     throw new Error('SMS content is required.');
   }
 
-  // 1. Enforce monthly package SMS quota limit & increment usage counter
   if (websiteId) {
     await checkAndIncrementSmsUsage(websiteId, 1);
   }
 
-  // 2. Main platform SMS provider credentials
   const provider = process.env.SMS_PROVIDER || 'mimsms';
   const apiKey = process.env.SMS_API_KEY || '';
   const finalSenderId = senderId || process.env.SMS_SENDER_ID || 'CampusSMS';
@@ -121,7 +99,6 @@ export async function sendWebsiteSms(websiteId, { to, message, senderId = null, 
   const clientId = process.env.SMS_CLIENT_ID || '';
   const endpointUrl = process.env.SMS_ENDPOINT_URL || '';
 
-  // If no live SMS provider API key configured, record dispatch and succeed
   if (!apiKey) {
     console.log(`[MainSMS] Platform SMS simulation to ${recipient}: "${cleanMsg}" (Website #${websiteId})`);
     return {
@@ -147,9 +124,6 @@ export async function sendWebsiteSms(websiteId, { to, message, senderId = null, 
   });
 }
 
-/**
- * Core dispatch execution across supported providers
- */
 export async function executeSmsDispatch({
   provider,
   apiKey,

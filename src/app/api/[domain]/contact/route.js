@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { ensureContactsTables } from 'src/lib/database/contactsDb.js';
 
-// GET: Public contact office details & status
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -34,7 +33,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Public submission of contact message / academic inquiry
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

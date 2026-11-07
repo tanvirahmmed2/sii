@@ -5,7 +5,6 @@ import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
 import { uploadImage } from 'src/lib/database/cloudinary';
 
-// SEND MESSAGE FROM DEVELOPER / STAFF TO CREATOR
 export async function POST(request, context) {
   try {
     const auth = await hasModulePermission(request, 'support');
@@ -79,7 +78,6 @@ export async function POST(request, context) {
       imageId = uploadRes.publicId;
     }
 
-    // Insert staff message
     const msgRes = await queryDb(`
       INSERT INTO support_messages (support_id, sender_type, sender_id, message)
       VALUES ($1, 'developer', $2, $3)
@@ -88,7 +86,6 @@ export async function POST(request, context) {
 
     const newMsg = msgRes.rows[0];
 
-    // Optional image attachment saved to support_images
     let attachedImages = [];
     if (imageUrl) {
       const imgRes = await queryDb(`
@@ -109,10 +106,8 @@ export async function POST(request, context) {
       attachedImages = imgRes.rows || [];
     }
 
-    // Determine target status
     const targetStatus = status ? status.toLowerCase() : (ticket.status === 'open' ? 'in_progress' : ticket.status);
 
-    // Update ticket
     const updateRes = await queryDb(`
       UPDATE supports
       SET updated_at = CURRENT_TIMESTAMP,
@@ -123,7 +118,6 @@ export async function POST(request, context) {
       RETURNING *
     `, [targetStatus, dev.id, ticket.id]);
 
-    // Send email notification to creator (fire-and-forget / non-blocking)
     if (ticket.requester_email) {
       const emailSubject = `[${ticket.ticket_number}] Update on: ${ticket.subject}`;
       const emailHtml = buildStyledEmail({

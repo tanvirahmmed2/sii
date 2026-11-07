@@ -23,30 +23,25 @@ import {
 export default function StudentIdCardTemplatesPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Templates from Database
   const [systemTemplates, setSystemTemplates] = useState([]);
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [templatesLoading, setTemplatesLoading] = useState(true);
   const [activating, setActivating] = useState(false);
 
-  // Gallery Filters & Preview Controls
-  const [orientationFilter, setOrientationFilter] = useState('all'); // 'all' | 'portrait' | 'landscape'
-  const [previewSide, setPreviewSide] = useState('both'); // 'both' | 'front' | 'back'
-  const [previewScale, setPreviewScale] = useState(1); // 1 | 1.15 | 1.3
+  const [orientationFilter, setOrientationFilter] = useState('all'); 
+  const [previewSide, setPreviewSide] = useState('both'); 
+  const [previewScale, setPreviewScale] = useState(1); 
 
-  // Class-wise Template Assignments State
   const [classAssignments, setClassAssignments] = useState([]);
   const [savingClasses, setSavingClasses] = useState(false);
   const [bulkClassTemplateId, setBulkClassTemplateId] = useState('default');
 
-  // Preview Filter State
   const [hasFiltered, setHasFiltered] = useState(false);
   const [filterInfo, setFilterInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
 
-  // Fetch available templates and class assignments
   const loadTemplates = async () => {
     setTemplatesLoading(true);
     try {
@@ -77,7 +72,6 @@ export default function StudentIdCardTemplatesPage() {
     loadTemplates();
   }, []);
 
-  // Update a single class assignment in local state
   const handleClassAssignmentChange = (classId, systemTemplateId) => {
     setClassAssignments((prev) =>
       prev.map((c) =>
@@ -92,7 +86,6 @@ export default function StudentIdCardTemplatesPage() {
     );
   };
 
-  // Bulk apply selected template to all classes
   const handleBulkApplyToAll = () => {
     setClassAssignments((prev) =>
       prev.map((c) => ({
@@ -104,7 +97,6 @@ export default function StudentIdCardTemplatesPage() {
     toast.success('Applied to all classes in editor. Click "Save Class Assignments" to persist.');
   };
 
-  // Save all class assignments to backend
   const handleSaveClassAssignments = async () => {
     setSavingClasses(true);
     try {
@@ -137,7 +129,6 @@ export default function StudentIdCardTemplatesPage() {
     }
   };
 
-  // Activate selected template as school-wide default
   const handleActivateDefaultTemplate = async (templateId) => {
     setActivating(true);
     try {
@@ -163,7 +154,6 @@ export default function StudentIdCardTemplatesPage() {
     }
   };
 
-  // Filter students for sample preview
   const loadData = async ({ sessionId, classId, sectionId, sessionName, className, sectionName }) => {
     setLoading(true);
     setFilterInfo({ sessionId, classId, sectionId, sessionName, className, sectionName });
@@ -220,7 +210,6 @@ export default function StudentIdCardTemplatesPage() {
     return parseFloat(currentTpl.dimension_width || 54) >= parseFloat(currentTpl.dimension_height || 86);
   }, [currentTpl]);
 
-  // Filter templates by orientation
   const filteredTemplates = useMemo(() => {
     if (orientationFilter === 'all') return systemTemplates;
     return systemTemplates.filter((t) => {
@@ -229,14 +218,12 @@ export default function StudentIdCardTemplatesPage() {
     });
   }, [systemTemplates, orientationFilter]);
 
-  // Helper to compile clean, fully styled card HTML for front or back side
   const renderCardHtml = (tpl, student, side = 'front') => {
     if (!tpl) return '';
 
     let contentHtml = '';
     if (side === 'back') {
       contentHtml = tpl.html_back_content || tpl.custom_html_back || '';
-      // Fallback clean back side if template has no back side HTML
       if (!contentHtml.trim()) {
         contentHtml = `
           <div style="width: 100%; height: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center;">
@@ -328,11 +315,9 @@ export default function StudentIdCardTemplatesPage() {
 </html>`;
   };
 
-  // Dimensions helper
   const getCardPixelDimensions = (tpl, scale = 1) => {
     if (!tpl) return { width: 204 * scale, height: 325 * scale };
     const isLand = parseFloat(tpl.dimension_width || 54) >= parseFloat(tpl.dimension_height || 86);
-    // Base preview scale factor: 1mm ~ 3.78px
     const w = isLand ? 325 : 204;
     const h = isLand ? 204 : 325;
     return {
@@ -346,7 +331,6 @@ export default function StudentIdCardTemplatesPage() {
 
   return (
     <div className="w-full space-y-6 pb-16 animate-fade-up">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -369,7 +353,6 @@ export default function StudentIdCardTemplatesPage() {
         </div>
       </div>
 
-      {/* Section 1: Institutional Master Templates Grid */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
@@ -389,7 +372,6 @@ export default function StudentIdCardTemplatesPage() {
             </p>
           </div>
 
-          {/* Orientation Filter Buttons */}
           <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
             <button
               type="button"
@@ -453,7 +435,6 @@ export default function StudentIdCardTemplatesPage() {
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm'
                   }`}
                 >
-                  {/* Visual Card Thumbnail / Miniature Preview */}
                   <div className="p-3 bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center border-b border-slate-100 dark:border-slate-800">
                     <div
                       className={`relative overflow-hidden rounded shadow-xs border border-slate-300 dark:border-slate-700 bg-white transition-transform group-hover:scale-[1.02] ${
@@ -469,7 +450,6 @@ export default function StudentIdCardTemplatesPage() {
                     </div>
                   </div>
 
-                  {/* Card Content & Metadata */}
                   <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-start justify-between gap-2">
@@ -523,7 +503,6 @@ export default function StudentIdCardTemplatesPage() {
         )}
       </div>
 
-      {/* Section 2: Live Dual-Sided Template Verification & Sample Preview */}
       <div className="space-y-4">
         <StudentFilterBar
           onFilter={loadData}
@@ -533,7 +512,6 @@ export default function StudentIdCardTemplatesPage() {
           description="Filter roster to preview selected template populated with real student credentials"
         />
 
-        {/* Live Card Preview Box */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-2xs flex flex-col items-center space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
             <div>
@@ -550,9 +528,7 @@ export default function StudentIdCardTemplatesPage() {
               </p>
             </div>
 
-            {/* View Side & Zoom Controls */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Side Switcher */}
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded border border-slate-200 dark:border-slate-700 text-xs">
                 <button
                   type="button"
@@ -589,7 +565,6 @@ export default function StudentIdCardTemplatesPage() {
                 </button>
               </div>
 
-              {/* Zoom Controls */}
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded border border-slate-200 dark:border-slate-700 text-xs">
                 <button
                   type="button"
@@ -614,10 +589,8 @@ export default function StudentIdCardTemplatesPage() {
             </div>
           </div>
 
-          {/* Card Presentation Display */}
           {currentTpl && (
             <div className="flex flex-wrap items-center justify-center gap-8 p-6 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl w-full overflow-x-auto min-h-[360px]">
-              {/* FRONT SIDE */}
               {(previewSide === 'both' || previewSide === 'front') && (
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
@@ -640,7 +613,6 @@ export default function StudentIdCardTemplatesPage() {
                 </div>
               )}
 
-              {/* BACK SIDE */}
               {(previewSide === 'both' || previewSide === 'back') && (
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
@@ -665,7 +637,6 @@ export default function StudentIdCardTemplatesPage() {
             </div>
           )}
 
-          {/* Quick Specifications Table */}
           <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4 text-slate-600 dark:text-slate-400">
               <span>Student: <strong className="text-slate-900 dark:text-white">{sampleStudent.name}</strong></span>
@@ -684,7 +655,6 @@ export default function StudentIdCardTemplatesPage() {
         </div>
       </div>
 
-      {/* Section 3: Class-Wise Student ID Card Assignment */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
@@ -697,7 +667,6 @@ export default function StudentIdCardTemplatesPage() {
             </p>
           </div>
 
-          {/* Quick Bulk Action */}
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={bulkClassTemplateId}

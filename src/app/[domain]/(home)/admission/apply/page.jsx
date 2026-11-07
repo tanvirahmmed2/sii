@@ -37,25 +37,20 @@ const ApplyFlowContent = () => {
   const [selectedCircular, setSelectedCircular] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Flow Step: 'form' | 'payment' | 'upload' | 'completed'
   const [currentStep, setCurrentStep] = useState('form');
   const [activeApplicant, setActiveApplicant] = useState(null);
 
-  // Available Gateways & Checkout Modal
   const [availableGateways, setAvailableGateways] = useState([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  // Submission & Payment state
   const [submittingForm, setSubmittingForm] = useState(false);
   const [clearingPayment, setClearingPayment] = useState(false);
   const [paymentTxnId, setPaymentTxnId] = useState('');
 
-  // Upload state
   const [photoPreview, setPhotoPreview] = useState('');
   const [signaturePreview, setSignaturePreview] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  // Load circulars on mount
   useEffect(() => {
     const loadCirculars = async () => {
       setLoading(true);
@@ -85,7 +80,6 @@ const ApplyFlowContent = () => {
     loadCirculars();
   }, [admissionIdParam, getApiEndpoint]);
 
-  // Load configured payment gateways for admission fees
   useEffect(() => {
     if (activeApplicant?.id && currentStep === 'payment') {
       const fetchGateways = async () => {
@@ -106,13 +100,11 @@ const ApplyFlowContent = () => {
     }
   }, [activeApplicant?.id, currentStep, getApiEndpoint]);
 
-  // Handle circular change
   const handleCircularChange = (id) => {
     const found = circulars.find((c) => String(c.id) === String(id));
     setSelectedCircular(found || null);
   };
 
-  // Resume existing applicant if found during email check
   const handleResumeExisting = ({ step, applicant }) => {
     setActiveApplicant(applicant);
     if (applicant.photo_url) setPhotoPreview(applicant.photo_url);
@@ -129,7 +121,6 @@ const ApplyFlowContent = () => {
 
   const [serverValidationErrors, setServerValidationErrors] = useState([]);
 
-  // Step 2: Information form submission -> sets status to 'unpaid'
   const handleFormSubmit = async (formValues) => {
     if (!selectedCircular) {
       toast.error('Please select an admission circular target.');
@@ -201,7 +192,6 @@ const ApplyFlowContent = () => {
     }
   };
 
-  // Step 3: Clear Fee Payment -> sets status to 'paid'
   const handlePaymentClearance = async (gatewayCode = 'online') => {
     if (!activeApplicant) return;
 
@@ -242,7 +232,6 @@ const ApplyFlowContent = () => {
     }
   };
 
-  // Step 4: Photo & Signature Selection
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -271,7 +260,6 @@ const ApplyFlowContent = () => {
     }
   };
 
-  // Step 4: Upload Media -> sets status to 'completed' and generates exam_roll if exam-based
   const handleCompleteUpload = async () => {
     if (!activeApplicant) return;
 
@@ -338,7 +326,6 @@ const ApplyFlowContent = () => {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl mx-auto space-y-6">
-        {/* Progress Stepper Banner */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
           <div className="grid grid-cols-4 gap-2 text-center text-xs">
             <div className={`p-2 rounded-xl transition ${currentStep === 'form' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800' : 'text-slate-400'}`}>
@@ -360,7 +347,6 @@ const ApplyFlowContent = () => {
           </div>
         </div>
 
-        {/* STEP 1: Candidate Application Form */}
         {currentStep === 'form' && selectedCircular && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -404,7 +390,6 @@ const ApplyFlowContent = () => {
           </motion.div>
         )}
 
-        {/* STEP 2: Fee Payment Card */}
         {currentStep === 'payment' && activeApplicant && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
@@ -444,7 +429,6 @@ const ApplyFlowContent = () => {
               </div>
             </div>
 
-            {/* Gateway Selection & 100% Secured Checkout Trigger */}
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
@@ -488,7 +472,6 @@ const ApplyFlowContent = () => {
                 </div>
               </div>
 
-              {/* Offline / Bank Reference manual fallback */}
               <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
                 <details className="text-xs text-slate-500 cursor-pointer">
                   <summary className="font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
@@ -515,7 +498,6 @@ const ApplyFlowContent = () => {
               </div>
             </div>
 
-            {/* Universal Gateway Modal */}
             <UniversalGatewayCheckout
               isOpen={checkoutOpen}
               onClose={() => setCheckoutOpen(false)}
@@ -548,7 +530,6 @@ const ApplyFlowContent = () => {
           </motion.div>
         )}
 
-        {/* STEP 3: Photo & Signature Upload Card */}
         {currentStep === 'upload' && activeApplicant && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
@@ -568,7 +549,6 @@ const ApplyFlowContent = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Photo Input (300x300 px) */}
               <div className="p-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-center space-y-3 bg-slate-50/50 dark:bg-slate-850/50">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
                   1. Candidate Portrait (300 &times; 300 px) *
@@ -593,7 +573,6 @@ const ApplyFlowContent = () => {
                 <p className="text-[10px] text-slate-400">Supported: JPG, PNG. Strict 300x300 px.</p>
               </div>
 
-              {/* Signature Input (150x50 px) */}
               <div className="p-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-center space-y-3 bg-slate-50/50 dark:bg-slate-850/50">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider block">
                   2. Official Signature (150 &times; 50 px) *
@@ -642,14 +621,12 @@ const ApplyFlowContent = () => {
           </motion.div>
         )}
 
-        {/* STEP 4: Application Completion & Printable Slip */}
         {currentStep === 'completed' && activeApplicant && (
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className="space-y-6"
           >
-            {/* Top Bar Actions (Hidden in Print) */}
             <div className="print:hidden flex flex-wrap items-center justify-between gap-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4">
               <div className="flex items-center gap-2.5 text-xs font-bold text-emerald-900 dark:text-emerald-200">
                 <FiCheckCircle className="text-emerald-600 w-5 h-5" />
@@ -680,9 +657,7 @@ const ApplyFlowContent = () => {
               </div>
             </div>
 
-            {/* CONFIRMATION SLIP SHEET */}
             <div className="bg-white text-slate-900 border-2 border-slate-900 rounded-2xl p-8 shadow-xs space-y-6 print:border-none print:shadow-none print:p-0">
-              {/* Slip Header */}
               <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
                 <div>
                   <span className="text-xs uppercase tracking-widest font-bold text-slate-500 block">
@@ -705,7 +680,6 @@ const ApplyFlowContent = () => {
                 </div>
               </div>
 
-              {/* Identity & Roll Grid */}
               <div className="grid grid-cols-12 gap-4 items-start">
                 <div className="col-span-8 space-y-2.5 text-xs">
                   <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -745,7 +719,6 @@ const ApplyFlowContent = () => {
                   </table>
                 </div>
 
-                {/* Candidate Media Preview */}
                 <div className="col-span-4 flex flex-col items-center gap-2">
                   <div className="w-24 h-24 border border-slate-300 rounded bg-slate-100 overflow-hidden flex items-center justify-center">
                     {photoPreview ? (
@@ -776,7 +749,6 @@ const ApplyFlowContent = () => {
                 </div>
               </div>
 
-              {/* Instructions */}
               <div className="border-t border-slate-200 pt-3 text-[10px] text-slate-600">
                 <span className="font-bold text-slate-800 uppercase block">Intake Notice:</span>
                 <p>

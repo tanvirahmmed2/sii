@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Public single award detail by slug or id
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -23,7 +22,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Match by slug or id
     const singleRes = await queryDb(
       `SELECT a.id,
               a.website_id,
@@ -54,7 +52,6 @@ export async function GET(request, context) {
 
     const award = singleRes.rows[0];
 
-    // Fetch up to 4 other related awards from this institution
     const relatedRes = await queryDb(
       `SELECT a.id,
               a.title,

@@ -4,12 +4,6 @@ import { resolveWebsiteFromRequest, getCreatorSession } from 'src/lib/middleware
 import { getStaffSession } from 'src/lib/middleware/staff.js';
 import { processSecureAdmissionFeePayment } from 'src/lib/database/paymentGateways.js';
 
-/**
- * POST /api/[domain]/admissions/pay
- * 100% Secured Admission Fee Payment.
- * - Online candidate payment: Validates all gateway credentials, API keys, and records full audit trail.
- * - Offline cash counter payment: Strictly verifies staff/admin session before settling.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -32,7 +26,7 @@ export async function POST(request, context) {
       applicant_id,
       email,
       transaction_id = null,
-      gateway_code = 'bkash',
+      gateway_code = 'surjopay',
       gateway_account_id = null,
       payment_details = {}
     } = body;
@@ -42,9 +36,8 @@ export async function POST(request, context) {
     }
 
     const appId = parseInt(applicant_id, 10);
-    const gw = String(gateway_code || 'bkash').toLowerCase().trim();
+    const gw = String(gateway_code || 'surjopay').toLowerCase().trim();
 
-    // Case A: Staff/Admin Offline Cash Counter Settlement
     if (['cash', 'manual', 'offline'].includes(gw)) {
       if (!staffSession && !creatorSession) {
         return NextResponse.json({
@@ -111,7 +104,6 @@ export async function POST(request, context) {
         WHERE id = $1 AND website_id = $2
       `, [appId, website.id]);
 
-      // Record transaction audit
       await queryDb(`
         INSERT INTO website_payment_transactions (
           website_id, gateway_code, purpose, invoice_ref,
@@ -139,7 +131,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Case B: Online Gateway Payment with 100% Credential & Key Validation
     const payResult = await processSecureAdmissionFeePayment({
       websiteId: website.id,
       applicantIdentifier: appId,

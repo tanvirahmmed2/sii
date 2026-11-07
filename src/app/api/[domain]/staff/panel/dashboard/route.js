@@ -19,7 +19,6 @@ export async function GET(request, context) {
 
     const websiteId = website.id;
 
-    // Fetch dashboard KPIs and statistics safely
     const [
       studentsRes,
       teachersRes,

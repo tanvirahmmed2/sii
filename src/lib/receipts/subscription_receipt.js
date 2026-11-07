@@ -53,7 +53,6 @@ export function numberToWords(num, currency = 'USD') {
     }
     return result.trim() + ' Taka Only';
   } else {
-    // International USD / Western numbering
     if (Math.floor(n / 1000000)) {
       result += convertLessThanThousand(Math.floor(n / 1000000)) + 'Million ';
       n %= 1000000;
@@ -111,7 +110,7 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       })
     : 'Renews periodically';
 
-  const currency = (payment.currency || (payment.payment_method === 'BKASH' ? 'BDT' : 'USD')).toUpperCase();
+  const currency = (payment.currency || (String(payment.payment_method).toLowerCase() === 'surjopay' ? 'BDT' : 'USD')).toUpperCase();
   const amountNumber = Number(payment.amount || 0);
   const amountFormatted = currency === 'BDT' ? `৳${amountNumber.toLocaleString()}` : `$${amountNumber.toFixed(2)}`;
   const amountWords = numberToWords(amountNumber, currency);

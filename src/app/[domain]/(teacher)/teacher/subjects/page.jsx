@@ -27,7 +27,6 @@ const SubjectsPage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="pb-3 border-b border-slate-200">
         <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
           <FiBook className="text-primary" /> My Subjects

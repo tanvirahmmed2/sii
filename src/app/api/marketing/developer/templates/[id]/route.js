@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { hasModulePermission } from 'src/lib/middleware/developer.js';
 import { ALL_TASKS, resolveTaskConfig } from 'src/lib/templates/templateTables.js';
 
-// Helper: locate which task table holds this ID
 async function findTemplateRecord(id, optionalCategoryOrTask) {
   const numericId = Number(id);
   if (isNaN(numericId)) return null;
@@ -26,7 +25,6 @@ async function findTemplateRecord(id, optionalCategoryOrTask) {
     }
   }
 
-  // Fallback: search all task tables
   for (const t of ALL_TASKS) {
     const res = await queryDb(
       `SELECT id, name, slug, '${t.category}' AS category, '${t.key}' AS task_key,
@@ -45,7 +43,6 @@ async function findTemplateRecord(id, optionalCategoryOrTask) {
   return null;
 }
 
-// GET: Single template with Fabric.js data
 export async function GET(request, context) {
   try {
     const params = await context.params;
@@ -70,7 +67,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Update template content, Fabric data, or metadata in its dedicated task table
 export async function PUT(request, context) {
   try {
     const auth = await hasModulePermission(request, 'templates');
@@ -146,7 +142,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete template from its dedicated task table
 export async function DELETE(request, context) {
   try {
     const auth = await hasModulePermission(request, 'templates');
@@ -186,7 +181,6 @@ export async function DELETE(request, context) {
   }
 }
 
-// POST: Clone / duplicate template within its dedicated task table
 export async function POST(request, context) {
   try {
     const auth = await hasModulePermission(request, 'templates');

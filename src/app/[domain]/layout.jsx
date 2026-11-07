@@ -40,10 +40,8 @@ export default async function TenantWebsiteMasterLayout({ children, params }) {
   const resolvedParams = await params;
   const slug = resolvedParams?.domain || resolvedParams?.slug || '';
 
-  // Validate tenant website strictly against database (subdomain, custom domain, or preview slug)
   const website = await resolveWebsiteFromRequest(null, { params: resolvedParams });
 
-  // If the website does not match a valid active tenant in the database, show the not found page
   if (!website || website.is_active === false) {
     notFound();
   }

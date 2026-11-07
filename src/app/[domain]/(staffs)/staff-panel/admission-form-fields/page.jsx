@@ -24,7 +24,7 @@ function AdmissionFormFieldsContent() {
   const domain = params?.domain || '';
   const apiBase = domain ? `/api/${domain}` : '/api';
 
-  const [activeSection, setActiveSection] = useState('personal'); // 'personal' | 'guardian' | 'address' | 'academic'
+  const [activeSection, setActiveSection] = useState('personal'); 
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
@@ -33,7 +33,6 @@ function AdmissionFormFieldsContent() {
   const [editingField, setEditingField] = useState(null);
   const [previewMode, setPreviewMode] = useState(false);
 
-  // New field modal state
   const [newField, setNewField] = useState({
     field_key: '',
     label: '',
@@ -67,7 +66,6 @@ function AdmissionFormFieldsContent() {
     fetchFields();
   }, [fetchFields]);
 
-  // Toggle field required status
   const handleToggleRequired = async (field) => {
     const idKey = field.id || field.field_key;
     setSavingId(idKey);
@@ -102,7 +100,6 @@ function AdmissionFormFieldsContent() {
     }
   };
 
-  // Toggle field active/inactive status
   const handleToggleActive = async (field) => {
     const idKey = field.id || field.field_key;
     setSavingId(idKey);
@@ -137,7 +134,6 @@ function AdmissionFormFieldsContent() {
     }
   };
 
-  // Delete modular field
   const handleDeleteField = async (field) => {
     const id = field?.id;
     const label = field?.label || 'Field';
@@ -167,7 +163,6 @@ function AdmissionFormFieldsContent() {
     }
   };
 
-  // Open Edit Modal with selected field data
   const handleStartEdit = (field) => {
     setEditingField({
       ...field,
@@ -176,7 +171,6 @@ function AdmissionFormFieldsContent() {
     setShowEditModal(true);
   };
 
-  // Submit field updates
   const handleUpdateField = async (e) => {
     e.preventDefault();
     if (!editingField?.label?.trim()) {
@@ -228,7 +222,6 @@ function AdmissionFormFieldsContent() {
     }
   };
 
-  // Initialize or reset defaults
   const handleInitializeDefaults = async () => {
     if (!confirm('Initialize standard default modular admission fields? Existing fields will be updated.')) return;
     setLoading(true);
@@ -252,7 +245,6 @@ function AdmissionFormFieldsContent() {
     }
   };
 
-  // Create new field submit
   const handleCreateField = async (e) => {
     e.preventDefault();
     if (!newField.label.trim()) {
@@ -289,7 +281,6 @@ function AdmissionFormFieldsContent() {
         })
       });
 
-
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success(`Custom field '${newField.label}' added!`);
@@ -325,7 +316,6 @@ function AdmissionFormFieldsContent() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl shadow-xs">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">
@@ -370,7 +360,6 @@ function AdmissionFormFieldsContent() {
         </div>
       </div>
 
-      {/* Section Navigation Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {sectionsConfig.map((sec) => {
           const Icon = sec.icon;
@@ -405,7 +394,6 @@ function AdmissionFormFieldsContent() {
         })}
       </div>
 
-      {/* Preview Mode Drawer */}
       {previewMode && (
         <div className="p-6 bg-slate-100 dark:bg-slate-900 border border-primary/30 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
@@ -430,7 +418,6 @@ function AdmissionFormFieldsContent() {
         </div>
       )}
 
-      {/* Fields Management Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -549,7 +536,6 @@ function AdmissionFormFieldsContent() {
         )}
       </div>
 
-      {/* Add Custom Field Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200">
@@ -599,7 +585,6 @@ function AdmissionFormFieldsContent() {
                   className="input-style w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
                 />
               </div>
-
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -696,7 +681,6 @@ function AdmissionFormFieldsContent() {
         </div>
       )}
 
-      {/* Edit Field Modal */}
       {showEditModal && editingField && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200">

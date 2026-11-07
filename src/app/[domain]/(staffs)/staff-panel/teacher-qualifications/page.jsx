@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -31,7 +29,6 @@ function TeacherQualificationsContent() {
   const [qualifications, setQualifications] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [editingId, setEditingId] = useState(null);
@@ -46,12 +43,10 @@ function TeacherQualificationsContent() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Delete modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -65,7 +60,6 @@ function TeacherQualificationsContent() {
     }
   }, []);
 
-  // Fetch teachers roster
   useEffect(() => {
     async function loadTeachers() {
       if (!domain) return;
@@ -85,7 +79,6 @@ function TeacherQualificationsContent() {
     loadTeachers();
   }, [domain, selectedTeacherId]);
 
-  // Fetch qualifications for selected teacher
   const fetchQualifications = useCallback(async (tId) => {
     if (!domain || !tId) return;
     try {
@@ -215,7 +208,6 @@ function TeacherQualificationsContent() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -229,7 +221,6 @@ function TeacherQualificationsContent() {
         </div>
       )}
 
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
@@ -249,7 +240,6 @@ function TeacherQualificationsContent() {
           </p>
         </div>
 
-        {/* Teacher selector and Add button */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select Faculty:</span>
@@ -276,7 +266,6 @@ function TeacherQualificationsContent() {
         </div>
       </div>
 
-      {/* Selected Teacher Summary Banner */}
       {currentTeacher && (
         <div className="flex items-center gap-3 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
           {currentTeacher.photo_url ? (
@@ -306,7 +295,6 @@ function TeacherQualificationsContent() {
         </div>
       )}
 
-      {/* Qualifications Data Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
@@ -387,7 +375,6 @@ function TeacherQualificationsContent() {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95">
@@ -503,7 +490,6 @@ function TeacherQualificationsContent() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && itemToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95">

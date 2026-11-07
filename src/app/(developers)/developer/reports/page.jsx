@@ -138,7 +138,6 @@ export default function AdminReportsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
@@ -157,7 +156,6 @@ export default function AdminReportsPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -193,7 +191,6 @@ export default function AdminReportsPage() {
         </div>
       </div>
 
-      {/* Metrics Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 space-y-1">
           <div className="text-[10px] uppercase font-semibold text-slate-400">Total Reports</div>
@@ -224,7 +221,6 @@ export default function AdminReportsPage() {
         />
       )}
 
-      {/* In-Page Review & Resolution Drawer / Card */}
       {selectedReport && (
         <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded p-4">
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
@@ -335,7 +331,6 @@ export default function AdminReportsPage() {
         </div>
       )}
 
-      {/* Main Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/20">
           <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
@@ -365,7 +360,6 @@ export default function AdminReportsPage() {
           </div>
         </div>
 
-        {/* Responsive Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -465,7 +459,6 @@ export default function AdminReportsPage() {
           </table>
         </div>
 
-        {/* Mobile Cards View */}
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {loading ? (
             <div className="py-10">

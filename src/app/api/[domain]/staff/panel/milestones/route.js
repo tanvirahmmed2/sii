@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all milestones for this website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -71,7 +70,6 @@ export async function GET(request, context) {
   }
 }
 
-// Helper to parse multipart/form-data or json
 async function parseMilestoneRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -95,7 +93,6 @@ async function parseMilestoneRequest(request) {
   return { body, imageFile };
 }
 
-// POST: Create a new milestone
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -114,7 +111,6 @@ export async function POST(request, context) {
     const finalYear = String(year || new Date().getFullYear()).trim();
     const staffId = auth.staffSession?.staff_id || auth.staffSession?.id || null;
 
-    // STEP 1: CREATE MILESTONE IN DATABASE FIRST
     const insertResult = await queryDb(
       `INSERT INTO website_milestons (
         website_id, year, title, description, image, image_id, order_no, is_active, created_by_staff_id
@@ -135,7 +131,6 @@ export async function POST(request, context) {
 
     const createdMilestone = insertResult.rows[0];
 
-    // STEP 2: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/milestones`);
@@ -165,7 +160,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing milestone
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -178,14 +172,12 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Milestone ID is required for update.' }, { status: 400 });
     }
 
-    // Retrieve previous milestone to clean up old Cloudinary image if replaced
     const existingResult = await queryDb(
       `SELECT image_id FROM website_milestons WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
     );
     const oldImageId = existingResult.rows[0]?.image_id;
 
-    // STEP 1: UPDATE MILESTONE IN DATABASE FIRST
     const updateResult = await queryDb(
       `UPDATE website_milestons
        SET year = COALESCE($1, year),
@@ -217,7 +209,6 @@ export async function PUT(request, context) {
 
     let updatedMilestone = updateResult.rows[0];
 
-    // STEP 2: IF NEW FILE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/milestones`);
@@ -239,7 +230,6 @@ export async function PUT(request, context) {
         console.error('Milestone photo update Cloudinary error:', uploadErr);
       }
     } else if (image_id !== undefined && oldImageId && oldImageId !== image_id) {
-      // If image_id was replaced by explicit string and old image_id exists, clean up old Cloudinary asset
       deleteImage(oldImageId).catch((err) =>
         console.warn('Could not clean up replaced milestone image on Cloudinary:', err.message)
       );
@@ -256,7 +246,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete a milestone
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

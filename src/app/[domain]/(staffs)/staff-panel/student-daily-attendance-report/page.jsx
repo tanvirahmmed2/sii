@@ -73,7 +73,6 @@ export default function StudentDailyAttendanceReportPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -95,7 +94,6 @@ export default function StudentDailyAttendanceReportPage() {
         )}
       </div>
 
-      {/* Filter Bar */}
       <div className="print:hidden">
         <StudentFilterBar
           onFilter={loadData}
@@ -108,7 +106,6 @@ export default function StudentDailyAttendanceReportPage() {
         />
       </div>
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📊"
@@ -117,7 +114,6 @@ export default function StudentDailyAttendanceReportPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Print Letterhead (visible only in print) */}
           <div className="hidden print:block text-center border-b pb-3 mb-3">
             <h2 className="text-lg font-bold uppercase">{website?.name || 'Institutional Portal'}</h2>
             <p className="text-xs text-slate-600">Daily Student Attendance Audit Report</p>
@@ -126,7 +122,6 @@ export default function StudentDailyAttendanceReportPage() {
             </p>
           </div>
 
-          {/* Metric KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-2xs">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Roster</span>
@@ -150,7 +145,6 @@ export default function StudentDailyAttendanceReportPage() {
             </div>
           </div>
 
-          {/* Report Breakdown Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             {records.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400">

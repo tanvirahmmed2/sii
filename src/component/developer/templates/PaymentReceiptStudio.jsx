@@ -21,7 +21,6 @@ function computeCanvasPixels(w, h, unit) {
 
   if (unit === 'px') return { pxW: Math.round(widthVal), pxH: Math.round(heightVal) };
   if (unit === 'in') return { pxW: Math.round(widthVal * 96), pxH: Math.round(heightVal * 96) };
-  // mm: scale factor 3.78 for A5 (210x148 -> ~794x560px)
   return { pxW: Math.round(widthVal * 3.78), pxH: Math.round(heightVal * 3.78) };
 }
 
@@ -31,7 +30,7 @@ export default function PaymentReceiptStudio({ initialTemplate, onSave, onExitUr
   const fabricRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('elements');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
   const [zoomLevel, setZoomLevel] = useState(0.85);
   const [selectedObject, setSelectedObject] = useState(null);
   const [canvasObjects, setCanvasObjects] = useState([]);
@@ -39,7 +38,6 @@ export default function PaymentReceiptStudio({ initialTemplate, onSave, onExitUr
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [canvasBg, setCanvasBg] = useState('#ffffff');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 210);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 148);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
@@ -340,7 +338,6 @@ export default function PaymentReceiptStudio({ initialTemplate, onSave, onExitUr
         </div>
       </header>
 
-      {/* Manual Dimensions Bar */}
       <div className="min-h-9 py-1 bg-slate-900/70 border-b border-slate-800/80 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-none gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-[11px] font-semibold text-slate-300">Dimensions:</span>
@@ -542,7 +539,6 @@ export default function PaymentReceiptStudio({ initialTemplate, onSave, onExitUr
         </aside>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

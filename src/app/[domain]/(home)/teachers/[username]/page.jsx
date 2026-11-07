@@ -60,7 +60,6 @@ const TeacherPublicProfilePage = () => {
         </div>
       ) : teacher ? (
         <div className="space-y-6">
-          {/* Profile Header */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6 shadow-xs">
             <div className="w-28 h-28 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
               {teacher.image ? (
@@ -103,7 +102,6 @@ const TeacherPublicProfilePage = () => {
             </div>
           </div>
 
-          {/* Academic & Personal Meta Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {teacher.blood_group && (
               <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 text-center space-y-1 shadow-xs">
@@ -133,9 +131,7 @@ const TeacherPublicProfilePage = () => {
             )}
           </div>
 
-          {/* Split View: Qualifications & Experiences */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Qualifications */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
                 <h2 className="font-serif text-base font-semibold text-slate-900 dark:text-white">
@@ -171,7 +167,6 @@ const TeacherPublicProfilePage = () => {
               )}
             </div>
 
-            {/* Experience */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
                 <h2 className="font-serif text-base font-semibold text-slate-900 dark:text-white">

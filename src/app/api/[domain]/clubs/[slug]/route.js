@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Single club details
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -48,7 +47,6 @@ export async function GET(request, context) {
 
     const club = clubRes.rows[0];
 
-    // Executive committee
     const execsRes = await queryDb(
       `SELECT scm.id,
               scm.role,

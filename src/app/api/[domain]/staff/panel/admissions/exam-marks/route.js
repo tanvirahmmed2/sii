@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 
-/**
- * GET /api/[domain]/staff/panel/admissions/exam-marks?admission_id=...
- * Fetches exam details, subjects, applicants, and marks breakdown for an admission circular.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -17,7 +13,6 @@ export async function GET(request, context) {
     const admissionId = searchParams.get('admission_id');
 
     if (!admissionId) {
-      // Return list of exam-based circulars if no admission_id is specified
       const circularsRes = await queryDb(`
         SELECT a.id, a.title, a.start_date, a.end_date, a.capacity,
                c.name AS class_name, c.max_seats AS class_max_seats,
@@ -39,7 +34,6 @@ export async function GET(request, context) {
 
     const admId = parseInt(admissionId, 10);
 
-    // 1. Fetch circular and exam metadata
     const circularRes = await queryDb(`
       SELECT a.id, a.title, a.capacity, a.selection_method, a.result_date,
              c.name AS class_name, c.max_seats AS class_max_seats,
@@ -58,7 +52,6 @@ export async function GET(request, context) {
 
     const circular = circularRes.rows[0];
 
-    // 2. Fetch exam subjects
     const subjectsRes = await queryDb(`
       SELECT id, title, mark, time
       FROM website_admission_exam_subjects
@@ -70,7 +63,6 @@ export async function GET(request, context) {
 
     const statusParam = searchParams.get('status') || 'completed';
 
-    // 3. Fetch applicants for this circular with images and fee status - strictly completed applicants only
     const applicantsRes = await queryDb(`
       SELECT a.id, a.application_no, a.exam_roll,
              COALESCE(a.exam_roll, a.roll_no, 'ROL-' || a.id) AS roll_no,
@@ -87,14 +79,12 @@ export async function GET(request, context) {
       ORDER BY a.score DESC NULLS LAST, a.created_at ASC
     `, [admId, auth.website.id, statusParam]);
 
-    // 4. Fetch all recorded exam marks for this circular
     const marksRes = await queryDb(`
       SELECT m.id, m.subject_id, m.applicant_id, m.marks_obtained, m.remarks
       FROM website_admission_exam_marks m
       WHERE m.admission_id = $1 AND m.website_id = $2
     `, [admId, auth.website.id]);
 
-    // Group marks by applicant_id -> subject_id -> mark
     const marksByApplicant = {};
     for (const m of marksRes.rows) {
       if (!marksByApplicant[m.applicant_id]) {
@@ -106,7 +96,6 @@ export async function GET(request, context) {
       };
     }
 
-    // Attach subject marks & calculate total obtained for each applicant
     const applicantsWithMarks = applicantsRes.rows.map((app) => {
       const appMarks = marksByApplicant[app.id] || {};
       let totalMarksObtained = 0;
@@ -149,11 +138,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/admissions/exam-marks
- * Upserts subject marks for applicants in real-time or bulk.
- * Must be updateable as required.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -173,7 +157,6 @@ export async function POST(request, context) {
 
     const admId = parseInt(admission_id, 10);
 
-    // Verify circular belongs to this website
     const checkRes = await queryDb(
       `SELECT id FROM website_admissions WHERE id = $1 AND website_id = $2`,
       [admId, auth.website.id]
@@ -190,7 +173,6 @@ export async function POST(request, context) {
 
       const marksVal = Math.max(0, parseFloat(marks_obtained) || 0);
 
-      // Upsert into website_admission_exam_marks (updateable anytime)
       await queryDb(`
         INSERT INTO website_admission_exam_marks (
           website_id, admission_id, subject_id, applicant_id, marks_obtained, remarks
@@ -214,7 +196,6 @@ export async function POST(request, context) {
       updatedCount++;
     }
 
-    // Recalculate applicant total scores in website_admission_applicants
     await queryDb(`
       UPDATE website_admission_applicants a
       SET score = COALESCE((

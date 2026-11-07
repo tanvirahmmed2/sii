@@ -19,7 +19,6 @@ export default function AdmissionIncompletePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
-  // 1. Fetch available circulars
   useEffect(() => {
     fetch(`${apiBase}/staff/panel/admissions`)
       .then(async (res) => {
@@ -34,7 +33,6 @@ export default function AdmissionIncompletePage() {
       .catch((err) => console.error('Error fetching circulars:', err));
   }, [apiBase]);
 
-  // 2. Fetch Incomplete Applicants - STRICT RULE: status=incomplete
   const fetchIncompleteApplicants = useCallback(
     async (showLoader = false) => {
       if (showLoader) setLoading(true);
@@ -51,7 +49,6 @@ export default function AdmissionIncompletePage() {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
         if (data.success) {
-          // Double filter to guarantee only incomplete applicants appear
           const incompleteOnly = (data.applicants || []).filter((a) => a.status === 'incomplete');
           setApplicants(incompleteOnly);
         } else {
@@ -71,7 +68,6 @@ export default function AdmissionIncompletePage() {
     fetchIncompleteApplicants();
   }, [fetchIncompleteApplicants]);
 
-  // Filtered applicants by client search
   const filteredApplicants = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
     if (!q) return applicants;
@@ -83,7 +79,6 @@ export default function AdmissionIncompletePage() {
     ));
   }, [applicants, searchTerm]);
 
-  // Summary Metrics
   const metrics = useMemo(() => {
     const circIds = new Set();
     applicants.forEach((a) => {
@@ -95,7 +90,6 @@ export default function AdmissionIncompletePage() {
     };
   }, [applicants]);
 
-  // Delete Draft Applicant
   const handleDeleteApplicant = async (applicantId) => {
     if (!window.confirm('Are you sure you want to delete this incomplete draft application?')) {
       return;
@@ -119,19 +113,16 @@ export default function AdmissionIncompletePage() {
     }
   };
 
-  // Copy Candidate Smart Resume Link
   const handleCopyResumeLink = (app) => {
     const resumeUrl = `${window.location.origin}/admission/apply?resume_email=${encodeURIComponent(app.email || '')}&circular_id=${app.admission_id || ''}`;
     navigator.clipboard.writeText(resumeUrl);
     toast.success('Smart Resume URL copied to clipboard!');
   };
 
-  // Send Resume Reminder
   const handleSendReminder = (app) => {
     toast.success(`Resume reminder queued for ${app.applicant_name} (${app.email})`);
   };
 
-  // Export to Excel (.xlsx)
   const handleExportExcel = () => {
     if (filteredApplicants.length === 0) {
       toast.error('No incomplete records to export.');
@@ -156,7 +147,6 @@ export default function AdmissionIncompletePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Banner Notice */}
       <div className="p-4 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
         <div>
           <span className="text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-900/60 px-2.5 py-0.5 rounded uppercase tracking-wider">
@@ -180,7 +170,6 @@ export default function AdmissionIncompletePage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -207,10 +196,8 @@ export default function AdmissionIncompletePage() {
         </div>
       </div>
 
-      {/* Control Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Search */}
           <div className="relative flex-1 sm:w-64">
             <input
               type="text"
@@ -221,7 +208,6 @@ export default function AdmissionIncompletePage() {
             />
           </div>
 
-          {/* Circular Filter */}
           <select
             value={selectedCircularId}
             onChange={(e) => setSelectedCircularId(e.target.value)}
@@ -256,7 +242,6 @@ export default function AdmissionIncompletePage() {
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -341,7 +326,6 @@ export default function AdmissionIncompletePage() {
 
                     <td className="py-2 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Copy Smart Resume URL */}
                         <button
                           onClick={() => handleCopyResumeLink(app)}
                           className="px-2 py-1 rounded text-[11px] font-semibold border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition flex items-center gap-1 cursor-pointer"
@@ -351,7 +335,6 @@ export default function AdmissionIncompletePage() {
                           <span>Resume Link</span>
                         </button>
 
-                        {/* Send Reminder */}
                         <button
                           onClick={() => handleSendReminder(app)}
                           className="px-2 py-1 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
@@ -360,7 +343,6 @@ export default function AdmissionIncompletePage() {
                           Remind
                         </button>
 
-                        {/* Delete Draft */}
                         <button
                           onClick={() => handleDeleteApplicant(app.id)}
                           disabled={actionLoadingId === app.id}

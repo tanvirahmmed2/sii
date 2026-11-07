@@ -6,43 +6,13 @@ import { hashPassword } from 'src/lib/middleware/staff.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
-
-/**
- * Constructs the teacher verification link using custom domain (if set)
- * or ${subdomain}.${baseDomain}/auth/access/teacher/verify?token=...
- */
 export function buildTeacherVerificationUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  // 1. Custom domain (if set)
-  const rawCustom = (website?.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/teacher/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  // 2. Subdomain of platform base URL
-  const rawSub = (website?.subdomain || website?.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/teacher/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  // Production base domain
-  const cleanHostNoPort = baseHost.split(':')[0];
-  const parts = cleanHostNoPort.split('.');
-  const baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : cleanHostNoPort;
-  const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-
-  return `${protocol}://${cleanSub}.${baseDomain}${port}/auth/access/teacher/verify?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/teacher/verify?token=${encodeURIComponent(token)}`;
 }
 
-// GET: Fetch teachers roster with designations, stats, or single teacher profile
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -56,12 +26,11 @@ export async function GET(request, context) {
     const email = searchParams.get('email');
     const search = searchParams.get('search')?.trim();
     const designationId = searchParams.get('designation_id');
-    const status = searchParams.get('status'); // 'all', 'active', 'inactive'
+    const status = searchParams.get('status'); 
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
     const offset = (page - 1) * limit;
 
-    // Single teacher profile retrieval
     if (id || email) {
       let queryStr = `
         SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
@@ -101,7 +70,6 @@ export async function GET(request, context) {
 
       const teacher = res.rows[0];
 
-      // Fetch teacher qualifications
       const qualRes = await queryDb(
         `SELECT id, degree, institute, board, passing_year, result, certificate_url, certificate_id, created_at
          FROM website_teacher_qualifications
@@ -111,7 +79,6 @@ export async function GET(request, context) {
       );
       teacher.qualifications = qualRes.rows;
 
-      // Fetch teacher assigned subjects
       const subjRes = await queryDb(
         `SELECT wts.id, wts.subject_id, wts.class_id, wts.is_primary,
                 ws.name AS subject_name, ws.code AS subject_code,
@@ -125,7 +92,6 @@ export async function GET(request, context) {
       );
       teacher.subjects = subjRes.rows;
 
-      // Fetch teacher class routine periods
       const periodsRes = await queryDb(
         `SELECT wtcp.id, wtcp.period_id, wtcp.class_id, wtcp.section_id, wtcp.day_id,
                 wp.name AS period_name, wp.start_time, wp.end_time,
@@ -146,7 +112,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, teacher });
     }
 
-    // List of teachers with filters & search
     let whereClauses = ['wt.website_id = $1'];
     let params = [website.id];
     let paramIndex = 2;
@@ -178,14 +143,12 @@ export async function GET(request, context) {
 
     const whereStr = whereClauses.join(' AND ');
 
-    // Total count for current filter
     const countRes = await queryDb(
       `SELECT COUNT(*)::int AS count FROM website_teachers wt WHERE ${whereStr}`,
       params
     );
     const total = countRes.rows[0]?.count || 0;
 
-    // Aggregated metrics
     const statsRes = await queryDb(
       `SELECT 
          COUNT(*)::int AS total_teachers,
@@ -205,7 +168,6 @@ export async function GET(request, context) {
       total_departments: 0,
     };
 
-    // Query rows with pagination
     const listQuery = `
       SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
              wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
@@ -249,7 +211,6 @@ export async function GET(request, context) {
   }
 }
 
-// Helper to parse multipart/form-data or json
 async function parseTeacherRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -280,7 +241,6 @@ async function parseTeacherRequest(request) {
   return { body, imageFile };
 }
 
-// POST: Create / Register new teacher
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');
@@ -313,7 +273,6 @@ export async function POST(request, context) {
       qualifications = [],
     } = body;
 
-    // Input validation
     if (!name || !name.trim()) {
       return NextResponse.json({ success: false, error: 'Teacher full name is required.' }, { status: 400 });
     }
@@ -330,14 +289,11 @@ export async function POST(request, context) {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedNumber = number.trim();
 
-    // Check cross-role email uniqueness across all institution roles
     const emailAvail = await checkInstitutionEmailAvailability(website.id, trimmedEmail);
     if (!emailAvail.available) {
       return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
 
-
-    // Verify department exists and belongs to this website
     const deptRes = await queryDb(
       `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [department_id, website.id]
@@ -347,7 +303,6 @@ export async function POST(request, context) {
     }
     const verifiedDepartmentId = deptRes.rows[0].id;
 
-    // Verify designation exists if provided
     let verifiedDesignationId = null;
     if (designation_id) {
       const desRes = await queryDb(
@@ -359,7 +314,6 @@ export async function POST(request, context) {
       }
     }
 
-    // Verify payroll scale if provided and calculate salary
     let finalSalary = Number(salary) || 0.00;
     let selectedPayroll = null;
     const targetPayrollId = payroll_id || body.payrollId || null;
@@ -379,16 +333,13 @@ export async function POST(request, context) {
       }
     }
 
-    // Generate a demo password by setup while creating teacher
     const demoPassword = password && password.trim()
       ? password.trim()
       : `Teacher@${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedPassword = await hashPassword(demoPassword);
 
-    // Cryptographic verification token (valid for 7 days)
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // STEP 1: CREATE TEACHER TABLE ROW FIRST IN DATABASE (status inactive until email verification)
     const insertRes = await queryDb(
       `INSERT INTO website_teachers (
          website_id, department_id, designation_id, name, email, number, emergency_contact,
@@ -426,7 +377,6 @@ export async function POST(request, context) {
 
     const createdTeacher = insertRes.rows[0];
 
-    // STEP 2: ASSIGN PAYROLL SCALE IN website_teacher_salaries TABLE
     if (selectedPayroll) {
       await queryDb(
         `INSERT INTO website_teacher_salaries (
@@ -444,7 +394,6 @@ export async function POST(request, context) {
       createdTeacher.payroll_grade_code = selectedPayroll.grade_code;
     }
 
-    // STEP 3: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${website.id}/teachers`);
@@ -463,7 +412,6 @@ export async function POST(request, context) {
       }
     }
 
-    // Optional initial qualifications insertion
     if (Array.isArray(qualifications) && qualifications.length > 0) {
       for (const q of qualifications) {
         if (q && q.degree && q.institute) {
@@ -487,10 +435,8 @@ export async function POST(request, context) {
       }
     }
 
-    // Build verification link using custom domain (if set) or subdomain.baseurl
     const verificationUrl = buildTeacherVerificationUrl(website, verificationToken, request);
 
-    // Send verification link to teacher's email via website mailer (with fallback to platform mailer)
     let emailSent = false;
     let emailError = null;
     try {
@@ -543,7 +489,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update existing teacher profile
 export async function PUT(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'edit');
@@ -580,7 +525,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Teacher ID is required for update.' }, { status: 400 });
     }
 
-    // Verify teacher exists and belongs to current website
     const checkRes = await queryDb(
       `SELECT id, password, photo_id FROM website_teachers WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [id, website.id]
@@ -592,7 +536,6 @@ export async function PUT(request, context) {
 
     const currentTeacher = checkRes.rows[0];
 
-    // Check duplicate email across all institution roles
     if (email) {
       const emailAvail = await checkInstitutionEmailAvailability(website.id, email.trim(), {
         excludeRole: 'teacher',
@@ -603,14 +546,11 @@ export async function PUT(request, context) {
       }
     }
 
-
-    // Handle password update if provided
     let passwordHash = currentTeacher.password;
     if (password && password.trim()) {
       passwordHash = await hashPassword(password.trim());
     }
 
-    // Verify department exists if provided
     let verifiedDepartmentId = undefined;
     if (department_id !== undefined) {
       if (!department_id) {
@@ -626,7 +566,6 @@ export async function PUT(request, context) {
       verifiedDepartmentId = deptRes.rows[0].id;
     }
 
-    // Verify designation exists if provided
     let verifiedDesignationId = null;
     if (designation_id) {
       const desRes = await queryDb(
@@ -638,7 +577,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Verify payroll scale if provided and calculate salary
     const targetPayrollId = payroll_id !== undefined ? payroll_id : body.payrollId;
     let selectedPayroll = null;
     let computedSalary = undefined;
@@ -683,7 +621,6 @@ export async function PUT(request, context) {
         ? Number(salary)
         : null;
 
-    // STEP 1: UPDATE TEACHER TABLE ROW FIRST IN DATABASE
     const updateRes = await queryDb(
       `UPDATE website_teachers
        SET name = COALESCE($1, name),
@@ -733,7 +670,6 @@ export async function PUT(request, context) {
 
     let updatedTeacher = updateRes.rows[0];
 
-    // STEP 2: SYNC PAYROLL SCALE ASSIGNMENT IN website_teacher_salaries
     if (targetPayrollId !== undefined) {
       if (selectedPayroll) {
         await queryDb(
@@ -768,7 +704,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // STEP 3: IF NEW IMAGE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${website.id}/teachers`);
@@ -806,7 +741,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a teacher
 export async function DELETE(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'delete');

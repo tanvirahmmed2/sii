@@ -60,7 +60,6 @@ const FacilitiesPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-6xl mx-auto space-y-10">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -80,7 +79,6 @@ const FacilitiesPage = () => {
           </p>
         </motion.div>
 
-        {/* Dynamic Facilities from Database */}
         {!loading && facilities.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -143,7 +141,6 @@ const FacilitiesPage = () => {
           </div>
         )}
 
-        {/* Hub Section Navigation Cards */}
         <div className="space-y-4">
           <h2 className="text-xl sm:text-2xl font-serif font-normal text-slate-900 dark:text-slate-100 tracking-tight">
             Campus Sectors &amp; Housing Portals
@@ -181,7 +178,6 @@ const FacilitiesPage = () => {
           </div>
         </div>
 
-        {/* Standard notice */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}

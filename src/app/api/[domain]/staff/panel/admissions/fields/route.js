@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { DEFAULT_ADMISSION_FIELDS } from 'src/lib/constants/admissionFields.js';
 
-/**
- * GET /api/[domain]/staff/panel/admissions/fields
- * Staff endpoint to list all unified modular form fields for admissions & student intake.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -23,7 +19,6 @@ export async function GET(request, context) {
 
     let res = await queryDb(sql, params);
 
-    // Auto-seed unified records if none exist
     if (res.rows.length === 0) {
       for (let i = 0; i < DEFAULT_ADMISSION_FIELDS.length; i++) {
         const f = DEFAULT_ADMISSION_FIELDS[i];
@@ -52,7 +47,6 @@ export async function GET(request, context) {
             Boolean(f.is_active !== false)
           ]);
         } catch {
-          // ignore duplicate
         }
       }
 
@@ -61,7 +55,6 @@ export async function GET(request, context) {
 
     const fields = res.rows.length > 0 ? res.rows : DEFAULT_ADMISSION_FIELDS;
 
-    // Group fields by section for frontend tabbed organization
     const sections = {
       personal: [],
       guardian: [],
@@ -94,10 +87,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/admissions/fields
- * Creates a new modular field or initializes defaults in unified table.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -124,7 +113,6 @@ export async function POST(request, context) {
       is_active = true
     } = body;
 
-    // Bulk initialization from defaults or template
     if (action === 'initialize_defaults' || Array.isArray(bulkFields)) {
       const fieldsToInsert = Array.isArray(bulkFields) ? bulkFields : DEFAULT_ADMISSION_FIELDS;
       const inserted = [];
@@ -183,7 +171,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Field label is required.' }, { status: 400 });
     }
 
-    // Auto-generate slug field_key if not provided
     const safeKey = (field_key || label)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
@@ -239,10 +226,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/staff/panel/admissions/fields
- * Update existing field attributes or toggle required status.
- */
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -394,9 +377,6 @@ export async function PUT(request, context) {
   }
 }
 
-/**
- * DELETE /api/[domain]/staff/panel/admissions/fields?id=...
- */
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);

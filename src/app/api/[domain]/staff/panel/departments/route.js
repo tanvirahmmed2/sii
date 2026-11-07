@@ -32,7 +32,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all departments for this website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -83,7 +82,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new department
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -149,7 +147,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing department
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -228,7 +225,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a department
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

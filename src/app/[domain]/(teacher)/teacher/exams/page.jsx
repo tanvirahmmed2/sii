@@ -32,7 +32,6 @@ const TeacherExamsPage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
           <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -70,7 +69,6 @@ const TeacherExamsPage = () => {
 
             return (
               <div key={exam.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                {/* Exam header row */}
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-slate-200 bg-slate-50">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-bold text-slate-800">{exam.name}</span>
@@ -85,7 +83,6 @@ const TeacherExamsPage = () => {
                   }`}>{exam.status}</span>
                 </div>
 
-                {/* Schedule table */}
                 {examSchedules.length === 0 ? (
                   <p className="px-4 py-3 text-xs text-slate-400 italic">No timetable entries for this exam.</p>
                 ) : (

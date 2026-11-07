@@ -13,7 +13,7 @@ export async function GET(request, context) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type'); // 'abouts' | 'missions' | 'visions' | 'milestones' | 'infrastructure' | 'board_members' | null (all)
+    const type = searchParams.get('type'); 
 
     const resultPayload = {
       success: true,

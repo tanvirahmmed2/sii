@@ -15,7 +15,7 @@ export async function GET(request, context) {
     const writerId = searchParams.get('writer_id');
     const publisherId = searchParams.get('publisher_id');
     const shelfId = searchParams.get('shelf_id');
-    const availability = searchParams.get('availability'); // 'available' | 'out_of_stock' | 'unavailable' | 'all'
+    const availability = searchParams.get('availability'); 
     const shelf = searchParams.get('shelf');
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -99,7 +99,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryText, params);
 
-    // KPI Counters
     const kpiRes = await queryDb(
       `SELECT
          COUNT(id)::int AS total_titles,
@@ -248,7 +247,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Book ID is required.' }, { status: 400 });
     }
 
-    // Fetch existing book
     const existing = await queryDb(
       `SELECT * FROM website_books WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
@@ -354,7 +352,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Book ID is required.' }, { status: 400 });
     }
 
-    // Check if there are active loans
     const loanCheck = await queryDb(
       `SELECT
          (SELECT COUNT(*) FROM website_book_student_issues WHERE book_id = $1 AND website_id = $2 AND status IN ('issued', 'overdue'))::int AS stu_active,

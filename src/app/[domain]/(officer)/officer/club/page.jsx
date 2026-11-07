@@ -7,7 +7,6 @@ export default function OfficerClubPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Title */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-base font-semibold text-slate-900 dark:text-white">
           Clubs & Student Activities Operations
@@ -17,7 +16,6 @@ export default function OfficerClubPage() {
         </p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -60,7 +58,6 @@ export default function OfficerClubPage() {
         </div>
       </div>
 
-      {/* Roster Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">

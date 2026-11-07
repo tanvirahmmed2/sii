@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Public list of published video tutorials
-// ============================================================================
 export async function GET() {
   try {
     const res = await queryDb(`

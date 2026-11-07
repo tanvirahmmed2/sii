@@ -35,13 +35,11 @@ function ApplicantsContent() {
   const [issuingAdmitCards, setIssuingAdmitCards] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
-  // Inline Score & Rank Edit State (NO popup modal)
   const [editingScoreId, setEditingScoreId] = useState(null);
   const [scoreInput, setScoreInput] = useState('');
   const [rankInput, setRankInput] = useState('');
-  const [sortBy, setSortBy] = useState('created_at'); // 'created_at' | 'merit' | 'score'
+  const [sortBy, setSortBy] = useState('created_at'); 
 
-  // Fetch circulars for filter dropdown
   useEffect(() => {
     fetch(`${apiBase}/staff/panel/admissions`)
       .then(async (res) => {
@@ -56,12 +54,10 @@ function ApplicantsContent() {
       .catch((err) => console.error('Error fetching circulars:', err));
   }, [apiBase]);
 
-  // Selected circular object
   const selectedCircular = useMemo(() => {
     return circulars.find((c) => String(c.id) === String(selectedCircularId)) || null;
   }, [circulars, selectedCircularId]);
 
-  // Fetch applicants
   const fetchApplicants = useCallback(
     async (showLoader = false) => {
       if (showLoader) setLoading(true);
@@ -150,7 +146,6 @@ function ApplicantsContent() {
     fetchApplicants(true);
   };
 
-  // Evaluate Applicant: Accept or Reject
   const handleEvaluate = async (applicantId, newStatus) => {
     setActionLoadingId(applicantId);
     try {
@@ -177,7 +172,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Issue Admit Card (single)
   const handleIssueSingleAdmitCard = async (applicantId) => {
     setActionLoadingId(applicantId);
     try {
@@ -203,7 +197,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Issue Admit Cards (Bulk for all completed in selected circular)
   const handleIssueBulkAdmitCards = async () => {
     if (!selectedCircularId) {
       toast.error('Please select an admission circular target first.');
@@ -233,7 +226,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Inline Score & Rank Save
   const handleSaveScore = async (applicantId) => {
     setActionLoadingId(applicantId);
     try {
@@ -261,7 +253,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Delete applicant record
   const handleDeleteApplicant = async (applicantId) => {
     if (!window.confirm('Are you sure you want to delete this applicant record? This action cannot be undone.')) {
       return;
@@ -285,7 +276,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Publish Results (manual publish)
   const handlePublishResults = async () => {
     if (!selectedCircularId && circulars.length > 0) {
       toast.error('Please select an admission circular target to publish results.');
@@ -317,7 +307,6 @@ function ApplicantsContent() {
     }
   };
 
-  // Download Excel Sheet (.xlsx)
   const handleDownloadExcel = () => {
     if (applicants.length === 0) {
       toast.error('No applicant records available to download.');
@@ -360,7 +349,6 @@ function ApplicantsContent() {
 
   const filteredApplicants = useMemo(() => {
     return applicants.filter((a) => {
-      // STRICT RULE: Unpaid and incomplete applicants NEVER appear in admission-applicants!
       if (a.status === 'incomplete' || a.status === 'unpaid') return false;
       if (statusFilter !== 'all' && a.status !== statusFilter) return false;
       return true;
@@ -369,7 +357,6 @@ function ApplicantsContent() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Segregated Workstations Notice Bar */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <Link
           href="/staff-panel/admission-incomplete"
@@ -418,7 +405,6 @@ function ApplicantsContent() {
         </Link>
       </div>
 
-      {/* Top Status Tabs - Only Completed & Processed Candidates */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         <button
           onClick={() => setStatusFilter('all')}
@@ -481,10 +467,8 @@ function ApplicantsContent() {
         </button>
       </div>
 
-      {/* Action Control Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Search */}
           <div className="relative flex-1 sm:w-64">
             <input
               type="text"
@@ -495,7 +479,6 @@ function ApplicantsContent() {
             />
           </div>
 
-          {/* Circular Selector */}
           <select
             value={selectedCircularId}
             onChange={(e) => setSelectedCircularId(e.target.value)}
@@ -509,7 +492,6 @@ function ApplicantsContent() {
             ))}
           </select>
 
-          {/* Sort By Selector */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
@@ -522,7 +504,6 @@ function ApplicantsContent() {
         </form>
 
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-          {/* Issue Admit Cards Button if exam-based */}
           {selectedCircular?.selection_method === 'exam' && (
             <button
               onClick={handleIssueBulkAdmitCards}
@@ -542,7 +523,6 @@ function ApplicantsContent() {
             Refresh
           </button>
 
-          {/* Download Excel Sheet */}
           <button
             onClick={handleDownloadExcel}
             className="px-3 py-1.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-2xs cursor-pointer"
@@ -551,7 +531,6 @@ function ApplicantsContent() {
             Download Excel Sheet
           </button>
 
-          {/* Publish Results Button */}
           <button
             onClick={handlePublishResults}
             disabled={publishing}
@@ -563,7 +542,6 @@ function ApplicantsContent() {
         </div>
       </div>
 
-      {/* Exam Workstation Banner if exam-based */}
       {selectedCircular?.selection_method === 'exam' && (
         <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="text-purple-900 dark:text-purple-200">
@@ -591,7 +569,6 @@ function ApplicantsContent() {
         </div>
       )}
 
-      {/* Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -648,7 +625,6 @@ function ApplicantsContent() {
                       {app.applicant_name}
                     </td>
 
-                    {/* Photo */}
                     <td className="py-2 px-3">
                       {app.photo_url ? (
                         <a href={app.photo_url} target="_blank" rel="noreferrer" title="View photo">
@@ -665,7 +641,6 @@ function ApplicantsContent() {
                       )}
                     </td>
 
-                    {/* Signature */}
                     <td className="py-2 px-3">
                       {app.signature_url ? (
                         <a href={app.signature_url} target="_blank" rel="noreferrer" title="View signature">
@@ -704,7 +679,6 @@ function ApplicantsContent() {
                       </span>
                     </td>
 
-                    {/* Payment Status */}
                     <td className="py-2.5 px-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -717,7 +691,6 @@ function ApplicantsContent() {
                       </span>
                     </td>
 
-                    {/* Application Status */}
                     <td className="py-2.5 px-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -738,7 +711,6 @@ function ApplicantsContent() {
                       </span>
                     </td>
 
-                    {/* Admit Card Status (if exam-based) */}
                     <td className="py-2.5 px-3">
                       {app.selection_method === 'exam' ? (
                         app.is_admit_card_issued ? (
@@ -761,7 +733,6 @@ function ApplicantsContent() {
                       )}
                     </td>
 
-                    {/* Score & Merit Rank */}
                     <td className="py-2.5 px-3 font-mono text-[11px]">
                       {editingScoreId === app.id ? (
                         <div className="flex items-center gap-1">
@@ -814,7 +785,6 @@ function ApplicantsContent() {
                       )}
                     </td>
 
-                    {/* Actions */}
                     <td className="py-2.5 px-3 text-right sticky right-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 shadow-xs">
                       <div className="flex items-center justify-end gap-1.5">
                         <button

@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Single payroll with all developer salary items and payments
-// ============================================================================
 export async function GET(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -31,7 +28,6 @@ export async function GET(request, { params }) {
 
     const payroll = payrollRes.rows[0];
 
-    // Developer salary line items
     const itemsRes = await queryDb(
       `SELECT 
         dp.*,
@@ -46,7 +42,6 @@ export async function GET(request, { params }) {
       [id]
     );
 
-    // Payments recorded against this payroll
     const paymentsRes = await queryDb(
       `SELECT 
         pp.*,
@@ -71,9 +66,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// ============================================================================
-// PUT: Update payroll status, notes, or developer salary line (ADMIN ONLY)
-// ============================================================================
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'payroll');
@@ -87,7 +79,6 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    // 1. Update status or notes on the payroll run itself
     if (body.status || body.notes !== undefined || body.title) {
       const fields = [];
       const values = [];
@@ -115,7 +106,6 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // 2. Update individual developer payroll item if provided
     if (body.developer_payroll_id) {
       const { developer_payroll_id, base_salary, bonus, deductions, payment_status, notes } = body;
       const base = parseFloat(base_salary) || 0;
@@ -131,7 +121,6 @@ export async function PUT(request, { params }) {
         [base, bon, ded, net, payment_status || null, notes || null, developer_payroll_id, id]
       );
 
-      // Recalculate total payroll amount
       await queryDb(
         `UPDATE payrolls 
          SET total_amount = (SELECT COALESCE(SUM(net_salary), 0) FROM developer_payrolls WHERE payroll_id = $1)
@@ -149,9 +138,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete payroll run (ADMIN ONLY)
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'payroll');

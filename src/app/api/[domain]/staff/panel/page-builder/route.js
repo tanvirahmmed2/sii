@@ -35,7 +35,6 @@ function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// GET: Load pages, theme, blocks, menus, and media files
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -43,13 +42,11 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Pages
     const pagesRes = await queryDb(
       `SELECT * FROM website_pages WHERE website_id = $1 ORDER BY is_homepage DESC, updated_at DESC`,
       [websiteId]
     );
 
-    // 2. Active Theme
     let themeRes = await queryDb(
       `SELECT * FROM website_themes WHERE website_id = $1 AND is_active = TRUE LIMIT 1`,
       [websiteId]
@@ -64,19 +61,16 @@ export async function GET(request, context) {
       themeRes = initTheme;
     }
 
-    // 3. Global Blocks
     const blocksRes = await queryDb(
       `SELECT * FROM website_global_blocks WHERE website_id = $1 ORDER BY block_type ASC`,
       [websiteId]
     );
 
-    // 4. Menus
     const menusRes = await queryDb(
       `SELECT * FROM website_menus WHERE website_id = $1 ORDER BY location ASC`,
       [websiteId]
     );
 
-    // 5. Media Files
     const mediaRes = await queryDb(
       `SELECT * FROM website_media_files WHERE website_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [websiteId]
@@ -96,7 +90,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create or update page, create block, update theme
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -115,7 +108,6 @@ export async function POST(request, context) {
       const pageSlug = slug ? slugify(slug) : slugify(title);
 
       if (id) {
-        // Update page
         const updateRes = await queryDb(
           `UPDATE website_pages 
            SET title = $1, slug = $2, content = $3, meta_title = $4, meta_description = $5,
@@ -125,7 +117,6 @@ export async function POST(request, context) {
           [title, pageSlug, JSON.stringify(content || []), meta_title || null, meta_description || null, Boolean(is_published), Boolean(is_homepage), template, id, websiteId]
         );
 
-        // Store version history
         const versionCount = await queryDb(`SELECT COUNT(*) as count FROM website_page_versions WHERE page_id = $1`, [id]);
         const nextVersion = parseInt(versionCount.rows[0]?.count || 0, 10) + 1;
         await queryDb(
@@ -136,7 +127,6 @@ export async function POST(request, context) {
 
         return NextResponse.json({ success: true, message: 'Page updated successfully', page: updateRes.rows[0] });
       } else {
-        // Insert new page
         const insertRes = await queryDb(
           `INSERT INTO website_pages (website_id, title, slug, content, meta_title, meta_description, is_published, is_homepage, template)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -144,7 +134,6 @@ export async function POST(request, context) {
           [websiteId, title, pageSlug, JSON.stringify(content || []), meta_title || null, meta_description || null, Boolean(is_published), Boolean(is_homepage), template || 'default']
         );
 
-        // Store initial version
         await queryDb(
           `INSERT INTO website_page_versions (website_id, page_id, version_number, content, change_summary)
            VALUES ($1, $2, 1, $3, 'Initial page creation')`,
@@ -189,7 +178,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove page or global block
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

@@ -14,7 +14,6 @@ export default function StudentAttendanceLeavePage() {
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState([]);
 
-  // Leave Entry State
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [leaveDate, setLeaveDate] = useState(new Date().toISOString().substring(0, 10));
   const [leaveReason, setLeaveReason] = useState('Medical Leave');
@@ -97,7 +96,6 @@ export default function StudentAttendanceLeavePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Student Leave Management &amp; Excusal Input
@@ -107,7 +105,6 @@ export default function StudentAttendanceLeavePage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -116,7 +113,6 @@ export default function StudentAttendanceLeavePage() {
         description="Select session, class, and section to record student leave"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📝"
@@ -125,7 +121,6 @@ export default function StudentAttendanceLeavePage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Leave Input Form */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
@@ -211,7 +206,6 @@ export default function StudentAttendanceLeavePage() {
             </form>
           </div>
 
-          {/* Roster overview for reference */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
               Eligible Students Roster ({students.length})

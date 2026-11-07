@@ -9,27 +9,23 @@ export default function AdminDatabaseModulesPage() {
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
   const isAdminUser = Boolean(permissions.includes('modules'));
 
-  // Main navigation view: 'control' | 'home' | 'tables'
   const [viewMode, setViewMode] = useState('control');
 
-  // Database tables state
   const [modules, setModules] = useState([]);
   const [counts, setCounts] = useState({ total: 0, website: 0, platform: 0, legacy: 0, home_modules: 0, control_modules: 0, developer_modules: 0 });
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'website' | 'platform' | 'legacy'
+  const [activeFilter, setActiveFilter] = useState('all'); 
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Tenant Home & Control Modules state
   const [homeModules, setHomeModules] = useState([]);
   const [controlModules, setControlModules] = useState([]);
   const [developerModules, setDeveloperModules] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [togglingId, setTogglingId] = useState(null);
 
-  // Table inspection state
   const [inspectingTable, setInspectingTable] = useState(null);
   const [inspectData, setInspectData] = useState(null);
-  const [inspectTab, setInspectTab] = useState('schema'); // 'schema' | 'preview'
+  const [inspectTab, setInspectTab] = useState('schema'); 
   const [loadingSchema, setLoadingSchema] = useState(false);
 
   const fetchModules = async () => {
@@ -81,7 +77,6 @@ export default function AdminDatabaseModulesPage() {
     }
   };
 
-  // Toggle active state for Home or Control Module
   const handleToggleModule = async (type, item) => {
     const nextActive = !item.is_active;
     setTogglingId(`${type}-${item.id}`);
@@ -114,7 +109,6 @@ export default function AdminDatabaseModulesPage() {
     }
   };
 
-  // Filtered DB tables
   const filteredTables = useMemo(() => {
     return modules.filter((mod) => {
       const matchesSearch =
@@ -129,7 +123,6 @@ export default function AdminDatabaseModulesPage() {
     });
   }, [modules, searchTerm, activeFilter]);
 
-  // Distinct categories for Home & Control
   const homeCategories = useMemo(() => {
     return Array.from(new Set(homeModules.map((m) => m.category).filter(Boolean))).sort();
   }, [homeModules]);
@@ -138,7 +131,6 @@ export default function AdminDatabaseModulesPage() {
     return Array.from(new Set(controlModules.map((m) => m.category).filter(Boolean))).sort();
   }, [controlModules]);
 
-  // Filtered Home Modules
   const filteredHomeModules = useMemo(() => {
     return homeModules.filter((m) => {
       const matchesSearch =
@@ -155,7 +147,6 @@ export default function AdminDatabaseModulesPage() {
     });
   }, [homeModules, searchTerm, selectedCategory]);
 
-  // Filtered Control Modules
   const filteredControlModules = useMemo(() => {
     return controlModules.filter((m) => {
       const matchesSearch =
@@ -172,7 +163,6 @@ export default function AdminDatabaseModulesPage() {
     });
   }, [controlModules, searchTerm, selectedCategory]);
 
-  // Filtered Developer Modules
   const filteredDeveloperModules = useMemo(() => {
     return developerModules.filter((m) => {
       const q = searchTerm.toLowerCase();
@@ -187,7 +177,6 @@ export default function AdminDatabaseModulesPage() {
     });
   }, [developerModules, searchTerm]);
 
-  // Metric counts
   const totalTables = modules.length;
   const websiteModules = modules.filter((m) => m.category === 'website').length;
   const platformTables = modules.filter((m) => m.category === 'platform').length;
@@ -209,7 +198,6 @@ export default function AdminDatabaseModulesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -245,7 +233,6 @@ export default function AdminDatabaseModulesPage() {
         </div>
       </div>
 
-      {/* Primary View Switcher Navigation */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 flex-wrap">
         <button
           type="button"
@@ -323,12 +310,8 @@ export default function AdminDatabaseModulesPage() {
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* VIEW 1: CONTROL MODULES (202 Administrative Workstations) */}
-      {/* ========================================================================= */}
       {viewMode === 'control' && (
         <div className="space-y-4">
-          {/* KPI Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
@@ -367,7 +350,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Filter Bar & Search */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold text-slate-500">Category:</span>
@@ -397,7 +379,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Control Modules Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -485,12 +466,8 @@ export default function AdminDatabaseModulesPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* VIEW 2: HOME MODULES (26 Public Frontend Pages & Routes) */}
-      {/* ========================================================================= */}
       {viewMode === 'home' && (
         <div className="space-y-4">
-          {/* KPI Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
@@ -529,7 +506,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Filter Bar & Search */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-semibold text-slate-500">Category:</span>
@@ -559,7 +535,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Home Modules Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -647,12 +622,8 @@ export default function AdminDatabaseModulesPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* VIEW 2B: DEVELOPER PANEL MODULES & APIS (41 Platform Engineering Modules) */}
-      {/* ========================================================================= */}
       {viewMode === 'developer' && (
         <div className="space-y-4">
-          {/* KPI Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
@@ -693,7 +664,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Filter Bar & Search */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Platform developer panel pages and REST API routes assigned to developer roles via <span className="font-mono">developer_role_permissions</span>.
@@ -710,7 +680,6 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Developer Modules Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -789,12 +758,8 @@ export default function AdminDatabaseModulesPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* VIEW 3: DATABASE TABLES (240 Schema Tables Introspection) */}
-      {/* ========================================================================= */}
       {viewMode === 'tables' && (
         <div className="space-y-4">
-          {/* KPI Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
@@ -829,9 +794,7 @@ export default function AdminDatabaseModulesPage() {
             </div>
           </div>
 
-          {/* Main Table Card */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
-            {/* Filter Tabs & Search Bar */}
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
@@ -891,7 +854,6 @@ export default function AdminDatabaseModulesPage() {
               </div>
             </div>
 
-            {/* Modules Table List */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -985,7 +947,6 @@ export default function AdminDatabaseModulesPage() {
         </div>
       )}
 
-      {/* Schema & Live Data Inspector Modal */}
       {inspectingTable && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded w-full max-w-4xl max-h-[85vh] flex flex-col shadow-xl overflow-hidden">
@@ -1023,7 +984,6 @@ export default function AdminDatabaseModulesPage() {
               </button>
             </div>
 
-            {/* Modal Tabs */}
             <div className="px-4 pt-3 pb-0 border-b border-slate-100 dark:border-slate-800 flex gap-2">
               <button
                 type="button"
@@ -1096,7 +1056,6 @@ export default function AdminDatabaseModulesPage() {
                   <p className="text-xs text-slate-400 text-center py-6">No columns found for this table.</p>
                 )
               ) : (
-                /* Data Preview Tab */
                 inspectData?.sample_rows && inspectData.sample_rows.length > 0 ? (
                   <div className="border border-slate-200 dark:border-slate-800 rounded overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">

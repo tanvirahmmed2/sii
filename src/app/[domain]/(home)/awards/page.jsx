@@ -13,13 +13,12 @@ const AwardsPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedYear, setSelectedYear] = useState('all');
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' | 'asc'
+  const [sortOrder, setSortOrder] = useState('desc'); 
 
   useEffect(() => {
     const fetchAwards = async () => {
       try {
         setLoading(true);
-        // Primary endpoint: awards, fallback: recognitions
         const res = await fetch(getApiEndpoint('awards'));
         if (res.ok) {
           const data = await res.json();
@@ -33,7 +32,6 @@ const AwardsPage = () => {
             [];
           setAwards(list);
         } else {
-          // Try recognitions fallback
           const recRes = await fetch(getApiEndpoint('recognitions'));
           if (recRes.ok) {
             const recData = await recRes.json();
@@ -57,7 +55,6 @@ const AwardsPage = () => {
     fetchAwards();
   }, [getApiEndpoint]);
 
-  // Extract unique years
   const availableYears = useMemo(() => {
     const years = new Set();
     awards.forEach((a) => {
@@ -66,7 +63,6 @@ const AwardsPage = () => {
     return Array.from(years).sort((a, b) => b - a);
   }, [awards]);
 
-  // Filter & sort
   const filteredAwards = useMemo(() => {
     const q = search.toLowerCase().trim();
     let result = awards.filter((item) => {
@@ -108,7 +104,6 @@ const AwardsPage = () => {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-7xl mx-auto space-y-10 sm:space-y-12">
-        {/* Header Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -129,7 +124,6 @@ const AwardsPage = () => {
             </p>
           </div>
 
-          {/* Quick Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0">
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 text-center shadow-xs">
               <div className="text-2xl font-bold text-primary font-mono">{awards.length}</div>
@@ -156,10 +150,8 @@ const AwardsPage = () => {
           </div>
         </motion.div>
 
-        {/* Filter & Search Bar */}
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            {/* Year Filter Tabs */}
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
@@ -188,7 +180,6 @@ const AwardsPage = () => {
               ))}
             </div>
 
-            {/* Search Input & Sort */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1 sm:w-72">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
@@ -211,7 +202,6 @@ const AwardsPage = () => {
                 )}
               </div>
 
-              {/* Sort Order Toggle */}
               <button
                 type="button"
                 onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
@@ -224,7 +214,6 @@ const AwardsPage = () => {
             </div>
           </div>
 
-          {/* Results feedback */}
           {(search || selectedYear !== 'all') && (
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
               <span>
@@ -246,7 +235,6 @@ const AwardsPage = () => {
           )}
         </div>
 
-        {/* Award Cards Grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -307,7 +295,6 @@ const AwardsPage = () => {
           </div>
         )}
 
-        {/* Institutional Accreditation Footnote Banner */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-lg border border-slate-700/60 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 text-primary-light text-[11px] font-bold uppercase tracking-wider border border-primary/30">

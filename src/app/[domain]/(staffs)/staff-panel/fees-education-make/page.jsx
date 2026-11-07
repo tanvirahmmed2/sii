@@ -31,7 +31,6 @@ export default function FeesEducationMakePage() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
-  // Form Fields
   const now = new Date();
   const currentMonthName = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
@@ -80,7 +79,6 @@ export default function FeesEducationMakePage() {
     loadMeta();
   }, []);
 
-  // When class changes, fetch configured fee rules for that class
   useEffect(() => {
     if (!formData.class_id) {
       setClassFees([]);
@@ -98,7 +96,6 @@ export default function FeesEducationMakePage() {
             setClassFees(feesList);
             if (feesList.length > 0) {
               const firstFee = feesList[0];
-              // Set due date default based on fee's due_day_of_month
               const dueDay = firstFee.due_day_of_month || 10;
               const defaultDueDate = new Date(now.getFullYear(), now.getMonth(), dueDay).toISOString().split('T')[0];
               setFormData((prev) => ({
@@ -126,7 +123,6 @@ export default function FeesEducationMakePage() {
     fetchFees();
   }, [formData.class_id]);
 
-  // When fee structure selection changes, update amount and due date
   const handleFeeSelect = (feeId) => {
     const selected = classFees.find((f) => String(f.id) === String(feeId));
     if (selected) {
@@ -146,7 +142,6 @@ export default function FeesEducationMakePage() {
     }
   };
 
-  // Preview eligible students whenever class, section, fee, or month changes
   useEffect(() => {
     if (!formData.class_id) {
       setPreviewData(null);
@@ -225,7 +220,6 @@ export default function FeesEducationMakePage() {
           'success',
           resJson.message || `Successfully created ${resJson.createdCount} student fee invoices!`
         );
-        // Refresh preview
         setPreviewData((prev) =>
           prev ? { ...prev, eligibleStudentsCount: 0, existingDuesCount: prev.totalStudents } : null
         );
@@ -246,7 +240,6 @@ export default function FeesEducationMakePage() {
 
   return (
     <div className="w-full space-y-6 pb-10">
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-4 rounded-2xl flex items-center justify-between text-sm shadow-xs transition-all ${
@@ -269,7 +262,6 @@ export default function FeesEducationMakePage() {
         </div>
       )}
 
-      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
         <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
           <FiSend /> Batch Billing Dispatch
@@ -283,7 +275,6 @@ export default function FeesEducationMakePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Form Column (2 Cols) */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <FiDollarSign className="text-indigo-600" /> Due Billing Configuration
@@ -451,7 +442,6 @@ export default function FeesEducationMakePage() {
           </form>
         </div>
 
-        {/* Right Preview Column (1 Col) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">

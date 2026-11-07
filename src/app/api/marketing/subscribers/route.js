@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// PUBLIC SUBSCRIBE ENDPOINT
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -25,7 +24,6 @@ export async function POST(request) {
       );
     }
 
-    // Check if email already exists in subscribers table (Table 12)
     const existing = await queryDb(
       `SELECT id, email, name, source, is_active, created_at, updated_at,
               CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
@@ -46,7 +44,6 @@ export async function POST(request) {
         });
       }
 
-      // Re-activate previously unsubscribed email
       const updated = await queryDb(
         `UPDATE subscribers 
          SET is_active = TRUE, source = $1, updated_at = CURRENT_TIMESTAMP 
@@ -62,7 +59,6 @@ export async function POST(request) {
       });
     }
 
-    // Insert new subscriber record according to psql/schema.psql Table 12
     const res = await queryDb(
       `INSERT INTO subscribers (email, name, source, is_active) 
        VALUES ($1, $2, $3, TRUE) 
@@ -87,7 +83,6 @@ export async function POST(request) {
   }
 }
 
-// GET SUBSCRIBERS STATUS / STATS
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

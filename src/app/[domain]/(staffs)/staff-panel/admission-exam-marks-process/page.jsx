@@ -18,9 +18,8 @@ export default function AdmissionExamMarksProcessPage() {
   const [processing, setProcessing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [unselectedPolicy, setUnselectedPolicy] = useState('rejected'); // 'rejected' | 'waiting'
+  const [unselectedPolicy, setUnselectedPolicy] = useState('rejected'); 
 
-  // Fetch exam circulars
   useEffect(() => {
     const fetchCirculars = async () => {
       try {
@@ -44,7 +43,6 @@ export default function AdmissionExamMarksProcessPage() {
     fetchCirculars();
   }, [apiBase, selectedAdmissionId]);
 
-  // Fetch exam applicants & calculated marks
   const fetchExamData = useCallback(async (silent = false) => {
     if (!selectedAdmissionId) return;
     if (!silent) setLoadingData(true);
@@ -70,7 +68,6 @@ export default function AdmissionExamMarksProcessPage() {
     }
   }, [selectedAdmissionId, fetchExamData]);
 
-  // Auto-Select top applicants up to class seat ceiling
   const handleAutoSelect = async () => {
     if (!selectedAdmissionId) {
       toast.error('Please select an admission circular.');
@@ -102,7 +99,6 @@ export default function AdmissionExamMarksProcessPage() {
     }
   };
 
-  // Publish Results (commits accepted candidates to results and deletes rejected candidates)
   const handlePublishResults = async () => {
     if (!selectedAdmissionId) return;
     setPublishing(true);
@@ -131,7 +127,6 @@ export default function AdmissionExamMarksProcessPage() {
     }
   };
 
-  // Manual status override
   const handleManualStatus = async (applicantId, newStatus) => {
     try {
       const res = await fetch(`${apiBase}/staff/panel/admissions/applicants`, {
@@ -156,7 +151,6 @@ export default function AdmissionExamMarksProcessPage() {
     }
   };
 
-  // Sorted candidates from highest total score to lowest - STRICT RULE: only completed applicants
   const sortedApplicants = useMemo(() => {
     if (!examData?.applicants) return [];
     const completedOnly = examData.applicants.filter(
@@ -167,14 +161,12 @@ export default function AdmissionExamMarksProcessPage() {
     return list;
   }, [examData]);
 
-  // Filtered list by search
   const filteredApplicants = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
     if (!q) return sortedApplicants;
     return sortedApplicants.filter(a => a.applicant_name.toLowerCase().includes(q) || a.application_no.toLowerCase().includes(q) || a.roll_no && a.roll_no.toLowerCase().includes(q));
   }, [sortedApplicants, searchTerm]);
 
-  // Seat capacity ceiling
   const seatCapacity = useMemo(() => {
     if (!examData?.circular) return 50;
     const circCap = parseInt(examData.circular.capacity, 10) || 50;
@@ -185,7 +177,6 @@ export default function AdmissionExamMarksProcessPage() {
     return (examData?.applicants || []).filter(a => a.status === 'selected' || a.status === 'accepted').length;
   }, [examData]);
   return <div className="w-full space-y-4">
-      {/* Top Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -206,7 +197,6 @@ export default function AdmissionExamMarksProcessPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Auto-Select Button */}
             <button onClick={handleAutoSelect} disabled={processing || !examData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition disabled:opacity-50 cursor-pointer">
               {processing ? <>
                   <div className="loader loader-xs loader-white" />
@@ -217,7 +207,6 @@ export default function AdmissionExamMarksProcessPage() {
                 </>}
             </button>
 
-            {/* Publish Results Button */}
             <button onClick={handlePublishResults} disabled={publishing || selectedCount === 0} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition disabled:opacity-50 cursor-pointer" title="Publishes accepted candidates to results and deletes rejected applicants">
               {publishing ? <>
                   <div className="loader loader-xs loader-white" />
@@ -230,7 +219,6 @@ export default function AdmissionExamMarksProcessPage() {
           </div>
         </div>
 
-        {/* Circular Selector & Options */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">
@@ -253,7 +241,6 @@ export default function AdmissionExamMarksProcessPage() {
         </div>
       </div>
 
-      {/* KPI Cards: Seats, Selected, Cutoff */}
       {examData && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
             <span className="text-[10px] uppercase font-semibold text-slate-400">Class Seat Limit</span>
@@ -294,7 +281,6 @@ export default function AdmissionExamMarksProcessPage() {
           </div>
         </div>}
 
-      {/* Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5 shadow-2xs flex items-center justify-between gap-3">
         <div className="relative w-full max-w-sm">
           
@@ -306,7 +292,6 @@ export default function AdmissionExamMarksProcessPage() {
         </button>
       </div>
 
-      {/* Merit & Ranking Table: Single row format with full details */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -344,7 +329,6 @@ export default function AdmissionExamMarksProcessPage() {
               const isWithinSeats = rankNumber <= seatCapacity;
               const subjects = examData?.subjects || [];
               return <tr key={app.id} className={`transition-colors ${isWithinSeats ? 'bg-emerald-50/20 dark:bg-emerald-950/10 hover:bg-emerald-50/40' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'}`}>
-                      {/* Merit Rank Badge */}
                       <td className="py-2.5 px-3 font-mono font-bold">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] ${rankNumber === 1 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 font-extrabold' : rankNumber === 2 ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-300 font-bold' : rankNumber === 3 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 font-bold' : isWithinSeats ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
                           #{rankNumber}
@@ -370,7 +354,6 @@ export default function AdmissionExamMarksProcessPage() {
                           </div>}
                       </td>
 
-                      {/* Subject Breakdown */}
                       {subjects.map(sub => {
                   const breakdown = app.marks_breakdown?.find(b => b.subject_id === sub.id);
                   const markVal = breakdown?.marks_obtained;
@@ -385,7 +368,6 @@ export default function AdmissionExamMarksProcessPage() {
                         {parseFloat(app.score || 0).toFixed(2)} pts
                       </td>
 
-                      {/* Seat Quota Status */}
                       <td className="py-2.5 px-3">
                         {app.status === 'selected' || app.status === 'accepted' ? <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
                             Selected (Seat #{rankNumber})
@@ -396,7 +378,6 @@ export default function AdmissionExamMarksProcessPage() {
                           </span>}
                       </td>
 
-                      {/* Manual Override Action Buttons */}
                       <td className="py-2.5 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button onClick={() => handleManualStatus(app.id, 'selected')} disabled={app.status === 'selected'} className="px-2 py-1 rounded text-[10px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-40 transition cursor-pointer" title="Force Accept Candidate">

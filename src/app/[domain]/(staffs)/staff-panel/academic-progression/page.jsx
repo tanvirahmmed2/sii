@@ -12,10 +12,9 @@ export default function AcademicProgressionStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('devices'); // devices | biometric | promotions | alumni
+  const [activeTab, setActiveTab] = useState('devices'); 
   const [data, setData] = useState({ promotions: [], devices: [], biometric_logs: [], alumni: [] });
 
-  // Device Modal
   const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
   const [deviceName, setDeviceName] = useState('');
   const [deviceIp, setDeviceIp] = useState('');
@@ -24,7 +23,6 @@ export default function AcademicProgressionStaffPage() {
   const [deviceLocation, setDeviceLocation] = useState('Main Gate');
   const [submittingDevice, setSubmittingDevice] = useState(false);
 
-  // Alumni Modal
   const [isAlumniModalOpen, setIsAlumniModalOpen] = useState(false);
   const [alumniName, setAlumniName] = useState('');
   const [gradYear, setGradYear] = useState(2025);
@@ -137,7 +135,6 @@ export default function AcademicProgressionStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -164,7 +161,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('devices')}
@@ -208,7 +204,6 @@ export default function AcademicProgressionStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Devices */}
       {activeTab === 'devices' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -258,7 +253,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Punch Logs */}
       {activeTab === 'biometric' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -306,7 +300,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Alumni */}
       {activeTab === 'alumni' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -336,7 +329,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       )}
 
-      {/* Tab 4: Promotions */}
       {activeTab === 'promotions' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Historical Progression Logs</h2>
@@ -375,7 +367,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       )}
 
-      {/* Register Device Modal */}
       {isDeviceModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -447,7 +438,6 @@ export default function AcademicProgressionStaffPage() {
         </div>
       )}
 
-      {/* Add Alumni Modal */}
       {isAlumniModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

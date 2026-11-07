@@ -9,8 +9,8 @@ export default function PaymentForm({ onSuccess, onCancel }) {
     package_id: 1,
     subscription_id: '',
     amount_in_cents: 2900,
-    currency: 'USD',
-    payment_method: 'PADDLE_CARD',
+    currency: 'BDT',
+    payment_method: 'surjopay',
     transaction_id: '',
     status: 'COMPLETED',
   });
@@ -47,8 +47,8 @@ export default function PaymentForm({ onSuccess, onCancel }) {
           package_id: 1,
           subscription_id: '',
           amount_in_cents: 2900,
-          currency: 'USD',
-          payment_method: 'PADDLE_CARD',
+          currency: 'BDT',
+          payment_method: 'surjopay',
           transaction_id: '',
           status: 'COMPLETED',
         });
@@ -158,13 +158,14 @@ export default function PaymentForm({ onSuccess, onCancel }) {
               value={formData.payment_method}
               onChange={(e) => {
                 const nextMethod = e.target.value;
-                const nextCurr = nextMethod === 'BKASH' ? 'BDT' : 'USD';
+                const nextCurr = nextMethod === 'surjopay' ? 'BDT' : 'USD';
                 setFormData({ ...formData, payment_method: nextMethod, currency: nextCurr });
               }}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             >
-              <option value="BKASH">bKash (BDT)</option>
-              <option value="PADDLE_CARD">Paddle (USD)</option>
+              <option value="surjopay">shurjoPay (BDT)</option>
+              <option value="paypal">PayPal (USD)</option>
+              <option value="paddle">Paddle Billing (USD)</option>
             </select>
           </div>
 

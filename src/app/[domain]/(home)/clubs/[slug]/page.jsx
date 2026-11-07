@@ -92,7 +92,6 @@ const ClubDetailsPage = () => {
           </button>
         </motion.div>
 
-        {/* Club Profile */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -152,7 +151,6 @@ const ClubDetailsPage = () => {
           )}
         </motion.div>
 
-        {/* Club News & Updates */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}

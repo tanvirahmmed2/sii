@@ -6,9 +6,6 @@ import { JWT_SECRET, TEACHER_TOKEN } from '../database/secret.js';
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 export const TEACHER_COOKIE_NAME = TEACHER_TOKEN || 'hiesci-teacher';
 
-// ============================================================================
-// Cookie helper
-// ============================================================================
 async function getCookieStore() {
   try {
     const nextHeaders = await import('next/headers');
@@ -16,14 +13,10 @@ async function getCookieStore() {
       return await nextHeaders.cookies();
     }
   } catch {
-    // Outside Next.js server runtime context
   }
   return null;
 }
 
-// ============================================================================
-// Password helpers
-// ============================================================================
 export async function hashPassword(password) {
   if (!password) throw new Error('Password is required for hashing.');
   const salt = await bcrypt.genSalt(10);
@@ -39,9 +32,6 @@ export async function comparePassword(password, hash) {
   }
 }
 
-// ============================================================================
-// JWT helpers
-// ============================================================================
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -59,16 +49,13 @@ export function verifyJWT(token) {
   }
 }
 
-// ============================================================================
-// Session Cookie helpers
-// ============================================================================
 export async function setTeacherSessionCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -105,13 +92,6 @@ export async function clearTeacherSessionCookie(response) {
   }
 }
 
-// ============================================================================
-// Teacher Session & RBAC Helpers
-// ============================================================================
-
-/**
- * Creates an active teacher session record in website_teacher_login_sessions
- */
 export async function createTeacherSession({ websiteId, teacherId, token, request, expiresAt }) {
   try {
     let ip = null;
@@ -139,9 +119,6 @@ export async function createTeacherSession({ websiteId, teacherId, token, reques
   }
 }
 
-/**
- * Revokes all sessions for a teacher
- */
 export async function revokeAllTeacherSessions(websiteId, teacherId) {
   try {
     await queryDb(
@@ -155,9 +132,6 @@ export async function revokeAllTeacherSessions(websiteId, teacherId) {
   }
 }
 
-/**
- * Extracts and returns the authenticated teacher session from request or cookies
- */
 export async function getTeacherSession(request) {
   try {
     let token = null;
@@ -183,7 +157,6 @@ export async function getTeacherSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // Check website_teachers first
     const res = await queryDb(
       `SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
               wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
@@ -205,7 +178,6 @@ export async function getTeacherSession(request) {
 
     if (!teacher.is_active || !teacher.is_registered) return null;
 
-    // Check if session token was revoked
     try {
       const sessRes = await queryDb(
         `SELECT id, is_revoked, expires_at 
@@ -264,9 +236,6 @@ export const getTeacherUser = async (request) => {
   return session?.teacher || null;
 };
 
-/**
- * Checks whether the current request is an authenticated and active teacher
- */
 export async function isTeacher(request) {
   try {
     const session = await getTeacherSession(request);
@@ -276,9 +245,6 @@ export async function isTeacher(request) {
   }
 }
 
-/**
- * Route guard requiring teacher authentication
- */
 export async function requireTeacher(request) {
   const session = await getTeacherSession(request);
   if (!session || !session.isActive) {

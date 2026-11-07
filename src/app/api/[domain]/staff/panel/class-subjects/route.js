@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List class subjects (optionally filter by class_id)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -70,7 +69,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Assign subject to class
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -83,7 +81,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Both Class and Subject are required.' }, { status: 400 });
     }
 
-    // Verify class and subject belong to tenant
     const verifyClass = await queryDb(
       `SELECT id FROM website_classes WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [class_id, auth.website.id]
@@ -125,7 +122,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update class subject marks or optional status
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -170,7 +166,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Unassign subject from class
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

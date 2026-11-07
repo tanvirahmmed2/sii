@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 
-// GET: List issued teacher ID cards with rich faculty JOIN metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -46,7 +45,6 @@ export async function GET(request, context) {
       LEFT JOIN website_teacher_id_templates tpl ON tid.template_id = tpl.id
     `;
 
-    // Single card fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE tid.website_id = $1 AND tid.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -55,7 +53,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { id_card: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['tid.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -128,7 +125,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Issue new faculty ID card(s)
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');
@@ -159,7 +155,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Please select at least one teacher.' }, { status: 400 });
     }
 
-    // Fetch teachers metadata
     const teachersRes = await queryDb(
       `SELECT t.id, t.code, t.name, t.department_id, t.designation_id
        FROM website_teachers t
@@ -236,7 +231,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update faculty card status or particulars
 export async function PUT(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'update');
@@ -279,7 +273,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Revoke/delete faculty ID card
 export async function DELETE(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'delete');

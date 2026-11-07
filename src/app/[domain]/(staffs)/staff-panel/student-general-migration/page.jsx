@@ -15,13 +15,11 @@ export default function StudentGeneralMigrationPage() {
   const [students, setStudents] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Target Migration Controls
   const [targetSessionId, setTargetSessionId] = useState('');
   const [targetClassId, setTargetClassId] = useState('');
   const [targetSectionId, setTargetSectionId] = useState('');
   const [migrating, setMigrating] = useState(false);
 
-  // Reference lists for target dropdowns
   const [allClasses, setAllClasses] = useState([]);
   const [allSections, setAllSections] = useState([]);
   const [allSessions, setAllSessions] = useState([]);
@@ -117,7 +115,6 @@ export default function StudentGeneralMigrationPage() {
       }
 
       toast.success(data.message || `Migrated ${selectedIds.length} students!`);
-      // Reload current roster
       if (filterInfo) {
         loadData(filterInfo);
       }
@@ -134,7 +131,6 @@ export default function StudentGeneralMigrationPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           General Student Migration &amp; Promotion
@@ -144,7 +140,6 @@ export default function StudentGeneralMigrationPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -153,7 +148,6 @@ export default function StudentGeneralMigrationPage() {
         description="Select current session, class, and section to view eligible students"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🚀"
@@ -162,7 +156,6 @@ export default function StudentGeneralMigrationPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Target Migration Specification Banner */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -244,7 +237,6 @@ export default function StudentGeneralMigrationPage() {
             </form>
           </div>
 
-          {/* Student Selection Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
               <span className="font-semibold text-slate-800 dark:text-slate-200">

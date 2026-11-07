@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { syncAdmissionFormSnapshot } from '@/lib/form-criteria-engine';
 
-/**
- * GET /api/[domain]/staff/panel/admissions
- * Fetches all admission circulars, departments, classes, sessions, exam details, and applicant counts.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -16,7 +12,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Fetch circulars with fee info, dept info, class info, session info, and stats
     const circularsRes = await queryDb(`
       SELECT a.*,
              d.name AS department_name,
@@ -58,7 +53,6 @@ export async function GET(request, context) {
       ORDER BY a.created_at DESC
     `, [websiteId]);
 
-    // 2. Fetch exam subjects for circulars
     const examSubjectsRes = await queryDb(`
       SELECT id, admission_id, admission_exam_id, title, mark, time
       FROM website_admission_exam_subjects
@@ -79,7 +73,6 @@ export async function GET(request, context) {
       exam_subjects: subjectsByAdmission[circ.id] || []
     }));
 
-    // 3. Fetch departments, classes and sessions for selectors
     const [departmentsRes, classesRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1 ORDER BY order_no ASC, name ASC`, [websiteId]),
       queryDb(`SELECT id, name, department_id, max_seats FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
@@ -99,11 +92,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/admissions
- * Creates an admission circular with validation against class seat ceiling,
- * candidate previous background requirements, selection method, and exam subjects if exam-based.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -155,7 +143,6 @@ export async function POST(request, context) {
 
     const parsedCapacity = parseInt(capacity, 10) || 100;
 
-    // Enforce Class Seat Capacity Ceiling
     const classCheck = await queryDb(
       `SELECT id, name, max_seats FROM website_classes WHERE id = $1 AND website_id = $2`,
       [parseInt(class_id, 10), auth.website.id]
@@ -177,7 +164,6 @@ export async function POST(request, context) {
     const validSelectionMethod = ['exam', 'merit', 'manual'].includes(selection_method) ? selection_method : 'manual';
     const staffId = auth.user?.id || null;
 
-    // 1. Insert admission circular
     const insertRes = await queryDb(`
       INSERT INTO website_admissions (
         website_id, department_id, session_id, class_id, title, description,
@@ -221,7 +207,6 @@ export async function POST(request, context) {
 
     const createdAdm = insertRes.rows[0];
 
-    // 1b. Map Per-Circular Form Field Configs & Freeze Schema Snapshot
     if (Array.isArray(form_field_configs) && form_field_configs.length > 0) {
       const fieldIds = form_field_configs.map((f) => parseInt(f.form_field_id || f.id, 10));
       const reqs = form_field_configs.map((f) => Boolean(f.is_required));
@@ -240,7 +225,6 @@ export async function POST(request, context) {
     const frozenSnapshot = await syncAdmissionFormSnapshot(queryDb, auth.website.id, createdAdm.id);
     createdAdm.form_schema_snapshot = frozenSnapshot;
 
-    // 2. Insert admission fee structure
     const feeRes = await queryDb(`
       INSERT INTO website_admission_fees (
         website_id, admission_id, fee_title, amount, currency, late_fee, status
@@ -256,7 +240,6 @@ export async function POST(request, context) {
       parseFloat(late_fee) || 0.00
     ]);
 
-    // 3. If exam-based admission, create website_admission_exams and website_admission_exam_subjects
     let createdExam = null;
     let createdSubjects = [];
     if (validSelectionMethod === 'exam') {
@@ -313,10 +296,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/staff/panel/admissions
- * Updates an admission circular, fee, capacity checks, and exam configuration.
- */
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -361,7 +340,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Admission circular ID is required.' }, { status: 400 });
     }
 
-    // Verify ownership
     const checkRes = await queryDb(
       `SELECT * FROM website_admissions WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
@@ -390,7 +368,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Update circular
     const updateRes = await queryDb(`
       UPDATE website_admissions
       SET title = COALESCE($1, title),
@@ -441,7 +418,6 @@ export async function PUT(request, context) {
 
     const updatedCirc = updateRes.rows[0];
 
-    // Upsert Per-Circular Form Field Configs & Re-freeze Snapshot
     if (Array.isArray(form_field_configs)) {
       if (form_field_configs.length > 0) {
         const fieldIds = form_field_configs.map((f) => parseInt(f.form_field_id || f.id, 10));
@@ -468,7 +444,6 @@ export async function PUT(request, context) {
     const frozenSnapshot = await syncAdmissionFormSnapshot(queryDb, auth.website.id, id);
     updatedCirc.form_schema_snapshot = frozenSnapshot;
 
-    // Upsert or update fee
     if (fee_amount !== undefined) {
       const existingFee = await queryDb(
         `SELECT id FROM website_admission_fees WHERE admission_id = $1 AND website_id = $2 LIMIT 1`,
@@ -509,7 +484,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Handle exam config and subjects
     if (updatedCirc.selection_method === 'exam') {
       const examUpsert = await queryDb(`
         INSERT INTO website_admission_exams (
@@ -537,7 +511,6 @@ export async function PUT(request, context) {
       const examId = examUpsert.rows[0]?.id;
 
       if (Array.isArray(exam_subjects) && exam_subjects.length > 0) {
-        // Sync subjects: clear existing and re-insert
         await queryDb(`DELETE FROM website_admission_exam_subjects WHERE admission_id = $1`, [id]);
         for (const sub of exam_subjects) {
           if (sub.title && sub.title.trim()) {
@@ -569,9 +542,6 @@ export async function PUT(request, context) {
   }
 }
 
-/**
- * DELETE /api/[domain]/staff/panel/admissions
- */
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);

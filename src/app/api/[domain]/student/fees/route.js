@@ -19,7 +19,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Student profile info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.class_id, s.section_id,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -40,7 +39,6 @@ export async function GET(request, context) {
     }
     const student = studentRes.rows[0];
 
-    // 1. Fetch Class Education Fee Payments & Dues
     const eduFeesRes = await queryDb(
       `SELECT p.id,
               p.website_id,
@@ -70,7 +68,6 @@ export async function GET(request, context) {
       [student.id, website.id]
     );
 
-    // 2. Fetch Exam Fee Payments
     const examPaymentsRes = await queryDb(
       `SELECT p.id,
               p.website_id,
@@ -99,7 +96,6 @@ export async function GET(request, context) {
       [student.id, website.id]
     );
 
-    // Combine education fees and exam fees
     const allFees = [
       ...eduFeesRes.rows.map(item => ({
         id: item.id,
@@ -144,7 +140,6 @@ export async function GET(request, context) {
       })),
     ];
 
-    // Summary calculations
     const totalOutstanding = allFees
       .filter(f => f.status !== 'paid' && f.status !== 'waived')
       .reduce((sum, f) => sum + (f.amount + f.fine_amount - f.paid_amount), 0);

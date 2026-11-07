@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -45,7 +43,6 @@ export default function TeacherAttendanceTakePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -59,7 +56,6 @@ export default function TeacherAttendanceTakePage() {
     }
   }, []);
 
-  // Fetch attendance for selected date
   const fetchAttendance = useCallback(async () => {
     if (!domain || !date) return;
     try {
@@ -84,7 +80,6 @@ export default function TeacherAttendanceTakePage() {
     fetchAttendance();
   }, [fetchAttendance]);
 
-  // Update single teacher record in local state
   const handleStatusChange = (teacherId, newStatus) => {
     setTeachers((prev) =>
       prev.map((t) =>
@@ -111,7 +106,6 @@ export default function TeacherAttendanceTakePage() {
     );
   };
 
-  // Mark all present
   const markAllPresent = () => {
     setTeachers((prev) =>
       prev.map((t) => ({
@@ -124,7 +118,6 @@ export default function TeacherAttendanceTakePage() {
     showToast('All teachers marked as Present. Click "Save Attendance Roster" to persist.');
   };
 
-  // Submit batch
   const handleSaveAttendance = async () => {
     try {
       setSaving(true);
@@ -158,7 +151,6 @@ export default function TeacherAttendanceTakePage() {
     }
   };
 
-  // Live counts
   const currentPresent = teachers.filter((t) => t.status === 'present').length;
   const currentAbsent = teachers.filter((t) => t.status === 'absent').length;
   const currentLate = teachers.filter((t) => t.status === 'late').length;
@@ -166,7 +158,6 @@ export default function TeacherAttendanceTakePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <FiCheck className="w-4 h-4" />
@@ -180,7 +171,6 @@ export default function TeacherAttendanceTakePage() {
         </div>
       )}
 
-      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
@@ -200,7 +190,6 @@ export default function TeacherAttendanceTakePage() {
           </p>
         </div>
 
-        {/* Date Selector & Quick Actions */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-500 font-medium">Roster Date:</span>
@@ -239,7 +228,6 @@ export default function TeacherAttendanceTakePage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <span className="text-[10px] uppercase font-semibold text-slate-400">Total Teachers</span>
@@ -267,7 +255,6 @@ export default function TeacherAttendanceTakePage() {
         </div>
       </div>
 
-      {/* Attendance Roster Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
@@ -303,7 +290,6 @@ export default function TeacherAttendanceTakePage() {
               ) : (
                 teachers.map((row) => (
                   <tr key={row.teacher_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                    {/* Faculty Profile */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         {row.photo_url ? (
@@ -326,12 +312,10 @@ export default function TeacherAttendanceTakePage() {
                       </div>
                     </td>
 
-                    {/* Designation */}
                     <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
                       {row.designation_title || <span className="text-slate-400 italic">Faculty</span>}
                     </td>
 
-                    {/* Status Toggle Pills */}
                     <td className="px-3 py-2 text-center">
                       <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 overflow-hidden text-[10px]">
                         {STATUS_OPTIONS.map((opt) => {
@@ -354,7 +338,6 @@ export default function TeacherAttendanceTakePage() {
                       </div>
                     </td>
 
-                    {/* In Time */}
                     <td className="px-3 py-2">
                       <input
                         type="text"
@@ -365,7 +348,6 @@ export default function TeacherAttendanceTakePage() {
                       />
                     </td>
 
-                    {/* Out Time */}
                     <td className="px-3 py-2">
                       <input
                         type="text"
@@ -376,7 +358,6 @@ export default function TeacherAttendanceTakePage() {
                       />
                     </td>
 
-                    {/* Remarks */}
                     <td className="px-3 py-2">
                       <input
                         type="text"
@@ -393,7 +374,6 @@ export default function TeacherAttendanceTakePage() {
           </table>
         </div>
 
-        {/* Action footer */}
         <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
           <span className="text-[11px] text-slate-500">
             Roster for {date} • {teachers.length} faculty entries

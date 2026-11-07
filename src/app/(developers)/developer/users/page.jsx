@@ -54,7 +54,6 @@ export default function AdminUsersPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
@@ -84,7 +83,6 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Users Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">

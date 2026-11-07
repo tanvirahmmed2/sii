@@ -4,17 +4,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 
 export default function OfficerLibrarySetupPage() {
-  const [activeTab, setActiveTab] = useState('categories'); // 'categories' | 'writers' | 'publishers'
+  const [activeTab, setActiveTab] = useState('categories'); 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Modals
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [currentItem, setCurrentItem] = useState(null);
@@ -156,7 +154,6 @@ export default function OfficerLibrarySetupPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
@@ -181,7 +178,6 @@ export default function OfficerLibrarySetupPage() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 text-xs font-medium space-x-6">
         {[
           { key: 'categories', label: 'Book Categories' },
@@ -205,7 +201,6 @@ export default function OfficerLibrarySetupPage() {
         ))}
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -221,7 +216,6 @@ export default function OfficerLibrarySetupPage() {
         </div>
       )}
 
-      {/* Toolbar & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex-1 max-w-sm">
@@ -244,7 +238,6 @@ export default function OfficerLibrarySetupPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -326,7 +319,6 @@ export default function OfficerLibrarySetupPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
@@ -364,7 +356,6 @@ export default function OfficerLibrarySetupPage() {
         </div>
       </div>
 
-      {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">
@@ -445,7 +436,6 @@ export default function OfficerLibrarySetupPage() {
         </div>
       )}
 
-      {/* Delete Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

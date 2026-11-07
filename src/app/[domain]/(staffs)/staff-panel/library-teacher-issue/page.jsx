@@ -11,14 +11,12 @@ export default function LibraryTeacherIssuePage() {
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('issued'); // 'all' | 'issued' | 'overdue'
+  const [statusFilter, setStatusFilter] = useState('issued'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Issue Modal
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
   const [teacherList, setTeacherList] = useState([]);
@@ -30,20 +28,18 @@ export default function LibraryTeacherIssuePage() {
 
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 30); // 30 days loan period for faculty
+    d.setDate(d.getDate() + 30); 
     return d.toISOString().split('T')[0];
   });
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Quick Return Modal
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [targetIssue, setTargetIssue] = useState(null);
   const [fineAmount, setFineAmount] = useState('0');
   const [fineStatus, setFineStatus] = useState('none');
   const [conditionNote, setConditionNote] = useState('Good condition, verified intact.');
 
-  // Delete Modal
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadIssues = useCallback(async () => {
@@ -73,7 +69,6 @@ export default function LibraryTeacherIssuePage() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, pageSize]);
 
-  // Autocomplete Teacher Search
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchTeachers = async () => {
@@ -89,7 +84,6 @@ export default function LibraryTeacherIssuePage() {
     return () => clearTimeout(timer);
   }, [targetSearch, issueModalOpen]);
 
-  // Autocomplete In-Stock Book Search
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchBooks = async () => {
@@ -105,7 +99,6 @@ export default function LibraryTeacherIssuePage() {
     return () => clearTimeout(timer);
   }, [bookSearch, issueModalOpen]);
 
-  // Filter & Pagination Calculations
   const filteredIssues = useMemo(() => {
     return issues.filter((iss) => {
       const matchSearch =
@@ -262,7 +255,6 @@ export default function LibraryTeacherIssuePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -280,7 +272,6 @@ export default function LibraryTeacherIssuePage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -331,7 +322,6 @@ export default function LibraryTeacherIssuePage() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -350,7 +340,6 @@ export default function LibraryTeacherIssuePage() {
         </div>
       )}
 
-      {/* Toolbar & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex-1 max-w-sm">
@@ -383,7 +372,6 @@ export default function LibraryTeacherIssuePage() {
           </div>
         </div>
 
-        {/* Issues Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -499,7 +487,6 @@ export default function LibraryTeacherIssuePage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
@@ -537,7 +524,6 @@ export default function LibraryTeacherIssuePage() {
         </div>
       </div>
 
-      {/* Modal: Issue Book to Faculty */}
       {issueModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-lg w-full p-4 shadow-xl space-y-3">
@@ -554,7 +540,6 @@ export default function LibraryTeacherIssuePage() {
             </div>
 
             <form onSubmit={handleSubmitIssue} className="space-y-3">
-              {/* Step 1: Select Teacher */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   1. Search &amp; Select Faculty Member <span className="text-rose-500">*</span>
@@ -605,7 +590,6 @@ export default function LibraryTeacherIssuePage() {
                 )}
               </div>
 
-              {/* Step 2: Select Book */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   2. Search &amp; Select In-Stock Book <span className="text-rose-500">*</span>
@@ -656,7 +640,6 @@ export default function LibraryTeacherIssuePage() {
                 )}
               </div>
 
-              {/* Step 3: Due Date & Remarks */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -705,7 +688,6 @@ export default function LibraryTeacherIssuePage() {
         </div>
       )}
 
-      {/* Return Modal */}
       {returnModalOpen && targetIssue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xl overflow-hidden">
@@ -757,7 +739,6 @@ export default function LibraryTeacherIssuePage() {
         </div>
       )}
 
-      {/* Delete Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

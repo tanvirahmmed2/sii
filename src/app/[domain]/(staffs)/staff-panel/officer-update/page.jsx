@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
@@ -54,11 +52,9 @@ function OfficerUpdateContent() {
 
   const fileInputRef = useRef(null);
 
-  // All officers list (for selector if no id given)
   const [allOfficers, setAllOfficers] = useState([]);
   const [selectedOfficerId, setSelectedOfficerId] = useState(initialOfficerId);
 
-  // Payroll scales
   const [payrolls, setPayrolls] = useState([]);
   const [loadingPayrolls, setLoadingPayrolls] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -67,7 +63,6 @@ function OfficerUpdateContent() {
   const [photoPreview, setPhotoPreview] = useState('');
   const [resendingInvite, setResendingInvite] = useState(false);
 
-  // Form data
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -92,7 +87,6 @@ function OfficerUpdateContent() {
     is_registered: false
   });
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -106,7 +100,6 @@ function OfficerUpdateContent() {
     }
   }, []);
 
-  // Fetch all officers (for switching) and payroll scales
   useEffect(() => {
     async function loadData() {
       if (!domain) return;
@@ -139,7 +132,6 @@ function OfficerUpdateContent() {
     loadData();
   }, [domain, selectedOfficerId]);
 
-  // Load selected officer profile details
   const loadOfficerProfile = useCallback(
     async (officerId) => {
       if (!domain || !officerId) return;
@@ -194,7 +186,6 @@ function OfficerUpdateContent() {
     }
   }, [selectedOfficerId, loadOfficerProfile]);
 
-  // Handle Photo selection
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -231,10 +222,8 @@ function OfficerUpdateContent() {
     }));
   };
 
-  // Selected payroll details
   const selectedPayroll = payrolls.find((p) => String(p.id) === String(formData.payroll_id));
 
-  // Submit update
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -272,7 +261,6 @@ function OfficerUpdateContent() {
       submissionData.append('bio', formData.bio.trim());
       submissionData.append('is_active', formData.is_active);
 
-      // Direct payroll assignment: sends selected payroll scale ID or 'none' to remove
       submissionData.append('payroll_id', formData.payroll_id ? formData.payroll_id : 'none');
 
       if (formData.password && formData.password.trim()) {
@@ -317,7 +305,6 @@ function OfficerUpdateContent() {
     }
   };
 
-  // Resend invitation
   const handleResendInvite = async () => {
     if (!formData.id) return;
     try {
@@ -344,7 +331,6 @@ function OfficerUpdateContent() {
 
   return (
     <div className="w-full space-y-6 pb-16">
-      {/* Toast Notifications */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-medium rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
           <FiCheck className="w-4 h-4 shrink-0" />
@@ -358,7 +344,6 @@ function OfficerUpdateContent() {
         </div>
       )}
 
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
@@ -399,7 +384,6 @@ function OfficerUpdateContent() {
         </div>
       </div>
 
-      {/* Officer Selector Toolbar */}
       <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex-1 max-w-md">
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
@@ -458,12 +442,9 @@ function OfficerUpdateContent() {
           Select an officer from the dropdown above to begin editing.
         </div>
       ) : (
-        /* Main Full-Page Update Form (NO POPUP MODAL) */
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Personal & Institutional Info */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Card 1: Core Personal Information */}
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <FiUser className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -473,7 +454,6 @@ function OfficerUpdateContent() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Name */}
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Full Name <span className="text-rose-500">*</span>
@@ -488,7 +468,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* Email */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Email Address <span className="text-rose-500">*</span>
@@ -503,7 +482,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* Phone */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Phone Number <span className="text-rose-500">*</span>
@@ -518,7 +496,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* NID */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       National ID (NID)
@@ -532,7 +509,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* DOB */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Date of Birth
@@ -546,7 +522,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* Gender */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Gender
@@ -565,7 +540,6 @@ function OfficerUpdateContent() {
                     </select>
                   </div>
 
-                  {/* Blood Group */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Blood Group
@@ -585,7 +559,6 @@ function OfficerUpdateContent() {
                     </select>
                   </div>
 
-                  {/* Religion */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Religion
@@ -606,7 +579,6 @@ function OfficerUpdateContent() {
                 </div>
               </div>
 
-              {/* Card 2: Department & Designation */}
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <FiBriefcase className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -616,7 +588,6 @@ function OfficerUpdateContent() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* Department */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Department Unit <span className="text-rose-500">*</span>
@@ -636,7 +607,6 @@ function OfficerUpdateContent() {
                     </select>
                   </div>
 
-                  {/* Designation */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Designation Title <span className="text-rose-500">*</span>
@@ -651,7 +621,6 @@ function OfficerUpdateContent() {
                     />
                   </div>
 
-                  {/* Joining Date */}
                   <div>
                     <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Date of Joining
@@ -667,7 +636,6 @@ function OfficerUpdateContent() {
                 </div>
               </div>
 
-              {/* Card 3: Address & Bio */}
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <FiMapPin className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -719,9 +687,7 @@ function OfficerUpdateContent() {
               </div>
             </div>
 
-            {/* Right Column: Direct Payroll Scale & Photo & Account */}
             <div className="space-y-6">
-              {/* Card 4: DIRECT PAYROLL SCALE ASSIGNMENT (NO SEPARATE SALARY STEP) */}
               <div className="p-5 rounded-xl border-2 border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/20 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-indigo-100 dark:border-indigo-950">
                   <div className="flex items-center gap-2">
@@ -763,7 +729,6 @@ function OfficerUpdateContent() {
                   </select>
                 </div>
 
-                {/* Live Payroll Breakdown */}
                 {selectedPayroll ? (
                   <div className="p-3.5 rounded-lg border border-indigo-200/80 dark:border-indigo-800/80 bg-white/90 dark:bg-slate-800/90 space-y-2.5 text-xs animate-in fade-in duration-200">
                     <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700 pb-2">
@@ -819,7 +784,6 @@ function OfficerUpdateContent() {
                 )}
               </div>
 
-              {/* Card 5: Profile Photo Replace */}
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <FiUpload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -877,7 +841,6 @@ function OfficerUpdateContent() {
                 </div>
               </div>
 
-              {/* Card 6: Password Reset & Status */}
               <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                   <FiLock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -921,7 +884,6 @@ function OfficerUpdateContent() {
             </div>
           </div>
 
-          {/* Action Bottom Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
             <Link
               href={`/${domain}/staff-panel/officer-list`}

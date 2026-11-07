@@ -15,7 +15,6 @@ export default function StudentHostelsPage() {
   const [studentGender, setStudentGender] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Application form
   const [preferredHostelId, setPreferredHostelId] = useState('');
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -86,7 +85,6 @@ export default function StudentHostelsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -102,7 +100,6 @@ export default function StudentHostelsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        {/* Active Allocation or Application Form */}
         <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           {isAllocated && activeAllocation ? (
             <div className="space-y-3">
@@ -204,7 +201,6 @@ export default function StudentHostelsPage() {
           )}
         </div>
 
-        {/* Application History Table */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <h2 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -266,7 +262,6 @@ export default function StudentHostelsPage() {
         </div>
       </div>
 
-      {/* Available Halls Directory Table */}
       {hostels.length > 0 && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">

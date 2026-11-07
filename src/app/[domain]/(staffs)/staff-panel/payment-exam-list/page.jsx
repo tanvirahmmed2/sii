@@ -27,7 +27,6 @@ export default function PaymentExamListPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +42,6 @@ export default function PaymentExamListPage() {
     notes: ''
   });
 
-  // Load Exam Meta
   useEffect(() => {
     async function loadMeta() {
       try {
@@ -169,7 +167,6 @@ export default function PaymentExamListPage() {
     }
   };
 
-  // Metrics
   const totalAmount = payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const totalPaid = payments.reduce((sum, p) => sum + (parseFloat(p.paid_amount) || 0), 0);
   const totalPending = Math.max(0, totalAmount - totalPaid);
@@ -177,7 +174,6 @@ export default function PaymentExamListPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Total Invoices</p>
@@ -223,9 +219,7 @@ export default function PaymentExamListPage() {
         </div>
       </div>
 
-      {/* Main Workstation Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xs space-y-4">
-        {/* Action & Filter Toolbar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-2 flex-1">
             <div className="relative min-w-[200px] flex-1 max-w-xs">
@@ -264,7 +258,6 @@ export default function PaymentExamListPage() {
           </div>
         </div>
 
-        {/* High-Density Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
@@ -370,7 +363,6 @@ export default function PaymentExamListPage() {
           </table>
         </div>
 
-        {/* Micro Pagination Footer */}
         <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
           <span>
             Showing {payments.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0} to{' '}
@@ -398,7 +390,6 @@ export default function PaymentExamListPage() {
         </div>
       </div>
 
-      {/* Modal Dialog */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">

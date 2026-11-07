@@ -37,7 +37,6 @@ const DEFAULT_DAYS = [
   { name: 'Saturday', order: 7, status: 'off' }
 ];
 
-// GET: List academic days (auto-seeds default 7 days if empty)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -52,7 +51,6 @@ export async function GET(request, context) {
       [auth.website.id]
     );
 
-    // If no days exist yet, seed standard week
     if (result.rows.length === 0) {
       for (const d of DEFAULT_DAYS) {
         await queryDb(
@@ -84,7 +82,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add custom day or re-seed standard schedule
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -138,7 +135,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update day status or order
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -183,7 +179,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove day
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

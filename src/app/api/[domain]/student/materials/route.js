@@ -21,7 +21,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const subjectIdParam = searchParams.get('subject_id') || searchParams.get('class_subject_id');
 
-    // Fetch student's class
     const studentRes = await queryDb(
       `SELECT s.id, s.class_id, s.section_id, s.session_id
        FROM website_students s
@@ -36,7 +35,6 @@ export async function GET(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Query notes, lectures, and syllabus
     let notesSql = `
       SELECT n.id, n.title, n.content AS description, n.file_url, n.created_at, 'Note' AS resource_type,
              sub.name AS subject_name, sub.code AS subject_code
@@ -68,7 +66,6 @@ export async function GET(request, context) {
     if (subjectIdParam) {
       const parsedId = parseInt(subjectIdParam, 10);
       if (!isNaN(parsedId)) {
-        // Check if this ID is a class_subject_id or direct subject_id
         const csCheck = await queryDb(
           `SELECT subject_id FROM website_class_subjects WHERE id = $1 AND website_id = $2 LIMIT 1`,
           [parsedId, website.id]

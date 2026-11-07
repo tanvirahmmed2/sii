@@ -37,7 +37,6 @@ export default function AdminLiveChatsPage() {
     setTimeout(() => setActionNotice({ text: '', type: '' }), 4000);
   };
 
-  // 1. Fetch chat sessions list
   const fetchChats = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
@@ -47,7 +46,6 @@ export default function AdminLiveChatsPage() {
         setChats(data.records);
         if (data.currentUser) setCurrentUser(data.currentUser);
 
-        // Sort latest sender first to pick active chat
         if (data.records.length > 0) {
           const sorted = [...data.records].sort((a, b) => {
             const timeA = a.last_message_at || a.updated_at || a.created_at;
@@ -75,7 +73,6 @@ export default function AdminLiveChatsPage() {
     fetchChats(true);
   }, [fetchChats]);
 
-  // 2. Fetch specific active chat and its message stream
   const fetchActiveChatDetails = useCallback(async (chatId, showLoading = false) => {
     if (!chatId) return;
     try {
@@ -100,7 +97,6 @@ export default function AdminLiveChatsPage() {
     }
   }, [activeChatId, fetchActiveChatDetails]);
 
-  // Silent polling every 3 seconds for active chat messages and conversation updates
   useEffect(() => {
     const interval = setInterval(() => {
       fetchChats(false);
@@ -111,7 +107,6 @@ export default function AdminLiveChatsPage() {
     return () => clearInterval(interval);
   }, [activeChatId, fetchChats, fetchActiveChatDetails]);
 
-  // Handle Send Reply
   const handleSendReply = async (e) => {
     if (e) e.preventDefault();
     const text = replyMessage.trim();
@@ -145,7 +140,6 @@ export default function AdminLiveChatsPage() {
     }
   };
 
-  // Status toggle
   const handleToggleStatus = async (newStatus) => {
     if (!activeChatId) return;
     try {
@@ -170,7 +164,6 @@ export default function AdminLiveChatsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Touch-Swipeable Visitors Bar */}
       <ChatUsersSwipeBar
         users={chats.map((c) => ({
           id: c.id,
@@ -184,7 +177,6 @@ export default function AdminLiveChatsPage() {
         activeId={activeChatId}
       />
 
-      {/* Main Content Area */}
       {loading && chats.length === 0 ? (
         <LoadingScreen fullScreen={false} label="Loading live chats..." />
       ) : chats.length === 0 ? (
@@ -204,7 +196,6 @@ export default function AdminLiveChatsPage() {
         </div>
       ) : activeChat ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[650px]">
-          {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-xs shrink-0">
@@ -261,7 +252,6 @@ export default function AdminLiveChatsPage() {
             </div>
           </div>
 
-          {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
             {loadingMessages && messages.length === 0 ? (
               <div className="h-full flex items-center justify-center">
@@ -305,7 +295,6 @@ export default function AdminLiveChatsPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input Box */}
           <form
             onSubmit={handleSendReply}
             className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"

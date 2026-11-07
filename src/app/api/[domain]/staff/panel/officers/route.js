@@ -7,7 +7,7 @@ import { revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
-
+import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 const VALID_DEPARTMENTS = [
   'Hall',
@@ -20,17 +20,12 @@ const VALID_DEPARTMENTS = [
   'Inventory'
 ];
 
-/**
- * Validates staff authorization to manage officers for this tenant website.
- * Enforces tenant subscription allowance and explicit staff permissions.
- */
 async function verifyStaffOfficerAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Check Tenant Subscription Package Allowance
   const hasAllowance =
     (await hasTenantModuleAllowance(website, 'officers')) ||
     (await hasTenantModuleAllowance(website, 'staff-payroll')) ||
@@ -45,7 +40,6 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     };
   }
 
-  // 2. Check Staff Session & Tenant Boundary
   const staffSession = await getStaffSession(request);
   if (!staffSession) {
     return { error: 'Unauthorized: Staff credentials required.', status: 401, code: 'UNAUTHORIZED' };
@@ -61,7 +55,6 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
   }
 
-  // 3. Check Staff Module Permissions
   const hasPerm =
     hasStaffModulePermission(staffSession, 'officers', action) ||
     hasStaffModulePermission(staffSession, 'staff-payroll', action) ||
@@ -85,41 +78,11 @@ async function verifyStaffOfficerAccess(request, context, action = 'view') {
   };
 }
 
-/**
- * Builds the officer verification link respecting custom domain or tenant subdomain.
- */
 function buildOfficerVerificationUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  // 1. Custom domain if verified and set
-  const rawCustom = (website?.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  // 2. Subdomain of base URL
-  const rawSub = (website?.subdomain || website?.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
-  }
-
-  const cleanHostNoPort = baseHost.split(':')[0];
-  const parts = cleanHostNoPort.split('.');
-  const baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : cleanHostNoPort;
-  const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-
-  return `${protocol}://${cleanSub}.${baseDomain}${port}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/officer/verify?token=${encodeURIComponent(token)}`;
 }
 
-/**
- * Helper to parse multipart/form-data or application/json for officer endpoints
- */
 async function parseOfficerRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -150,7 +113,6 @@ async function parseOfficerRequest(request) {
   return { body, imageFile };
 }
 
-// GET: Fetch officers roster, stats, or single officer profile with assigned payroll
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffOfficerAccess(request, context, 'view');
@@ -164,12 +126,11 @@ export async function GET(request, context) {
     const email = searchParams.get('email');
     const search = searchParams.get('search')?.trim()?.toLowerCase();
     const department = searchParams.get('department')?.trim();
-    const status = searchParams.get('status'); // 'all', 'active', 'inactive', 'pending'
+    const status = searchParams.get('status'); 
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
     const offset = (page - 1) * limit;
 
-    // 1. Single officer retrieval
     if (id || email) {
       let singleQuery = `
         SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
@@ -208,7 +169,6 @@ export async function GET(request, context) {
 
       const officer = singleRes.rows[0];
 
-      // Fetch officer's granted module permissions
       const permsRes = await queryDb(
         `SELECT COALESCE(wop.control_module_id, wop.website_module_id) AS website_module_id, wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
                 cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
@@ -235,7 +195,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, officer, payload: { officer } });
     }
 
-    // 2. Fetch all website modules allowed for this website by its subscription package
     let packageModulesRes = await queryDb(
       `SELECT DISTINCT cm.id, cm.name, cm.slug, cm.description, cm.icon, cm.is_active
        FROM website_control_modules cm
@@ -257,7 +216,6 @@ export async function GET(request, context) {
     }
     const packageModules = packageModulesRes.rows;
 
-    // 3. Build filter clauses for roster list
     const whereClauses = ['wo.website_id = $1'];
     const params = [website.id];
     let paramIndex = 2;
@@ -286,14 +244,12 @@ export async function GET(request, context) {
 
     const whereStr = whereClauses.join(' AND ');
 
-    // 4. Count total matching officers
     const countRes = await queryDb(
       `SELECT COUNT(*)::int AS count FROM website_officers wo WHERE ${whereStr}`,
       params
     );
     const total = countRes.rows[0]?.count || 0;
 
-    // 5. Aggregated metrics for cards
     const statsRes = await queryDb(
       `SELECT 
          COUNT(*)::int AS total_officers,
@@ -313,7 +269,6 @@ export async function GET(request, context) {
       total_departments: 0,
     };
 
-    // 6. Query list with joined salaries and payrolls
     const listQuery = `
       SELECT wo.id, wo.website_id, wo.name, wo.email, wo.phone, wo.department,
              wo.designation, wo.nid_number, wo.gender, wo.blood_group, wo.date_of_birth,
@@ -339,7 +294,6 @@ export async function GET(request, context) {
 
     const officersRes = await queryDb(listQuery, params);
 
-    // 7. Active login sessions count
     const sessionsRes = await queryDb(
       `SELECT officer_id, COUNT(*)::int AS active_sessions
        FROM website_officer_login_sessions
@@ -387,7 +341,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create new officer, optionally assign direct payroll scale, and dispatch verification email
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffOfficerAccess(request, context, 'create');
@@ -434,20 +387,16 @@ export async function POST(request, context) {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPhone = phone.trim();
 
-    // Normalize department to valid DB check constraint
     let validDept = 'General';
     if (department && VALID_DEPARTMENTS.includes(department.trim())) {
       validDept = department.trim();
     }
 
-    // Check duplicate email across all institution roles
     const emailAvail = await checkInstitutionEmailAvailability(website.id, trimmedEmail);
     if (!emailAvail.available) {
       return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
 
-
-    // Verify and calculate direct payroll assignment
     let finalSalary = Number(salary) || 0.00;
     let selectedPayroll = null;
     const targetPayrollId = payroll_id || body.payrollId || null;
@@ -482,14 +431,11 @@ export async function POST(request, context) {
       }
     }
 
-    // Default demo password if not provided; officer will establish permanent password during verification
     const rawPass = password && password.trim() ? password.trim() : `Officer@${Math.floor(100000 + Math.random() * 900000)}`;
     const hashedPassword = await hashPassword(rawPass);
 
-    // Cryptographic verification token valid for 7 days
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // STEP 1: Insert into website_officers table
     const insertOfficerRes = await queryDb(
       `INSERT INTO website_officers (
          website_id, name, email, phone, department, designation, nid_number,
@@ -529,7 +475,6 @@ export async function POST(request, context) {
 
     const createdOfficer = insertOfficerRes.rows[0];
 
-    // STEP 2: Directly assign payroll in website_officer_salaries without separate salary page
     if (selectedPayroll) {
       await queryDb(
         `INSERT INTO website_officer_salaries (
@@ -549,7 +494,6 @@ export async function POST(request, context) {
       createdOfficer.payroll_basic_salary = selectedPayroll.basic_salary;
     }
 
-    // STEP 3: Upload photo to Cloudinary if image file provided
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${website.id}/officers`);
@@ -568,7 +512,6 @@ export async function POST(request, context) {
       }
     }
 
-    // STEP 4: Save granted permissions if provided
     if (permissions && typeof permissions === 'object') {
       const allMods = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modMap = {};
@@ -601,7 +544,6 @@ export async function POST(request, context) {
       }
     }
 
-    // STEP 5: Generate verification link & dispatch email
     const verificationUrl = buildOfficerVerificationUrl(website, verificationToken, request);
     let emailSent = false;
     let emailError = null;
@@ -655,7 +597,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update officer profile details, sync assigned payroll scale, and update permissions
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffOfficerAccess(request, context, 'edit');
@@ -705,7 +646,6 @@ export async function PUT(request, context) {
 
     const currentOfficer = checkRes.rows[0];
 
-    // Check duplicate email across all institution roles
     if (email && email.trim()) {
       const emailAvail = await checkInstitutionEmailAvailability(website.id, email.trim(), {
         excludeRole: 'officer',
@@ -716,14 +656,11 @@ export async function PUT(request, context) {
       }
     }
 
-
-    // Handle password update if provided
     let passwordHash = currentOfficer.password;
     if (password && password.trim()) {
       passwordHash = await hashPassword(password.trim());
     }
 
-    // Validate department
     let validDept = undefined;
     if (department !== undefined) {
       if (VALID_DEPARTMENTS.includes(department.trim())) {
@@ -733,7 +670,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Direct Payroll scale synchronization
     const targetPayrollId = payroll_id !== undefined ? payroll_id : body.payrollId;
     let selectedPayroll = null;
     let computedSalary = undefined;
@@ -778,7 +714,6 @@ export async function PUT(request, context) {
         ? Number(salary)
         : null;
 
-    // STEP 1: Update website_officers row
     const updateRes = await queryDb(
       `UPDATE website_officers SET
          name = COALESCE($1, name),
@@ -830,7 +765,6 @@ export async function PUT(request, context) {
 
     let updatedOfficer = updateRes.rows[0];
 
-    // STEP 2: Sync payroll scale assignment in website_officer_salaries
     if (targetPayrollId !== undefined) {
       if (selectedPayroll) {
         await queryDb(
@@ -866,7 +800,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // STEP 3: Handle photo update if imageFile provided
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${website.id}/officers`);
@@ -887,7 +820,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // STEP 4: Update module permissions if provided
     if (permissions && typeof permissions === 'object') {
       const allMods = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
       const modMap = {};
@@ -941,7 +873,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete an officer and cascade cleanup
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffOfficerAccess(request, context, 'delete');

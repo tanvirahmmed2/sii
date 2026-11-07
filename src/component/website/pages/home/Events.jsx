@@ -11,7 +11,7 @@ const Events = () => {
   const { tenantUrl, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'popular' | 'rsvp'
+  const [activeTab, setActiveTab] = useState('upcoming'); 
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -53,14 +53,12 @@ const Events = () => {
       return (applicable.length > 0 ? applicable : list).slice(0, 3);
     }
 
-    // Default 'upcoming': first 3
     return list.slice(0, 3);
   }, [events, activeTab]);
 
   return (
     <section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="w-full max-w-6xl mx-auto space-y-8">
-        {/* Header Block */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -95,7 +93,6 @@ const Events = () => {
           </div>
         </motion.div>
 
-        {/* Filter Pills */}
         {events.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <motion.button
@@ -139,7 +136,6 @@ const Events = () => {
           </div>
         )}
 
-        {/* Loading Skeleton */}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
@@ -155,7 +151,6 @@ const Events = () => {
             ))}
           </div>
         ) : events.length === 0 ? (
-          /* Empty State */
           <div className="bg-slate-50/80 dark:bg-slate-800/30 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-10 text-center space-y-3">
             <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mx-auto">
               <FiCalendar className="text-xl" />
@@ -168,7 +163,6 @@ const Events = () => {
             </p>
           </div>
         ) : (
-          /* Events Grid */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {filteredEvents.map((event, index) => (
               <motion.div

@@ -5,9 +5,6 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
 import { buildStyledEmail } from 'src/lib/database/brevo.js';
 
-/**
- * POST: Sends a 6-digit email verification code via Brevo to verify student email before setup
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -25,7 +22,6 @@ export async function POST(request, context) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanRegNo = registration_no?.trim() || null;
 
-    // Verify student exists in website_students matching the email or registration number
     let studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -44,7 +40,6 @@ export async function POST(request, context) {
       cleanRegNo ? [website.id, cleanEmail, cleanRegNo] : [website.id, cleanEmail]
     );
 
-    // Fallback: If not found by email, check if student was registered without email using registration number
     if (studentRes.rows.length === 0 && cleanRegNo) {
       studentRes = await queryDb(
         `SELECT s.id, s.registration_no, s.roll_no, s.email, s.is_active,
@@ -86,7 +81,6 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Rate-limiting check: enforce a 60-second cooldown per student/email
     const recentOtpRes = await queryDb(`
       SELECT created_at FROM website_email_verifications
       WHERE website_id = $1 AND LOWER(email) = $2 AND purpose = 'student_setup'
@@ -101,11 +95,9 @@ export async function POST(request, context) {
       }, { status: 429 });
     }
 
-    // Generate 6-digit numeric verification OTP securely
     const verificationOtp = crypto.randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
 
-    // Store OTP in website_students directly (always present for registered student)
     await queryDb(
       `UPDATE website_students
        SET two_factor_code = $1,
@@ -115,7 +107,6 @@ export async function POST(request, context) {
       [verificationOtp, expiresAt, student.id, website.id]
     );
 
-    // Also store in website_email_verifications
     try {
       await queryDb(
         `INSERT INTO website_email_verifications (website_id, email, otp_code, purpose, expires_at)
@@ -126,7 +117,6 @@ export async function POST(request, context) {
       console.warn('Notice inserting into website_email_verifications:', verErr.message);
     }
 
-    // If website_student_info exists, update it as well
     try {
       await queryDb(
         `UPDATE website_student_info
@@ -138,7 +128,6 @@ export async function POST(request, context) {
       );
     } catch (_) {}
 
-    // Prepare Brevo email content
     let emailDispatched = false;
     let dispatchError = null;
 

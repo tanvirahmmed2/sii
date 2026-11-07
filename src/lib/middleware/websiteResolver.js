@@ -1,22 +1,15 @@
 import { query, queryDb } from '../database/db.js';
 import { BASE_DOMAIN, BASE_HOST, BASE_URL, extractBaseDomain, getWebsiteDomain } from '../database/secret.js';
 
-// Configuration
-const DEFAULT_CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL for valid websites
-const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000; // 5 seconds negative cache on not-found or DB errors
-const QUERY_TIMEOUT_MS = 10000; // 10s timeout prevents DNS/pooler hangs on remote connections
+const DEFAULT_CACHE_TTL_MS = 60 * 1000; 
+const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000; 
+const QUERY_TIMEOUT_MS = 10000; 
 
-// In-memory cache structures
 const websiteCache = new Map();
 const inFlightResolutions = new Map();
 
-// Lazy schema migration flag
 let _websiteSchemaEnsured = false;
 
-/**
- * Ensure optional website social links schema columns exist in DB in the background.
- * Non-blocking: executed asynchronously without delaying website resolution.
- */
 function ensureWebsiteSchemaAsync() {
   if (_websiteSchemaEnsured) return;
   _websiteSchemaEnsured = true;
@@ -28,26 +21,15 @@ function ensureWebsiteSchemaAsync() {
     ADD COLUMN IF NOT EXISTS youtube_url TEXT,
     ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
   `).catch(() => {
-    // Ignore schema errors silently (e.g., read-only replicas or permission constraints)
   });
 }
 
-/**
- * Extract website identifier (slug, subdomain, custom domain, or ID) from request or context.
- * Supports Next.js 15 async route context params, standard Next.js request, URL headers, and cookies.
- *
- * @param {Request|object|null} request
- * @param {object|string|null} context
- * @returns {Promise<string|null>}
- */
 export async function extractWebsiteIdentifier(request, context) {
-  // 1. Direct string context (e.g. resolveWebsite('afit'))
   if (typeof context === 'string' && context.trim()) {
     const raw = context.trim().toLowerCase().split(':')[0];
     return getWebsiteDomain(raw) || raw;
   }
 
-  // 2. Route Context Params (handles both Promise params for Next.js 15+ and plain objects)
   if (context?.params) {
     try {
       const resolvedParams = typeof context.params.then === 'function' 
@@ -62,9 +44,7 @@ export async function extractWebsiteIdentifier(request, context) {
     } catch {}
   }
 
-  // 3. Request-based extraction
   if (request) {
-    // URL Search parameters
     const url = request.nextUrl || (request.url ? new URL(request.url, 'http://localhost') : null);
     if (url?.searchParams) {
       const queryParam =
@@ -79,7 +59,6 @@ export async function extractWebsiteIdentifier(request, context) {
       }
     }
 
-    // Direct headers set by edge middleware or proxies
     const headerDomain =
       request.headers?.get?.('x-website-domain') ||
       request.headers?.get?.('x-domain');
@@ -88,7 +67,6 @@ export async function extractWebsiteIdentifier(request, context) {
       return getWebsiteDomain(raw) || raw;
     }
 
-    // Cookies
     const cookieDomain =
       request.cookies?.get?.('x-website-domain')?.value ||
       request.cookies?.get?.('x-domain')?.value ||
@@ -98,7 +76,6 @@ export async function extractWebsiteIdentifier(request, context) {
       return getWebsiteDomain(raw) || raw;
     }
 
-    // Referer Header (useful for client-side API fetches from /[domain]/...)
     const referer = request.headers?.get?.('referer');
     if (referer) {
       const refMatch = referer.match(/\/(?:websites|website|webite)\/([^/?#]+)/i);
@@ -122,7 +99,6 @@ export async function extractWebsiteIdentifier(request, context) {
       } catch {}
     }
 
-    // Host Header: match subdomain.base_url or custom domain
     const hostTenant = getWebsiteDomain(request);
     if (hostTenant) {
       return hostTenant;
@@ -132,13 +108,6 @@ export async function extractWebsiteIdentifier(request, context) {
   return null;
 }
 
-/**
- * Execute raw database query with a strict timeout to avoid connection hangs.
- * Also retrieves tenant subscription package information and allowed modules.
- *
- * @param {string} cleanId
- * @returns {Promise<object|null>}
- */
 async function fetchWebsiteFromDb(cleanId) {
   const isNum = /^[0-9]+$/.test(cleanId);
   const noWww = cleanId.replace(/^www\./, '');
@@ -194,11 +163,9 @@ async function fetchWebsiteFromDb(cleanId) {
 
     const website = res.rows[0];
 
-    // Default color and configuration fallbacks
     website.primary_color = website.primary_color || '#1e40af';
     website.secondary_color = website.secondary_color || '#0ea5e9';
 
-    // Fetch website subscription package and allowed modules
     let allowedModules = [];
     let allowedModuleSlugs = [];
     let packageInfo = null;
@@ -261,7 +228,6 @@ async function fetchWebsiteFromDb(cleanId) {
         allowedModules = pRow.allowed_modules || [];
         allowedModuleSlugs = pRow.allowed_module_slugs || [];
       } else {
-        // Fallback: If no subscription is active, load active control modules as default allowance
         const fallbackMods = await query(
           `SELECT id, name, slug, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY id ASC`
         ).catch(() => ({ rows: [] }));
@@ -280,7 +246,6 @@ async function fetchWebsiteFromDb(cleanId) {
     website.allowed_module_slugs = allowedModuleSlugs;
     website.allowedModules = allowedModuleSlugs;
 
-    // Shallow copy settings aliases to maintain compatibility without circular JSON references
     const settingsCopy = { ...website };
     website.settings = settingsCopy;
     website.website_settings = settingsCopy;
@@ -293,16 +258,6 @@ async function fetchWebsiteFromDb(cleanId) {
   }
 }
 
-/**
- * Resolve website record by string or numeric identifier.
- * Uses in-memory TTL caching and in-flight promise coalescing.
- *
- * @param {string|number} identifier
- * @param {object} [options]
- * @param {boolean} [options.bypassCache=false]
- * @param {number} [options.ttlMs]
- * @returns {Promise<object|null>}
- */
 export async function resolveWebsite(identifier, options = {}) {
   if (!identifier) return null;
 
@@ -312,7 +267,6 @@ export async function resolveWebsite(identifier, options = {}) {
   const now = Date.now();
   const bypassCache = options.bypassCache === true;
 
-  // 1. Check in-memory cache
   if (!bypassCache && websiteCache.has(cleanId)) {
     const cached = websiteCache.get(cleanId);
     if (now < cached.expiresAt) {
@@ -321,15 +275,12 @@ export async function resolveWebsite(identifier, options = {}) {
     websiteCache.delete(cleanId);
   }
 
-  // 2. Coalesce in-flight requests for the same identifier
   if (!bypassCache && inFlightResolutions.has(cleanId)) {
     return inFlightResolutions.get(cleanId);
   }
 
-  // Trigger lazy background schema ensure once
   ensureWebsiteSchemaAsync();
 
-  // 3. Perform database resolution with deduplication
   const resolutionPromise = (async () => {
     try {
       const website = await fetchWebsiteFromDb(cleanId);
@@ -342,10 +293,8 @@ export async function resolveWebsite(identifier, options = {}) {
         expiresAt: Date.now() + ttl,
       };
 
-      // Store in cache for requested identifier
       websiteCache.set(cleanId, cacheEntry);
 
-      // If website was found, also index under its canonical identifiers
       if (website) {
         if (website.slug) websiteCache.set(String(website.slug).toLowerCase(), cacheEntry);
         if (website.subdomain) websiteCache.set(String(website.subdomain).toLowerCase(), cacheEntry);
@@ -363,14 +312,6 @@ export async function resolveWebsite(identifier, options = {}) {
   return resolutionPromise;
 }
 
-/**
- * Primary resolver matching the standard signature used across routes, layouts, and auth middlewares.
- *
- * @param {Request|null} request
- * @param {object|string|null} context
- * @param {object} [options]
- * @returns {Promise<object|null>}
- */
 export async function resolveWebsiteFromRequest(request, context, options = {}) {
   try {
     const identifier = await extractWebsiteIdentifier(request, context);
@@ -382,48 +323,21 @@ export async function resolveWebsiteFromRequest(request, context, options = {}) 
   }
 }
 
-/**
- * Helper to resolve website strictly by ID.
- *
- * @param {string|number} id
- * @param {object} [options]
- * @returns {Promise<object|null>}
- */
 export async function getWebsiteById(id, options = {}) {
   if (!id) return null;
   return resolveWebsite(id, options);
 }
 
-/**
- * Helper to resolve website strictly by slug.
- *
- * @param {string} slug
- * @param {object} [options]
- * @returns {Promise<object|null>}
- */
 export async function getWebsiteBySlug(slug, options = {}) {
   if (!slug) return null;
   return resolveWebsite(slug, options);
 }
 
-/**
- * Helper to resolve website strictly by domain / custom domain.
- *
- * @param {string} domain
- * @param {object} [options]
- * @returns {Promise<object|null>}
- */
 export async function getWebsiteByDomain(domain, options = {}) {
   if (!domain) return null;
   return resolveWebsite(domain, options);
 }
 
-/**
- * Check if a website is already present in memory cache without querying DB.
- *
- * @param {string|number} identifier
- * @returns {object|null}
- */
 export function getWebsiteFromCache(identifier) {
   if (!identifier) return null;
   const cleanId = String(identifier).trim().toLowerCase().split(':')[0];
@@ -434,11 +348,6 @@ export function getWebsiteFromCache(identifier) {
   return null;
 }
 
-/**
- * Invalidate cache for a specific website identifier or its associated aliases.
- *
- * @param {string|number} [identifier]
- */
 export function invalidateWebsiteCache(identifier) {
   if (!identifier) {
     websiteCache.clear();
@@ -447,7 +356,6 @@ export function invalidateWebsiteCache(identifier) {
   const cleanId = String(identifier).trim().toLowerCase();
   websiteCache.delete(cleanId);
 
-  // Scan and remove any entries matching this website
   for (const [key, entry] of websiteCache.entries()) {
     const w = entry?.website;
     if (
@@ -462,31 +370,20 @@ export function invalidateWebsiteCache(identifier) {
   }
 }
 
-/**
- * Clear the entire website cache.
- */
 export function clearWebsiteCache() {
   websiteCache.clear();
   inFlightResolutions.clear();
 }
 
-/**
- * Check whether a tenant website has module allowance for a given module slug
- * @param {object|string|number} websiteOrId
- * @param {string} moduleSlug
- * @returns {Promise<boolean>}
- */
 export async function hasTenantModuleAllowance(websiteOrId, moduleSlug) {
   if (!websiteOrId || !moduleSlug) return false;
 
   const targetSlug = String(moduleSlug).trim().toLowerCase();
 
-  // If website object with loaded slugs was passed
   if (typeof websiteOrId === 'object' && Array.isArray(websiteOrId.allowed_module_slugs)) {
     return websiteOrId.allowed_module_slugs.includes(targetSlug);
   }
 
-  // If identifier or ID passed, resolve website
   const website = typeof websiteOrId === 'object' ? websiteOrId : await resolveWebsite(websiteOrId);
   if (!website) return false;
 
@@ -497,11 +394,6 @@ export async function hasTenantModuleAllowance(websiteOrId, moduleSlug) {
   return false;
 }
 
-/**
- * Get all allowed modules and package metadata for a tenant website
- * @param {object|string|number} websiteOrId
- * @returns {Promise<{ package: object|null, allowed_modules: Array, allowed_module_slugs: Array }>}
- */
 export async function getTenantAllowedModules(websiteOrId) {
   const website = typeof websiteOrId === 'object' ? websiteOrId : await resolveWebsite(websiteOrId);
   if (!website) {

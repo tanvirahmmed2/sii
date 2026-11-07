@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Public endpoint for published blogs
-// Conforms strictly to Table 17 (blogs) in psql/schema.psql
-// ============================================================================
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -104,7 +100,6 @@ export async function GET(request) {
         return NextResponse.json({ success: false, error: 'Article not found.' }, { status: 404 });
       }
 
-      // Increment views count safely in background
       queryDb(`UPDATE blogs SET views_count = COALESCE(views_count, 0) + 1 WHERE id = $1`, [blog.id]).catch(() => {});
 
       return NextResponse.json({ success: true, blog, record: blog });

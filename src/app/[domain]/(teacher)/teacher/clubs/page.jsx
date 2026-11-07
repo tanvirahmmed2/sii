@@ -9,7 +9,6 @@ import {
   FiUserCheck, FiCalendar, FiEdit2
 } from 'react-icons/fi';
 
-
 const TeacherClubsOverviewPage = () => {
   const [loading, setLoading] = useState(true);
   const [isClubAdmin, setIsClubAdmin] = useState(false);
@@ -68,7 +67,6 @@ const TeacherClubsOverviewPage = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Page Header */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{currentClub?.name || 'Club Admin'}</h1>
@@ -90,7 +88,6 @@ const TeacherClubsOverviewPage = () => {
         )}
       </div>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-1 shadow-xs">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Members</span>
@@ -113,10 +110,8 @@ const TeacherClubsOverviewPage = () => {
         </div>
       </div>
 
-      {/* Quick Action Navigation Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* 1. Notice Info Card */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all shadow-xs group">
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-xl bg-primary-light border border-primary-light flex items-center justify-center text-primary text-lg group-hover:scale-105 transition-transform">
@@ -138,7 +133,6 @@ const TeacherClubsOverviewPage = () => {
           </Link>
         </div>
 
-        {/* 2. Members & Roles Card */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all shadow-xs group">
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-xl bg-primary-light border border-primary-light flex items-center justify-center text-primary text-lg group-hover:scale-105 transition-transform">
@@ -160,7 +154,6 @@ const TeacherClubsOverviewPage = () => {
           </Link>
         </div>
 
-        {/* 3. Club News Card */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between space-y-4 hover:border-slate-300 transition-all shadow-xs group">
           <div className="space-y-2">
             <div className="w-10 h-10 rounded-xl bg-primary-light border border-primary-light flex items-center justify-center text-primary text-lg group-hover:scale-105 transition-transform">
@@ -184,10 +177,8 @@ const TeacherClubsOverviewPage = () => {
 
       </div>
 
-      {/* Bottom Previews Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Recent Members Preview */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
           <div className="flex justify-between items-center border-b border-slate-100 pb-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -218,7 +209,6 @@ const TeacherClubsOverviewPage = () => {
           </div>
         </div>
 
-        {/* Recent News Preview */}
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
           <div className="flex justify-between items-center border-b border-slate-100 pb-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">

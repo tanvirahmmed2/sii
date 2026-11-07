@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 
-// GET: List issued certificates with student JOIN metadata
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -47,7 +46,6 @@ export async function GET(request, context) {
       LEFT JOIN website_student_certificate_templates tpl ON cert.template_id = tpl.id
     `;
 
-    // Single certificate fetch
     if (id) {
       const res = await queryDb(`${baseSelect} WHERE cert.website_id = $1 AND cert.id = $2 LIMIT 1`, [website.id, id]);
       if (res.rows.length === 0) {
@@ -56,7 +54,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: true, payload: { certificate: res.rows[0] } });
     }
 
-    // List with filters
     const conditions = ['cert.website_id = $1'];
     const values = [website.id];
     let pIdx = 2;
@@ -125,7 +122,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Issue new student certificate
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -206,7 +202,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update certificate status or details
 export async function PUT(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'update');
@@ -250,7 +245,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Revoke/delete certificate
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'delete');

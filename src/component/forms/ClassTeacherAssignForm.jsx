@@ -12,7 +12,6 @@ const ClassTeacherAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
 
   const [filteredSections, setFilteredSections] = useState([]);
 
-  // Fetch sections dynamically based on selected class
   useEffect(() => {
     if (classId) {
       fetch(`/api/sections?class_id=${classId}`)
@@ -76,7 +75,6 @@ const ClassTeacherAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
       </h2>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {/* Class Selection */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiLayers className="text-slate-400" /> Class *
@@ -97,7 +95,6 @@ const ClassTeacherAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Section Selection */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiGrid className="text-slate-400" /> Section (Optional)
@@ -117,7 +114,6 @@ const ClassTeacherAssignForm = ({ classes, teachers, onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Assigned Teacher */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiUserCheck className="text-slate-400" /> Class Teacher *

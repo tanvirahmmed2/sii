@@ -1,14 +1,6 @@
 import { query } from './db';
 import { MONTHLY_FEE_DUE_DAY } from './secret';
 
-/**
- * Automatically checks and generates monthly fee invoices for active/registered students.
- * Generates:
- * 1. Monthly Tuition Fee ("Monthly Fee (Month Year)").
- * 2. Monthly Hostel Seat Fee ("Hostel Monthly Fee (Month Year) - Seat 101A").
- * Due date: 6th day of the current calendar month (configurable via MONTHLY_FEE_DUE_DAY).
- * Status: 'unpaid'.
- */
 export async function triggerMonthlyFeeGeneration(targetStudentId = null) {
   try {
     const today = new Date();
@@ -22,7 +14,6 @@ export async function triggerMonthlyFeeGeneration(targetStudentId = null) {
     const dayStr = String(dueDay).padStart(2, '0');
     const formattedDueDate = `${year}-${monthStr}-${dayStr}`;
 
-    // 1. Generate Class Monthly Tuition Fees
     let insertSql = `
       INSERT INTO student_fees (student_id, title, amount, due_date, status)
       SELECT 
@@ -54,7 +45,6 @@ export async function triggerMonthlyFeeGeneration(targetStudentId = null) {
       console.log(`Generated ${res.rowCount} new monthly tuition fee invoices for ${monthYearTag}.`);
     }
 
-    // 2. Generate Monthly Hostel Seat Fees for Allocated Students
     let hostelFeeSql = `
       INSERT INTO student_fees (student_id, title, amount, due_date, status)
       SELECT 

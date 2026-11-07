@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * POST /api/[domain]/admissions/verify-otp
- * Verifies the 6-digit email OTP for admission application.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -26,7 +22,6 @@ export async function POST(request, context) {
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = code.trim();
 
-    // Look up most recent unexpired OTP for this email and purpose
     const res = await queryDb(`
       SELECT id, otp_code, expires_at, is_verified
       FROM website_email_verifications
@@ -57,7 +52,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Invalid verification code. Please check your email and try again.' }, { status: 400 });
     }
 
-    // Mark as verified
     await queryDb(`
       UPDATE website_email_verifications
       SET is_verified = TRUE, updated_at = CURRENT_TIMESTAMP

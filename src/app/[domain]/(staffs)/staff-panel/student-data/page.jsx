@@ -19,7 +19,6 @@ export default function StudentDataPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailData, setDetailData] = useState(null);
 
-  // Custom Columns & Requirements State
   const [customColumns, setCustomColumns] = useState([]);
   const [loadingColumns, setLoadingColumns] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
@@ -27,12 +26,10 @@ export default function StudentDataPage() {
   const [editingColumn, setEditingColumn] = useState(null);
   const [savingColumn, setSavingColumn] = useState(false);
 
-  // Student Edit State
   const [editingStudent, setEditingStudent] = useState(null);
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
   const [savingStudent, setSavingStudent] = useState(false);
 
-  // New custom column form
   const [newColumn, setNewColumn] = useState({
     field_key: '',
     label: '',
@@ -44,7 +41,6 @@ export default function StudentDataPage() {
     help_text: ''
   });
 
-  // Fetch configured form fields/custom columns
   const fetchCustomColumns = useCallback(async () => {
     setLoadingColumns(true);
     try {
@@ -121,7 +117,6 @@ export default function StudentDataPage() {
     }
   };
 
-  // Create new custom column (used for both student table & admission intake)
   const handleCreateColumn = async (e) => {
     e.preventDefault();
     if (!newColumn.label.trim()) {
@@ -183,7 +178,6 @@ export default function StudentDataPage() {
     }
   };
 
-  // Toggle column requirement
   const handleToggleRequirement = async (col) => {
     const nextReq = !col.is_required;
     try {
@@ -214,7 +208,6 @@ export default function StudentDataPage() {
     }
   };
 
-  // Open Edit Column Modal
   const handleStartEditColumn = (col) => {
     setEditingColumn({
       ...col,
@@ -223,7 +216,6 @@ export default function StudentDataPage() {
     setShowEditColumnModal(true);
   };
 
-  // Submit Column Edit
   const handleUpdateColumn = async (e) => {
     e.preventDefault();
     if (!editingColumn?.label?.trim()) {
@@ -271,7 +263,6 @@ export default function StudentDataPage() {
     }
   };
 
-  // Open Edit Student Modal
   const handleStartEditStudent = (student) => {
     setEditingStudent({
       id: student.id,
@@ -285,7 +276,6 @@ export default function StudentDataPage() {
     setShowEditStudentModal(true);
   };
 
-  // Submit Student Edit
   const handleUpdateStudent = async (e) => {
     e.preventDefault();
     if (!editingStudent?.registration_no?.trim()) {
@@ -359,7 +349,6 @@ export default function StudentDataPage() {
     );
   });
 
-  // Extract display value for custom column
   const getColValue = (student, colKey) => {
     if (!student) return '—';
     if (student[colKey] !== undefined && student[colKey] !== null && String(student[colKey]).trim() !== '') {
@@ -377,13 +366,11 @@ export default function StudentDataPage() {
     return '—';
   };
 
-  // Extra custom columns to show in the table (excluding core columns already rendered)
   const coreKeys = new Set(['name', 'registration_no', 'roll_no', 'student_unique_id', 'email', 'class_id', 'section_id', 'session_id']);
   const tableCustomColumns = customColumns.filter((col) => !coreKeys.has(col.field_key));
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -408,7 +395,6 @@ export default function StudentDataPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={handleFilter}
         onReset={handleReset}
@@ -417,7 +403,6 @@ export default function StudentDataPage() {
         description="Select academic session, class, and section to load enrolled students"
       />
 
-      {/* Data display: show after filter only */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🎓"
@@ -426,7 +411,6 @@ export default function StudentDataPage() {
         />
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-          {/* Active Filter Badge & Search Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -457,7 +441,6 @@ export default function StudentDataPage() {
             </div>
           </div>
 
-          {/* IN-PAGE STUDENT DETAILS VIEW */}
           {selectedStudent && (
             <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -484,7 +467,6 @@ export default function StudentDataPage() {
                 </div>
               ) : (
                 <div className="space-y-4 text-xs">
-                  {/* Academic & Identity Box */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                     <div>
                       <span className="text-[10px] text-slate-400 block uppercase font-semibold">Registration No</span>
@@ -512,7 +494,6 @@ export default function StudentDataPage() {
                     </div>
                   </div>
 
-                  {/* Address Information */}
                   {detailData?.address && (
                     <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
                       <span className="text-[10px] text-slate-400 block uppercase font-semibold">Address Information</span>
@@ -528,7 +509,6 @@ export default function StudentDataPage() {
                     </div>
                   )}
 
-                  {/* Guardian Information */}
                   {detailData?.guardian && (
                     <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
                       <span className="text-[10px] text-slate-400 block uppercase font-semibold">Guardian Information</span>
@@ -544,7 +524,6 @@ export default function StudentDataPage() {
                     </div>
                   )}
 
-                  {/* Custom Modular Fields Box */}
                   {tableCustomColumns.length > 0 && (
                     <div className="p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-800/60 space-y-2">
                       <span className="text-[10px] text-indigo-700 dark:text-indigo-400 block uppercase font-bold tracking-wider">
@@ -579,7 +558,6 @@ export default function StudentDataPage() {
             </div>
           )}
 
-          {/* Student Table with Dynamic Custom Columns */}
           {filteredStudents.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               No students found matching your filters.
@@ -594,7 +572,6 @@ export default function StudentDataPage() {
                     <th className="px-3 py-2.5">Full Name</th>
                     <th className="px-3 py-2.5">Email</th>
                     <th className="px-3 py-2.5">Class / Section</th>
-                    {/* Dynamic Custom Column Headers */}
                     {tableCustomColumns.map((col) => (
                       <th key={col.id || col.field_key} className="px-3 py-2.5 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
@@ -627,7 +604,6 @@ export default function StudentDataPage() {
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-400">
                         {s.class_name} {s.section_name ? `(${s.section_name})` : ''}
                       </td>
-                      {/* Dynamic Custom Column Values */}
                       {tableCustomColumns.map((col) => (
                         <td key={col.id || col.field_key} className="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap font-medium">
                           {getColValue(s, col.field_key)}
@@ -683,7 +659,6 @@ export default function StudentDataPage() {
         </div>
       )}
 
-      {/* CUSTOM COLUMN & REQUIRED FIELDS MANAGER MODAL */}
       {showColumnModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
@@ -706,7 +681,6 @@ export default function StudentDataPage() {
               </button>
             </div>
 
-            {/* Form to Add New Custom Column */}
             <form onSubmit={handleCreateColumn} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
               <h4 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider">
                 + Create New Custom Column
@@ -812,7 +786,6 @@ export default function StudentDataPage() {
               </div>
             </form>
 
-            {/* List of Configured Columns with Requirement Toggles */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase text-slate-700 dark:text-slate-300 tracking-wider">
                 Configured Columns &amp; Admission Field Status ({customColumns.length})
@@ -870,7 +843,6 @@ export default function StudentDataPage() {
         </div>
       )}
 
-      {/* Edit Custom Column Modal */}
       {showEditColumnModal && editingColumn && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in duration-200">
@@ -1045,7 +1017,6 @@ export default function StudentDataPage() {
         </div>
       )}
 
-      {/* EDIT STUDENT RECORD MODAL */}
       {showEditStudentModal && editingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 animate-in fade-in duration-150">

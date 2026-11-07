@@ -8,7 +8,7 @@ const RoutinePage = () => {
   const { getApiEndpoint } = useTenantWebsite();
   const [routine, setRoutine] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'day'
+  const [viewMode, setViewMode] = useState('table'); 
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -46,7 +46,6 @@ const RoutinePage = () => {
 
   return (
     <div className="w-full space-y-4 pb-8">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -97,7 +96,6 @@ const RoutinePage = () => {
           </p>
         </div>
       ) : viewMode === 'table' ? (
-        /* Weekly Master Table */
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
           <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -174,7 +172,6 @@ const RoutinePage = () => {
           </div>
         </div>
       ) : (
-        /* Day View with Tab selection */
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="flex flex-wrap items-center gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-800">
             {displayDays.map((day) => (

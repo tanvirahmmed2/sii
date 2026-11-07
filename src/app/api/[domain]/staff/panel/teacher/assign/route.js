@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 
-// GET: Fetch teacher assignments (subjects and/or class periods)
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -13,7 +12,7 @@ export async function GET(request, context) {
     const { website } = auth;
     const { searchParams } = new URL(request.url);
     const teacherId = searchParams.get('teacher_id');
-    const type = searchParams.get('type'); // 'subject', 'period', or null (both)
+    const type = searchParams.get('type'); 
 
     const result = {};
 
@@ -75,7 +74,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Assign subject or class period to a teacher
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');
@@ -91,7 +89,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'teacher_id is required.' }, { status: 400 });
     }
 
-    // Verify teacher belongs to current website
     const teacherCheck = await queryDb(
       `SELECT id FROM website_teachers WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [teacher_id, website.id]
@@ -151,7 +148,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove an assignment (subject or class period)
 export async function DELETE(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'delete');

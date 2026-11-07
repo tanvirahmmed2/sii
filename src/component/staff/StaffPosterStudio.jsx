@@ -56,17 +56,15 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [showGrid, setShowGrid] = useState(false);
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialPoster?.dimension_width) || 1080);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialPoster?.dimension_height) || 1080);
   const [dimUnit, setDimUnit] = useState(initialPoster?.dimension_unit || 'px');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
 
   const [posterName, setPosterName] = useState(initialPoster?.name || `${website?.name || 'School'} Promotional Poster`);
   const [description, setDescription] = useState(initialPoster?.description || '');
   const [currentPosterId, setCurrentPosterId] = useState(initialPoster?.id && initialPoster.id !== 'new' ? initialPoster.id : null);
 
-  // History stack for Undo / Redo
   const historyRef = useRef([]);
   const historyIndexRef = useRef(-1);
   const isHistoryActionRef = useRef(false);
@@ -142,7 +140,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     });
   };
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
@@ -169,7 +166,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Initialize Canvas
   useEffect(() => {
     let isMounted = true;
     async function init() {
@@ -254,7 +250,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     };
   }, []);
 
-  // Standard Starter Layout
   const loadDefaultSchoolPoster = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -380,7 +375,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     saveHistoryState();
   };
 
-  // ================= ALIGNMENT UTILITIES =================
   const alignLeft = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !selectedObject) return;
@@ -453,7 +447,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     toast.success('Centered on Canvas');
   };
 
-  // ================= ADVANCE TOOLS =================
   const duplicateSelected = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !selectedObject) return;
@@ -558,7 +551,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     toast.success('Removed Object');
   };
 
-  // ================= SHAPES PALETTE =================
   const addRectangle = () => {
     const canvas = fabricCanvasRef.current;
     const fabric = fabricRef.current;
@@ -742,7 +734,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     toast.success(`Inserted ${tag.label}`);
   };
 
-  // ================= SAVE POSTER (ZERO THUMBNAILS) =================
   const handleSavePoster = async () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -754,7 +745,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
       const fabricJSON = canvas.toJSON(['id', 'name', 'mergeTag', 'isLocked']);
       const svgOutput = canvas.toSVG();
 
-      // STRICTLY ZERO THUMBNAIL OVERHEAD
       const payload = {
         name: posterName,
         description: description,
@@ -799,7 +789,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     }
   };
 
-  // DOWNLOAD HIGH-RES JPEG
   const handleDownloadJpeg = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -830,7 +819,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
     }
   };
 
-  // DOWNLOAD PRINT-GRADE PDF
   const handleDownloadPdf = () => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
@@ -881,7 +869,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
 
   return (
     <div className="w-full h-screen flex flex-col bg-slate-950 text-slate-100 font-sans select-none overflow-hidden">
-      {/* Top Application Bar */}
       <header className="h-12 border-b border-slate-800 bg-slate-900 px-4 flex items-center justify-between z-30 shrink-0">
         <div className="flex items-center gap-3">
           <a
@@ -902,7 +889,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
           </div>
         </div>
 
-        {/* Center: Quick dimensions badge & Undo/Redo */}
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-800 text-[11px] text-slate-300 border border-slate-700">
             <span>{dimWidth} × {dimHeight} {dimUnit}</span>
@@ -929,7 +915,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
           </div>
         </div>
 
-        {/* Right Actions: Export and Save */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -962,9 +947,7 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
         </div>
       </header>
 
-      {/* Main Studio Body */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Sidebar */}
         <div className={`w-full lg:w-80 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0 ${mobileView === 'tools' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="flex border-b border-slate-800 bg-slate-950/60 p-1">
             <button
@@ -1091,7 +1074,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
               </>
             )}
 
-            {/* Shapes Palette Tab */}
             {activeTab === 'shapes' && (
               <div className="space-y-4">
                 <div className="p-3 bg-slate-950 rounded border border-slate-800">
@@ -1179,7 +1161,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
               </div>
             )}
 
-            {/* Layers Tab */}
             {activeTab === 'layers' && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between mb-2">
@@ -1209,7 +1190,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
               </div>
             )}
 
-            {/* Canvas Settings */}
             {activeTab === 'settings' && (
               <div className="space-y-4">
                 <div className="p-3 bg-slate-950 rounded border border-slate-800 space-y-3">
@@ -1302,11 +1282,8 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
           </div>
         </div>
 
-        {/* Center: Workstation & Alignment Toolbar */}
         <div className={`flex-1 min-w-0 flex flex-col bg-slate-950 overflow-hidden ${mobileView === 'canvas' ? 'flex' : 'hidden lg:flex'}`}>
-          {/* Alignment & Quick Tools Sub-bar */}
           <div className="min-h-10 border-b border-slate-800 bg-slate-900/90 px-3 py-1 flex items-center justify-between text-xs shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none gap-2">
-            {/* Alignment Buttons */}
             <div className="flex items-center gap-1">
               <span className="text-[10px] text-slate-400 uppercase font-semibold mr-1">Align:</span>
               <button
@@ -1375,7 +1352,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
               </button>
             </div>
 
-            {/* Quick Actions (Duplicate, Flip, Lock, Delete) */}
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -1433,7 +1409,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
 
               <span className="text-slate-700 mx-1">|</span>
 
-              {/* Grid Toggle */}
               <button
                 type="button"
                 onClick={() => setShowGrid(!showGrid)}
@@ -1446,7 +1421,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
                 Grid: {showGrid ? 'On' : 'Off'}
               </button>
 
-              {/* Zoom Controls */}
               <div className="flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-slate-300">
                 <button
                   type="button"
@@ -1474,7 +1448,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
             </div>
           </div>
 
-          {/* Canvas Viewport */}
           <div
             className={`flex-1 overflow-auto flex items-center justify-center p-8 ${
               showGrid
@@ -1493,7 +1466,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
             </div>
           </div>
 
-          {/* Canvas Footer Status */}
           <div className="h-6 border-t border-slate-800 bg-slate-900 px-3 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
             <div className="flex items-center gap-3">
               <span>Dimensions: {dimWidth} × {dimHeight} {dimUnit}</span>
@@ -1506,7 +1478,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
           </div>
         </div>
 
-        {/* Right Inspector Sidebar */}
         <div className={`w-full lg:w-72 border-l border-slate-800 bg-slate-900 p-4 overflow-y-auto text-xs space-y-4 shrink-0 ${mobileView === 'inspector' ? 'flex flex-1 z-20' : 'hidden lg:flex'}`}>
           <div className="border-b border-slate-800 pb-2">
             <h3 className="font-bold text-slate-200 uppercase text-[11px] tracking-wider">
@@ -1519,7 +1490,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
 
           {selectedObject ? (
             <div className="space-y-4">
-              {/* Layer Stacking Order */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Layer Ordering</span>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -1554,7 +1524,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
                 </div>
               </div>
 
-              {/* Opacity Slider */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-1.5">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-slate-400">Opacity</span>
@@ -1579,7 +1548,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
                 />
               </div>
 
-              {/* Color & Fills */}
               <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Colors & Stroke</span>
                 <div className="flex items-center justify-between">
@@ -1661,7 +1629,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
                 )}
               </div>
 
-              {/* Typography if Text Object */}
               {(selectedObject.type === 'i-text' || selectedObject.type === 'text') && (
                 <div className="p-2.5 bg-slate-950 rounded border border-slate-800 space-y-2">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Typography</span>
@@ -1725,7 +1692,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
                     </div>
                   </div>
 
-                  {/* Font Styling Buttons */}
                   <div className="flex gap-1 pt-1">
                     <button
                       type="button"
@@ -1790,7 +1756,6 @@ export default function StaffPosterStudio({ initialPoster, onExitUrl = '/staff-p
         </div>
       </div>
 
-      {/* Mobile Navigation Tab Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

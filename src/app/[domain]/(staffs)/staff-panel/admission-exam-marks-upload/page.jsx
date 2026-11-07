@@ -17,11 +17,9 @@ export default function AdmissionExamMarksUploadPage() {
   const [loadingData, setLoadingData] = useState(false);
   const [savingMarks, setSavingMarks] = useState(false);
 
-  // Local editable marks state: { [applicantId]: { [subjectId]: marks_obtained } }
   const [editedMarks, setEditedMarks] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 1. Fetch available exam-based admission circulars
   useEffect(() => {
     const fetchCirculars = async () => {
       try {
@@ -45,7 +43,6 @@ export default function AdmissionExamMarksUploadPage() {
     fetchCirculars();
   }, [apiBase]);
 
-  // 2. Fetch exam details, subjects, and applicants for selected circular
   const fetchExamData = useCallback(async (silent = false) => {
     if (!selectedAdmissionId) return;
     if (!silent) setLoadingData(true);
@@ -55,7 +52,6 @@ export default function AdmissionExamMarksUploadPage() {
       const data = await res.json();
       if (data.success) {
         setExamData(data);
-        // Initialize editable marks map
         const initialMap = {};
         for (const app of data.applicants || []) {
           initialMap[app.id] = {};
@@ -80,7 +76,6 @@ export default function AdmissionExamMarksUploadPage() {
     }
   }, [selectedAdmissionId, fetchExamData]);
 
-  // Handle local mark cell change
   const handleMarkChange = (applicantId, subjectId, value) => {
     setEditedMarks(prev => ({
       ...prev,
@@ -91,7 +86,6 @@ export default function AdmissionExamMarksUploadPage() {
     }));
   };
 
-  // Save modified marks to database
   const handleSaveMarks = async () => {
     if (!examData || !examData.subjects) return;
     const marksRecords = [];
@@ -137,7 +131,6 @@ export default function AdmissionExamMarksUploadPage() {
     }
   };
 
-  // Download Excel Template with pre-filled applicants and subject columns
   const handleDownloadTemplate = () => {
     if (!examData || !examData.subjects || !examData.applicants) {
       toast.error('No exam or applicant data loaded.');
@@ -168,7 +161,6 @@ export default function AdmissionExamMarksUploadPage() {
     toast.success('Excel marks template downloaded!');
   };
 
-  // Upload Excel file and extract marks for each subject
   const handleExcelUpload = e => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -201,7 +193,6 @@ export default function AdmissionExamMarksUploadPage() {
             updatedLocal[matchedApp.id] = {};
           }
 
-          // Match subject headers
           for (const sub of subjects) {
             for (const key in row) {
               if (key.toLowerCase().includes(sub.title.toLowerCase())) {
@@ -226,7 +217,6 @@ export default function AdmissionExamMarksUploadPage() {
     reader.readAsBinaryString(file);
   };
 
-  // Filter applicants by search query - STRICT RULE: only completed applicants appear here
   const filteredApplicants = useMemo(() => {
     if (!examData?.applicants) return [];
     const completedOnly = examData.applicants.filter(a => a.status === 'completed');
@@ -239,7 +229,6 @@ export default function AdmissionExamMarksUploadPage() {
     ));
   }, [examData, searchTerm]);
   return <div className="w-full space-y-4">
-      {/* Top Header & Workstation Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -262,7 +251,6 @@ export default function AdmissionExamMarksUploadPage() {
           </div>
         </div>
 
-        {/* Circular Selector & Actions Control Bar */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0">
@@ -276,20 +264,17 @@ export default function AdmissionExamMarksUploadPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Download Template Button */}
             <button onClick={handleDownloadTemplate} disabled={!examData} className="px-3 py-1.5 rounded text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50" title="Download pre-filled Excel template">
               
               <span>Download Excel Template (.xlsx)</span>
             </button>
 
-            {/* Upload Excel Button */}
             <label className="px-3 py-1.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
               
               <span>Upload Marks (.xlsx)</span>
               <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" />
             </label>
 
-            {/* Save All Marks Button */}
             <button onClick={handleSaveMarks} disabled={savingMarks || !examData} className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 min-w-[110px] justify-center">
               {savingMarks ? <>
                   <div className="loader loader-xs loader-white" />
@@ -303,7 +288,6 @@ export default function AdmissionExamMarksUploadPage() {
         </div>
       </div>
 
-      {/* Circular Summary & Subject Badges */}
       {examData && <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
             <span className="text-[10px] uppercase font-semibold text-slate-400">Target Intake</span>
@@ -342,7 +326,6 @@ export default function AdmissionExamMarksUploadPage() {
           </div>
         </div>}
 
-      {/* Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5 shadow-2xs flex items-center justify-between gap-3">
         <div className="relative w-full max-w-sm">
           
@@ -354,7 +337,6 @@ export default function AdmissionExamMarksUploadPage() {
         </button>
       </div>
 
-      {/* Marks Table: Single Row Overflow Format */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
@@ -414,7 +396,6 @@ export default function AdmissionExamMarksUploadPage() {
                         </span>
                       </td>
 
-                      {/* Subject Mark Editable Inputs */}
                       {subjects.map(sub => {
                   const currentVal = editedMarks[app.id]?.[sub.id] ?? '';
                   const isOverMax = parseFloat(currentVal) > parseFloat(sub.mark);

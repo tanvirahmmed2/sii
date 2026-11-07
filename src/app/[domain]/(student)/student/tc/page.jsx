@@ -45,7 +45,6 @@ export default function StudentTCPage() {
   const tcNumber = tc?.tc_number || `TC-${student?.registration_no || 'DRAFT'}`;
   const issueDateFormatted = tc?.issue_date ? new Date(tc.issue_date).toLocaleDateString('en-GB') : 'Official Issue';
 
-  // Compile TC HTML with active template
   const compileTcHtml = () => {
     if (!tc || !template) return null;
     let html = template.custom_html || template.html_content || '';
@@ -123,7 +122,6 @@ export default function StudentTCPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -166,7 +164,6 @@ export default function StudentTCPage() {
         )}
       </div>
 
-      {/* Student Summary Strip */}
       {student && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -199,10 +196,8 @@ export default function StudentTCPage() {
         </div>
       )}
 
-      {/* TC Preview or Notice */}
       {tc ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Visual TC Preview */}
           <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center space-y-4">
             <div className="flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-800 pb-3">
               <div>
@@ -231,7 +226,6 @@ export default function StudentTCPage() {
             )}
           </div>
 
-          {/* TC Parameter Details */}
           <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-3">
             <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">Clearance &amp; Exit Parameters</h3>
             <div className="overflow-x-auto">

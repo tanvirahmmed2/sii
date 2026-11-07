@@ -7,9 +7,6 @@ import { checkDomainAvailability, checkCustomDomainAvailability } from './check-
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Normalizes institution type string to a consistent capitalised label.
- */
 function normalizeInstitutionType(type) {
   if (!type) return 'School';
   const lower = String(type).trim().toLowerCase();
@@ -36,9 +33,6 @@ function normalizeInstitutionType(type) {
   }
 }
 
-/**
- * GET /api/marketing/creator/websites
- */
 export async function GET(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
@@ -48,7 +42,6 @@ export async function GET(request) {
     const domainParam = searchParams.get('domain') || searchParams.get('subdomain') || searchParams.get('slug') || searchParams.get('website');
     const checkDomainParam = searchParams.get('checkDomain');
 
-    // 1. Fast Domain Check query if requested
     if (checkDomainParam) {
       const type = searchParams.get('type') || '';
       if (type === 'custom') {
@@ -80,7 +73,6 @@ export async function GET(request) {
 
     const dynamicBaseUrl = getBaseUrl(request);
 
-    // 2. If specific website requested by ID, domain, subdomain, or slug
     const targetIdentifier = websiteIdParam || domainParam;
     if (targetIdentifier && targetIdentifier !== 'new') {
       const cleanIdent = String(targetIdentifier).trim().toLowerCase();
@@ -134,7 +126,6 @@ export async function GET(request) {
       });
     }
 
-    // 3. List all websites for creator linked with package and subscription
     const res = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
@@ -166,14 +157,10 @@ export async function GET(request) {
   }
 }
 
-/**
- * Dispatches Website actions (create, setup, update, delete, check_domain, verify_custom_domain)
- */
 export async function handleWebsitesAction(body, sessionCreator, request = null) {
   const { action } = body;
   const creatorId = Number(body.creatorId || sessionCreator?.id);
 
-  // Allow check_domain even before auth if user is checking in the UI
   if (action === 'check_domain') {
     const domainToCheck = body.domain || body.subdomain || body.customDomain || '';
     const websiteId = body.websiteId || body.id || null;
@@ -208,7 +195,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 
   const baseDomain = BASE_DOMAIN || 'localhost:3000';
 
-  // 1. Create or Setup Website
   if (action === 'create_website' || action === 'setup_website' || !action) {
     const name = (body.name || body.websiteName || '').trim();
     if (!name) {
@@ -227,7 +213,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       return NextResponse.json({ success: false, error: 'Subdomain prefix is required.' }, { status: 400 });
     }
 
-    // Check subdomain availability
     const domainValidation = await checkDomainAvailability(rawDomain, null, request);
     if (!domainValidation.available) {
       return NextResponse.json({
@@ -240,7 +225,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const fullSubdomain = domainValidation.fullDomain || `${cleanSubdomain}.${baseDomain}`;
     const slug = cleanSubdomain;
 
-    // Check and validate subscription selection & website limits
     const requestedSubId = Number(body.subscriptionId || body.subscription_id || 0);
     let chosenSub = null;
 
@@ -273,7 +257,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         }, { status: 403 });
       }
 
-      // Check quota specifically for this chosen subscription
       const countRes = await queryDb(
         `SELECT COUNT(*)::int AS count 
          FROM websites 
@@ -291,7 +274,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         }, { status: 403 });
       }
     } else {
-      // Auto-select an active subscription that has remaining website creation capacity
       const allActiveSubsRes = await queryDb(
         `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id,
                 (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND w.subscription_id = s.id) AS current_count
@@ -417,7 +399,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 
     const newWebsite = res.rows[0];
 
-    // Link subscription's website_id if not already pointing to a website
     await queryDb(
       `UPDATE subscriptions 
        SET website_id = $1, updated_at = CURRENT_TIMESTAMP 
@@ -425,7 +406,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       [newWebsite.id, chosenSub.id]
     ).catch(() => {});
 
-    // Seed default settings, modules, roles & content
     await seedWebsiteDefaults(newWebsite.id, newWebsite.name, { primaryColor, secondaryColor, theme: themeName }, {
       contactEmail,
       contactPhone,
@@ -448,10 +428,9 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // Dedicated Action: Upload Brand Asset (Logo or Favicon) to Cloudinary and delete old one
   if (action === 'upload_branding') {
     const websiteId = Number(body.websiteId || body.id);
-    const type = body.type; // 'logo' | 'favicon'
+    const type = body.type; 
     const imageInput = body.image || body.file || body.data;
 
     if (!websiteId || !type || !imageInput) {
@@ -470,7 +449,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const folder = type === 'logo' ? 'website_logos' : 'website_favicons';
     const oldPublicId = type === 'logo' ? currentSite.logo_id : currentSite.favicon_id;
 
-    // Delete previous asset from Cloudinary
     if (oldPublicId) {
       try {
         await deleteImage(oldPublicId);
@@ -479,7 +457,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     }
 
-    // Upload new image to Cloudinary
     let uploadRes;
     try {
       uploadRes = await uploadImage(imageInput, folder);
@@ -508,10 +485,9 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // Dedicated Action: Remove Brand Asset (Logo or Favicon) from Cloudinary and database
   if (action === 'remove_branding') {
     const websiteId = Number(body.websiteId || body.id);
-    const type = body.type; // 'logo' | 'favicon'
+    const type = body.type; 
 
     if (!websiteId || !type) {
       return NextResponse.json({ success: false, error: 'websiteId and type are required.' }, { status: 400 });
@@ -553,7 +529,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // 2. Update Website (Data, Subdomain, or Custom Domain)
   if (action === 'update_website') {
     const id = Number(body.id || body.websiteId);
     if (!id) {
@@ -628,7 +603,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(liVal ? String(liVal).trim() : null);
     }
 
-    // Subdomain change
     if (body.subdomain !== undefined) {
       const rawSub = String(body.subdomain).trim().toLowerCase();
       if (rawSub) {
@@ -643,11 +617,9 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     }
 
-    // Custom domain change (like WordPress / web builders)
     if (body.custom_domain !== undefined || body.customDomain !== undefined) {
       const rawCustom = (body.custom_domain !== undefined ? body.custom_domain : body.customDomain);
       if (!rawCustom || String(rawCustom).trim() === '') {
-        // Disconnect custom domain
         updates.push(`custom_domain = NULL`);
         updates.push(`custom_domain_verified = FALSE`);
       } else {
@@ -700,7 +672,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(body.theme);
     }
 
-    // Fetch current site details if logo or favicon is being updated or removed
     let currentSiteForBranding = null;
     if (
       body.logo !== undefined ||
@@ -715,7 +686,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       currentSiteForBranding = siteCheck.rows[0] || null;
     }
 
-    // 1. Logo Handling (Cloudinary upload & delete old)
     if (body.removeLogo || body.logo === '' || body.logo === null) {
       if (currentSiteForBranding?.logo_id) {
         try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
@@ -725,7 +695,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     } else if (body.logo !== undefined) {
       const logoInput = String(body.logo).trim();
       if (logoInput.startsWith('data:image')) {
-        // Upload base64 to Cloudinary & delete old
         if (currentSiteForBranding?.logo_id) {
           try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
         }
@@ -739,7 +708,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
           console.error('Cloudinary logo upload error during website update:', logoErr);
         }
       } else if (logoInput) {
-        // Plain URL
         if (body.logo_id !== undefined && body.logo_id !== currentSiteForBranding?.logo_id && currentSiteForBranding?.logo_id) {
           try { await deleteImage(currentSiteForBranding.logo_id); } catch (_) {}
         }
@@ -752,7 +720,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     }
 
-    // 2. Favicon Handling (Cloudinary upload & delete old)
     if (body.removeFavicon || body.favicon === '' || body.favicon === null) {
       if (currentSiteForBranding?.favicon_id) {
         try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
@@ -762,7 +729,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     } else if (body.favicon !== undefined) {
       const faviconInput = String(body.favicon).trim();
       if (faviconInput.startsWith('data:image') || faviconInput.startsWith('data:')) {
-        // Upload base64 to Cloudinary & delete old
         if (currentSiteForBranding?.favicon_id) {
           try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
         }
@@ -776,7 +742,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
           console.error('Cloudinary favicon upload error during website update:', favErr);
         }
       } else if (faviconInput) {
-        // Plain URL
         if (body.favicon_id !== undefined && body.favicon_id !== currentSiteForBranding?.favicon_id && currentSiteForBranding?.favicon_id) {
           try { await deleteImage(currentSiteForBranding.favicon_id); } catch (_) {}
         }
@@ -829,7 +794,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     }
 
-    // Fetch refreshed website directly from websites table
     const refreshed = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
@@ -868,7 +832,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // 3. Verify Custom Domain
   if (action === 'verify_custom_domain') {
     const id = Number(body.id || body.websiteId);
     if (!id) {
@@ -889,7 +852,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  // 4. Delete Website
   if (action === 'delete_website') {
     const id = Number(body.id || body.websiteId);
     if (!id) {
@@ -917,12 +879,8 @@ export async function POST(request) {
   }
 }
 
-/**
- * Seed default configurations, settings and demo content for a new website
- */
 export async function seedWebsiteDefaults(websiteId, websiteName, themeConfig = {}, extraSettings = {}) {
   try {
-    // Default Sample Notice
     await queryDb(`
       INSERT INTO website_notices (website_id, title, content, is_published, published_at)
       VALUES ($1, $2, $3, TRUE, CURRENT_TIMESTAMP)

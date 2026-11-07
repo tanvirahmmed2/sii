@@ -20,10 +20,6 @@ export const DEFAULT_STUDENT_FIELDS = [
   { field_key: 'permanent_address', label: 'Permanent Address', field_type: 'textarea', is_required: false, placeholder: 'Permanent ancestral home address', section: 'address', sort_order: 15, is_active: true }
 ];
 
-/**
- * GET /api/[domain]/staff/panel/students/fields
- * List unified modular form fields configured for the institution.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -65,7 +61,6 @@ export async function GET(request, context) {
             Boolean(f.is_active !== false)
           ]);
         } catch {
-          // ignore
         }
       }
 
@@ -111,10 +106,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/students/fields
- * Create modular field or bulk initialize defaults in unified table.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -145,7 +136,6 @@ export async function POST(request, context) {
       is_active = true
     } = body;
 
-    // Bulk initialization
     if (action === 'initialize_defaults' || Array.isArray(bulkFields)) {
       const fieldsToInsert = Array.isArray(bulkFields) ? bulkFields : DEFAULT_STUDENT_FIELDS;
       const inserted = [];
@@ -199,7 +189,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Single field insertion
     if (!label?.trim()) {
       return NextResponse.json({ success: false, error: 'Field label is required.' }, { status: 400 });
     }
@@ -271,10 +260,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/staff/panel/students/fields
- * Update existing field attributes or toggle required status.
- */
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -434,9 +419,6 @@ export async function PUT(request, context) {
   }
 }
 
-/**
- * DELETE /api/[domain]/staff/panel/students/fields?id=...
- */
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);

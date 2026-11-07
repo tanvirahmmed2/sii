@@ -4,10 +4,6 @@ import { getMetaConfigStatus } from 'src/lib/meta/graph';
 
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'settings'];
 
-/**
- * GET /api/developer/meta/config
- * Returns Meta channel configuration status
- */
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);

@@ -18,7 +18,6 @@ function ResultsContent() {
     total_selected_available: 0
   });
 
-  // Load circulars
   useEffect(() => {
     fetch(`${apiBase}/staff/panel/admissions`).then(async res => {
       if (!res.ok) return {
@@ -35,7 +34,6 @@ function ResultsContent() {
     }).catch(err => console.error(err));
   }, [apiBase]);
 
-  // Fetch results for the selected circular
   const fetchResults = async () => {
     setLoading(true);
     try {
@@ -65,7 +63,6 @@ function ResultsContent() {
     fetchResults();
   }, [selectedCircularId, apiBase]);
 
-  // Handle 1-Click Auto-Publish
   const handleAutoPublish = async () => {
     if (!selectedCircularId) {
       toast.error('Please select an admission circular first.');
@@ -100,7 +97,6 @@ function ResultsContent() {
     }
   };
   return <div className="w-full space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -128,7 +124,6 @@ function ResultsContent() {
         </div>
       </div>
 
-      {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-1">
@@ -167,7 +162,6 @@ function ResultsContent() {
         </div>
       </div>
 
-      {/* Circular Selector Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 max-w-md">
           <span className="text-xs font-medium text-slate-500">Target Intake:</span>
@@ -184,7 +178,6 @@ function ResultsContent() {
         </div>
       </div>
 
-      {/* Results Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">

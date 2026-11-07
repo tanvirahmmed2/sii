@@ -13,38 +13,31 @@ export default function DepartmentsPage() {
     tenantUrl
   } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search & Filter & Views
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [statusFilter, setStatusFilter] = useState('all'); 
+  const [viewMode, setViewMode] = useState('cards'); 
 
-  // INLINE Form states (NO popup modal)
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('create'); // 'create' | 'edit'
+  const [formMode, setFormMode] = useState('create'); 
   const [editingDept, setEditingDept] = useState(null);
 
-  // Form Fields
   const [formName, setFormName] = useState('');
   const [formCode, setFormCode] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formOrderNo, setFormOrderNo] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // Inline Delete state
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const editorSectionRef = useRef(null);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/departments'), [getApiEndpoint]);
 
-  // Fetch departments
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);else setRefreshing(true);
     try {
@@ -86,7 +79,6 @@ export default function DepartmentsPage() {
     };
   }, [apiEndpoint]);
 
-  // Open Inline Create Form
   const openCreateForm = () => {
     setFormMode('create');
     setEditingDept(null);
@@ -104,7 +96,6 @@ export default function DepartmentsPage() {
     }, 100);
   };
 
-  // Open Inline Edit Form
   const openEditForm = dept => {
     setFormMode('edit');
     setEditingDept(dept);
@@ -127,7 +118,6 @@ export default function DepartmentsPage() {
     setEditingDept(null);
   };
 
-  // Handle Form Submit
   const handleSubmit = async e => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -185,7 +175,6 @@ export default function DepartmentsPage() {
     }
   };
 
-  // Inline Delete Execution
   const handleInlineDeleteConfirm = async id => {
     setDeletingId(id);
     const toastId = toast.loading('Deleting department...');
@@ -216,14 +205,11 @@ export default function DepartmentsPage() {
     }
   };
 
-  // Filtered List
   const filteredDepartments = useMemo(() => {
     return departments.filter(d => {
-      // Status filter
       if (statusFilter === 'active' && !d.is_active) return false;
       if (statusFilter === 'inactive' && d.is_active) return false;
 
-      // Search query
       if (!searchTerm.trim()) return true;
       const q = searchTerm.toLowerCase();
       const name = (d.name || '').toLowerCase();
@@ -233,7 +219,6 @@ export default function DepartmentsPage() {
     });
   }, [departments, statusFilter, searchTerm]);
 
-  // Metrics
   const metrics = useMemo(() => {
     const total = departments.length;
     const active = departments.filter(d => d.is_active).length;
@@ -247,7 +232,6 @@ export default function DepartmentsPage() {
     };
   }, [departments]);
   return <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           
@@ -288,8 +272,6 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
-
-      {/* Inline Delete Confirmation Alert (NO popup modal) */}
       {deleteConfirmId && <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
           <div className="flex items-start gap-2.5">
             
@@ -318,7 +300,6 @@ export default function DepartmentsPage() {
           </div>
         </div>}
 
-      {/* INLINE Department Form (NO POPUP MODAL) */}
       {isFormOpen && <div ref={editorSectionRef} className="bg-white dark:bg-slate-900 rounded-2xl border border-blue-200 dark:border-blue-900/60 p-5 sm:p-6 shadow-md space-y-5 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
@@ -341,7 +322,6 @@ export default function DepartmentsPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Department Name */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Department / Track Name <span className="text-rose-500">*</span>
@@ -349,7 +329,6 @@ export default function DepartmentsPage() {
                 <input type="text" required value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Science, Business Studies, Humanities, Primary" className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
 
-              {/* Department Code */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Department Code
@@ -359,7 +338,6 @@ export default function DepartmentsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Order No */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Display Sequence Order
@@ -367,7 +345,6 @@ export default function DepartmentsPage() {
                 <input type="number" min="0" value={formOrderNo} onChange={e => setFormOrderNo(e.target.value)} className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
 
-              {/* Operational Status */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Operational Status
@@ -384,7 +361,6 @@ export default function DepartmentsPage() {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Department Overview / Remarks
@@ -392,7 +368,6 @@ export default function DepartmentsPage() {
               <textarea rows={2} value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Optional description of this academic department or curriculum discipline..." className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
             </div>
 
-            {/* Buttons */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
               <button type="button" onClick={handleCloseForm} disabled={submitting} className="px-4 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer">
                 Cancel
@@ -405,7 +380,6 @@ export default function DepartmentsPage() {
           </form>
         </div>}
 
-      {/* Control Bar: Search & Filters */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-2.5 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -437,7 +411,6 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
-      {/* Main Content Area */}
       {loading ? <div className="py-20 flex flex-col items-center justify-center gap-3">
           <Loader />
           <p className="text-xs text-slate-400">Loading academic departments...</p>
@@ -459,7 +432,7 @@ export default function DepartmentsPage() {
               Add Department
             </button>
           </div>
-        </div> : viewMode === 'cards' ? (/* Cards View */
+        </div> : viewMode === 'cards' ? (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDepartments.map(dept => <div key={dept.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group">
               <div>
@@ -520,7 +493,7 @@ export default function DepartmentsPage() {
                 </div>
               </div>
             </div>)}
-        </div>) : (/* Table View */
+        </div>) : (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">

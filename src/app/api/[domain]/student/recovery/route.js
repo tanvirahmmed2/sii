@@ -6,7 +6,6 @@ import { hashPassword } from 'src/lib/middleware/students.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentRecoveryUrl } from 'src/lib/student/urls.js';
 
-// POST: Request recovery token or reset password (supports both step 1 request and step 2 reset)
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -17,12 +16,10 @@ export async function POST(request, context) {
     const body = await request.json();
     const { email, recovery_token, new_password } = body;
 
-    // STEP 2: Password reset submission
     if (recovery_token && new_password) {
       return handlePasswordReset(website, email, recovery_token, new_password);
     }
 
-    // STEP 1: Request recovery token
     if (!email?.trim()) {
       return NextResponse.json({ success: false, error: 'Registered email or registration number is required.' }, { status: 400 });
     }
@@ -42,7 +39,6 @@ export async function POST(request, context) {
     );
 
     if (studentRes.rows.length === 0) {
-      // Don't leak user enumeration for security, return positive message
       return NextResponse.json({
         success: true,
         message: 'If an account exists with this credential, a verification code has been dispatched.',
@@ -51,10 +47,8 @@ export async function POST(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Rate limiting: 60-second cooldown on password recovery requests
     if (student.recovery_token_expires) {
       const remainingMs = new Date(student.recovery_token_expires).getTime() - Date.now();
-      // Expiry was set to 60 mins = 3600s; if generated < 60s ago, remaining > 59 mins (3540s)
       if (remainingMs > 59 * 60 * 1000) {
         return NextResponse.json({
           success: false,
@@ -63,9 +57,8 @@ export async function POST(request, context) {
       }
     }
 
-    // Generate 6-digit numeric recovery code securely
     const sixDigitCode = crypto.randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); 
 
     await queryDb(
       `UPDATE website_students
@@ -76,10 +69,8 @@ export async function POST(request, context) {
       [sixDigitCode, expiresAt, student.id, website.id]
     );
 
-    // Direct reset link URL with token query param
     const recoveryUrl = buildStudentRecoveryUrl(website, sixDigitCode, request);
 
-    // Dispatch recovery email via Brevo if email is available
     if (student.email) {
       try {
         const emailHtml = buildStyledEmail({
@@ -125,7 +116,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Reset password using verification token
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

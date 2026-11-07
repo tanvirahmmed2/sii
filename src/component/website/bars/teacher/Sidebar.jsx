@@ -94,7 +94,6 @@ const Sidebar = () => {
               );
             })}
 
-            {/* Club Administration if moderator */}
             {isClubAdmin && (
               <div className="flex flex-col space-y-0.5 pt-1">
                 <button

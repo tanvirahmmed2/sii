@@ -22,12 +22,10 @@ export default function ClubNoticesPage() {
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClub, setSelectedClub] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Inline Form State (NO popup, NO slug)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState(null);
   const [formClubId, setFormClubId] = useState('');
@@ -38,11 +36,9 @@ export default function ClubNoticesPage() {
   const [formIsActive, setFormIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Inline Delete State
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -186,14 +182,12 @@ export default function ClubNoticesPage() {
     }
   };
 
-  // KPIs
   const totalNotices = notices.length;
   const activeNotices = notices.filter((n) => n.is_active).length;
   const distinctClubs = new Set(notices.map((n) => n.club_id)).size;
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {toastMessage && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>
@@ -207,7 +201,6 @@ export default function ClubNoticesPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Notices</p>
@@ -242,7 +235,6 @@ export default function ClubNoticesPage() {
         </div>
       </div>
 
-      {/* Inline Create / Edit Notice Workstation Panel (NO popup, NO slug) */}
       {isFormOpen && (
         <div className="bg-white dark:bg-slate-900 border border-primary/30 rounded p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -368,9 +360,7 @@ export default function ClubNoticesPage() {
         </div>
       )}
 
-      {/* Main Interactive Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -421,7 +411,6 @@ export default function ClubNoticesPage() {
           </div>
         </div>
 
-        {/* Notices Table (NO slug column) */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">

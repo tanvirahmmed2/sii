@@ -257,10 +257,8 @@ const ExcelAttendanceForm = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      {/* Date, Class, Period Control Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full">
-          {/* Date */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600 shrink-0">Date:</span>
             <input
@@ -271,7 +269,6 @@ const ExcelAttendanceForm = () => {
             />
           </div>
 
-          {/* Class */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600 shrink-0">Class:</span>
             <select
@@ -291,7 +288,6 @@ const ExcelAttendanceForm = () => {
             </select>
           </div>
 
-          {/* Period */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-600 shrink-0">Period:</span>
             <select
@@ -317,7 +313,6 @@ const ExcelAttendanceForm = () => {
         <p className="text-xs text-rose-500 font-medium px-1">{dropdownError}</p>
       )}
 
-      {/* Upload / Download Action Buttons */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={handleDownloadStudentList}
@@ -352,7 +347,6 @@ const ExcelAttendanceForm = () => {
         </div>
       </div>
 
-      {/* Preview Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
         {parsedRecords.length === 0 ? (
           <div className="w-full py-12 text-center text-xs text-slate-400">

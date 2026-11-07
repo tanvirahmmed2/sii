@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useEffect, useState, useContext } from 'react';
@@ -29,12 +28,10 @@ const HistoryPage = () => {
     let ignore = false;
     const fetchData = async () => {
       try {
-        // Fetch new institutional milestones from database
         const milestonePromise = fetch(getApiEndpoint('institutional?type=milestones'))
           .then((res) => (res.ok ? res.json() : { milestones: [] }))
           .catch(() => ({ milestones: [] }));
 
-        // Also fetch archival histories from database
         const historyPromise = fetch(getApiEndpoint('histories'))
           .then((res) => (res.ok ? res.json() : {}))
           .catch(() => ({}));
@@ -69,7 +66,6 @@ const HistoryPage = () => {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-4xl mx-auto space-y-8">
-        {/* Header */}
         <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
           <div className="flex items-center gap-2 mb-2">
             <Link
@@ -88,7 +84,6 @@ const HistoryPage = () => {
           </p>
         </div>
 
-        {/* Dynamic Rich Text from Website record */}
         {website?.history && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-3">
             <h2 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
@@ -101,7 +96,6 @@ const HistoryPage = () => {
           </div>
         )}
 
-        {/* Timeline Loading / Empty / Content */}
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-16 flex justify-center items-center shadow-xs">
             <div className="loader loader-md" />
@@ -118,7 +112,6 @@ const HistoryPage = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* New Database Milestones */}
             {milestones.length > 0 && (
               <div className="space-y-4">
                 <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
@@ -143,7 +136,6 @@ const HistoryPage = () => {
                         </div>
                       </div>
 
-                      {/* Attached Cloudinary Image */}
                       {m.image && (
                         <div className="overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
                           <a
@@ -165,7 +157,6 @@ const HistoryPage = () => {
                         </div>
                       )}
 
-                      {/* Rich Text Description */}
                       {m.description && (
                         <div
                           className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none"
@@ -178,7 +169,6 @@ const HistoryPage = () => {
               </div>
             )}
 
-            {/* Legacy Timeline Records */}
             {legacyHistories.length > 0 && (
               <div className="space-y-4 pt-2">
                 <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">

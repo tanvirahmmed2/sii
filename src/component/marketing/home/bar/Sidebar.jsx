@@ -15,7 +15,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Backdrop overlay */}
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-xs z-50 lg:hidden transition-opacity duration-300 ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
@@ -24,7 +23,6 @@ export default function Sidebar({ isOpen, onClose }) {
         aria-hidden="true"
       />
 
-      {/* Right-sided Drawer */}
       <aside
         className={`fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 z-50 lg:hidden flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
@@ -32,7 +30,6 @@ export default function Sidebar({ isOpen, onClose }) {
         aria-label="Mobile Navigation"
       >
         <div className="flex flex-col h-full overflow-y-auto">
-          {/* Header */}
           <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
             <Link
               href="/"
@@ -51,7 +48,6 @@ export default function Sidebar({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Navigation links */}
           <nav className="flex flex-col p-4 space-y-1">
 
             <Link
@@ -112,7 +108,6 @@ export default function Sidebar({ isOpen, onClose }) {
           </nav>
         </div>
 
-        {/* Footer Actions: Contact, Login, Get Started */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
           <Link
             href="/contact"

@@ -1,8 +1,5 @@
 import { SCHOOL_NAME } from 'src/lib/database/secret';
 
-/**
- * Calculates letter grade and grade point from score percentage or existing properties
- */
 function getSubjectGradeInfo(markItem) {
   if (markItem.letter_grade && (markItem.grade_point !== undefined && markItem.grade_point !== null)) {
     return {

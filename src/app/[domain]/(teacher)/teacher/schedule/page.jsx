@@ -34,7 +34,6 @@ const SchedulePage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="pb-3 border-b border-slate-200">
         <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
           <FiClock className="text-primary" /> My Class Schedule
@@ -42,7 +41,6 @@ const SchedulePage = () => {
         <p className="text-xs text-slate-500 mt-0.5">Your daily teaching routine, classes, and room numbers.</p>
       </div>
 
-      {/* Day Tabs */}
       <div className="flex flex-wrap gap-1">
         {daysOfWeek.map((day) => {
           const count = routine.filter((r) => r.day_of_week === day).length;
@@ -61,7 +59,6 @@ const SchedulePage = () => {
         })}
       </div>
 
-      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {loading ? (
           <div className="py-16 flex justify-center items-center">

@@ -23,7 +23,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Fetch conversations list or messages for a specific conversation
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -35,14 +34,12 @@ export async function GET(request, context) {
 
     const metaConfig = await getWebsiteMetaConfig(auth.website.id);
 
-    // Case 1: Fetch messages for a specific conversation
     if (conversationId) {
       const convId = parseInt(conversationId, 10);
       if (isNaN(convId) || convId <= 0) {
         return NextResponse.json({ success: false, error: 'Valid integer conversationId is required.' }, { status: 400 });
       }
 
-      // Mark unread count as 0 for this conversation
       await queryDb(
         `UPDATE website_meta_conversations SET unread_count = 0 WHERE id = $1 AND website_id = $2`,
         [convId, auth.website.id]
@@ -75,7 +72,6 @@ export async function GET(request, context) {
       });
     }
 
-    // Case 2: Fetch list of conversations for this platform
     const convsRes = await queryDb(
       `SELECT id, platform, external_conversation_id, recipient_id, recipient_name,
               recipient_phone, recipient_avatar, last_message, last_message_at,
@@ -114,7 +110,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Send outbound response to a conversation
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -133,7 +128,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Message text cannot be empty.' }, { status: 400 });
     }
 
-    // Fetch conversation
     const convRes = await queryDb(
       `SELECT id, platform, recipient_id, recipient_name, recipient_phone
        FROM website_meta_conversations
@@ -153,7 +147,6 @@ export async function POST(request, context) {
     let deliveryStatus = 'SENT';
     let errorMessage = null;
 
-    // Dispatch via Meta Graph API using website-specific credentials
     try {
       const recipient = conv.platform === 'whatsapp' ? (conv.recipient_phone || conv.recipient_id) : conv.recipient_id;
       const metaResult = await sendWebsiteMetaMessage({
@@ -169,7 +162,6 @@ export async function POST(request, context) {
       errorMessage = metaErr.message;
     }
 
-    // Persist to website_meta_messages
     const insertRes = await queryDb(
       `INSERT INTO website_meta_messages (
          website_id, conversation_id, platform, sender_type, sender_id, sender_name,
@@ -190,7 +182,6 @@ export async function POST(request, context) {
       ]
     );
 
-    // Update conversation record
     await queryDb(
       `UPDATE website_meta_conversations
        SET last_message = $1, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
@@ -210,7 +201,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update conversation status (OPEN, RESOLVED, SPAM)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -252,7 +242,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete conversation or individual message
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

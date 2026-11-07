@@ -12,7 +12,7 @@ export async function GET(request, context) {
     const { website } = auth;
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search')?.trim() || '';
-    const status = searchParams.get('status') || 'all'; // 'all', 'assigned', 'unassigned', 'active', 'inactive'
+    const status = searchParams.get('status') || 'all'; 
     const department = searchParams.get('department') || 'all';
 
     let whereConditions = [`wo.website_id = $1`];
@@ -106,7 +106,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Officer ID and Payroll Scale ID are required.' }, { status: 400 });
     }
 
-    // Validate officer exists
     const officerCheck = await queryDb(
       `SELECT id, name FROM website_officers WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [officerId, website.id]
@@ -115,7 +114,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, message: 'Officer not found.' }, { status: 404 });
     }
 
-    // Validate payroll scale exists
     const payrollCheck = await queryDb(
       `SELECT id, title, basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
               provident_fund, tax_deduction, other_deductions
@@ -131,7 +129,6 @@ export async function POST(request, context) {
     const deductions = Number(p.provident_fund) + Number(p.tax_deduction) + Number(p.other_deductions);
     const netSalary = Math.max(0, gross - deductions);
 
-    // Upsert into website_officer_salaries
     const upsertRes = await queryDb(
       `INSERT INTO website_officer_salaries (
         website_id, officer_id, payroll_id, effective_date, status, remarks
@@ -146,7 +143,6 @@ export async function POST(request, context) {
       [website.id, officerId, payrollId, effectiveDate, status, remarks]
     );
 
-    // Sync legacy salary column in website_officers
     await queryDb(
       `UPDATE website_officers SET salary = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
       [netSalary, officerId, website.id]
@@ -178,7 +174,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, message: 'Officer ID is required.' }, { status: 400 });
     }
 
-    // Check existing
     const existing = await queryDb(
       `SELECT id, payroll_id FROM website_officer_salaries WHERE website_id = $1 AND officer_id = $2 LIMIT 1`,
       [website.id, officer_id]
@@ -189,7 +184,6 @@ export async function PUT(request, context) {
 
     const targetPayrollId = payroll_id || existing.rows[0].payroll_id;
 
-    // Fetch net salary if payroll changed
     const payrollCheck = await queryDb(
       `SELECT basic_salary, house_rent, medical_allowance, transport_allowance, other_allowance,
               provident_fund, tax_deduction, other_deductions
@@ -217,7 +211,6 @@ export async function PUT(request, context) {
       [targetPayrollId, status, effective_date, remarks, website.id, officer_id]
     );
 
-    // Sync legacy salary column in website_officers
     await queryDb(
       `UPDATE website_officers SET salary = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
       [netSalary, officer_id, website.id]
@@ -258,7 +251,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, message: 'Salary assignment not found for this officer.' }, { status: 404 });
     }
 
-    // Reset legacy salary in website_officers
     await queryDb(
       `UPDATE website_officers SET salary = 0.00, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND website_id = $2`,
       [officerId, website.id]

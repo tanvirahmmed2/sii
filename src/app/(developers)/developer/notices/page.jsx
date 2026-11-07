@@ -11,7 +11,6 @@ export default function DeveloperNoticesPage() {
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Create Notice Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     title: '',
@@ -140,7 +139,6 @@ export default function DeveloperNoticesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -176,7 +174,6 @@ export default function DeveloperNoticesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Pinned Announcements */}
           {pinnedNotices.length > 0 && (
             <div className="space-y-2">
               <div className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">
@@ -236,7 +233,6 @@ export default function DeveloperNoticesPage() {
             </div>
           )}
 
-          {/* Regular Notices */}
           <div className="space-y-2">
             {pinnedNotices.length > 0 && (
               <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
@@ -295,7 +291,6 @@ export default function DeveloperNoticesPage() {
         </div>
       )}
 
-      {/* Post Notice Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded border border-slate-200 shadow-lg max-w-lg w-full p-4 sm:p-6 space-y-4">

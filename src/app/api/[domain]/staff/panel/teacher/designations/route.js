@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 
-// GET: List all designations for the website with teacher count
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -33,7 +32,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new designation
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');
@@ -51,7 +49,6 @@ export async function POST(request, context) {
 
     const trimmedTitle = title.trim();
 
-    // Check if duplicate title exists in this website
     const existing = await queryDb(
       `SELECT id FROM website_designations WHERE website_id = $1 AND LOWER(title) = LOWER($2) LIMIT 1`,
       [website.id, trimmedTitle]
@@ -79,7 +76,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing designation
 export async function PUT(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'edit');
@@ -101,7 +97,6 @@ export async function PUT(request, context) {
 
     const trimmedTitle = title.trim();
 
-    // Check uniqueness conflict with other designations in the same website
     const conflict = await queryDb(
       `SELECT id FROM website_designations WHERE website_id = $1 AND LOWER(title) = LOWER($2) AND id != $3 LIMIT 1`,
       [website.id, trimmedTitle, id]
@@ -138,7 +133,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a designation
 export async function DELETE(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'delete');

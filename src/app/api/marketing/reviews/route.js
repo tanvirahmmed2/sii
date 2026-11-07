@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// GET: Public endpoint returning approved client reviews with pagination & limit support
-// Conforms strictly to Table 19 (reviews) in psql/schema.psql
 export async function GET(request) {
   try {
 
@@ -11,7 +9,6 @@ export async function GET(request) {
     const limitParam = searchParams.get('limit');
     const ratingParam = searchParams.get('rating');
 
-    // Base condition: only approved reviews
     const whereConditions = ['COALESCE(r.is_approved, TRUE) = TRUE'];
     const queryParams = [];
 
@@ -25,14 +22,12 @@ export async function GET(request) {
 
     const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
 
-    // Total matching records for pagination
     const countRes = await queryDb(
       `SELECT COUNT(*)::int AS total FROM reviews r ${whereClause}`,
       queryParams
     ).catch(() => ({ rows: [{ total: 0 }] }));
     const totalCount = countRes.rows[0]?.total || 0;
 
-    // Overall stats for all approved reviews
     const statsRes = await queryDb(
       `SELECT r.rating
        FROM reviews r
@@ -52,7 +47,6 @@ export async function GET(request) {
       1: allApproved.filter((r) => Number(r.rating) === 1).length,
     };
 
-    // Build SELECT query
     let selectQuery = `
       SELECT r.id,
               r.creator_id,

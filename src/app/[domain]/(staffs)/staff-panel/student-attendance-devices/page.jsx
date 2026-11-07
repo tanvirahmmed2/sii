@@ -17,10 +17,8 @@ export default function StudentAttendanceDevicesPage() {
   const [selectedTerminal, setSelectedTerminal] = useState('term-1');
   const [syncingAll, setSyncingAll] = useState(false);
 
-  // Local device assignments mapping: studentId -> { rfid: string, terminal: string, status: string, lastSync: string }
   const [deviceMappings, setDeviceMappings] = useState({});
 
-  // Modal for editing device / card UID
   const [editingStudent, setEditingStudent] = useState(null);
   const [modalCardId, setModalCardId] = useState('');
   const [modalTerminal, setModalTerminal] = useState('term-1');
@@ -48,12 +46,10 @@ export default function StudentAttendanceDevicesPage() {
         setStudents(studentList);
         setHasFiltered(true);
 
-        // Prepopulate or maintain device mappings
         setDeviceMappings((prev) => {
           const next = { ...prev };
           studentList.forEach((s) => {
             if (!next[s.id]) {
-              // Default seed: use student_unique_id or roll
               const defaultRfid = s.student_unique_id ? `RFID-${s.student_unique_id.replace(/[^0-9A-Z]/g, '').slice(-6)}` : '';
               next[s.id] = {
                 rfid: defaultRfid,
@@ -186,7 +182,6 @@ export default function StudentAttendanceDevicesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Student Attendance Devices & RFID Management
@@ -196,7 +191,6 @@ export default function StudentAttendanceDevicesPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -206,7 +200,6 @@ export default function StudentAttendanceDevicesPage() {
         description="Select session, class, and section to manage biometric and RFID device links"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="📟"
@@ -215,7 +208,6 @@ export default function StudentAttendanceDevicesPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* KPI Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3.5 shadow-2xs">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Students</span>
@@ -235,7 +227,6 @@ export default function StudentAttendanceDevicesPage() {
             </div>
           </div>
 
-          {/* Device Actions Bar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Terminal:</span>
@@ -270,9 +261,7 @@ export default function StudentAttendanceDevicesPage() {
             </div>
           </div>
 
-          {/* Student Roster Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
-            {/* IN-PAGE RFID CONFIGURATION CARD */}
             {editingStudent && (
               <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

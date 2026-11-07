@@ -16,10 +16,6 @@ import {
 } from 'react-icons/bi';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
-/**
- * Split article content/description evenly by the number of images.
- * Works seamlessly with both HTML and plain-text/markdown content.
- */
 function splitContentByImages(content, imageCount) {
   if (!content) return [];
   if (imageCount <= 1) return [content];
@@ -27,7 +23,6 @@ function splitContentByImages(content, imageCount) {
   const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
 
   if (isHtml) {
-    // Split by closing block tags: </p>, </h2>, </h3>, </h4>, </div>, </ul>, </ol>, </blockquote>
     const blocks = content
       .split(/(<\/(?:p|h[1-6]|div|ul|ol|blockquote)>)/i)
       .reduce((acc, curr, idx, arr) => {
@@ -59,7 +54,6 @@ function splitContentByImages(content, imageCount) {
 
     return result.map((bucket) => bucket.join('\n'));
   } else {
-    // Plain text: split by double newlines (paragraphs)
     const paragraphs = content
       .split(/\r?\n\s*\r?\n/)
       .map((p) => p.trim())
@@ -155,7 +149,6 @@ export default function SingleBlogPage({ params }) {
     );
   }
 
-  // Calculate and extract all images attached to the blog
   const rawGallery = Array.isArray(blog.images) ? blog.images : [];
   const images = [];
   rawGallery.forEach((img) => {
@@ -195,7 +188,6 @@ export default function SingleBlogPage({ params }) {
 
   return (
     <main className="min-h-screen bg-slate-50/70 dark:bg-slate-950/70 pb-16">
-      {/* 1. TOP: BRIEF DESCRIPTION / SUMMARY ON TOP */}
       {(blog.summary || blog.excerpt) && (
         <section className="bg-primary-light dark:bg-primary-dark border-b border-primary/20 dark:border-primary-dark/30 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 shadow-xs">
           <div className="max-w-4xl mx-auto text-center space-y-2">
@@ -210,7 +202,6 @@ export default function SingleBlogPage({ params }) {
       )}
 
       <div className="w-full py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-10">
-        {/* 2. THEN: TITLE & METADATA */}
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
             {blog.category && (
@@ -247,12 +238,10 @@ export default function SingleBlogPage({ params }) {
           </div>
         </section>
 
-        {/* 3. THEN: INTERLEAVED IMAGE AND SPLIT DESCRIPTION */}
         <section className="space-y-12">
           {imageCount > 0 ? (
             images.map((img, idx) => (
               <article key={idx} className="space-y-6">
-                {/* Image */}
                 <div
                   className="relative aspect-16/10 rounded-2xl overflow-hidden bg-slate-950 border border-slate-200/80 dark:border-slate-800 shadow-sm cursor-pointer group"
                   onClick={() => setSelectedZoomImage(img)}
@@ -273,7 +262,6 @@ export default function SingleBlogPage({ params }) {
                   )}
                 </div>
 
-                {/* Description chunk corresponding to this image */}
                 {contentChunks[idx] && (
                   <div className="prose prose-slate dark:prose-invert max-w-none text-base text-slate-700 dark:text-slate-300 leading-relaxed font-sans [&_p]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-secondary [&_blockquote]:pl-4 [&_blockquote]:italic">
                     {isHtml ? (
@@ -286,7 +274,6 @@ export default function SingleBlogPage({ params }) {
               </article>
             ))
           ) : (
-            // Fallback when no images exist
             <article className="prose prose-slate dark:prose-invert max-w-none text-base text-slate-700 dark:text-slate-300 leading-relaxed font-sans [&_p]:mb-4">
               {isHtml ? (
                 <div dangerouslySetInnerHTML={{ __html: blog.content }} />
@@ -296,7 +283,6 @@ export default function SingleBlogPage({ params }) {
             </article>
           )}
 
-          {/* Any remaining chunks beyond the image count (if applicable) */}
           {contentChunks.length > imageCount && (
             <div className="prose prose-slate dark:prose-invert max-w-none text-base text-slate-700 dark:text-slate-300 leading-relaxed font-sans [&_p]:mb-4">
               {contentChunks.slice(imageCount).map((rem, i) => (
@@ -310,7 +296,6 @@ export default function SingleBlogPage({ params }) {
           )}
         </section>
 
-        {/* 4. Full image zoom modal */}
         {selectedZoomImage && (
           <div
             className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-xs cursor-pointer"
@@ -338,7 +323,6 @@ export default function SingleBlogPage({ params }) {
           </div>
         )}
 
-        {/* 5. Bottom Navigation */}
         <div className="pt-8 border-t border-slate-200 dark:border-slate-800 text-center">
           <Link
             href="/blogs"

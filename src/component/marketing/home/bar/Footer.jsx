@@ -20,11 +20,7 @@ const Footer = () => {
   return (
     <footer className="w-full bg-slate-900 dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
       <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
-        {/* ======================================================== */}
-        {/* LAYER 1 (TOP): Company Identity & Newsletter Subscribe   */}
-        {/* ======================================================== */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
-          {/* Company Brand & Overview */}
           <div className="lg:col-span-7 space-y-2">
             <div className="space-y-1">
               <Link
@@ -44,17 +40,12 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Newsletter Subscription Component */}
           <div className="lg:col-span-5 p-5 rounded-md bg-slate-950/60 border border-slate-800">
             <SubscribeForm source="HOME_FOOTER" />
           </div>
         </div>
 
-        {/* ======================================================== */}
-        {/* LAYER 2 (MIDDLE): Four Columns of Links & Contact        */}
-        {/* ======================================================== */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-8 border-b border-slate-800">
-          {/* Column 1: Products */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Products
@@ -78,7 +69,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 2: Resources */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Resources
@@ -102,7 +92,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 3: Platform */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Platform
@@ -152,7 +141,6 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 4: Contact & Location */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Contact &amp; Location
@@ -198,18 +186,12 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* ======================================================== */}
-        {/* LAYER 3 (BOTTOM): Controls, Theme Mode, Copr  */}
-        {/* ======================================================== */}
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 pt-2">
-          {/* Copyright notice */}
           <p className="order-2 md:order-1 text-center md:text-left font-normal">
             &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
 
-          {/* Controls: Color Mode */}
           <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-3">
-            {/* Mode switch */}
             <div className="inline-flex items-center rounded border border-slate-700 bg-slate-950 p-0.5 text-xs">
               <button
                 type="button"
@@ -234,7 +216,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Company attribution */}
           <p className="order-3 text-center md:text-right font-normal">
             A Product of{' '}
             <Link

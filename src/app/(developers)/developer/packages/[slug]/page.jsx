@@ -115,7 +115,6 @@ export default function PackageDetailPage({ params }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header and Breadcrumbs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
@@ -155,7 +154,6 @@ export default function PackageDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Direct Update Form */}
       <PackageForm
         initialData={pkg}
         onSuccess={handleUpdateSuccess}

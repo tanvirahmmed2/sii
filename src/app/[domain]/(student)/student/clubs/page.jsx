@@ -83,7 +83,6 @@ const StudentClubsDashboardPage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -102,7 +101,6 @@ const StudentClubsDashboardPage = () => {
         </div>
       </div>
 
-      {/* My Enrolled Clubs Table */}
       {myClubs.length > 0 && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
           <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -160,7 +158,6 @@ const StudentClubsDashboardPage = () => {
         </div>
       )}
 
-      {/* Clubs Catalog Table */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

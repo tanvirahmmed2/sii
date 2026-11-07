@@ -20,7 +20,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch student info
     const studentRes = await queryDb(
       `SELECT s.id, s.registration_no, s.roll_no, s.class_id, s.section_id,
               COALESCE(s.name, i.data->>'name') AS name,
@@ -58,7 +57,6 @@ export async function GET(request, context) {
       date_of_birth: rawStudent.date_of_birth
     };
 
-    // Fetch testimonial requests
     let testimonials = [];
     try {
       const res = await queryDb(
@@ -79,7 +77,6 @@ export async function GET(request, context) {
       console.error('Error fetching testimonials:', err);
     }
 
-    // Determine latest or approved testimonial
     const approvedTestimonial = testimonials.find(t => t.status === 'approved' || t.status === 'issued') || testimonials[0] || null;
     const isProvided = approvedTestimonial ? (approvedTestimonial.status === 'approved' || approvedTestimonial.status === 'issued') : false;
 

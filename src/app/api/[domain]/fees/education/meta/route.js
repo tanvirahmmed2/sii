@@ -11,7 +11,6 @@ export async function GET(request, context) {
 
     const { website } = auth;
 
-    // Fetch classes
     const classesRes = await queryDb(
       `SELECT id, name AS class_name, code AS code
        FROM website_classes
@@ -20,7 +19,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // Fetch sections
     const sectionsRes = await queryDb(
       `SELECT id, class_id, name AS section_name
        FROM website_sections
@@ -29,7 +27,6 @@ export async function GET(request, context) {
       [website.id]
     );
 
-    // Fetch sessions
     const sessionsRes = await queryDb(
       `SELECT id, name AS session_name, is_current
        FROM website_sessions

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth.js';
 
-// GET: List club members with student details, metadata, and candidate search
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -20,7 +19,6 @@ export async function GET(request, context) {
     const candidateQuery = searchParams.get('candidate_query')?.trim();
     const targetClubId = searchParams.get('target_club_id');
 
-    // Dedicated Candidate Students Search Sub-Action
     if (action === 'search_candidates') {
       let candQuery = `
         SELECT s.id,
@@ -77,7 +75,6 @@ export async function GET(request, context) {
       });
     }
 
-    // Default: Fetch full member ledger + dropdowns & initial candidates
     const clubId = searchParams.get('club_id');
     const search = searchParams.get('search')?.trim() || '';
     const role = searchParams.get('role');
@@ -144,25 +141,21 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryStr, params);
 
-    // Fetch clubs list for dropdown
     const clubsRes = await queryDb(
       `SELECT id, name, category, has_chat_box FROM website_clubs WHERE website_id = $1 AND is_active = true ORDER BY name ASC`,
       [website.id]
     );
 
-    // Fetch departments for candidate filtering
     const deptsRes = await queryDb(
       `SELECT id, name FROM website_departments WHERE website_id = $1 AND is_active = true ORDER BY name ASC`,
       [website.id]
     );
 
-    // Fetch classes for candidate filtering
     const classesRes = await queryDb(
       `SELECT id, name, department_id FROM website_classes WHERE website_id = $1 ORDER BY name ASC`,
       [website.id]
     );
 
-    // Initial pool of candidate students
     const initialCandidatesRes = await queryDb(
       `SELECT s.id,
               s.registration_no,
@@ -198,7 +191,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add single or multiple students as club members
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -219,7 +211,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'A target Club must be selected.' }, { status: 400 });
     }
 
-    // Verify club
     const clubCheck = await queryDb(
       `SELECT id, name FROM website_clubs WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [clubId, website.id]
@@ -228,7 +219,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Selected club not found.' }, { status: 404 });
     }
 
-    // Determine student IDs: supports both array `student_ids` and single `student_id`
     let studentIds = [];
     if (Array.isArray(body.student_ids)) {
       studentIds = body.student_ids
@@ -271,7 +261,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update member role, status, or chat access
 export async function PUT(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -321,7 +310,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove member from club
 export async function DELETE(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);

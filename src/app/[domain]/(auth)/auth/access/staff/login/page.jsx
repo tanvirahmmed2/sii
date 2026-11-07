@@ -9,14 +9,13 @@ import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 export default function StaffLoginPage() {
   const router = useRouter();
   const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
-  const [step, setStep] = useState('credentials'); // 'credentials' | '2fa'
+  const [step, setStep] = useState('credentials'); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
-  // Step 1: Submit Credentials
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
@@ -54,7 +53,6 @@ export default function StaffLoginPage() {
     }
   };
 
-  // Step 2: Submit 2FA Code
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (!otpCode || otpCode.trim().length !== 6) {
@@ -87,7 +85,6 @@ export default function StaffLoginPage() {
     }
   };
 
-  // Resend 2FA Code
   const handleResendCode = async () => {
     if (resending) return;
     setResending(true);
@@ -117,7 +114,6 @@ export default function StaffLoginPage() {
     <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
         
-        {/* Header */}
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
           
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">

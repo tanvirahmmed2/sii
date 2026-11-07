@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
-/**
- * Creator Active Login Sessions API Route
- * Path: /api/marketing/creator/sessions
- * Provides list and revocation of active devices/sessions for creators.
- */
-
 async function ensureSessionsTable() {
   try {
     await queryDb(`
@@ -46,7 +40,6 @@ export async function GET(request) {
 
     const currentToken = sessionCreator.token || '';
 
-    // Auto-record current session if not already in creator_login_sessions
     if (sessionCreator.id && currentToken) {
       try {
         const existing = await queryDb(
@@ -134,7 +127,6 @@ export async function POST(request) {
         );
       }
 
-      // Check if session being revoked is current device
       const checkRes = await queryDb(
         `SELECT token FROM creator_login_sessions WHERE id = $1 AND creator_id = $2 LIMIT 1`,
         [sessionId, sessionCreator.id]

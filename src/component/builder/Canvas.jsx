@@ -41,7 +41,6 @@ export default function Canvas({
               textAlign: styles.textAlign || 'left',
             }}
           >
-            {/* Drag handle / Action Bar */}
             <div className="absolute -top-3.5 left-4 z-20 flex items-center gap-1.5 bg-slate-900 border border-white/10 px-2.5 py-1 rounded-lg text-xs shadow-lg">
               <span className="font-bold text-indigo-400 text-[10px] uppercase tracking-wider">
                 {type}
@@ -49,7 +48,6 @@ export default function Canvas({
               <span className="text-slate-600">•</span>
               <span className="text-slate-300 font-medium text-[11px]">{section.title}</span>
 
-              {/* Reorder Buttons */}
               <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/10">
                 <button
                   type="button"
@@ -89,9 +87,7 @@ export default function Canvas({
               </div>
             </div>
 
-            {/* Section Render Preview */}
             <div className="px-6 md:px-12 max-w-4xl mx-auto">
-              {/* HERO */}
               {type === 'HERO' && (
                 <div className="space-y-4">
                   <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
@@ -111,7 +107,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* ABOUT */}
               {type === 'ABOUT' && (
                 <div className="space-y-3">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title}</h2>
@@ -119,7 +114,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* EXPERIENCE TIMELINE */}
               {type === 'EXPERIENCE' && (
                 <div className="space-y-4">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -136,7 +130,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* BLOG */}
               {type === 'BLOG' && (
                 <div className="space-y-4">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -157,7 +150,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* APPOINTMENT */}
               {type === 'APPOINTMENT' && (
                 <div className="space-y-4 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -169,7 +161,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* REVIEWS */}
               {type === 'REVIEWS' && (
                 <div className="space-y-4 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -198,7 +189,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* CONTACT */}
               {type === 'CONTACT' && (
                 <div className="space-y-2 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title}</h2>
@@ -206,7 +196,6 @@ export default function Canvas({
                 </div>
               )}
 
-              {/* CUSTOM */}
               {type === 'CUSTOM' && (
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold text-white">{section.title}</h2>

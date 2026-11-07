@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
 
-// GET: Public events list (supports ?limit=N and ?home=true)
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -18,7 +17,6 @@ export async function GET(request, context) {
     const limitParam = searchParams.get('limit');
     const isHome = searchParams.get('home') === 'true';
 
-    // Optional student session check for personal interest & registration status
     let studentId = null;
     try {
       const session = await getStudentSession(request);
@@ -95,7 +93,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Toggle student interest for an event
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -130,7 +127,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Valid Event ID is required.' }, { status: 400 });
     }
 
-    // Verify event exists & is active
     const eventCheck = await queryDb(
       `SELECT id, title, is_active FROM website_events WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [parsedEventId, website.id]
@@ -142,7 +138,6 @@ export async function POST(request, context) {
 
     const studentId = session.id;
 
-    // Check existing interest
     const interestCheck = await queryDb(
       `SELECT id FROM website_events_interested WHERE event_id = $1 AND student_id = $2 LIMIT 1`,
       [parsedEventId, studentId]
@@ -151,14 +146,12 @@ export async function POST(request, context) {
     let isInterestedNow = false;
 
     if (interestCheck.rowCount > 0 && (action === 'toggle' || action === 'uninterest' || action === 'remove')) {
-      // Remove interest
       await queryDb(
         `DELETE FROM website_events_interested WHERE event_id = $1 AND student_id = $2`,
         [parsedEventId, studentId]
       );
       isInterestedNow = false;
     } else {
-      // Add interest
       await queryDb(
         `INSERT INTO website_events_interested (website_id, event_id, student_id)
          VALUES ($1, $2, $3)
@@ -168,7 +161,6 @@ export async function POST(request, context) {
       isInterestedNow = true;
     }
 
-    // Calculate current count and update website_events cache
     const countRes = await queryDb(
       `SELECT COUNT(*)::int AS count FROM website_events_interested WHERE event_id = $1`,
       [parsedEventId]

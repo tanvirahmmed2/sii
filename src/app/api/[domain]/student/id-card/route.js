@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch student info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
               s.class_id, s.section_id, s.session_id,
@@ -62,7 +61,6 @@ export async function GET(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Fetch existing card from DB or generate active identity card
     let card = null;
     try {
       const cardRes = await queryDb(
@@ -100,7 +98,6 @@ export async function GET(request, context) {
       registration_number: student.registration_no
     };
 
-    // Fetch class-assigned template or school default template
     let template = null;
     try {
       if (student.class_id) {

@@ -5,10 +5,6 @@ import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 import { validateSubmissionPayload } from '@/lib/form-criteria-engine';
 
-/**
- * GET /api/[domain]/admissions/apply?admission_id=...
- * Returns active circular details, frozen form_schema_snapshot, criteria_rules, fee, and exam schedules.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -44,7 +40,6 @@ export async function GET(request, context) {
 
     const res = await queryDb(sql, params);
 
-    // Fetch live form fields as fallback for circulars without a frozen snapshot
     const liveFieldsRes = await queryDb(`
       SELECT id AS form_field_id, target_scope, field_key, label, field_type,
              options, validation_regex, is_unique, is_required, is_required_in_admission, sort_order
@@ -53,7 +48,6 @@ export async function GET(request, context) {
       ORDER BY sort_order ASC, id ASC
     `, [website.id]);
 
-    // Fetch subjects for any exam-based circulars
     const examSubjectsRes = await queryDb(`
       SELECT id, admission_id, admission_exam_id, title, mark, time
       FROM website_admission_exam_subjects
@@ -97,10 +91,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/admissions/apply
- * Validates dynamic schema & AST criteria in transaction -> records applicant, info, and fee payment entry.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -142,7 +132,6 @@ export async function POST(request, context) {
     }
     const admId = parseInt(targetAdmId, 10);
 
-    // Verify circular exists and get active fee
     const circRes = await queryDb(`
       SELECT a.*, af.amount AS fee_amount, af.currency AS fee_currency
       FROM website_admissions a
@@ -168,7 +157,6 @@ export async function POST(request, context) {
 
     const cleanEmail = email.toLowerCase().trim();
 
-    // 0. Enforce backend email verification check (or check if applicant already verified)
     const existingAppCheck = await queryDb(`
       SELECT id, application_no, status FROM website_admission_applicants
       WHERE website_id = $1 AND admission_id = $2 AND LOWER(email) = $3
@@ -177,7 +165,6 @@ export async function POST(request, context) {
 
     const existingApp = existingAppCheck.rows[0] || null;
 
-    // 0a. Check cross-role email uniqueness
     const emailAvailability = await checkInstitutionEmailAvailability(website.id, cleanEmail, {
       excludeRole: existingApp ? 'applicant' : null,
       excludeId: existingApp?.id || null,
@@ -209,7 +196,6 @@ export async function POST(request, context) {
       }
     }
 
-    // Prepare submitted custom fields and partitioned buckets
     const submittedCustom = body.custom_fields && typeof body.custom_fields === 'object' ? { ...body.custom_fields } : {};
 
     const resolvedLastClass = last_class ? last_class.trim() : (body.past_school_class || 'N/A');
@@ -271,9 +257,7 @@ export async function POST(request, context) {
       addresses: addressData
     };
 
-    // Execute submission write inside isolated transaction
     const result = await withTenantTransaction(website.id, async (client) => {
-      // 1. Validate Dynamic Fields and AST Criteria Rules
       const validation = await validateSubmissionPayload({
         clientOrPool: client,
         websiteId: website.id,
@@ -348,7 +332,6 @@ export async function POST(request, context) {
         applicant = insertApp.rows[0];
       }
 
-      // Upsert modular info
       await client.query(`
         INSERT INTO website_admission_applicant_info (website_id, applicant_id, data, updated_at)
         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -357,7 +340,6 @@ export async function POST(request, context) {
           updated_at = CURRENT_TIMESTAMP
       `, [website.id, applicant.id, JSON.stringify(personalData)]);
 
-      // Upsert guardians
       await client.query(`
         INSERT INTO website_admission_applicant_guardians (website_id, applicant_id, data, updated_at)
         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -366,7 +348,6 @@ export async function POST(request, context) {
           updated_at = CURRENT_TIMESTAMP
       `, [website.id, applicant.id, JSON.stringify(guardianData)]);
 
-      // Upsert addresses
       await client.query(`
         INSERT INTO website_admission_applicant_addresses (website_id, applicant_id, data, updated_at)
         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
@@ -375,7 +356,6 @@ export async function POST(request, context) {
           updated_at = CURRENT_TIMESTAMP
       `, [website.id, applicant.id, JSON.stringify(addressData)]);
 
-      // Upsert fee payment record
       const feeAmount = parseFloat(circular.fee_amount) || 500.00;
       const feeCurrency = circular.fee_currency || 'BDT';
       const invoiceRef = `INV-ADM-${appNumber}`;
@@ -404,7 +384,6 @@ export async function POST(request, context) {
         ]);
       }
 
-      // Invalidate consumed OTP verification
       if (verifiedCheck?.rows?.length > 0) {
         await client.query(`DELETE FROM website_email_verifications WHERE id = $1`, [verifiedCheck.rows[0].id]);
       }

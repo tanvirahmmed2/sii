@@ -72,11 +72,9 @@ export default function StaffProfilePage() {
   return (
     <div className="w-full space-y-5">
       
-      {/* Profile Header Hero Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div className="flex items-start sm:items-center gap-4">
-            {/* Avatar / Photo / Initials */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 overflow-hidden text-slate-700 dark:text-slate-200 font-semibold text-xl uppercase font-mono shadow-inner">
               {staff.image ? (
                 <img
@@ -89,7 +87,6 @@ export default function StaffProfilePage() {
               )}
             </div>
 
-            {/* Identity & Status */}
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -118,7 +115,6 @@ export default function StaffProfilePage() {
             </div>
           </div>
 
-          {/* Quick Edit Action Button */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/staff-panel/staff-settings"
@@ -130,7 +126,6 @@ export default function StaffProfilePage() {
           </div>
         </div>
 
-        {/* Bio preview if exists */}
         {staff.bio && (
           <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-600 dark:text-slate-400 italic">
             "{staff.bio}"
@@ -138,7 +133,6 @@ export default function StaffProfilePage() {
         )}
       </div>
 
-      {/* KPI Stats Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block">Pay Grade &amp; Scale</span>
@@ -185,7 +179,6 @@ export default function StaffProfilePage() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto text-xs font-medium">
         {[
           { key: 'overview', label: 'Personal Information' },
@@ -209,10 +202,8 @@ export default function StaffProfilePage() {
         ))}
       </div>
 
-      {/* Tab Panels */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-2xs space-y-6">
 
-        {/* TAB 1: Personal Information */}
         {activeTab === 'overview' && (
           <div className="space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -280,7 +271,6 @@ export default function StaffProfilePage() {
           </div>
         )}
 
-        {/* TAB 2: Compensation & Pay Scale */}
         {activeTab === 'compensation' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -318,7 +308,6 @@ export default function StaffProfilePage() {
           </div>
         )}
 
-        {/* TAB 3: Module Permissions Matrix */}
         {activeTab === 'permissions' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -398,7 +387,6 @@ export default function StaffProfilePage() {
           </div>
         )}
 
-        {/* TAB 4: Experience History */}
         {activeTab === 'experiences' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -452,7 +440,6 @@ export default function StaffProfilePage() {
           </div>
         )}
 
-        {/* TAB 5: Active Security Sessions */}
         {activeTab === 'sessions' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">

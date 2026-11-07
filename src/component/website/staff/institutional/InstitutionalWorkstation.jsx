@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
@@ -8,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to avoid SSR hydration issues
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -36,35 +34,29 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Data states
   const [missions, setMissions] = useState([]);
   const [visions, setVisions] = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [infrastructure, setInfrastructure] = useState([]);
   const [boardMembers, setBoardMembers] = useState([]);
 
-  // Loading states
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
 
-  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [facilityTypeFilter, setFacilityTypeFilter] = useState('all');
 
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [modalMode, setModalMode] = useState('create'); 
   const [editingItem, setEditingItem] = useState(null);
 
-  // Delete modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formName, setFormName] = useState('');
   const [formDesignation, setFormDesignation] = useState('');
@@ -79,7 +71,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
 
   const fileInputRef = useRef(null);
 
-  // Compute endpoints
   const endpoints = useMemo(() => {
     return {
       missions: getApiEndpoint('staff/panel/missions'),
@@ -90,7 +81,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     };
   }, [getApiEndpoint]);
 
-  // Load current tab data
   const fetchData = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
@@ -161,7 +151,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     };
   }, [activeTab, endpoints]);
 
-  // Open Create Modal
   const openCreateModal = () => {
     setModalMode('create');
     setEditingItem(null);
@@ -180,7 +169,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingItem(item);
@@ -199,7 +187,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     setIsModalOpen(true);
   };
 
-  // Handle Local Photo Selection
   const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -221,7 +208,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Remove current image
   const handleRemoveImage = () => {
     setSelectedImageFile(null);
     setFormImageUrl('');
@@ -230,7 +216,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     toast.success('Image unlinked.');
   };
 
-  // Save (Create or Update)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -332,7 +317,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     }
   };
 
-  // Toggle active status directly from row
   const handleToggleStatus = async (item) => {
     try {
       const targetUrl = endpoints[activeTab];
@@ -353,7 +337,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     }
   };
 
-  // Delete Item
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
 
@@ -378,7 +361,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     }
   };
 
-  // Filter current list
   const currentList = useMemo(() => {
     let list = [];
     if (activeTab === 'missions') list = missions;
@@ -388,16 +370,13 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
     else if (activeTab === 'board_members') list = boardMembers;
 
     return list.filter((item) => {
-      // Status filter
       if (statusFilter === 'active' && !item.is_active) return false;
       if (statusFilter === 'inactive' && item.is_active) return false;
 
-      // Facility Type filter
       if (activeTab === 'infrastructure' && facilityTypeFilter !== 'all') {
         if (item.facility_type !== facilityTypeFilter) return false;
       }
 
-      // Search term
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase();
         const titleMatch = item.title?.toLowerCase().includes(query);
@@ -435,7 +414,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
   return (
     <div className="w-full min-h-[calc(100vh-80px)] bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div>
             <div className="flex items-center gap-2">
@@ -488,7 +466,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
           </div>
         </div>
 
-        {/* Tab Navigation */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             type="button"
@@ -551,7 +528,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
           </button>
         </div>
 
-        {/* Filter & Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="sm:col-span-6 relative">
             <input
@@ -618,7 +594,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
           )}
         </div>
 
-        {/* Content Table / Cards */}
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 flex flex-col items-center justify-center gap-3">
             <Loader />
@@ -696,12 +671,10 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                       key={item.id || idx}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* Order No / Index */}
                       <td className="px-4 py-3.5 text-center font-mono text-[11px] text-slate-400">
                         {item.order_no ?? idx + 1}
                       </td>
 
-                      {/* Image Thumbnail (Milestones, Infrastructure, Board Members) */}
                       {(activeTab === 'milestones' ||
                         activeTab === 'infrastructure' ||
                         activeTab === 'board_members') && (
@@ -741,7 +714,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                         </td>
                       )}
 
-                      {/* Year badge for Milestones */}
                       {activeTab === 'milestones' && (
                         <td className="px-4 py-3.5">
                           <span className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono text-xs font-semibold">
@@ -750,7 +722,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                         </td>
                       )}
 
-                      {/* Title & Description or Board Member Details */}
                       <td className="px-4 py-3.5 space-y-1 max-w-md">
                         {activeTab === 'board_members' ? (
                           <>
@@ -786,7 +757,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                               )}
                             </div>
 
-                            {/* Rich HTML preview from Tiptap */}
                             {item.description && (
                               <div
                                 className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed prose prose-xs dark:prose-invert max-w-none"
@@ -797,7 +767,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                         )}
                       </td>
 
-                      {/* Facility Type Badge */}
                       {activeTab === 'infrastructure' && (
                         <td className="px-4 py-3.5">
                           <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
@@ -806,12 +775,10 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                         </td>
                       )}
 
-                      {/* Order No */}
                       <td className="px-4 py-3.5 text-center font-mono text-xs text-slate-500">
                         {item.order_no ?? 0}
                       </td>
 
-                      {/* Status Toggle */}
                       <td className="px-4 py-3.5 text-center">
                         <button
                           type="button"
@@ -832,7 +799,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                         </button>
                       </td>
 
-                      {/* Actions */}
                       <td className="px-4 py-3.5 text-right space-x-1.5 whitespace-nowrap">
                         <button
                           type="button"
@@ -863,11 +829,9 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
           </div>
         )}
 
-        {/* Modal: Create / Edit Record */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl my-6">
-              {/* Modal Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   
@@ -899,9 +863,7 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                 </button>
               </div>
 
-              {/* Modal Form Body */}
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-                {/* Board Member Specific Header Inputs (Name, Title, Designation) */}
                 {activeTab === 'board_members' ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
@@ -967,7 +929,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                   </div>
                 ) : (
                   <>
-                    {/* Milestone Year / Infrastructure Facility Type / Order */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {activeTab === 'milestones' && (
                         <div>
@@ -1021,7 +982,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                       </div>
                     </div>
 
-                    {/* Title */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                         Title <span className="text-rose-500">*</span>
@@ -1044,7 +1004,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                       />
                     </div>
 
-                    {/* Subtitle (Infrastructure only) */}
                     {activeTab === 'infrastructure' && (
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -1062,7 +1021,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                   </>
                 )}
 
-                {/* Cloudinary Image Upload Section (Milestones, Infrastructure, Board Members) */}
                 {(activeTab === 'milestones' ||
                   activeTab === 'infrastructure' ||
                   activeTab === 'board_members') && (
@@ -1086,7 +1044,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                       )}
                     </div>
 
-                    {/* Preview or Upload Area */}
                     {formImageUrl ? (
                       <div className="flex items-center gap-4 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                         <img
@@ -1159,7 +1116,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                   </div>
                 )}
 
-                {/* Tiptap Rich Text Description / Bio */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -1187,7 +1143,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                   </div>
                 </div>
 
-                {/* Active Checkbox */}
                 <div className="flex items-center gap-2 pt-1">
                   <input
                     type="checkbox"
@@ -1204,7 +1159,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
                   </label>
                 </div>
 
-                {/* Modal Footer */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
@@ -1241,7 +1195,6 @@ export default function InstitutionalWorkstation({ initialTab = 'missions' }) {
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
         {deleteConfirmOpen && itemToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">

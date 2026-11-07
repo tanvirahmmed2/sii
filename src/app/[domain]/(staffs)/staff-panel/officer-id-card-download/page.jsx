@@ -9,7 +9,6 @@ import { FiSave, FiList, FiTrash2, FiSearch, FiRefreshCw, FiDownload, FiCheck, F
 export default function OfficerIdCardDownloadPage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'generate' or 'archive'
   const [activeTab, setActiveTab] = useState('generate');
 
   const [loading, setLoading] = useState(false);
@@ -21,28 +20,24 @@ export default function OfficerIdCardDownloadPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
 
-  // Archive state
   const [issuedCards, setIssuedCards] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveStatus, setArchiveStatus] = useState('all');
 
-  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+  const [cardSideView, setCardSideView] = useState('both'); 
   const cardFrontRefs = useRef({});
   const cardBackRefs = useRef({});
 
-  // Fetch officers & active template
   useEffect(() => {
     async function initData() {
       setLoading(true);
       try {
-        // Attempt to load officer_id_card template, or fallback to teacher_id_card template
         let tplRes = await fetch(getApiEndpoint('staff/panel/templates?category=officer_id_card'));
         let tplData = await tplRes.json();
         if (tplRes.ok && tplData.success && tplData.active_template) {
           setActiveTemplate(tplData.active_template);
         } else {
-          // Check teacher_id_card as fallback design
           tplRes = await fetch(getApiEndpoint('staff/panel/templates?category=teacher_id_card'));
           tplData = await tplRes.json();
           if (tplRes.ok && tplData.success && tplData.active_template) {
@@ -67,7 +62,6 @@ export default function OfficerIdCardDownloadPage() {
     initData();
   }, [getApiEndpoint]);
 
-  // Fetch issued officer cards from website_officer_ids
   const fetchIssuedArchive = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -109,7 +103,6 @@ export default function OfficerIdCardDownloadPage() {
     );
   };
 
-  // Issue & persist cards in database website_officer_ids
   const handleIssueAndSave = async () => {
     if (selectedIds.length === 0) {
       toast.error('Please select at least one officer.');
@@ -148,7 +141,6 @@ export default function OfficerIdCardDownloadPage() {
     }
   };
 
-  // Compile card HTML or return null to trigger built-in card
   const compileOfficerCard = (officer) => {
     if (!activeTemplate) return null;
     let frontHtml = activeTemplate.html_content || '';
@@ -156,7 +148,6 @@ export default function OfficerIdCardDownloadPage() {
     const css = activeTemplate.css_content || '';
 
     const replacements = {
-      // Identity & Designation
       '{{officer_name}}': officer.name || 'Administrative Officer',
       '{{name}}': officer.name || 'Administrative Officer',
       '{{teacher_name}}': officer.name || 'Administrative Officer',
@@ -171,7 +162,6 @@ export default function OfficerIdCardDownloadPage() {
       '{{barcode}}': `*OFF${officer.id}*`,
       '{{qr_code}}': website?.domain ? `https://${website.domain}/verify/OFF-${officer.id}` : `https://alpha.edu/verify/OFF-${officer.id}`,
 
-      // Personal Details
       '{{gender}}': officer.gender || '—',
       '{{blood_group}}': officer.blood_group || 'O+',
       '{{date_of_birth}}': officer.date_of_birth ? new Date(officer.date_of_birth).toLocaleDateString() : '—',
@@ -182,18 +172,15 @@ export default function OfficerIdCardDownloadPage() {
       '{{teacher_photo}}': officer.photo_url || officer.image || '/default-avatar.png',
       '{{bio}}': officer.bio || 'Staff Member',
 
-      // Contact Info
       '{{email}}': officer.email || '—',
       '{{phone}}': officer.phone || officer.number || '+880 1900-445566',
       '{{number}}': officer.phone || officer.number || '+880 1900-445566',
       '{{emergency_contact}}': officer.phone || website?.phone || '+880 1900-000000',
 
-      // Addresses
       '{{address}}': officer.address || '—',
       '{{present_address}}': officer.address || '—',
       '{{permanent_address}}': officer.permanent_address || officer.address || '—',
 
-      // Institutional
       '{{institution_name}}': website?.name || 'Educational Institution',
       '{{school_name}}': website?.name || 'Educational Institution',
       '{{institution_logo}}': website?.logo_url || '/school-logo.png',
@@ -217,7 +204,6 @@ export default function OfficerIdCardDownloadPage() {
     return { frontHtml, backHtml, css };
   };
 
-  // Export single card as JPEG (Front, Back, or Both)
   const handleDownloadSingleJpeg = async (officer) => {
     const frontEl = cardFrontRefs.current[officer.id];
     const backEl = cardBackRefs.current[officer.id];
@@ -238,7 +224,6 @@ export default function OfficerIdCardDownloadPage() {
     }
   };
 
-  // Export single card as PDF (Front, Back, or 2-page Both)
   const handleDownloadSinglePdf = async (officer) => {
     const frontEl = cardFrontRefs.current[officer.id];
     const backEl = cardBackRefs.current[officer.id];
@@ -263,7 +248,6 @@ export default function OfficerIdCardDownloadPage() {
     }
   };
 
-  // Batch Export selected cards as PDF
   const handleBatchPdfDownload = async () => {
     let targetElements = [];
 
@@ -354,12 +338,10 @@ export default function OfficerIdCardDownloadPage() {
 
   const selectedOfficers = filteredOfficers.filter((o) => selectedIds.includes(o.id));
 
-  // Departments list
   const departments = ['Hall', 'Library', 'Club', 'Accounts', 'Administration', 'General', 'Hostel', 'Inventory'];
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800 print:hidden">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -371,7 +353,6 @@ export default function OfficerIdCardDownloadPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -407,7 +388,6 @@ export default function OfficerIdCardDownloadPage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED OFFICER REGISTRY ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -556,9 +536,7 @@ export default function OfficerIdCardDownloadPage() {
           </div>
         </div>
       ) : (
-        /* ================= GENERATE CARDS DESK ================= */
         <div className="space-y-4">
-          {/* Controls Bar */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative w-48 sm:w-60">
@@ -587,7 +565,6 @@ export default function OfficerIdCardDownloadPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {/* Card Side Toggle */}
               <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
                 <button
                   type="button"
@@ -650,7 +627,6 @@ export default function OfficerIdCardDownloadPage() {
             </div>
           </div>
 
-          {/* Cards Grid */}
           <div className={`grid grid-cols-1 ${cardSideView === 'both' ? 'md:grid-cols-2 xl:grid-cols-2' : 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-4 print:grid-cols-2`}>
             {selectedOfficers.map((o) => {
               const cardData = compileOfficerCard(o);
@@ -666,7 +642,6 @@ export default function OfficerIdCardDownloadPage() {
                     {cardData ? (
                       <>
                         <style dangerouslySetInnerHTML={{ __html: cardData.css }} />
-                        {/* FRONT SIDE */}
                         {(cardSideView === 'both' || cardSideView === 'front') && (
                           <div className="flex flex-col items-center gap-1.5">
                             {cardSideView === 'both' && (
@@ -693,7 +668,6 @@ export default function OfficerIdCardDownloadPage() {
                           </div>
                         )}
 
-                        {/* BACK SIDE */}
                         {(cardSideView === 'both' || cardSideView === 'back') && (
                           <div className="flex flex-col items-center gap-1.5">
                             {cardSideView === 'both' && (
@@ -725,7 +699,6 @@ export default function OfficerIdCardDownloadPage() {
                         )}
                       </>
                     ) : (
-                      /* Modern Built-In Officer Card Badges */
                       <>
                         {(cardSideView === 'both' || cardSideView === 'front') && (
                           <div className="flex flex-col items-center gap-1.5">
@@ -749,7 +722,6 @@ export default function OfficerIdCardDownloadPage() {
                                 position: 'relative',
                               }}
                             >
-                              {/* Top Banner */}
                               <div
                                 style={{
                                   background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)',
@@ -778,7 +750,6 @@ export default function OfficerIdCardDownloadPage() {
                                 </span>
                               </div>
 
-                              {/* Body */}
                               <div style={{ flex: 1, display: 'flex', padding: '8px 10px', gap: '10px', alignItems: 'center', background: '#f8fafc' }}>
                                 <div style={{ position: 'relative' }}>
                                   <img
@@ -809,7 +780,6 @@ export default function OfficerIdCardDownloadPage() {
                                 </div>
                               </div>
 
-                              {/* Footer */}
                               <div style={{ padding: '4px 10px', background: '#ffffff', borderTop: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ fontSize: '7px', color: '#64748b' }}>
                                   Valid Thru: <b>Dec 2028</b>
@@ -823,7 +793,6 @@ export default function OfficerIdCardDownloadPage() {
                           </div>
                         )}
 
-                        {/* Back Side Built-in */}
                         {(cardSideView === 'both' || cardSideView === 'back') && (
                           <div className="flex flex-col items-center gap-1.5">
                             {cardSideView === 'both' && (
@@ -874,7 +843,6 @@ export default function OfficerIdCardDownloadPage() {
                     )}
                   </div>
 
-                  {/* Actions Bar */}
                   <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-2 print:hidden">
                     <label className="flex items-center gap-1.5 cursor-pointer">
                       <input

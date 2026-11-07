@@ -24,7 +24,6 @@ async function verifyStaffAccess(request, context, action = 'view') {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
   }
 
-  // Validate module action permissions if granular permissions table exists
   const permissions = staffSession.permissions || staffSession.staff?.permissions || {};
   if (Object.keys(permissions).length > 0) {
     const modPerm = permissions['board-members'] || permissions['institutional'] || permissions['website-profile'];
@@ -44,7 +43,6 @@ async function verifyStaffAccess(request, context, action = 'view') {
   return { website, staffSession };
 }
 
-// GET: List all board members for this website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -94,7 +92,6 @@ export async function GET(request, context) {
   }
 }
 
-// Helper to parse multipart/form-data or json
 async function parseBoardMemberRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -118,7 +115,6 @@ async function parseBoardMemberRequest(request) {
   return { body, imageFile };
 }
 
-// POST: Create a new board member
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'create');
@@ -145,7 +141,6 @@ export async function POST(request, context) {
 
     const staffId = auth.staffSession?.staff_id || auth.staffSession?.id || null;
 
-    // STEP 1: CREATE BOARD MEMBER IN DATABASE FIRST
     const insertResult = await queryDb(
       `INSERT INTO website_board_members (
         website_id, name, title, designation, image, image_id, bio, order_no, is_active, created_by_staff_id
@@ -167,7 +162,6 @@ export async function POST(request, context) {
 
     const createdMember = insertResult.rows[0];
 
-    // STEP 2: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/board_members`);
@@ -197,7 +191,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing board member
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'edit');
@@ -220,14 +213,12 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Board member ID is required for update.' }, { status: 400 });
     }
 
-    // Retrieve previous record to clean up old Cloudinary image if replaced
     const existingResult = await queryDb(
       `SELECT image_id FROM website_board_members WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
     );
     const oldImageId = existingResult.rows[0]?.image_id;
 
-    // STEP 1: UPDATE BOARD MEMBER IN DATABASE FIRST
     const updateResult = await queryDb(
       `UPDATE website_board_members
        SET name = COALESCE($1, name),
@@ -261,7 +252,6 @@ export async function PUT(request, context) {
 
     let updatedMember = updateResult.rows[0];
 
-    // STEP 2: IF NEW FILE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/board_members`);
@@ -283,7 +273,6 @@ export async function PUT(request, context) {
         console.error('Board member photo update Cloudinary error:', uploadErr);
       }
     } else if (image_id !== undefined && oldImageId && oldImageId !== image_id) {
-      // If image_id was replaced by explicit string and old image_id exists, clean up old Cloudinary asset
       deleteImage(oldImageId).catch((err) =>
         console.warn('Could not clean up replaced board member image on Cloudinary:', err.message)
       );
@@ -300,7 +289,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete a board member
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'delete');

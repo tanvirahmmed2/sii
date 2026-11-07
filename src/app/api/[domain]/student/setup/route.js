@@ -3,9 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 
-/**
- * GET: Validates student setup token or registration number and returns current profile details
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -67,7 +64,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Fetch existing addresses, guardians, picture, signature, and configured form fields
     const [addrRes, guardRes, picRes, sigRes, fieldsRes] = await Promise.all([
       queryDb(`SELECT * FROM website_student_addresses WHERE student_id = $1 LIMIT 1`, [student.id]),
       queryDb(`SELECT * FROM website_student_guardians WHERE student_id = $1 LIMIT 1`, [student.id]),
@@ -103,9 +99,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PUT / POST: Finalizes student account setup and submits profile for staff verification
- */
 export async function PUT(request, context) {
   return handleSetupSubmission(request, context);
 }
@@ -132,7 +125,6 @@ async function handleSetupSubmission(request, context) {
       blood_group,
       date_of_birth,
       religion,
-      // Addresses
       present_address,
       permanent_address,
       city,
@@ -140,7 +132,6 @@ async function handleSetupSubmission(request, context) {
       upazila,
       postal_code,
       country = 'Bangladesh',
-      // Guardians
       father_name,
       father_phone,
       father_nid,
@@ -154,7 +145,6 @@ async function handleSetupSubmission(request, context) {
       guardian_phone,
       guardian_email,
       guardian_address,
-      // Media
       image_url,
       signature_url,
     } = body;
@@ -167,7 +157,6 @@ async function handleSetupSubmission(request, context) {
       return NextResponse.json({ success: false, error: 'Email address is required.' }, { status: 400 });
     }
 
-    // Verify student exists in website_students
     const studentCheck = await queryDb(
       `SELECT s.id, s.registration_no, s.email AS registered_student_email, s.two_factor_code,
               i.data->>'email' AS info_email, COALESCE(s.name, i.data->>'name') AS name, COALESCE(s.is_verified, FALSE) AS is_verified, s.verification_token_expires
@@ -186,7 +175,6 @@ async function handleSetupSubmission(request, context) {
     const student = studentCheck.rows[0];
     const inputEmail = email.trim().toLowerCase();
 
-    // Verify email verification has passed
     let isEmailVerified = Boolean(student.is_verified);
     if (!isEmailVerified) {
       const verRecord = await queryDb(
@@ -207,7 +195,6 @@ async function handleSetupSubmission(request, context) {
       }, { status: 403 });
     }
 
-    // Dynamic field partitioning based on target_scope from website_form_fields
     const dynamicFieldsRes = await queryDb(
       `SELECT field_key, target_scope FROM website_form_fields WHERE website_id = $1`,
       [website.id]
@@ -233,7 +220,6 @@ async function handleSetupSubmission(request, context) {
       }
     }
 
-    // STEP 2: Password setup and account creation in website_student_info
     if (body.step === 2 || body.step === 'password') {
       if (!password || password.length < 6) {
         return NextResponse.json(
@@ -270,7 +256,6 @@ async function handleSetupSubmission(request, context) {
       });
     }
 
-    // STEP 3: Personal details
     if (body.step === 3 || body.step === 'personal') {
       if (!name?.trim()) {
         return NextResponse.json({ success: false, error: 'Student full name is required.' }, { status: 400 });
@@ -320,7 +305,6 @@ async function handleSetupSubmission(request, context) {
       });
     }
 
-    // STEP 4: Guardian information
     if (body.step === 4 || body.step === 'guardian') {
       const guardianPayload = {
         father_name: father_name?.trim() || null,
@@ -357,13 +341,11 @@ async function handleSetupSubmission(request, context) {
       });
     }
 
-    // STEP 5 or Full Submission: Address & Finalization
     let hashedPassword = null;
     if (password && password.length >= 6) {
       hashedPassword = await hashPassword(password);
     }
 
-    // 1. Upsert website_student_info (Modular, protecting non-editable carry-over values)
     const currentInfoRes = await queryDb(
       `SELECT data FROM website_student_info WHERE student_id = $1 AND website_id = $2`,
       [student.id, website.id]
@@ -388,7 +370,6 @@ async function handleSetupSubmission(request, context) {
       ...dynamicInfo,
     };
 
-    // Restore immutable carry-over fields
     for (const k of nonEditableKeys) {
       if (existingStudentData[k] !== undefined) {
         finalInfo[k] = existingStudentData[k];
@@ -410,7 +391,6 @@ async function handleSetupSubmission(request, context) {
       [website.id, student.id, JSON.stringify(finalInfo)]
     );
 
-    // 2. In website_students, update core and password
     const studentUpdateFields = ['email = $1', 'name = COALESCE($2, name)', 'is_active = TRUE', 'is_registered = TRUE', 'is_verified = TRUE', 'updated_at = CURRENT_TIMESTAMP'];
     const studentUpdateVals = [inputEmail, name?.trim() || null];
     let sUpIdx = 3;
@@ -426,7 +406,6 @@ async function handleSetupSubmission(request, context) {
       studentUpdateVals
     );
 
-    // 3. Upsert modular website_student_addresses
     const addressPayload = {
       present_address: present_address?.trim() || null,
       permanent_address: permanent_address?.trim() || present_address?.trim() || null,
@@ -450,7 +429,6 @@ async function handleSetupSubmission(request, context) {
       [website.id, student.id, JSON.stringify(addressPayload)]
     );
 
-    // 4. Upsert modular website_student_guardians if guardian details provided
     if (father_name || mother_name || guardian_name || Object.keys(dynamicGuardians).length > 0) {
       const finalGuardian = {
         father_name: father_name?.trim() || null,
@@ -482,7 +460,6 @@ async function handleSetupSubmission(request, context) {
       );
     }
 
-    // 5. Record student picture if provided
     if (image_url?.trim()) {
       await queryDb(
         `INSERT INTO website_student_pictures (website_id, student_id, image_url, is_primary)
@@ -491,7 +468,6 @@ async function handleSetupSubmission(request, context) {
       );
     }
 
-    // 6. Record student signature if provided
     if (signature_url?.trim()) {
       await queryDb(
         `INSERT INTO website_student_signatures (website_id, student_id, signature_url, updated_at)
@@ -502,7 +478,6 @@ async function handleSetupSubmission(request, context) {
       );
     }
 
-    // Ensure student is active and verified in website_students
     await queryDb(
       `UPDATE website_students
        SET is_active = TRUE,

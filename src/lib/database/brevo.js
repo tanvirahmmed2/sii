@@ -3,10 +3,6 @@ import { sendWebsiteEmail, getWebsiteBrevoConfig } from './websiteBrevo.js';
 
 export { sendWebsiteEmail, getWebsiteBrevoConfig };
 
-/**
- * Sends an email using Brevo's Transactional Email SMTP API.
- * Supports optional options.websiteId to automatically use tenant mailer.
- */
 export const sendEmail = async ({ to, toName, subject, html, websiteId }) => {
   if (websiteId) {
     return await sendWebsiteEmail(websiteId, { to, toName, subject, html });
@@ -58,14 +54,6 @@ export const sendEmail = async ({ to, toName, subject, html, websiteId }) => {
   }
 };
 
-/**
- * Builds an HTML email adhering strictly to STYLE.md specifications:
- * - High-contrast, clean slate palette (slate-50 background, white card, slate-200 border)
- * - Strict typography: font-normal, font-medium, font-semibold (zero bold/extrabold)
- * - Compact radiuses: 4px / rounded (no rounded-xl, 2xl, or full)
- * - Zero icons, zero decorative shapes or colorful badges
- * - Accessible, high-contrast, clean professional layout
- */
 export function buildStyledEmail({
   title,
   subtitle,

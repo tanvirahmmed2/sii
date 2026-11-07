@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission, authenticateStaff } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Single task detail with full comment stream
-// ============================================================================
 export async function GET(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tasks');
@@ -69,9 +66,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// ============================================================================
-// PUT: Update task (Admin/Manager full edit; Assignee can update status)
-// ============================================================================
 export async function PUT(request, { params }) {
   try {
     const auth = await authenticateStaff(request);
@@ -86,7 +80,6 @@ export async function PUT(request, { params }) {
     const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
     const isElevated = perms.includes('tasks') || currentStaff?.role === 'admin';
 
-    // Verify task exists in developer_tasks or tasks
     let currentRes = await queryDb('SELECT * FROM developer_tasks WHERE id = $1', [id]).catch(() => null);
     const isDevTasksTable = Boolean(currentRes && currentRes.rows?.length > 0);
 
@@ -100,7 +93,6 @@ export async function PUT(request, { params }) {
     const currentTask = currentRes.rows[0];
     const taskAssigneeId = currentTask.developer_id || currentTask.assigned_to_developer_id;
 
-    // If not elevated manager/admin, check if user is the assigned developer updating status
     if (!isElevated) {
       if (taskAssigneeId !== currentStaffId) {
         return NextResponse.json(
@@ -120,7 +112,6 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ success: false, error: 'Assignees can only update task status.' }, { status: 403 });
     }
 
-    // Elevated full update
     const { title, description, status, priority, assigned_to_developer_id, developer_id, due_date } = body;
     const targetDevId = assigned_to_developer_id || developer_id;
 
@@ -201,9 +192,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete task
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'tasks');

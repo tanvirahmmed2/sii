@@ -2,13 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * GET /api/[domain]/public/results
- * Public lookup for academic examination results and published exams list.
- * Query parameters:
- *  - reg_no (required for individual student lookup)
- *  - exam_id (optional, filters by specific exam)
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -21,7 +14,6 @@ export async function GET(request, context) {
     const examIdParam = searchParams.get('exam_id')?.trim();
     const examId = examIdParam ? parseInt(examIdParam, 10) : null;
 
-    // 1. Fetch published exams for dropdown selection
     const publishedExamsRes = await queryDb(`
       SELECT e.id, e.name, e.term, e.start_date, e.end_date,
              c.name AS class_name, ses.name AS session_name
@@ -35,7 +27,6 @@ export async function GET(request, context) {
 
     const publishedExams = publishedExamsRes.rows;
 
-    // If no registration number provided, just return published exams list
     if (!regNo) {
       return NextResponse.json({
         success: true,
@@ -54,7 +45,6 @@ export async function GET(request, context) {
       });
     }
 
-    // 2. Lookup student by registration_no or roll_no
     const studentRes = await queryDb(`
       SELECT s.id, s.class_id, s.section_id, s.session_id, s.roll_no, s.registration_no,
              s.email,
@@ -99,7 +89,6 @@ export async function GET(request, context) {
       name: studentRow.name || `Student ${studentRow.registration_no}`
     };
 
-    // 3. Fetch exam results for this student
     let resultsQuery = `
       SELECT r.id, r.exam_id, r.total_marks, r.obtained_marks, r.gpa, r.grade_name,
              r.grade_name AS grade, r.merit_rank, r.result_status, r.result_status AS status,
@@ -130,7 +119,6 @@ export async function GET(request, context) {
     if (allResults.length > 0) {
       selectedResultRecord = allResults[0];
 
-      // 4. Fetch subject breakdown marks for selected exam
       const marksRes = await queryDb(`
         SELECT m.id, m.exam_id, m.subject_id, m.marks_obtained, m.full_marks, m.pass_marks,
                m.full_marks AS total_marks,

@@ -31,7 +31,6 @@ export default function CollaborationsPage() {
 
   return (
     <div className="w-full min-h-screen py-10 px-4 sm:px-6 lg:px-8 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
-      {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -49,7 +48,6 @@ export default function CollaborationsPage() {
         </p>
       </motion.div>
 
-      {/* Partners Grid */}
       <div className="max-w-5xl mx-auto">
         {loading ? (
           <div className="flex justify-center items-center py-20">
@@ -69,7 +67,6 @@ export default function CollaborationsPage() {
                 <div className="flex gap-4 items-start">
                   {partner.logo ? (
                     <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 p-2.5 flex items-center justify-center shrink-0">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={partner.logo}
                         alt={partner.institution_name}
@@ -120,7 +117,6 @@ export default function CollaborationsPage() {
         )}
       </div>
 
-      {/* External Relations Inquiry Callout */}
       <div className="max-w-5xl mx-auto bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-1.5 text-center md:text-left">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-primary block">

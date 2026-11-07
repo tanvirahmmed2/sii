@@ -4,42 +4,13 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword, revokeAllTeacherSessions } from 'src/lib/middleware/teacher.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
-/**
- * Constructs the teacher recovery link using custom domain (if set)
- * or ${subdomain}.${baseDomain}/auth/access/teacher/recovery?token=...
- */
 function buildTeacherRecoveryUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  // 1. Custom domain (if set)
-  const rawCustom = (website?.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/teacher/recovery?token=${encodeURIComponent(token)}`;
-  }
-
-  // 2. Subdomain of platform base URL
-  const rawSub = (website?.subdomain || website?.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/teacher/recovery?token=${encodeURIComponent(token)}`;
-  }
-
-  // Production base domain
-  const cleanHostNoPort = baseHost.split(':')[0];
-  const parts = cleanHostNoPort.split('.');
-  const baseDomain = parts.length >= 2 ? parts.slice(-2).join('.') : cleanHostNoPort;
-  const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-
-  return `${protocol}://${cleanSub}.${baseDomain}${port}/auth/access/teacher/recovery?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/teacher/recovery?token=${encodeURIComponent(token)}`;
 }
 
-// POST: Request password reset link/token
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -86,7 +57,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Rate limiting: 60-second cooldown on recovery requests
     if (teacher.recovery_token_expires) {
       const remainingMs = new Date(teacher.recovery_token_expires).getTime() - Date.now();
       if (remainingMs > 59 * 60 * 1000) {
@@ -97,7 +67,6 @@ export async function POST(request, context) {
       }
     }
 
-    // Generate random 64-character token and a convenient 6-digit numeric code
     const recoveryToken = crypto.randomBytes(32).toString('hex');
 
     await queryDb(
@@ -149,7 +118,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Set new password using recovery token
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -216,7 +184,6 @@ export async function PUT(request, context) {
       [hashedPassword, teacher.id]
     );
 
-    // Revoke previous sessions
     await revokeAllTeacherSessions(website.id, teacher.id);
 
     return NextResponse.json({

@@ -29,15 +29,12 @@ function SubscriptionContent() {
   const searchParams = useSearchParams();
   const targetWebsiteId = searchParams.get('websiteId');
 
-  // Website Settings Modal State
   const [selectedWebsiteForSettings, setSelectedWebsiteForSettings] = useState(null);
   const [siteSettings, setSiteSettings] = useState(null);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState('');
   const [settingsErr, setSettingsErr] = useState('');
-
-
 
   useEffect(() => {
     if (targetWebsiteId && websites.length > 0) {
@@ -139,11 +136,8 @@ function SubscriptionContent() {
     }
   };
 
-
-
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
@@ -175,7 +169,6 @@ function SubscriptionContent() {
         </div>
       </div>
 
-      {/* All Purchased Subscriptions Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">
@@ -270,7 +263,6 @@ function SubscriptionContent() {
                     </div>
                   </div>
 
-                  {/* Quota & Capacity Grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 py-3 border-b border-slate-100">
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Websites Quota</span>
@@ -317,7 +309,6 @@ function SubscriptionContent() {
                     </div>
                   </div>
 
-                  {/* Provisioned Websites under this Subscription */}
                   <div className="pt-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] font-semibold text-slate-700">
@@ -364,7 +355,6 @@ function SubscriptionContent() {
         )}
       </div>
 
-      {/* Provisioned Websites Section */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div>
@@ -441,7 +431,6 @@ function SubscriptionContent() {
         )}
       </div>
 
-      {/* Website Settings Modal */}
       {selectedWebsiteForSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
@@ -578,7 +567,6 @@ function SubscriptionContent() {
           </div>
         </div>
       )}
-
 
     </div>
   );

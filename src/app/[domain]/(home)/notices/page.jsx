@@ -43,7 +43,6 @@ const NoticesPage = () => {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-10 sm:py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-6xl mx-auto space-y-8 sm:space-y-10">
-        {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -62,7 +61,6 @@ const NoticesPage = () => {
             </p>
           </div>
 
-          {/* Search bar */}
           <div className="w-full md:w-72 shrink-0">
             <div className="relative">
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -77,7 +75,6 @@ const NoticesPage = () => {
           </div>
         </motion.div>
 
-        {/* Notices listing */}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (

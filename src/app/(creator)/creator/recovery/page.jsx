@@ -148,7 +148,6 @@ export default function CreatorRecoveryPage() {
               <input
                 type="email"
                 required
-                placeholder="you@institution.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -175,7 +174,6 @@ export default function CreatorRecoveryPage() {
                 type="text"
                 required
                 maxLength={6}
-                placeholder="123456"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest text-center focus:outline-none focus:border-slate-800"

@@ -10,8 +10,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="w-full h-full">
-      <body className="min-h-full w-full overflow-x-hidden">
+    <html lang="en" className="w-full h-full" suppressHydrationWarning>
+      <body className="min-h-full w-full overflow-x-hidden" suppressHydrationWarning>
         <ContextProvider>
           <ToastProvider />
           <main>{children}</main>

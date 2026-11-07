@@ -5,11 +5,6 @@ import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniquen
 
 export const dynamic = 'force-dynamic';
 
-/**
- * POST /api/[domain]/admissions/lookup
- * Checks if a candidate already exists for the given circular and email.
- * If candidate exists, returns profile and current state to bypass verification and resume.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -32,7 +27,6 @@ export async function POST(request, context) {
     const admId = parseInt(targetAdmId, 10);
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Query for existing applicant for this circular
     const appRes = await queryDb(
       `SELECT a.*,
               i.data AS info_data,
@@ -66,7 +60,6 @@ export async function POST(request, context) {
       const addrData = applicant.address_data || {};
       const iData = applicant.info_data || {};
 
-      // Determine step based on applicant status
       let currentStep = 'info';
       if (applicant.status === 'incomplete') {
         currentStep = 'info';
@@ -78,7 +71,6 @@ export async function POST(request, context) {
         currentStep = 'completed';
       }
 
-      // Check admit card eligibility
       const admitPublishDate = applicant.admit_publish_date ? new Date(applicant.admit_publish_date) : null;
       const isDateReached = admitPublishDate ? new Date() >= admitPublishDate : false;
       const canDownloadAdmitCard = Boolean(
@@ -143,8 +135,6 @@ export async function POST(request, context) {
       });
     }
 
-    // 2. Candidate does not exist yet for this circular.
-    // Verify that the email is not registered to an enrolled student, staff, teacher, officer, or other applicant
     const emailCheck = await checkInstitutionEmailAvailability(website.id, cleanEmail);
     if (!emailCheck.available) {
       return NextResponse.json({
@@ -153,7 +143,6 @@ export async function POST(request, context) {
       }, { status: 409 });
     }
 
-    // Check if email was already verified recently
     const verifiedRes = await queryDb(
       `SELECT id, is_verified, expires_at
        FROM website_email_verifications

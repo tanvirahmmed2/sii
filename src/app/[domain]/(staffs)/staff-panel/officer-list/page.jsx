@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -58,16 +56,13 @@ export default function OfficerListPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
 
-  // Inline delete state (NO POPUP MODAL)
   const [inlineDeleteId, setInlineDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // In-page quick view drawer (NO POPUP MODAL)
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [selectedOfficer, setSelectedOfficer] = useState(null);
   const [resendingId, setResendingId] = useState(null);
 
-  // Toast feedback
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -81,7 +76,6 @@ export default function OfficerListPage() {
     }
   }, []);
 
-  // Fetch officers roster
   const fetchOfficers = useCallback(async () => {
     if (!domain) return;
     try {
@@ -119,7 +113,6 @@ export default function OfficerListPage() {
     fetchOfficers();
   }, [fetchOfficers]);
 
-  // Handle inline delete
   const handleDeleteOfficer = async (id, name) => {
     try {
       setDeletingId(id);
@@ -147,7 +140,6 @@ export default function OfficerListPage() {
     }
   };
 
-  // Resend invitation link
   const handleResendInvite = async (officerId) => {
     try {
       setResendingId(officerId);
@@ -178,7 +170,6 @@ export default function OfficerListPage() {
 
   return (
     <div className="w-full space-y-6 pb-16">
-      {/* Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-600 text-white text-sm font-medium rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
           <FiCheck className="w-4 h-4 shrink-0" />
@@ -192,7 +183,6 @@ export default function OfficerListPage() {
         </div>
       )}
 
-      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1">
@@ -230,7 +220,6 @@ export default function OfficerListPage() {
         </div>
       </div>
 
-      {/* KPI Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs">
           <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -289,10 +278,8 @@ export default function OfficerListPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Box */}
           <div className="relative flex-1 max-w-md">
             <FiSearch className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
             <input
@@ -305,7 +292,6 @@ export default function OfficerListPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Department Filter */}
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -318,7 +304,6 @@ export default function OfficerListPage() {
               ))}
             </select>
 
-            {/* Status Filter */}
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -330,7 +315,6 @@ export default function OfficerListPage() {
               <option value="inactive">Inactive</option>
             </select>
 
-            {/* Refresh */}
             <button
               type="button"
               onClick={fetchOfficers}
@@ -344,7 +328,6 @@ export default function OfficerListPage() {
         </div>
       </div>
 
-      {/* Officers Table */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
@@ -386,7 +369,6 @@ export default function OfficerListPage() {
                 officers.map((officer) => (
                   <React.Fragment key={officer.id}>
                     <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                      {/* Officer Profile */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {officer.photo_url ? (
@@ -411,7 +393,6 @@ export default function OfficerListPage() {
                         </div>
                       </td>
 
-                      {/* Department & Role */}
                       <td className="py-3 px-4">
                         <div className="space-y-1">
                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
@@ -423,7 +404,6 @@ export default function OfficerListPage() {
                         </div>
                       </td>
 
-                      {/* Contact Info */}
                       <td className="py-3 px-4">
                         <div className="space-y-0.5 text-slate-600 dark:text-slate-300">
                           <div className="flex items-center gap-1.5 text-xs">
@@ -437,7 +417,6 @@ export default function OfficerListPage() {
                         </div>
                       </td>
 
-                      {/* Direct Payroll Scale */}
                       <td className="py-3 px-4">
                         {officer.payroll_id ? (
                           <div className="space-y-0.5">
@@ -462,7 +441,6 @@ export default function OfficerListPage() {
                         )}
                       </td>
 
-                      {/* Status */}
                       <td className="py-3 px-4 text-center">
                         {officer.is_active && officer.is_registered ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -481,10 +459,8 @@ export default function OfficerListPage() {
                         )}
                       </td>
 
-                      {/* Action buttons */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Quick View Drawer */}
                           <button
                             type="button"
                             onClick={() => handleOpenDrawer(officer)}
@@ -494,7 +470,6 @@ export default function OfficerListPage() {
                             <FiEye className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Edit Profile */}
                           <Link
                             href={`/${domain}/staff-panel/officer-update?id=${officer.id}`}
                             className="p-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
@@ -503,7 +478,6 @@ export default function OfficerListPage() {
                             <FiEdit2 className="w-3.5 h-3.5" />
                           </Link>
 
-                          {/* ID Card */}
                           <Link
                             href={`/${domain}/staff-panel/officer-id-card`}
                             className="p-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
@@ -512,7 +486,6 @@ export default function OfficerListPage() {
                             <FiCreditCard className="w-3.5 h-3.5" />
                           </Link>
 
-                          {/* Resend Invite (if pending) */}
                           {!officer.is_registered && (
                             <button
                               type="button"
@@ -525,7 +498,6 @@ export default function OfficerListPage() {
                             </button>
                           )}
 
-                          {/* Inline Delete trigger */}
                           <button
                             type="button"
                             onClick={() => setInlineDeleteId(inlineDeleteId === officer.id ? null : officer.id)}
@@ -538,7 +510,6 @@ export default function OfficerListPage() {
                       </td>
                     </tr>
 
-                    {/* Inline Delete Confirmation Row (NO POPUP MODAL) */}
                     {inlineDeleteId === officer.id && (
                       <tr className="bg-rose-50/90 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-900/60 animate-in fade-in duration-150">
                         <td colSpan={6} className="py-3 px-4">
@@ -578,7 +549,6 @@ export default function OfficerListPage() {
           </table>
         </div>
 
-        {/* Pagination Bar */}
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 text-xs text-slate-500">
             <span>
@@ -609,11 +579,9 @@ export default function OfficerListPage() {
         )}
       </div>
 
-      {/* In-Page Quick View Slide Drawer (NO POPUP MODAL) */}
       {viewDrawerOpen && selectedOfficer && (
         <div className="fixed inset-0 z-40 flex justify-end bg-slate-900/40 backdrop-blur-2xs transition-opacity animate-in fade-in duration-200">
           <div className="w-full max-w-md h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-6 overflow-y-auto space-y-6 shadow-2xl">
-            {/* Drawer Header */}
             <div className="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 {selectedOfficer.photo_url ? (
@@ -646,7 +614,6 @@ export default function OfficerListPage() {
               </button>
             </div>
 
-            {/* Direct Payroll Status */}
             <div className="p-4 rounded-xl border border-indigo-100 dark:border-indigo-950 bg-indigo-50/50 dark:bg-indigo-950/20 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
@@ -672,7 +639,6 @@ export default function OfficerListPage() {
               </div>
             </div>
 
-            {/* Officer Details */}
             <div className="space-y-3 text-xs">
               <h4 className="font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px]">
                 Profile Information
@@ -710,7 +676,6 @@ export default function OfficerListPage() {
               )}
             </div>
 
-            {/* Action buttons */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
               <Link
                 href={`/${domain}/staff-panel/officer-update?id=${selectedOfficer.id}`}

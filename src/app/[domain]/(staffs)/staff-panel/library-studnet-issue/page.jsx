@@ -11,14 +11,12 @@ export default function LibraryStudentIssueTypoPage() {
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('issued'); // 'all' | 'issued' | 'overdue'
+  const [statusFilter, setStatusFilter] = useState('issued'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Issue Modal
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [targetSearch, setTargetSearch] = useState('');
   const [targetList, setTargetList] = useState([]);
@@ -64,7 +62,6 @@ export default function LibraryStudentIssueTypoPage() {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, pageSize]);
 
-  // Autocomplete Student Search
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchStudents = async () => {
@@ -80,7 +77,6 @@ export default function LibraryStudentIssueTypoPage() {
     return () => clearTimeout(timer);
   }, [targetSearch, issueModalOpen]);
 
-  // Autocomplete In-Stock Book Search
   useEffect(() => {
     if (!issueModalOpen) return;
     const fetchBooks = async () => {
@@ -200,7 +196,6 @@ export default function LibraryStudentIssueTypoPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -218,7 +213,6 @@ export default function LibraryStudentIssueTypoPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -269,7 +263,6 @@ export default function LibraryStudentIssueTypoPage() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -288,7 +281,6 @@ export default function LibraryStudentIssueTypoPage() {
         </div>
       )}
 
-      {/* Toolbar & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex-1 max-w-sm">
@@ -321,7 +313,6 @@ export default function LibraryStudentIssueTypoPage() {
           </div>
         </div>
 
-        {/* Issues Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -425,7 +416,6 @@ export default function LibraryStudentIssueTypoPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
@@ -463,7 +453,6 @@ export default function LibraryStudentIssueTypoPage() {
         </div>
       </div>
 
-      {/* Modal: Issue Book to Student */}
       {issueModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-lg w-full p-4 shadow-xl space-y-3">
@@ -480,7 +469,6 @@ export default function LibraryStudentIssueTypoPage() {
             </div>
 
             <form onSubmit={handleSubmitIssue} className="space-y-3">
-              {/* Step 1: Select Student */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   1. Search &amp; Select Student <span className="text-rose-500">*</span>
@@ -531,7 +519,6 @@ export default function LibraryStudentIssueTypoPage() {
                 )}
               </div>
 
-              {/* Step 2: Select Book */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   2. Search &amp; Select In-Stock Book <span className="text-rose-500">*</span>
@@ -582,7 +569,6 @@ export default function LibraryStudentIssueTypoPage() {
                 )}
               </div>
 
-              {/* Step 3: Due Date & Remarks */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -631,7 +617,6 @@ export default function LibraryStudentIssueTypoPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

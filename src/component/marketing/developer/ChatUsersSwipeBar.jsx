@@ -36,13 +36,11 @@ export default function ChatUsersSwipeBar({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Drag-to-swipe states for touch and mouse
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const scrollLeftPosRef = useRef(0);
   const dragDistanceRef = useRef(0);
 
-  // 1. Sort users: Latest message sender ALWAYS on the left
   const sortedUsers = useMemo(() => {
     if (!Array.isArray(users) || users.length === 0) return [];
     return [...users].sort((a, b) => {
@@ -52,7 +50,6 @@ export default function ChatUsersSwipeBar({
     });
   }, [users]);
 
-  // 2. Check scroll overflow for navigation buttons
   const updateScrollButtons = useCallback(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -73,7 +70,6 @@ export default function ChatUsersSwipeBar({
     };
   }, [sortedUsers, updateScrollButtons]);
 
-  // 3. Swap buttons action
   const handleScrollPrev = () => {
     if (!scrollContainerRef.current) return;
     scrollContainerRef.current.scrollBy({ left: -220, behavior: 'smooth' });
@@ -84,7 +80,6 @@ export default function ChatUsersSwipeBar({
     scrollContainerRef.current.scrollBy({ left: 220, behavior: 'smooth' });
   };
 
-  // 4. Mouse drag-to-swipe handling
   const handleMouseDown = (e) => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -109,7 +104,6 @@ export default function ChatUsersSwipeBar({
     isDraggingRef.current = false;
   };
 
-  // Prevent navigation when user was just dragging
   const handleItemClick = (e, item) => {
     if (dragDistanceRef.current > 6) {
       e.preventDefault();
@@ -131,7 +125,6 @@ export default function ChatUsersSwipeBar({
     <div
       className={`relative w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5 select-none ${className}`}
     >
-      {/* Scroll Left Button */}
       {canScrollLeft && (
         <button
           type="button"
@@ -143,7 +136,6 @@ export default function ChatUsersSwipeBar({
         </button>
       )}
 
-      {/* Swipeable Horizontal Stream */}
       <div
         ref={scrollContainerRef}
         onMouseDown={handleMouseDown}
@@ -165,7 +157,6 @@ export default function ChatUsersSwipeBar({
               className="flex flex-col items-center shrink-0 group"
               title={name}
             >
-              {/* User Avatar */}
               <div
                 className={`w-10 h-10 rounded relative flex items-center justify-center font-medium text-xs border ${
                   isActive
@@ -186,7 +177,6 @@ export default function ChatUsersSwipeBar({
                   <span className="pointer-events-none">{initial}</span>
                 )}
 
-                {/* Unread badge dot */}
                 {user.unreadCount > 0 && (
                   <span
                     className="absolute -top-1 -right-1 text-[9px] font-medium px-1 rounded bg-rose-50 text-rose-700 border border-rose-200"
@@ -197,7 +187,6 @@ export default function ChatUsersSwipeBar({
                 )}
               </div>
 
-              {/* User Name */}
               <span
                 className={`text-[11px] truncate w-14 sm:w-16 text-center mt-1 pointer-events-none leading-none ${
                   isActive
@@ -236,7 +225,6 @@ export default function ChatUsersSwipeBar({
         })}
       </div>
 
-      {/* Scroll Right Button */}
       {canScrollRight && (
         <button
           type="button"

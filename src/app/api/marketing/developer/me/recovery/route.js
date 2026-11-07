@@ -17,7 +17,6 @@ export async function POST(request) {
       );
     }
 
-    // Step 2: Reset Password
     if (action === 'reset_password' || (token && newPassword)) {
       if (!token || !newPassword) {
         return NextResponse.json(
@@ -57,7 +56,6 @@ export async function POST(request) {
         [hashedPassword, adminRes.rows[0].id]
       );
 
-      // Invalidate existing sessions for security
       try {
         await queryDb('UPDATE developer_login_sessions SET is_active = FALSE WHERE developer_id = $1', [adminRes.rows[0].id]);
       } catch (_) {}
@@ -68,7 +66,6 @@ export async function POST(request) {
       });
     }
 
-    // Step 1: Request Recovery Token (pure alphanumeric letters and numbers, e.g. 123D1)
     const generatedToken = generateToken(8);
 
     const dbAdmin = await queryDb('SELECT * FROM developers WHERE LOWER(email) = $1 LIMIT 1', [cleanEmail]);
@@ -86,7 +83,6 @@ export async function POST(request) {
       [generatedToken, dbAdmin.rows[0].id]
     );
 
-    // Attempt to send email via Brevo using STYLE.md format
     try {
       const emailHtml = buildStyledEmail({
         title: 'Developer Security Recovery Token',

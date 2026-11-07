@@ -93,14 +93,12 @@ const ProfilePage = () => {
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [toggling2FA, setToggling2FA] = useState(false);
 
-  // Qualifications
   const [qualifications, setQualifications] = useState([]);
   const [showQualForm, setShowQualForm] = useState(false);
   const [qualFormLoading, setQualFormLoading] = useState(false);
   const [editQualId, setEditQualId] = useState(null);
   const [qualFormData, setQualFormData] = useState({ degree: '', institution: '', passing_year: '', result: '' });
 
-  // Experiences
   const [experiences, setExperiences] = useState([]);
   const [showExpForm, setShowExpForm] = useState(false);
   const [editingExp, setEditingExp] = useState(null);
@@ -201,7 +199,6 @@ const ProfilePage = () => {
     finally { setToggling2FA(false); }
   };
 
-  // Qualification handlers
   const handleQualSubmit = async (e) => {
     e.preventDefault();
     if (!qualFormData.degree.trim() || !qualFormData.institution.trim() || !qualFormData.passing_year) {
@@ -231,7 +228,6 @@ const ProfilePage = () => {
     } catch (err) { toast.error('Failed to remove.'); }
   };
 
-  // Experience handlers
   const handleExpSave = async (formData) => {
     setExpFormLoading(true);
     try {
@@ -274,7 +270,6 @@ const ProfilePage = () => {
   return (
     <div className="w-full space-y-5 pb-12">
 
-      {/* Profile Card */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-center gap-5">
         <div className="relative group w-20 h-20 rounded-full overflow-hidden shrink-0 border-2 border-slate-200 bg-slate-100">
           {profile?.image ? (
@@ -308,7 +303,6 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      {/* Edit / View Contact Details */}
       {isEditing ? (
         <form onSubmit={handleSaveDetails} className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">Edit Profile Details</h3>
@@ -392,7 +386,6 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {/* 2FA Toggle */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 flex items-center justify-between gap-4">
         <div>
           <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><FiShield className="text-emerald-600" /> Two-Factor Authentication</h3>
@@ -404,7 +397,6 @@ const ProfilePage = () => {
         </button>
       </div>
 
-      {/* Change Password */}
       <form onSubmit={handlePasswordChange} className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
         <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider border-b border-slate-100 pb-2"><FiLock className="text-primary" /> Change Password</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -425,7 +417,6 @@ const ProfilePage = () => {
         </button>
       </form>
 
-      {/* Qualifications */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5"><FiAward className="text-primary" /> Qualifications ({qualifications.length})</h3>
@@ -481,7 +472,6 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* Experiences */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5"><FiStar className="text-primary" /> Work Experience ({experiences.length})</h3>

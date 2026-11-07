@@ -36,14 +36,12 @@ export default function StudentExitsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
 
-  // Record Exit Modal State
   const [showModal, setShowModal] = useState(false);
   const [activeStudents, setActiveStudents] = useState([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
 
-  // Exit Form
   const [exitForm, setExitForm] = useState({
     exit_type: 'graduated',
     exit_date: new Date().toISOString().split('T')[0],
@@ -56,7 +54,6 @@ export default function StudentExitsPage() {
     clearance_notes: '',
   });
 
-  // Selected Detail Modal
   const [detailExit, setDetailExit] = useState(null);
 
   const fetchExits = useCallback(async () => {
@@ -89,7 +86,6 @@ export default function StudentExitsPage() {
     fetchExits();
   }, [fetchExits]);
 
-  // Fetch active students for recording modal
   const fetchActiveStudents = async (query = '') => {
     try {
       const params = new URLSearchParams({ limit: '20' });
@@ -221,7 +217,6 @@ export default function StudentExitsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -250,7 +245,6 @@ export default function StudentExitsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {EXIT_TYPE_TABS.map((tab) => (
@@ -284,7 +278,6 @@ export default function StudentExitsPage() {
         </div>
       </div>
 
-      {/* Roster Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-16 flex flex-col items-center justify-center gap-2">
@@ -399,7 +392,6 @@ export default function StudentExitsPage() {
         )}
       </div>
 
-      {/* Record Departure Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-xl w-full p-5 shadow-xl space-y-4 my-8">
@@ -417,7 +409,6 @@ export default function StudentExitsPage() {
             </div>
 
             <form onSubmit={handleSubmitExit} className="space-y-4 text-xs">
-              {/* Student Picker */}
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                   Select Departing Student <span className="text-rose-500">*</span>
@@ -469,7 +460,6 @@ export default function StudentExitsPage() {
                 )}
               </div>
 
-              {/* Classification & Exit Date */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -499,7 +489,6 @@ export default function StudentExitsPage() {
                 </div>
               </div>
 
-              {/* Destination School / College */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Destination Institution / University (if transferred/graduated)
@@ -513,7 +502,6 @@ export default function StudentExitsPage() {
                 />
               </div>
 
-              {/* Reason */}
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Departure Reason / Academic Remarks <span className="text-rose-500">*</span>
@@ -527,7 +515,6 @@ export default function StudentExitsPage() {
                 />
               </div>
 
-              {/* Institutional Clearances Checklist */}
               <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded border border-slate-200 dark:border-slate-700 space-y-2">
                 <span className="block text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                   Institutional Clearances
@@ -560,7 +547,6 @@ export default function StudentExitsPage() {
                 </div>
               </div>
 
-              {/* Submit Buttons */}
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
@@ -582,7 +568,6 @@ export default function StudentExitsPage() {
         </div>
       )}
 
-      {/* Detail Dossier Modal */}
       {detailExit && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-lg w-full p-5 shadow-xl space-y-4">

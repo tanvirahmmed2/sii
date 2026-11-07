@@ -21,14 +21,11 @@ const TeacherLayout = async ({ children }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
-      {/* Top Navbar */}
       <Navbar />
 
       <div className="flex flex-1 relative pt-16">
-        {/* Left Sidebar */}
         <Sidebar />
 
-        {/* Main Content Area */}
         <main className="flex-1 w-full min-w-0 p-4 md:p-8 md:pl-[280px] transition-all duration-200">
           {children}
         </main>

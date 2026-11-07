@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load fee heads, structures, waivers, invoices, ledgers, wallets, refunds
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -34,13 +33,11 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Fee Heads
     const headsRes = await queryDb(
       `SELECT * FROM website_fee_heads WHERE website_id = $1 ORDER BY category ASC, name ASC`,
       [websiteId]
     );
 
-    // 2. Fee Structures
     const structuresRes = await queryDb(
       `SELECT fs.*, fh.name as head_name, c.name as class_name
        FROM website_fee_structures fs
@@ -51,7 +48,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 3. Recent Student Invoices (Limit 50)
     const invoicesRes = await queryDb(
       `SELECT inv.*, s.name as student_name, s.roll
        FROM website_student_invoices inv
@@ -62,7 +58,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 4. Refund Requests
     const refundsRes = await queryDb(
       `SELECT r.*, s.name as student_name
        FROM website_refund_requests r
@@ -73,7 +68,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 5. Total Wallet Balances
     const walletRes = await queryDb(
       `SELECT COUNT(*) as total_wallets, COALESCE(SUM(balance), 0) as total_wallet_balance
        FROM website_student_wallets
@@ -95,7 +89,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create fee head, configure fee structure, apply waiver, generate invoices
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -157,7 +150,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove fee head or structure
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

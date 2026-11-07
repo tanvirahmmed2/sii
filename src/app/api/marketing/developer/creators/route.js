@@ -12,7 +12,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const emailParam = searchParams.get('email');
 
-    // Creator availability check for subscriptions
     if (emailParam) {
       const cleanEmail = emailParam.trim().toLowerCase();
       const checkRes = await queryDb(
@@ -77,7 +76,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE CREATOR
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'creators');
@@ -100,7 +98,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE CREATOR
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'creators');
@@ -133,7 +130,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE CREATOR
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'creators');

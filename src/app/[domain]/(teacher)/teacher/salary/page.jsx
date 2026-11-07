@@ -30,7 +30,6 @@ const SalaryHistoryPage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="pb-3 border-b border-slate-200">
         <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
           <FiDollarSign className="text-primary" /> Salary Ledger
@@ -38,7 +37,6 @@ const SalaryHistoryPage = () => {
         <p className="text-xs text-slate-500 mt-0.5">Monthly basic pay, allowances, deductions, and payment status.</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-slate-200 rounded-xl p-4">
           <span className="text-[10px] font-semibold text-slate-500 uppercase block mb-1">Total Earned</span>
@@ -50,7 +48,6 @@ const SalaryHistoryPage = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {loading ? (
           <div className="py-16 flex justify-center items-center">

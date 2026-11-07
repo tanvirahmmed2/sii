@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Fetch candidate applications for a specific career post
-// ============================================================================
 export async function GET(request, context) {
   try {
     const auth = await hasModulePermission(request, 'careers');
@@ -20,7 +17,6 @@ export async function GET(request, context) {
     const status = searchParams.get('status') || '';
     const search = searchParams.get('search') || '';
 
-    // Verify career exists
     const careerRes = await queryDb(
       `SELECT id, title, department, job_type, location, is_published FROM career WHERE id = $1`,
       [id]
@@ -66,7 +62,6 @@ export async function GET(request, context) {
 
     const res = await queryDb(query, params);
 
-    // Also get breakdown of counts for this specific career
     const countsRes = await queryDb(
       `
       SELECT 

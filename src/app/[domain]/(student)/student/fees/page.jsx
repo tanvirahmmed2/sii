@@ -14,11 +14,10 @@ const FeesPage = () => {
   const [assignedGateways, setAssignedGateways] = useState([]);
   const [institutionCurrency, setInstitutionCurrency] = useState('BDT');
 
-  // Pay Modal State
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
   const [selectedGatewayAccount, setSelectedGatewayAccount] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('bkash');
+  const [paymentMethod, setPaymentMethod] = useState('surjopay');
   const [accountNumber, setAccountNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -59,7 +58,7 @@ const FeesPage = () => {
     setSelectedFee(fee);
     const initialGw = assignedGateways.length > 0 ? assignedGateways[0] : null;
     setSelectedGatewayAccount(initialGw);
-    setPaymentMethod(initialGw?.gateway_code || 'bkash');
+    setPaymentMethod(initialGw?.gateway_code || 'surjopay');
     setAccountNumber('');
     setTransactionId('');
     setPaySuccessData(null);
@@ -148,7 +147,6 @@ const FeesPage = () => {
 
   return (
     <div className="w-full space-y-4 pb-8">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -165,7 +163,6 @@ const FeesPage = () => {
         </div>
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
         <div
           className={`w-full px-3 py-2 rounded-md text-xs font-medium border ${
@@ -178,7 +175,6 @@ const FeesPage = () => {
         </div>
       )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {stats.map((s, idx) => (
           <div
@@ -202,7 +198,6 @@ const FeesPage = () => {
         ))}
       </div>
 
-      {/* Education Fees Section */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
         <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -304,7 +299,6 @@ const FeesPage = () => {
         )}
       </div>
 
-      {/* Exam Fees Section */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
         <div className="pb-1 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -387,7 +381,6 @@ const FeesPage = () => {
         )}
       </div>
 
-      {/* Online Payment Modal */}
       {payModalOpen && selectedFee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 space-y-4 shadow-lg">
@@ -461,7 +454,7 @@ const FeesPage = () => {
                       onChange={(e) => {
                         const gw = assignedGateways.find((g) => String(g.id) === String(e.target.value));
                         setSelectedGatewayAccount(gw);
-                        setPaymentMethod(gw?.gateway_code || 'bkash');
+                        setPaymentMethod(gw?.gateway_code || 'surjopay');
                       }}
                       className="w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
                     >

@@ -7,7 +7,6 @@ const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_20
 
 export const OFFICER_COOKIE_NAME = OFFICER_TOKEN || 'hiesci-officer';
 
-// Password helpers
 export async function hashPassword(password) {
   if (!password) throw new Error('Password is required for hashing.');
   const salt = await bcrypt.genSalt(10);
@@ -23,7 +22,6 @@ export async function comparePassword(password, hash) {
   }
 }
 
-// JWT helpers
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -48,7 +46,6 @@ async function getCookieStore() {
       return await nextHeaders.cookies();
     }
   } catch {
-    // Outside Next.js server runtime context
   }
   return null;
 }
@@ -59,7 +56,7 @@ export async function setOfficerSessionCookie(response, token) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -93,13 +90,9 @@ export async function clearOfficerSessionCookie(response) {
 }
 
 export async function ensureOfficerSchema() {
-  // Schema is managed directly in database via website_tables.psql
   return Promise.resolve();
 }
 
-/**
- * Creates an active officer session record in website_officer_login_sessions
- */
 export async function createOfficerSession({ websiteId, officerId, token, request, expiresAt }) {
   try {
     await ensureOfficerSchema().catch(() => {});
@@ -132,9 +125,6 @@ export async function createOfficerSession({ websiteId, officerId, token, reques
   }
 }
 
-/**
- * Extracts and decodes officer session from request or cookies
- */
 export async function getOfficerSession(request) {
   try {
     await ensureOfficerSchema().catch(() => {});
@@ -161,7 +151,6 @@ export async function getOfficerSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // 1. Look up active session
     let sessRes = await queryDb(
       `SELECT os.id AS session_id, os.website_id, os.officer_id, os.is_active, os.expires_at,
               wo.id, wo.name, wo.email, wo.phone, wo.department, wo.designation, wo.address,
@@ -177,7 +166,6 @@ export async function getOfficerSession(request) {
       [token]
     );
 
-    // Auto-heal session if JWT is valid and officer exists
     if (sessRes.rows.length === 0) {
       const officerCheck = await queryDb(
         `SELECT wo.*, w.id AS web_id, w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
@@ -218,13 +206,11 @@ export async function getOfficerSession(request) {
     if (sessRes.rows.length === 0) return null;
     const row = sessRes.rows[0];
 
-    // Non-blocking ping last_active_at
     queryDb(
       `UPDATE website_officer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE id = $1`,
       [row.session_id]
     ).catch(() => {});
 
-    // 2. Fetch officer permissions (scoped to control modules available for this website's package)
     const permsRes = await queryDb(
       `SELECT COALESCE(wop.control_module_id, wop.website_module_id) AS control_module_id,
               wop.can_view, wop.can_create, wop.can_edit, wop.can_delete,
@@ -319,25 +305,16 @@ export async function getOfficerSession(request) {
   }
 }
 
-/**
- * Returns the currently logged-in officer user
- */
 export async function getOfficerUser(request) {
   const sessionData = await getOfficerSession(request);
   return sessionData ? sessionData.officer : null;
 }
 
-/**
- * Checks if requester is an active authenticated officer
- */
 export async function isOfficer(request) {
   const sessionData = await getOfficerSession(request);
   return Boolean(sessionData && sessionData.officer && sessionData.officer.isActive);
 }
 
-/**
- * Checks whether an officer has permission for a specific module action
- */
 export function hasOfficerModulePermission(officerOrSession, moduleSlug, action = 'view') {
   if (!officerOrSession || !moduleSlug) return false;
   const officer = officerOrSession.officer || officerOrSession;
@@ -359,9 +336,6 @@ export function hasOfficerModulePermission(officerOrSession, moduleSlug, action 
   }
 }
 
-/**
- * Revokes an officer session token
- */
 export async function revokeOfficerSession(token) {
   try {
     if (!token) return false;
@@ -373,9 +347,6 @@ export async function revokeOfficerSession(token) {
   }
 }
 
-/**
- * Revokes all sessions for an officer
- */
 export async function revokeAllOfficerSessions(officerId, websiteId = null) {
   try {
     if (!officerId) return false;

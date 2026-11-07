@@ -14,13 +14,11 @@ export default function TenantQuotasPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState({ domains: [], storage_usages: [], quotas: null, feature_flags: [] });
 
-  // Domain modal state
   const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
   const [domainInput, setDomainInput] = useState('');
   const [isPrimaryDomain, setIsPrimaryDomain] = useState(false);
   const [submittingDomain, setSubmittingDomain] = useState(false);
 
-  // New Flag modal state
   const [isFlagModalOpen, setIsFlagModalOpen] = useState(false);
   const [flagKey, setFlagKey] = useState('');
   const [flagDesc, setFlagDesc] = useState('');
@@ -147,7 +145,6 @@ export default function TenantQuotasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -174,9 +171,7 @@ export default function TenantQuotasPage() {
         </div>
       </div>
 
-      {/* Resource Quota Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Storage Card */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
@@ -193,7 +188,6 @@ export default function TenantQuotasPage() {
           </div>
         </div>
 
-        {/* SMS Credits */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
@@ -210,7 +204,6 @@ export default function TenantQuotasPage() {
           </div>
         </div>
 
-        {/* Max Students */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Student Capacity</span>
@@ -222,7 +215,6 @@ export default function TenantQuotasPage() {
           <p className="text-xs text-slate-500 mt-1">Maximum active enrolled students</p>
         </div>
 
-        {/* Max Staff */}
         <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Staff Limit</span>
@@ -235,7 +227,6 @@ export default function TenantQuotasPage() {
         </div>
       </div>
 
-      {/* Custom Domains Section */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -305,7 +296,6 @@ export default function TenantQuotasPage() {
         </div>
       </div>
 
-      {/* Feature Flags Section */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -352,7 +342,6 @@ export default function TenantQuotasPage() {
         </div>
       </div>
 
-      {/* Add Domain Modal */}
       {isDomainModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">
@@ -405,7 +394,6 @@ export default function TenantQuotasPage() {
         </div>
       )}
 
-      {/* Add Feature Flag Modal */}
       {isFlagModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

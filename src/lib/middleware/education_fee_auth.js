@@ -2,23 +2,12 @@ import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/mid
 import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 
-/**
- * Validates whether the incoming request is authorized to manage education fees, batch dues, and student payment collections.
- * 
- * Strict Tenant Boundary: Checks tenant subscription allowance and module permissions.
- *
- * @param {Request} request
- * @param {Object} context
- * @param {'view'|'create'|'edit'|'delete'} action
- * @returns {Promise<{ website: Object, actor: Object, staffSession?: Object, officerSession?: Object, allowed: boolean } | { error: string, status: number }>}
- */
 export async function verifyEducationFeeAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // Check tenant module allowance
   const hasAllowance = (await hasTenantModuleAllowance(website, 'fees')) || (await hasTenantModuleAllowance(website, 'accounting'));
   if (!hasAllowance) {
     return {
@@ -29,7 +18,6 @@ export async function verifyEducationFeeAccess(request, context, action = 'view'
     };
   }
 
-  // 1. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -67,7 +55,6 @@ export async function verifyEducationFeeAccess(request, context, action = 'view'
     }
   }
 
-  // 2. Check Officer Session
   const officerSession = await getOfficerSession(request);
   if (officerSession && officerSession.officer) {
     const officer = officerSession.officer;

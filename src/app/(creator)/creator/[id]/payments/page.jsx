@@ -47,7 +47,6 @@ function PaymentsContent() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -74,7 +73,6 @@ function PaymentsContent() {
         </div>
       )}
 
-      {/* KPI Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-slate-200 rounded p-3">
           <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Total Settled</span>
@@ -108,7 +106,6 @@ function PaymentsContent() {
         </div>
       </div>
 
-      {/* Search and Invoices Table */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <h2 className="text-sm font-semibold text-slate-900">

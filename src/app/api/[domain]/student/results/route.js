@@ -20,7 +20,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch student's class
     const studentRes = await queryDb(
       `SELECT s.id, s.class_id, s.section_id, s.session_id, s.roll_no, s.registration_no,
               COALESCE(s.name, i.data->>'name') AS student_name,
@@ -49,7 +48,6 @@ export async function GET(request, context) {
       registration_number: studentRes.rows[0].registration_no
     };
 
-    // 1. Fetch Exam Results
     let results = [];
     try {
       const resultsRes = await queryDb(
@@ -69,7 +67,6 @@ export async function GET(request, context) {
       results = resultsRes.rows;
     } catch {}
 
-    // 2. Fetch Detailed Subject Marks
     let marks = [];
     try {
       const marksRes = await queryDb(
@@ -87,7 +84,6 @@ export async function GET(request, context) {
       marks = marksRes.rows;
     } catch {}
 
-    // 3. If no official exam results yet, also look up published exams for this class
     if (results.length === 0) {
       const fallbackExamsRes = await queryDb(
         `SELECT e.id AS exam_id, e.name AS exam_name, e.term AS exam_term,

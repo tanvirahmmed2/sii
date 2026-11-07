@@ -7,9 +7,6 @@ const ALLOWED_STATUSES = ['OPEN', 'RESOLVED', 'SPAM'];
 
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats'];
 
-/**
- * GET /api/developer/meta/conversations?platform=facebook|instagram|whatsapp&search=&status=
- */
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -37,7 +34,6 @@ export async function GET(request) {
     }
 
     if (rawSearch) {
-      // Escape SQL like wildcards
       const escaped = rawSearch.replace(/[%_]/g, '\\$&');
       conditions.push(
         `(recipient_name ILIKE $${paramIdx} OR recipient_id ILIKE $${paramIdx} OR last_message ILIKE $${paramIdx} OR recipient_phone ILIKE $${paramIdx})`
@@ -64,9 +60,6 @@ export async function GET(request) {
   }
 }
 
-/**
- * PATCH /api/developer/meta/conversations
- */
 export async function PATCH(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -126,9 +119,6 @@ export async function PATCH(request) {
   }
 }
 
-/**
- * DELETE /api/developer/meta/conversations?id=
- */
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -156,10 +146,6 @@ export async function DELETE(request) {
   }
 }
 
-/**
- * POST /api/developer/meta/conversations
- * Create/Initiate a conversation or seed a customer test conversation
- */
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -192,7 +178,6 @@ export async function POST(request) {
 
     const conv = convRes.rows[0];
 
-    // Insert the initial customer message
     await pool.query(
       `INSERT INTO meta_messages (
          conversation_id, platform, sender_type, sender_id, sender_name,

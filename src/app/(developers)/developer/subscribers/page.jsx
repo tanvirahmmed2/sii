@@ -86,7 +86,6 @@ export default function AdminSubscribersPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -112,12 +111,10 @@ export default function AdminSubscribersPage() {
         </div>
       </div>
 
-      {/* Info notice about organic subscription source */}
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 text-xs text-slate-600 dark:text-slate-400">
         <span className="font-medium text-slate-800 dark:text-slate-200">Organic Subscriptions Only:</span> Subscribers enter the database via the public website footer form. Manual subscriber creation is disabled to preserve authentic user consent and deliverability.
       </div>
 
-      {/* Stats Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 space-y-1">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Audience</p>
@@ -135,7 +132,6 @@ export default function AdminSubscribersPage() {
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="w-full sm:w-72">

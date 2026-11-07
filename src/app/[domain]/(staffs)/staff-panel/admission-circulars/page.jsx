@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
 
-// Dynamically import TiptapEditor to prevent SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -66,7 +65,6 @@ export default function AdmissionCircularsPage() {
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [selectionMethodFilter, setSelectionMethodFilter] = useState('all');
 
-  // Workstation Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCircular, setEditingCircular] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -74,7 +72,6 @@ export default function AdmissionCircularsPage() {
   const [deletingId, setDeletingId] = useState(null);
   const formSectionRef = useRef(null);
 
-  // Form State
   const [form, setForm] = useState(getInitialFormState);
   const fetchCirculars = useCallback(async (showLoader = false) => {
     if (showLoader) setLoading(true);
@@ -124,7 +121,6 @@ export default function AdmissionCircularsPage() {
     };
   }, [apiBase]);
 
-  // Filter classes based on selected department in form
   const availableClassesForForm = useMemo(() => {
     return classes.filter(cls => {
       if (form.department_id && String(cls.department_id) !== String(form.department_id)) {
@@ -134,7 +130,6 @@ export default function AdmissionCircularsPage() {
     });
   }, [classes, form.department_id]);
 
-  // Selected class object to inspect maximum seats
   const selectedClass = useMemo(() => {
     return classes.find(c => String(c.id) === String(form.class_id)) || null;
   }, [classes, form.class_id]);
@@ -219,7 +214,6 @@ export default function AdmissionCircularsPage() {
     setEditingCircular(null);
   };
 
-  // Exam Subjects helper handlers
   const addSubjectRow = () => {
     setForm(prev => ({
       ...prev,
@@ -364,7 +358,6 @@ export default function AdmissionCircularsPage() {
     });
   }, [circulars, searchTerm, statusFilter, departmentFilter, selectionMethodFilter]);
   return <div className="w-full space-y-4">
-      {/* Header and KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Circulars</p>
@@ -405,7 +398,6 @@ export default function AdmissionCircularsPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Alert */}
       {deleteConfirmId && <div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
             <div>
@@ -432,7 +424,6 @@ export default function AdmissionCircularsPage() {
           </div>
         </div>}
 
-      {/* Workstation Form */}
       {isFormOpen && <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-sm space-y-4 animate-fade-in">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
@@ -447,7 +438,6 @@ export default function AdmissionCircularsPage() {
           </div>
 
           <form onSubmit={handleSave} className="space-y-4">
-            {/* Section A: Title, Dept, Session */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="md:col-span-2">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -490,7 +480,6 @@ export default function AdmissionCircularsPage() {
               </div>
             </div>
 
-            {/* Section B: Class selection & Seat Capacity Ceiling */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -548,7 +537,6 @@ export default function AdmissionCircularsPage() {
               </div>
             </div>
 
-            {/* Section C: Dates & Windows */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -581,7 +569,6 @@ export default function AdmissionCircularsPage() {
               </div>
             </div>
 
-            {/* Section D: Background Prerequisites (Conditional: only for Merit-based admissions) */}
             {form.selection_method === 'merit' && (
               <div className="p-3 bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 rounded-md space-y-2 animate-fade-in">
                 <div className="flex items-center justify-between border-b border-amber-100 dark:border-amber-900/40 pb-1.5">
@@ -635,7 +622,6 @@ export default function AdmissionCircularsPage() {
               </div>
             )}
 
-            {/* Manual Selection Notice (Neither past class info nor exam subjects needed) */}
             {form.selection_method === 'manual' && (
               <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-md">
                 <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -644,7 +630,6 @@ export default function AdmissionCircularsPage() {
               </div>
             )}
 
-            {/* Section E: Exam Configuration (Conditional if selection_method === 'exam') */}
             {form.selection_method === 'exam' && <div className="p-4 bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800/50 rounded-lg space-y-3 animate-fade-in">
                 <div className="flex items-center justify-between border-b border-purple-100 dark:border-purple-900/40 pb-2">
                   <div className="flex items-center gap-2">
@@ -713,7 +698,6 @@ export default function AdmissionCircularsPage() {
                 </div>
               </div>}
 
-            {/* Section F: Age, Status, Description */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -777,7 +761,6 @@ export default function AdmissionCircularsPage() {
               />
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button type="button" onClick={closeForm} className="px-3.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
                 Cancel
@@ -798,16 +781,13 @@ export default function AdmissionCircularsPage() {
           </form>
         </div>}
 
-      {/* Control Bar: Search, Filters, Refresh, Create Action */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Search Input */}
           <div className="relative flex-1 sm:w-64">
             
             <input type="text" placeholder="Search circulars..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden" />
           </div>
 
-          {/* Department Filter */}
           <select value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
             <option value="all">All Departments</option>
             {departments.map(d => <option key={d.id} value={d.id}>
@@ -815,7 +795,6 @@ export default function AdmissionCircularsPage() {
               </option>)}
           </select>
 
-          {/* Selection Method Filter */}
           <select value={selectionMethodFilter} onChange={e => setSelectionMethodFilter(e.target.value)} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
             <option value="all">All Selection Methods</option>
             <option value="exam">Exam Based</option>
@@ -823,7 +802,6 @@ export default function AdmissionCircularsPage() {
             <option value="manual">Manual Selection</option>
           </select>
 
-          {/* Status Filter */}
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
             <option value="all">All Status</option>
             <option value="open">Open</option>
@@ -845,7 +823,6 @@ export default function AdmissionCircularsPage() {
         </div>
       </div>
 
-      {/* Admission Circulars Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">

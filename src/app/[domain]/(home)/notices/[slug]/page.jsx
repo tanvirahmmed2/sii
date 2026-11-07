@@ -96,7 +96,6 @@ const NoticeDetailPage = () => {
 
   const driveDetails = effectiveDriveUrl ? getDriveDetails(effectiveDriveUrl) : null;
 
-  // Compute view, download, and preview URLs
   let viewUrl = '';
   let downloadUrl = '';
   let previewUrl = '';
@@ -106,7 +105,6 @@ const NoticeDetailPage = () => {
     downloadUrl = effectivePdfUrl.includes('cloudinary.com') && effectivePdfUrl.includes('/upload/')
       ? effectivePdfUrl.replace('/upload/', '/upload/fl_attachment/')
       : effectivePdfUrl;
-    // Google Docs Viewer renders Cloudinary PDFs reliably on all desktop & mobile browsers
     previewUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(effectivePdfUrl)}&embedded=true`;
   } else if (effectiveDriveUrl) {
     viewUrl = driveDetails?.viewUrl || effectiveDriveUrl;
@@ -164,7 +162,6 @@ const NoticeDetailPage = () => {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        {/* Navigation & Action Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <Link
             href={tenantUrl ? tenantUrl('/notices') : '/notices'}
@@ -174,7 +171,6 @@ const NoticeDetailPage = () => {
             <span>Back to All Notices</span>
           </Link>
 
-          {/* Top Quick Actions */}
           <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
             <button
               type="button"
@@ -225,7 +221,6 @@ const NoticeDetailPage = () => {
           </div>
         </div>
 
-        {/* Notice Header Summary Card */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -287,7 +282,6 @@ const NoticeDetailPage = () => {
           )}
         </motion.div>
 
-        {/* DOCUMENT VIEWER SECTION */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,7 +292,6 @@ const NoticeDetailPage = () => {
               : ''
           }`}
         >
-          {/* Viewer Toolbar */}
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400">
@@ -352,7 +345,6 @@ const NoticeDetailPage = () => {
             </div>
           </div>
 
-          {/* Embedded Viewer Container */}
           <div
             className={`relative w-full rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm ${
               isFullscreen ? 'flex-1 h-full' : 'h-[620px] sm:h-[820px]'
@@ -393,7 +385,6 @@ const NoticeDetailPage = () => {
             )}
           </div>
 
-          {/* Viewer helper notice */}
           {hasDocument && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2 text-[11px] text-slate-500 dark:text-slate-400">
               <span>
@@ -428,7 +419,6 @@ const NoticeDetailPage = () => {
           )}
         </motion.section>
 
-        {/* RECENT NOTICES SECTION */}
         {recentNotices.length > 0 && (
           <div className="pt-8 border-t border-slate-200 dark:border-slate-800 space-y-4">
             <h3 className="font-serif text-lg font-medium text-slate-900 dark:text-white">

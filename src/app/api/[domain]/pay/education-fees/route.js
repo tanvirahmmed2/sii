@@ -5,10 +5,6 @@ import { fetchAssignedGatewaysForPurpose } from 'src/lib/database/paymentGateway
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay/education-fees
- * Look up student tuition and academic fees.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -19,7 +15,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const identifier = (searchParams.get('identifier') || '').trim();
 
-    // Fetch assigned gateways specifically for education fees
     const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'education_fees');
 
     if (!identifier) {
@@ -90,7 +85,6 @@ export async function GET(request, context) {
       masked_phone: maskPhone(row.raw_phone)
     };
 
-    // Fetch unpaid education fees
     const feeRes = await queryDb(`
       SELECT id, invoice_no, title, month_name, amount, fine_amount, paid_amount,
              currency, due_date, payment_status,
@@ -130,10 +124,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/pay/education-fees
- * Process payment for education/tuition fee invoice.
- */
 export async function POST(request, context) {
   const client = await pool.connect();
   try {
@@ -186,7 +176,6 @@ export async function POST(request, context) {
       if (match) finalAccountId = match.id;
     }
 
-    // Update invoice record
     await client.query(`
       UPDATE website_education_fee_payments
       SET payment_status = 'paid',
@@ -199,7 +188,6 @@ export async function POST(request, context) {
       WHERE id = $3
     `, [gw, txnId, inv.id]);
 
-    // Record in transaction audit ledger
     await client.query(`
       INSERT INTO website_payment_transactions (
         website_id, gateway_account_id, gateway_code, purpose, invoice_ref,

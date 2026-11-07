@@ -6,7 +6,6 @@ async function verifyStaffAccess(request, context, action = 'view') {
   return verifyStaffModuleAccess(request, context, 'routine', action);
 }
 
-// GET: List all classes strictly under Academic Departments
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'view');
@@ -15,7 +14,6 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const departmentId = searchParams.get('department_id');
 
-    // Fetch available departments for this website
     const departmentsResult = await queryDb(
       `SELECT id, name, code, slug 
        FROM website_departments 
@@ -62,7 +60,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create class (Only department_id is required; no session)
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'create');
@@ -81,7 +78,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Class name is required (e.g., Class 1, Grade 10).' }, { status: 400 });
     }
 
-    // Department is strictly REQUIRED
     if (!department_id) {
       return NextResponse.json({ success: false, error: 'Department is required to create a class.' }, { status: 400 });
     }
@@ -90,7 +86,6 @@ export async function POST(request, context) {
     const cleanCodePart = trimmedName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
     const trimmedCode = code ? String(code).trim().toUpperCase() : `CLS-${cleanCodePart || '1'}`;
 
-    // Verify department belongs to this website
     const deptCheck = await queryDb(
       `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2`,
       [department_id, auth.website.id]
@@ -144,7 +139,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update class (Only department_id is required; no session)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'edit');
@@ -164,7 +158,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Class ID is required.' }, { status: 400 });
     }
 
-    // Verify class exists and belongs to this website
     const existingCheck = await queryDb(
       `SELECT * FROM website_classes WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
@@ -174,7 +167,6 @@ export async function PUT(request, context) {
     }
     const existing = existingCheck.rows[0];
 
-    // If department_id is being updated, it must be provided and valid
     let targetDeptId = existing.department_id;
     if (department_id !== undefined) {
       if (!department_id) {
@@ -244,7 +236,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete class
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'delete');

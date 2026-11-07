@@ -12,10 +12,9 @@ export default function PageBuilderStaffPage() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('pages'); // pages | theme | blocks | media
+  const [activeTab, setActiveTab] = useState('pages'); 
   const [data, setData] = useState({ pages: [], theme: null, global_blocks: [], menus: [], media_files: [] });
 
-  // Page Modal state
   const [isPageModalOpen, setIsPageModalOpen] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
   const [pageTitle, setPageTitle] = useState('');
@@ -26,11 +25,9 @@ export default function PageBuilderStaffPage() {
   const [pageHomepage, setPageHomepage] = useState(false);
   const [submittingPage, setSubmittingPage] = useState(false);
 
-  // Theme state
   const [themeColors, setThemeColors] = useState({ primary: '#2563eb', secondary: '#475569', accent: '#f59e0b' });
   const [savingTheme, setSavingTheme] = useState(false);
 
-  // Block modal state
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockName, setBlockName] = useState('');
   const [blockType, setBlockType] = useState('announcement_bar');
@@ -183,7 +180,6 @@ export default function PageBuilderStaffPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -210,7 +206,6 @@ export default function PageBuilderStaffPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
         <button
           onClick={() => setActiveTab('pages')}
@@ -254,7 +249,6 @@ export default function PageBuilderStaffPage() {
         </button>
       </div>
 
-      {/* Tab 1: Pages List */}
       {activeTab === 'pages' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -330,7 +324,6 @@ export default function PageBuilderStaffPage() {
         </div>
       )}
 
-      {/* Tab 2: Theme Customizer */}
       {activeTab === 'theme' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 max-w-2xl space-y-6">
           <div>
@@ -405,7 +398,6 @@ export default function PageBuilderStaffPage() {
         </div>
       )}
 
-      {/* Tab 3: Global Blocks */}
       {activeTab === 'blocks' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -442,7 +434,6 @@ export default function PageBuilderStaffPage() {
         </div>
       )}
 
-      {/* Tab 4: Media Assets */}
       {activeTab === 'media' && (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -468,7 +459,6 @@ export default function PageBuilderStaffPage() {
         </div>
       )}
 
-      {/* Page Edit/Create Modal */}
       {isPageModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -558,7 +548,6 @@ export default function PageBuilderStaffPage() {
         </div>
       )}
 
-      {/* Global Block Modal */}
       {isBlockModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-xl">

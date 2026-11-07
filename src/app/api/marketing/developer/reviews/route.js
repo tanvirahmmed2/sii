@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// GET: Fetch all reviews for developer moderation oversight
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'reviews');
@@ -78,7 +77,6 @@ export async function GET(request) {
   }
 }
 
-// PUT: Moderate review status (approve or set pending) and featured state
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'reviews');
@@ -103,7 +101,6 @@ export async function PUT(request) {
       );
     }
 
-    // Determine is_approved
     let isApproved = null;
     if (body.is_approved !== undefined) {
       isApproved = Boolean(body.is_approved);
@@ -157,7 +154,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE: Remove review
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'reviews');

@@ -59,7 +59,6 @@ export default function StudentImagesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Student Photo Directory
@@ -69,7 +68,6 @@ export default function StudentImagesPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -78,7 +76,6 @@ export default function StudentImagesPage() {
         description="Select session, class, and section to view photo gallery"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🖼️"
@@ -87,7 +84,6 @@ export default function StudentImagesPage() {
         />
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-          {/* Active Filter Bar & Search */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -116,7 +112,6 @@ export default function StudentImagesPage() {
             </div>
           </div>
 
-          {/* IN-PAGE PHOTO PREVIEW CARD */}
           {previewImage && (
             <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">

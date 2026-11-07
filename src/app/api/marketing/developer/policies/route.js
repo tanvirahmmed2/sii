@@ -30,9 +30,6 @@ async function generateUniqueSlug(baseTitle, excludeId = null) {
   }
 }
 
-// ============================================================================
-// GET: Fetch policies (all or single by ID/slug)
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'policies');
@@ -80,9 +77,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new policy
-// ============================================================================
 export async function POST(request) {
   try {
     const authCheck = await hasModulePermission(request, 'policies');
@@ -124,9 +118,6 @@ export async function POST(request) {
   }
 }
 
-// ============================================================================
-// PUT: Update an existing policy
-// ============================================================================
 export async function PUT(request) {
   try {
     const authCheck = await hasModulePermission(request, 'policies');
@@ -175,9 +166,6 @@ export async function PUT(request) {
   }
 }
 
-// ============================================================================
-// PATCH: Toggle active/publish status or quick edit
-// ============================================================================
 export async function PATCH(request) {
   try {
     const authCheck = await hasModulePermission(request, 'policies');
@@ -220,9 +208,6 @@ export async function PATCH(request) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete a policy
-// ============================================================================
 export async function DELETE(request) {
   try {
     const authCheck = await hasModulePermission(request, 'policies');

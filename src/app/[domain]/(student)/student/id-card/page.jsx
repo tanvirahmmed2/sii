@@ -15,7 +15,7 @@ export default function StudentIDCardPage() {
   const [isProvided, setIsProvided] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [cardSideView, setCardSideView] = useState('both'); // 'both' | 'front' | 'back'
+  const [cardSideView, setCardSideView] = useState('both'); 
 
   const cardFrontRef = useRef(null);
   const cardBackRef = useRef(null);
@@ -54,7 +54,6 @@ export default function StudentIDCardPage() {
   const issueDateFormatted = idCard?.issue_date ? new Date(idCard.issue_date).toLocaleDateString('en-GB') : 'Active Session';
   const expiryDateFormatted = idCard?.expiry_date ? new Date(idCard.expiry_date).toLocaleDateString('en-GB') : '31/12/2027';
 
-  // Compile card HTML using active template
   const compileCard = () => {
     if (!template) return null;
     let frontHtml = template.custom_html || template.html_content || '';
@@ -161,7 +160,6 @@ export default function StudentIDCardPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -208,7 +206,6 @@ export default function StudentIDCardPage() {
         )}
       </div>
 
-      {/* Student Overview Strip */}
       {student && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -241,10 +238,8 @@ export default function StudentIDCardPage() {
         </div>
       )}
 
-      {/* ID Card Display */}
       {isProvided && student ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-          {/* Card Visual Preview */}
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center justify-center space-y-4">
             <div className="flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-800 pb-3">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -281,13 +276,11 @@ export default function StudentIDCardPage() {
               </div>
             </div>
 
-            {/* Template CSS */}
             {cardCompiled && (
               <style dangerouslySetInnerHTML={{ __html: cardCompiled.css }} />
             )}
 
             <div className="flex flex-wrap items-center justify-center gap-4 p-4 bg-slate-50 dark:bg-slate-950/60 rounded-md w-full overflow-x-auto border border-slate-100 dark:border-slate-800">
-              {/* FRONT SIDE */}
               {(cardSideView === 'both' || cardSideView === 'front') && (
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Card Front</span>
@@ -310,7 +303,6 @@ export default function StudentIDCardPage() {
                 </div>
               )}
 
-              {/* BACK SIDE */}
               {(cardSideView === 'both' || cardSideView === 'back') && cardCompiled?.backHtml && (
                 <div className="flex flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Card Back</span>
@@ -329,7 +321,6 @@ export default function StudentIDCardPage() {
             </div>
           </div>
 
-          {/* Identity Parameters Table */}
           <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-3">
             <div>
               <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">

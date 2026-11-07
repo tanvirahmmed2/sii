@@ -25,7 +25,6 @@ const TiptapEditor = ({ value, onChange, placeholder = 'Write description...' })
     },
   });
 
-  // Keep editor content in sync with value prop (for edit modes/resets)
   useEffect(() => {
     if (editor && value !== undefined && value !== editor.getHTML()) {
       editor.commands.setContent(value || '');

@@ -12,12 +12,10 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
-  // Create Modal State
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -28,10 +26,9 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     designation: 'Officer',
     salary: '0.00',
     joining_date: new Date().toISOString().split('T')[0],
-    permissions: {}, // { [slug]: { can_view: true, can_create: false, can_edit: false, can_delete: false } }
+    permissions: {}, 
   });
 
-  // Edit Modal State
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editingOfficer, setEditingOfficer] = useState(null);
@@ -46,7 +43,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     permissions: {},
   });
 
-  // Action feedback
   const [actionInProgressId, setActionInProgressId] = useState(null);
 
   const fetchOfficers = useCallback(async () => {
@@ -84,7 +80,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     fetchOfficers();
   }, [fetchOfficers]);
 
-  // Open Create Modal with initialized permissions map
   const openCreateModal = () => {
     const initialPerms = {};
     packageModules.forEach((mod) => {
@@ -141,7 +136,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     }
   };
 
-  // Open Edit Modal
   const openEditModal = (officer) => {
     setEditingOfficer(officer);
 
@@ -196,7 +190,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     }
   };
 
-  // Resend invitation email
   const handleResendInvite = async (officerId) => {
     setActionInProgressId(officerId);
     try {
@@ -220,7 +213,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
     }
   };
 
-  // Delete officer
   const handleDeleteOfficer = async (officer) => {
     if (!window.confirm(`Are you sure you want to remove officer "${officer.name}"? This action revokes all their active sessions.`)) {
       return;
@@ -247,7 +239,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
 
   return (
     <div className="w-full space-y-4">
-      {/* Title & Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -268,7 +259,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -319,9 +309,7 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
         </div>
       </div>
 
-      {/* Main Table Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Filter Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -361,7 +349,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
           </div>
         </div>
 
-        {/* Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -493,7 +480,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
         </div>
       </div>
 
-      {/* CREATE OFFICER MODAL */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 w-full max-w-2xl shadow-xl space-y-4 my-8">
@@ -604,7 +590,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 </div>
               </div>
 
-              {/* Package Modules Permission Matrix */}
               <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-900 dark:text-white">
@@ -696,7 +681,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 </div>
               </div>
 
-              {/* Submit Buttons */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
@@ -722,7 +706,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
         </div>
       )}
 
-      {/* EDIT OFFICER MODAL */}
       {isEditOpen && editingOfficer && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 w-full max-w-2xl shadow-xl space-y-4 my-8">
@@ -829,7 +812,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 </div>
               </div>
 
-              {/* Package Modules Matrix */}
               <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <span className="text-xs font-semibold text-slate-900 dark:text-white">
                   Package Module Access Rights
@@ -916,7 +898,6 @@ export default function OfficersManagementWorkstation({ title = 'Officers Manage
                 </div>
               </div>
 
-              {/* Submit Buttons */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"

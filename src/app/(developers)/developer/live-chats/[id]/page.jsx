@@ -41,7 +41,6 @@ export default function SingleLiveChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Fetch chat details and message stream
   const fetchChatDetails = useCallback(async (showLoading = false) => {
     if (!chatId) return;
     try {
@@ -65,7 +64,6 @@ export default function SingleLiveChatPage() {
     }
   }, [chatId]);
 
-  // Fetch all chats for the top swipe bar
   const fetchAllChats = useCallback(async () => {
     try {
       const res = await fetch('/api/marketing/developer/live_chats');
@@ -78,13 +76,11 @@ export default function SingleLiveChatPage() {
     }
   }, []);
 
-  // Initial fetch
   useEffect(() => {
     fetchChatDetails(true);
     fetchAllChats();
   }, [fetchChatDetails, fetchAllChats]);
 
-  // Real-time live polling every 4 seconds
   useEffect(() => {
     if (!chatId) return;
     const interval = setInterval(() => {
@@ -101,7 +97,6 @@ export default function SingleLiveChatPage() {
     setRefreshing(false);
   };
 
-  // Developer sends reply
   const handleSendReply = async (e) => {
     if (e) e.preventDefault();
     if (!replyMessage.trim() || !chatId || sendingReply) return;
@@ -145,7 +140,6 @@ export default function SingleLiveChatPage() {
     }
   };
 
-  // Update chat status
   const handleStatusChange = async (newStatus) => {
     if (!chatId || statusLoading) return;
     setStatusLoading(true);
@@ -173,7 +167,6 @@ export default function SingleLiveChatPage() {
     }
   };
 
-  // Assign developer to this chat session
   const handleAssignDeveloper = async (developerId) => {
     if (!chatId || assignLoading) return;
     setAssignLoading(true);
@@ -211,7 +204,6 @@ export default function SingleLiveChatPage() {
     }
   };
 
-  // Delete chat session
   const handleDeleteChat = async () => {
     if (!confirm('Are you sure you want to permanently delete this chat session? All message history will be removed.')) return;
     setDeleting(true);
@@ -259,7 +251,6 @@ export default function SingleLiveChatPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Touch-Swipeable Visitors Bar */}
       <ChatUsersSwipeBar
         users={allChats.map((c) => ({
           id: c.id,
@@ -272,7 +263,6 @@ export default function SingleLiveChatPage() {
         activeId={chatId}
       />
 
-      {/* Toast Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${
@@ -291,7 +281,6 @@ export default function SingleLiveChatPage() {
         </div>
       )}
 
-      {/* Top Action & Session Management Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div className="flex items-center gap-3">
           <Link
@@ -349,7 +338,6 @@ export default function SingleLiveChatPage() {
           </div>
         </div>
 
-        {/* Developer Action Toolbar */}
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
           {currentUser && !isAssignedToMe && (
             <button
@@ -408,9 +396,7 @@ export default function SingleLiveChatPage() {
         </div>
       </div>
 
-      {/* Main Chat Box Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[600px]">
-        {/* Messages Stream */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40 dark:bg-slate-950/30">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-slate-400">
@@ -456,7 +442,6 @@ export default function SingleLiveChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply Box Footer */}
         <form
           onSubmit={handleSendReply}
           className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2"

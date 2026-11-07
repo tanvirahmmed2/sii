@@ -41,7 +41,6 @@ async function handleCreateAdmin(d, request) {
     is_verified: false,
   };
 
-  // Grant module permissions for this developer
   await queryDb(
     `INSERT INTO module_permissions (developer_id, module_id, can_view, can_create, can_edit, can_delete)
      SELECT $1, id, TRUE, TRUE, TRUE, TRUE FROM modules WHERE is_active = TRUE
@@ -130,7 +129,6 @@ export async function POST(request) {
     const devCountRes = await queryDb('SELECT COUNT(*)::int AS count FROM developers');
     const devCount = devCountRes.rows[0]?.count || 0;
 
-    // Only bypass auth if there are ZERO developers in the system (initial bootstrap)
     if (devCount > 0) {
       const authCheck = await hasModulePermission(request, 'developers');
       if (!authCheck.success) {
@@ -175,7 +173,6 @@ export async function PUT(request) {
 
     const action = body.action;
 
-    // Direct module permissions update
     if (action === 'update_permissions' || body.permissions) {
       const permissions = body.permissions || {};
       if (typeof permissions === 'object') {
@@ -262,7 +259,6 @@ export async function PUT(request) {
       });
     }
 
-    // Generic Update
     const data = { ...(body.data || body) };
     delete data.id;
     delete data.adminId;

@@ -84,7 +84,6 @@ const Contact = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-6xl mx-auto space-y-8">
         
-        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -104,10 +103,8 @@ const Contact = () => {
           </p>
         </motion.div>
 
-        {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
-          {/* Left Details Panel */}
           <motion.div
             initial={{ opacity: 0, x: -15 }}
             animate={{ opacity: 1, x: 0 }}
@@ -169,7 +166,6 @@ const Contact = () => {
               </div>
             </div>
 
-            {/* Campus Map Frame */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl space-y-3 shadow-xs">
               <span className="text-xs font-semibold text-slate-900 dark:text-white px-1 block">
                 Geographic Location
@@ -188,7 +184,6 @@ const Contact = () => {
 
           </motion.div>
 
-          {/* Right Inquiry Form */}
           <motion.div
             initial={{ opacity: 0, x: 15 }}
             animate={{ opacity: 1, x: 0 }}

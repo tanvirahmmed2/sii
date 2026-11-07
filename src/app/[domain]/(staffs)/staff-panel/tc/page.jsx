@@ -9,7 +9,6 @@ import { FiSave, FiList, FiTrash2, FiSearch, FiRefreshCw, FiExternalLink, FiPrin
 export default function TransferCertificatePage() {
   const { website, getApiEndpoint } = useTenantWebsite();
 
-  // Mode: 'issue' or 'archive'
   const [activeTab, setActiveTab] = useState('issue');
 
   const [students, setStudents] = useState([]);
@@ -19,11 +18,9 @@ export default function TransferCertificatePage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Template
   const [activeTemplate, setActiveTemplate] = useState(null);
   const printDocRef = useRef(null);
 
-  // TC Custom Form Fields
   const [tcSerial, setTcSerial] = useState(`TC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [admissionDate, setAdmissionDate] = useState('15 January 2023');
   const [leavingDate, setLeavingDate] = useState(new Date().toISOString().split('T')[0]);
@@ -36,12 +33,10 @@ export default function TransferCertificatePage() {
   const [fatherName, setFatherName] = useState('');
   const [motherName, setMotherName] = useState('');
 
-  // Archive state
   const [issuedTcs, setIssuedTcs] = useState([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveSearch, setArchiveSearch] = useState('');
 
-  // Fetch active TC template
   useEffect(() => {
     async function initData() {
       try {
@@ -51,7 +46,6 @@ export default function TransferCertificatePage() {
           setActiveTemplate(tplData.active_template);
         }
 
-        // Fetch students roster
         const stuRes = await fetch(getApiEndpoint('staff/panel/students?limit=50'));
         const stuData = await stuRes.json();
         if (stuRes.ok && stuData.success) {
@@ -68,7 +62,6 @@ export default function TransferCertificatePage() {
     initData();
   }, [getApiEndpoint]);
 
-  // Fetch issued TCs archive
   const fetchIssuedTcs = useCallback(async () => {
     setLoadingArchive(true);
     try {
@@ -102,7 +95,6 @@ export default function TransferCertificatePage() {
     setLastClass(student.class_name || 'Grade 10');
   };
 
-  // Compile TC document HTML
   const compileTcDocument = () => {
     if (!activeTemplate || !selectedStudent) return null;
     let html = activeTemplate.html_content || '';
@@ -135,7 +127,6 @@ export default function TransferCertificatePage() {
     return { html, css };
   };
 
-  // Issue & Save TC to Database (triggers exit creation in website_student_exits)
   const handleIssueAndSaveTc = async () => {
     if (!selectedStudent) {
       toast.error('Please select a student.');
@@ -181,7 +172,6 @@ export default function TransferCertificatePage() {
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success('Transfer Certificate recorded & departure filed in Exit Registry!', { id: 'save-tc' });
-        // Automatically generate next serial
         setTcSerial(`TC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
       } else {
         toast.error(data.error || 'Failed to record TC.', { id: 'save-tc' });
@@ -193,7 +183,6 @@ export default function TransferCertificatePage() {
     }
   };
 
-  // Export JPEG
   const handleExportJpeg = async () => {
     if (!printDocRef.current) return;
     setIsExporting(true);
@@ -208,7 +197,6 @@ export default function TransferCertificatePage() {
     }
   };
 
-  // Export PDF
   const handleExportPdf = async () => {
     if (!printDocRef.current) return;
     setIsExporting(true);
@@ -248,7 +236,6 @@ export default function TransferCertificatePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -260,7 +247,6 @@ export default function TransferCertificatePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Mode Toggle */}
           <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800 text-xs">
             <button
               type="button"
@@ -296,7 +282,6 @@ export default function TransferCertificatePage() {
       </div>
 
       {activeTab === 'archive' ? (
-        /* ================= ISSUED TCS ARCHIVE ================= */
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative w-full sm:w-72">
@@ -394,11 +379,8 @@ export default function TransferCertificatePage() {
           </div>
         </div>
       ) : (
-        /* ================= ISSUE NEW TC ================= */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Form */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Student Selector Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 1. Select Departing Student
@@ -433,7 +415,6 @@ export default function TransferCertificatePage() {
               </div>
             </div>
 
-            {/* Certificate Parameters Form */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 2. Certificate Particulars
@@ -527,7 +508,6 @@ export default function TransferCertificatePage() {
             </div>
           </div>
 
-          {/* Right Preview Surface */}
           <div className="lg:col-span-7 flex flex-col items-center space-y-3">
             <div className="w-full flex items-center justify-end gap-2">
               <button

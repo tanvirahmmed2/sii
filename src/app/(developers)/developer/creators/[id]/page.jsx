@@ -4,13 +4,11 @@ import { useState, useEffect, useContext, use } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
-
 import { Context } from 'src/component/helper/Context';
 
 export default function CreatorDetailsPage({ params }) {
   const router = useRouter();
   const routeParams = useParams();
-  // Support both useParams and direct props
   const creatorId = routeParams?.id || (params ? (typeof params.then === 'function' ? use(params)?.id : params.id) : null);
 
   const { user } = useContext(Context);
@@ -20,7 +18,7 @@ export default function CreatorDetailsPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // overview | subscriptions | websites | payments | support
+  const [activeTab, setActiveTab] = useState('overview'); 
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedText, setCopiedText] = useState(null);
 
@@ -110,7 +108,6 @@ export default function CreatorDetailsPage({ params }) {
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  // Role Access Denied Screen
   if (!isAuthorized && user) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-4">
@@ -133,12 +130,10 @@ export default function CreatorDetailsPage({ params }) {
     );
   }
 
-  // Loading State
   if (loading) {
     return <LoadingScreen fullScreen={false} label="Loading creator profile..." />;
   }
 
-  // Error / Not Found State
   if (error || !data?.creator) {
     return (
       <div className="space-y-6">
@@ -173,7 +168,6 @@ export default function CreatorDetailsPage({ params }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Breadcrumb & Navigation */}
       <div className="flex items-center justify-between">
         <Link
           href="/developer/creators"
@@ -205,7 +199,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Creator Profile Banner */}
       <div className="bg-white border border-slate-200 rounded p-6 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
@@ -255,7 +248,6 @@ export default function CreatorDetailsPage({ params }) {
                 )}
               </div>
 
-              {/* Email & Phone */}
               <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1">
                 <div className="flex items-center gap-1.5">
                   
@@ -300,7 +292,6 @@ export default function CreatorDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* Quick Action Controls */}
           <div className="flex sm:flex-col items-center sm:items-end justify-start gap-2 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
             <button
               type="button"
@@ -327,9 +318,7 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Metric Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Active Plan */}
         <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-normal">
             <span>Package Plan</span>
@@ -345,7 +334,6 @@ export default function CreatorDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Subscription Status */}
         <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-normal">
             <span>Plan Status</span>
@@ -359,7 +347,6 @@ export default function CreatorDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Hosted Websites */}
         <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-normal">
             <span>Hosted Portfolios</span>
@@ -376,7 +363,6 @@ export default function CreatorDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Storage Used */}
         <div className="bg-white border border-slate-200 rounded p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-normal">
             <span>Storage Used</span>
@@ -388,7 +374,6 @@ export default function CreatorDetailsPage({ params }) {
           <div className="text-[11px] text-slate-400 mt-0.5">Assets & site storage</div>
         </div>
 
-        {/* Total Payments */}
         <div className="bg-white border border-slate-200 rounded p-4 shadow-xs col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between text-slate-500 text-xs font-normal">
             <span>Total Spend</span>
@@ -409,7 +394,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Tabs Header */}
       <div className="bg-white border border-slate-200 rounded p-1.5 shadow-xs flex flex-wrap items-center gap-1 text-xs font-normal">
         <button
           type="button"
@@ -477,10 +461,8 @@ export default function CreatorDetailsPage({ params }) {
         </button>
       </div>
 
-      {/* Tab 1: Account Overview */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Personal Information */}
           <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
             <h3 className="text-sm font-medium text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
               
@@ -524,7 +506,6 @@ export default function CreatorDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* Security & Authentication Details */}
           <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
             <h3 className="text-sm font-medium text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
               
@@ -589,7 +570,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Tab 2: Hosted Websites */}
       {activeTab === 'websites' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -689,7 +669,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Tab 3: Subscriptions */}
       {activeTab === 'subscriptions' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -782,7 +761,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Tab 4: Payments */}
       {activeTab === 'payments' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -859,7 +837,6 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Tab 5: Support Tickets */}
       {activeTab === 'support' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">

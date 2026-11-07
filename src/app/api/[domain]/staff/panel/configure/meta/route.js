@@ -18,7 +18,6 @@ async function verifyStaffAccess(request, context) {
     return { website, staffSession };
   }
 
-  // Allow institution owner/creator
   const creatorSession = await getCreatorSession(request);
   if (creatorSession) {
     const creatorId = creatorSession?.id || creatorSession?.creator?.id;
@@ -38,7 +37,6 @@ function maskSecret(val) {
   return val.slice(0, 6) + '••••••••••••••••' + val.slice(-4);
 }
 
-// GET: Fetch Meta configuration for website
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -95,7 +93,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST or PUT: Save/Upsert Meta configuration
 export async function POST(request, context) {
   return handleSaveMeta(request, context);
 }
@@ -119,7 +116,6 @@ async function handleSaveMeta(request, context) {
       is_active
     } = body;
 
-    // Load existing record to preserve masked secrets if passed back unchanged
     const existing = await queryDb(
       `SELECT meta_app_secret, meta_page_access_token FROM website_meta WHERE website_id = $1 LIMIT 1`,
       [auth.website.id]
@@ -192,7 +188,6 @@ async function handleSaveMeta(request, context) {
   }
 }
 
-// DELETE: Clear Meta configuration
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

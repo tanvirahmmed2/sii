@@ -38,7 +38,6 @@ function slugify(text) {
   return base || `news-${Date.now()}`;
 }
 
-// GET: List all news articles or fetch a single article by slug
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -50,7 +49,6 @@ export async function GET(request, context) {
     const category = searchParams.get('category');
     const status = searchParams.get('status');
 
-    // Single news article by slug
     if (slug) {
       const singleRes = await queryDb(
         `SELECT 
@@ -166,7 +164,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create news article (supports demo auto-creation and server slugify)
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -180,7 +177,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'News headline title is required.' }, { status: 400 });
     }
 
-    // Auto-generate unique slug via slugify on server (hidden from frontend)
     let baseSlug = slugify(title);
     let finalSlug = baseSlug;
 
@@ -218,7 +214,6 @@ export async function POST(request, context) {
 
     const createdNews = newsResult.rows[0];
 
-    // Insert attached images if provided
     const savedImages = [];
     if (Array.isArray(body.images) && body.images.length > 0) {
       for (let i = 0; i < body.images.length; i++) {
@@ -260,7 +255,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update news article (by ID or current slug)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -291,7 +285,6 @@ export async function PUT(request, context) {
     const newsId = targetNews.id;
     let finalSlug = targetNews.slug;
 
-    // If title changed, auto-slugify
     if (title && String(title).trim() !== targetNews.title) {
       const candidateSlug = slugify(title);
       const collision = await queryDb(
@@ -325,7 +318,6 @@ export async function PUT(request, context) {
       ]
     );
 
-    // If new images provided to append
     if (Array.isArray(images) && images.length > 0) {
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
@@ -348,7 +340,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Refreshed record with images
     const fullNews = await queryDb(
       `SELECT 
         n.id, n.website_id, n.title, n.slug, n.summary, n.content, n.category, n.published_date, n.is_published, n.created_at, n.updated_at,
@@ -385,7 +376,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete news article
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -402,7 +392,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'News article ID or slug required for deletion.' }, { status: 400 });
     }
 
-    // Collect image IDs for Cloudinary cleanup before deleting records
     let imageRecords = [];
     if (id) {
       const imgRes = await queryDb(
@@ -437,7 +426,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'News article not found or already deleted.' }, { status: 404 });
     }
 
-    // Clean up images from Cloudinary
     for (const record of imageRecords) {
       if (record.image_id) {
         await deleteImage(record.image_id).catch(() => {});

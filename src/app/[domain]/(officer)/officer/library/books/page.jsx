@@ -12,33 +12,27 @@ export default function OfficerLibraryBooksPage() {
   const [shelves, setShelves] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedShelf, setSelectedShelf] = useState('');
   const [selectedAvailability, setSelectedAvailability] = useState('all');
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Modals
   const [bookModalOpen, setBookModalOpen] = useState(false);
-  const [bookModalMode, setBookModalMode] = useState('add'); // 'add' | 'edit'
+  const [bookModalMode, setBookModalMode] = useState('add'); 
   const [currentBook, setCurrentBook] = useState(null);
   const [bookForm, setBookForm] = useState({});
 
-  // Quick Stock / Availability Modal
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [stockBook, setStockBook] = useState(null);
   const [stockForm, setStockForm] = useState({ total_copies: 1, available_copies: 1, is_available: true });
 
-  // Delete Modal
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch dropdown lookup options
   const loadLookups = useCallback(async () => {
     try {
       const [catRes, wriRes, pubRes, shelfRes] = await Promise.all([
@@ -248,7 +242,6 @@ export default function OfficerLibraryBooksPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-2 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
@@ -273,7 +266,6 @@ export default function OfficerLibraryBooksPage() {
         </button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -324,7 +316,6 @@ export default function OfficerLibraryBooksPage() {
         </div>
       </div>
 
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-2.5 rounded text-xs flex items-center justify-between border ${
@@ -343,7 +334,6 @@ export default function OfficerLibraryBooksPage() {
         </div>
       )}
 
-      {/* Toolbar & Filter Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           <div className="flex-1 max-w-sm">
@@ -402,7 +392,6 @@ export default function OfficerLibraryBooksPage() {
           </div>
         </div>
 
-        {/* Books Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -504,7 +493,6 @@ export default function OfficerLibraryBooksPage() {
           </table>
         </div>
 
-        {/* Pagination Footer */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing {totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{' '}
@@ -542,7 +530,6 @@ export default function OfficerLibraryBooksPage() {
         </div>
       </div>
 
-      {/* Add / Edit Book Modal */}
       {bookModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-lg w-full p-4 shadow-xl space-y-3">
@@ -766,7 +753,6 @@ export default function OfficerLibraryBooksPage() {
         </div>
       )}
 
-      {/* Stock Adjustment Modal */}
       {stockModalOpen && stockBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">
@@ -832,7 +818,6 @@ export default function OfficerLibraryBooksPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-xl space-y-3">

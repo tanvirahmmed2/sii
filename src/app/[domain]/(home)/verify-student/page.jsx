@@ -45,7 +45,6 @@ export default function VerifyStudentPage() {
     <div className="w-full min-h-[75vh] py-10 md:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors overflow-hidden">
       <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -66,7 +65,6 @@ export default function VerifyStudentPage() {
           </p>
         </motion.div>
 
-        {/* Search Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -105,7 +103,6 @@ export default function VerifyStudentPage() {
           </form>
         </motion.div>
 
-        {/* Verification Result Display */}
         {searched && (
           <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs">
             {student ? (
@@ -124,7 +121,6 @@ export default function VerifyStudentPage() {
 
                 <div className="flex flex-col sm:flex-row gap-6 items-start">
                   {student.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={student.image}
                       alt={student.name || 'Student photo'}

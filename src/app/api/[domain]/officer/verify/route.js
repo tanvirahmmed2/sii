@@ -9,7 +9,6 @@ import {
   ensureOfficerSchema,
 } from 'src/lib/middleware/officer.js';
 
-// POST: Validate verification token and return officer details
 export async function POST(request, context) {
   try {
     await ensureOfficerSchema().catch(() => {});
@@ -91,7 +90,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Finalize account setup with permanent password and profile details
 export async function PUT(request, context) {
   try {
     await ensureOfficerSchema().catch(() => {});
@@ -169,7 +167,6 @@ export async function PUT(request, context) {
       [hashedPassword, address?.trim() || null, phone?.trim() || null, website.id, officer.id]
     );
 
-    // Automatically create session and authenticate
     const sessionToken = generateToken({
       id: officer.id,
       email: officer.email,

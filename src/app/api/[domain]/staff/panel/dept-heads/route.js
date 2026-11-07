@@ -27,7 +27,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// Helper to retrieve a single fully joined department head record
 async function getJoinedDeptHead(id, websiteId) {
   const res = await queryDb(
     `SELECT dh.*,
@@ -45,7 +44,6 @@ async function getJoinedDeptHead(id, websiteId) {
   return res.rows[0] || null;
 }
 
-// GET: List department heads, available departments, and available teachers
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -98,7 +96,6 @@ export async function GET(request, context) {
 
     query += ` ORDER BY dh.order_no ASC, d.name ASC, dh.id ASC`;
 
-    // Fetch heads, departments, and teachers concurrently
     const [deptHeadsRes, departmentsRes, teachersRes] = await Promise.all([
       queryDb(query, params),
       queryDb(
@@ -142,7 +139,6 @@ export async function GET(request, context) {
   }
 }
 
-// Helper to parse multipart/form-data or json
 async function parseDeptHeadRequest(request) {
   const contentType = request.headers.get('content-type') || '';
   let body = {};
@@ -166,7 +162,6 @@ async function parseDeptHeadRequest(request) {
   return { body, imageFile };
 }
 
-// POST: Create or assign a department head
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -199,7 +194,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Department head name is required.' }, { status: 400 });
     }
 
-    // Verify department belongs to this website
     const deptCheck = await queryDb(
       `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2`,
       [department_id, auth.website.id]
@@ -210,7 +204,6 @@ export async function POST(request, context) {
 
     const staffId = auth.staffSession?.staff_id || auth.staffSession?.id || null;
 
-    // STEP 1: CREATE OR UPSERT DEPARTMENT HEAD IN DATABASE FIRST
     const result = await queryDb(
       `INSERT INTO website_dept_heads (
         website_id, department_id, teacher_id, name, title, designation,
@@ -255,7 +248,6 @@ export async function POST(request, context) {
 
     const createdRecordId = result.rows[0].id;
 
-    // STEP 2: ONLY AFTER TABLE ROW EXISTS, UPLOAD IMAGE TO CLOUDINARY & SAVE URL
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/dept_heads`);
@@ -285,7 +277,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing department head
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -327,7 +318,6 @@ export async function PUT(request, context) {
 
     const existing = checkRes.rows[0];
 
-    // If department_id is changing, ensure new department is valid and doesn't belong to another head
     const targetDeptId = department_id !== undefined ? department_id : existing.department_id;
     if (String(targetDeptId) !== String(existing.department_id)) {
       const deptCheck = await queryDb(
@@ -350,7 +340,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // If image is being replaced by URL, clean up old image if different
     if (image_id !== undefined && existing.image_id && existing.image_id !== image_id && !imageFile) {
       deleteImage(existing.image_id).catch(() => null);
     }
@@ -369,7 +358,6 @@ export async function PUT(request, context) {
     const updatedIsActive = is_active !== undefined ? Boolean(is_active) : existing.is_active;
     const updatedTeacherId = teacher_id !== undefined ? (teacher_id || null) : existing.teacher_id;
 
-    // STEP 1: UPDATE DEPARTMENT HEAD IN DATABASE FIRST
     await queryDb(
       `UPDATE website_dept_heads
        SET department_id = $1,
@@ -408,7 +396,6 @@ export async function PUT(request, context) {
       ]
     );
 
-    // STEP 2: IF NEW FILE PROVIDED, UPLOAD TO CLOUDINARY & UPDATE TABLE ROW
     if (imageFile) {
       try {
         const uploadRes = await uploadImage(imageFile, `school/${auth.website.id}/dept_heads`);
@@ -441,7 +428,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a department head
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -453,7 +439,6 @@ export async function DELETE(request, context) {
     let id = searchParams.get('id');
     let departmentId = searchParams.get('department_id');
 
-    // Also support JSON body if params are not in the URL
     if (!id && !departmentId) {
       const body = await request.json().catch(() => ({}));
       id = body.id;

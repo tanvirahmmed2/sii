@@ -18,7 +18,6 @@ import {
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to avoid SSR hydration issues
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -31,35 +30,28 @@ const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor
 export default function InstitutionalMissionsPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, inactive
+  const [statusFilter, setStatusFilter] = useState('all'); 
 
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [modalMode, setModalMode] = useState('create'); 
   const [editingMission, setEditingMission] = useState(null);
 
-  // Delete modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
 
-  // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formOrderNo, setFormOrderNo] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/missions'), [getApiEndpoint]);
 
-  // Fetch Missions
   const fetchMissions = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
@@ -106,7 +98,6 @@ export default function InstitutionalMissionsPage() {
     };
   }, [apiEndpoint]);
 
-  // Open Create Modal
   const openCreateModal = () => {
     setModalMode('create');
     setEditingMission(null);
@@ -117,7 +108,6 @@ export default function InstitutionalMissionsPage() {
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal
   const openEditModal = (item) => {
     setModalMode('edit');
     setEditingMission(item);
@@ -128,7 +118,6 @@ export default function InstitutionalMissionsPage() {
     setIsModalOpen(true);
   };
 
-  // Submit (Create or Update)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -178,7 +167,6 @@ export default function InstitutionalMissionsPage() {
     }
   };
 
-  // Toggle active status
   const handleToggleStatus = async (item) => {
     try {
       const res = await axios.put(apiEndpoint, {
@@ -198,7 +186,6 @@ export default function InstitutionalMissionsPage() {
     }
   };
 
-  // Delete Mission
   const handleConfirmDelete = async () => {
     if (!missionToDelete) return;
 
@@ -222,7 +209,6 @@ export default function InstitutionalMissionsPage() {
     }
   };
 
-  // Filtered List
   const filteredMissions = useMemo(() => {
     return missions.filter((item) => {
       if (statusFilter === 'active' && !item.is_active) return false;
@@ -241,7 +227,6 @@ export default function InstitutionalMissionsPage() {
 
   return (
     <div className="w-full space-y-4">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
           <div>
             <div className="flex items-center gap-2">
@@ -284,7 +269,6 @@ export default function InstitutionalMissionsPage() {
           </div>
         </div>
 
-        {/* Filter & Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="sm:col-span-8 relative">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -319,7 +303,6 @@ export default function InstitutionalMissionsPage() {
           </div>
         </div>
 
-        {/* Content Table */}
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-16 flex flex-col items-center justify-center gap-3">
             <Loader />
@@ -448,7 +431,6 @@ export default function InstitutionalMissionsPage() {
           </div>
         )}
 
-        {/* Modal: Create / Edit Record */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl my-6">
@@ -574,7 +556,6 @@ export default function InstitutionalMissionsPage() {
           </div>
         )}
 
-        {/* Delete Confirmation Modal */}
         {deleteConfirmOpen && missionToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">

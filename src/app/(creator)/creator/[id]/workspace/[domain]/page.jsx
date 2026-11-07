@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -49,7 +48,6 @@ export default function WebsiteManagePage() {
   const creatorId = routeParams?.id || contextCreatorId;
   const domainParam = routeParams?.domain;
 
-  // Active Tab: 'domains' | 'staffs' | 'general' | 'branding' | 'portals' | 'danger'
   const [activeTab, setActiveTab] = useState('domains');
 
   const [baseDomain, setBaseDomain] = useState(
@@ -60,7 +58,6 @@ export default function WebsiteManagePage() {
   const [loadError, setLoadError] = useState('');
   const [website, setWebsite] = useState(null);
 
-  // Form Fields
   const [name, setName] = useState('');
   const [institutionType, setInstitutionType] = useState('school');
   const [eeinNumber, setEeinNumber] = useState('');
@@ -90,7 +87,6 @@ export default function WebsiteManagePage() {
     'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
   );
 
-  // Brand Asset Upload states
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState('');
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -103,22 +99,18 @@ export default function WebsiteManagePage() {
   const logoInputRef = useRef(null);
   const faviconInputRef = useRef(null);
 
-  // Subdomain Management
   const [subdomain, setSubdomain] = useState('');
   const [subdomainStatus, setSubdomainStatus] = useState({ state: 'idle', message: '' });
 
-  // Custom Domain Management
   const [customDomainInput, setCustomDomainInput] = useState('');
   const [customDomainStatus, setCustomDomainStatus] = useState({ state: 'idle', message: '' });
   const [verifyingDns, setVerifyingDns] = useState(false);
 
-  // Save / Action states
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Staffs & Permissions Management
   const [staffsList, setStaffsList] = useState([]);
   const [modulesList, setModulesList] = useState([]);
   const [payScalesList, setPayScalesList] = useState([]);
@@ -126,20 +118,18 @@ export default function WebsiteManagePage() {
   const [staffActionMsg, setStaffActionMsg] = useState({ type: '', text: '' });
   const [resendingStaffId, setResendingStaffId] = useState(null);
 
-  // Staff Modals
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [showEditPermsModal, setShowEditPermsModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [targetStaff, setTargetStaff] = useState(null);
 
-  // Staff Forms
   const [staffForm, setStaffForm] = useState({
     name: '',
     email: '',
     number: '',
     address: '',
     password: '',
-    passwordMode: 'invite', // 'invite' | 'manual'
+    passwordMode: 'invite', 
     gradeId: '',
     bio: '',
     sendInvite: true,
@@ -147,11 +137,9 @@ export default function WebsiteManagePage() {
   });
   const [submittingStaff, setSubmittingStaff] = useState(false);
 
-  // Edit Permissions Form
   const [editPermsMap, setEditPermsMap] = useState({});
   const [savingPerms, setSavingPerms] = useState(false);
 
-  // Edit Profile Form
   const [editProfileForm, setEditProfileForm] = useState({
     name: '',
     email: '',
@@ -162,7 +150,6 @@ export default function WebsiteManagePage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Fetch Staffs
   const fetchStaffs = useCallback(async (siteId) => {
     if (!siteId) return;
     try {
@@ -175,13 +162,11 @@ export default function WebsiteManagePage() {
         setPayScalesList(data.payScales || []);
       }
     } catch {
-      // Non-fatal
     } finally {
       setLoadingStaffs(false);
     }
   }, [creatorId]);
 
-  // Fetch Website Data
   const fetchWebsite = useCallback(async () => {
     if (!creatorId || !domainParam) return;
     try {
@@ -224,17 +209,14 @@ export default function WebsiteManagePage() {
             'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
         );
 
-        // Subdomain
         let cleanSub = w.subdomain || w.slug || '';
         if (cleanSub.includes('.')) {
           cleanSub = cleanSub.split('.')[0];
         }
         setSubdomain(cleanSub);
 
-        // Custom Domain
         setCustomDomainInput(w.custom_domain || '');
 
-        // Fetch staff members
         fetchStaffs(w.id);
       } else {
         setLoadError(data.error || 'Website not found or access denied.');
@@ -250,7 +232,6 @@ export default function WebsiteManagePage() {
     fetchWebsite();
   }, [fetchWebsite]);
 
-  // Real-time Subdomain Availability Checker
   useEffect(() => {
     if (!website) return;
     const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
@@ -293,7 +274,6 @@ export default function WebsiteManagePage() {
     return () => clearTimeout(timer);
   }, [subdomain, website, baseDomain]);
 
-  // Real-time Custom Domain Availability Checker
   useEffect(() => {
     if (!website) return;
     const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -335,10 +315,6 @@ export default function WebsiteManagePage() {
 
     return () => clearTimeout(timer);
   }, [customDomainInput, website]);
-
-  // ---------------------------------------------------------------------------
-  // BRAND ASSETS (LOGO & FAVICON) WITH CLOUDINARY
-  // ---------------------------------------------------------------------------
 
   const handleLogoFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -504,10 +480,6 @@ export default function WebsiteManagePage() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // MAIN SAVE HANDLER
-  // ---------------------------------------------------------------------------
-
   const handleSave = async (e) => {
     if (e) e.preventDefault();
     if (!website) return;
@@ -623,10 +595,6 @@ export default function WebsiteManagePage() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // CUSTOM DOMAIN ACTIONS
-  // ---------------------------------------------------------------------------
-
   const handleConnectCustomDomain = async (e) => {
     e.preventDefault();
     const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -715,10 +683,6 @@ export default function WebsiteManagePage() {
       setSaveError('Failed to disconnect custom domain.');
     }
   };
-
-  // ---------------------------------------------------------------------------
-  // STAFF ACTIONS
-  // ---------------------------------------------------------------------------
 
   const handleAddStaff = async (e) => {
     e.preventDefault();
@@ -954,7 +918,6 @@ export default function WebsiteManagePage() {
     }
   };
 
-  // Delete Website
   const handleDeleteWebsite = async () => {
     if (!confirm(`Are you sure you want to permanently delete "${website.name}"? All student data, notices, and records will be deleted. This cannot be undone.`)) {
       return;
@@ -1004,14 +967,15 @@ export default function WebsiteManagePage() {
   }
 
   const cleanSub = (website.subdomain || website.slug || '').split('.')[0];
+  const isDevHost = baseDomain.includes('localhost') || baseDomain.includes('127.0.0.1') || /^\d+\.\d+\.\d+\.\d+/.test(baseDomain) || baseDomain.includes(':');
+  const tenantProto = isDevHost ? 'http' : 'https';
   const liveUrl = website.custom_domain && website.custom_domain_verified
     ? `https://${website.custom_domain}`
-    : `https://${cleanSub}.${baseDomain}`;
+    : `${tenantProto}://${cleanSub}.${baseDomain}`;
   const localPreviewPath = `/${cleanSub}`;
 
   return (
     <div className="w-full space-y-4 text-slate-800 text-xs pb-16">
-      {/* Top Header & Global Actions Bar */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs">
@@ -1063,7 +1027,6 @@ export default function WebsiteManagePage() {
         </div>
       </div>
 
-      {/* Global Notifications */}
       {saveSuccess && (
         <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between">
           <span>{saveSuccess}</span>
@@ -1082,7 +1045,6 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* Navigation Tabs (Zero Icons, Strict Style Guide) */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'domains', label: 'Domains & DNS' },
@@ -1110,12 +1072,8 @@ export default function WebsiteManagePage() {
         ))}
       </div>
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 1: DOMAINS & CUSTOM DOMAIN                                        */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'domains' && (
         <div className="space-y-4">
-          {/* Subdomain Card */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
@@ -1161,18 +1119,17 @@ export default function WebsiteManagePage() {
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-slate-600 flex items-center justify-between">
                 <span className="text-[11px]">Direct Address:</span>
                 <a
-                  href={`https://${cleanSub}.${baseDomain}`}
+                  href={`${tenantProto}://${cleanSub}.${baseDomain}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-xs text-slate-900 hover:underline font-medium"
                 >
-                  https://{cleanSub}.{baseDomain}
+                  {tenantProto}://{cleanSub}.{baseDomain}
                 </a>
               </div>
             </div>
           </div>
 
-          {/* Custom Domain Card */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
@@ -1274,12 +1231,8 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 2: STAFF MEMBERS & PERMISSIONS                                    */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'staffs' && (
         <div className="space-y-4">
-          {/* Action notification banner */}
           {staffActionMsg.text && (
             <div
               className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
@@ -1299,7 +1252,6 @@ export default function WebsiteManagePage() {
             </div>
           )}
 
-          {/* Section Header */}
           <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">
@@ -1329,7 +1281,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* KPI Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white border border-slate-200 rounded p-3">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">Total Staff</span>
@@ -1359,7 +1310,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* Staff Roster Table */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="text-sm font-semibold text-slate-900">Institutional Staff Roster</h3>
@@ -1528,7 +1478,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* ADD STAFF MODAL */}
           {showAddStaffModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
               <div className="bg-white rounded border border-slate-200 max-w-2xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
@@ -1653,7 +1602,6 @@ export default function WebsiteManagePage() {
                     </div>
                   </div>
 
-                  {/* Module Permissions Matrix */}
                   <div className="space-y-2 border-t border-slate-100 pt-2">
                     <div className="flex items-center justify-between">
                       <label className="block text-xs font-semibold text-slate-900">
@@ -1796,7 +1744,6 @@ export default function WebsiteManagePage() {
             </div>
           )}
 
-          {/* EDIT PERMISSIONS MODAL */}
           {showEditPermsModal && targetStaff && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
               <div className="bg-white rounded border border-slate-200 max-w-xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
@@ -1940,7 +1887,6 @@ export default function WebsiteManagePage() {
             </div>
           )}
 
-          {/* EDIT PROFILE MODAL */}
           {showEditProfileModal && targetStaff && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
               <div className="bg-white rounded border border-slate-200 max-w-md w-full p-4 space-y-3 shadow-md">
@@ -2043,12 +1989,8 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 3: INSTITUTIONAL PROFILE (WITH CLOUDINARY LOGO & FAVICON)        */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'general' && (
         <div className="space-y-4">
-          {/* Notification for logo/favicon action */}
           {brandingMsg.text && (
             <div
               className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
@@ -2068,7 +2010,6 @@ export default function WebsiteManagePage() {
             </div>
           )}
 
-          {/* CARD 1: BRAND ASSETS (LOGO & FAVICON VIA CLOUDINARY) */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">Brand Identity Assets (Logo & Favicon)</h2>
@@ -2078,7 +2019,6 @@ export default function WebsiteManagePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* LOGO MANAGER */}
               <div className="border border-slate-200 rounded p-3 space-y-3 bg-white">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-900">Official Institution Logo</span>
@@ -2090,10 +2030,8 @@ export default function WebsiteManagePage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  {/* Current / Preview Box */}
                   <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded flex items-center justify-center p-1.5 shrink-0 overflow-hidden">
                     {logoPreview || logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={logoPreview || logo}
                         alt="Institution Logo"
@@ -2159,7 +2097,6 @@ export default function WebsiteManagePage() {
                 </div>
               </div>
 
-              {/* FAVICON MANAGER */}
               <div className="border border-slate-200 rounded p-3 space-y-3 bg-white">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-900">Website Favicon</span>
@@ -2171,10 +2108,8 @@ export default function WebsiteManagePage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  {/* Current / Preview Box */}
                   <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded flex items-center justify-center p-1 shrink-0 overflow-hidden">
                     {faviconPreview || favicon ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={faviconPreview || favicon}
                         alt="Favicon"
@@ -2242,7 +2177,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* CARD 2: INSTITUTION GENERAL INFORMATION */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">Institutional Identity & Contact Information</h2>
@@ -2356,7 +2290,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* CARD 3: MISSION, VISION & HISTORY */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">Statements & Institutional Narrative</h2>
@@ -2399,7 +2332,6 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-          {/* CARD 4: SOCIAL MEDIA CHANNELS */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">Official Social Media Links</h2>
@@ -2477,9 +2409,6 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 4: APPEARANCE & THEMES                                            */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'branding' && (
         <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
           <div className="border-b border-slate-100 pb-2">
@@ -2488,7 +2417,6 @@ export default function WebsiteManagePage() {
           </div>
 
           <div className="space-y-4 max-w-xl">
-            {/* Primary Color */}
             <div className="space-y-2">
               <label className="block text-xs font-medium text-slate-700">Primary Brand Accent</label>
               <div className="flex flex-wrap items-center gap-2">
@@ -2520,7 +2448,6 @@ export default function WebsiteManagePage() {
               </div>
             </div>
 
-            {/* Secondary Color */}
             <div className="space-y-2">
               <label className="block text-xs font-medium text-slate-700">Secondary Brand Accent</label>
               <div className="flex flex-wrap items-center gap-2">
@@ -2552,7 +2479,6 @@ export default function WebsiteManagePage() {
               </div>
             </div>
 
-            {/* Theme Selector */}
             <div className="space-y-1">
               <label className="block text-xs font-medium text-slate-700 mb-1">Theme Layout Mode</label>
               <select
@@ -2581,9 +2507,6 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 5: DIRECT PORTALS                                                 */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'portals' && (
         <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
           <div className="border-b border-slate-100 pb-2">
@@ -2649,9 +2572,6 @@ export default function WebsiteManagePage() {
         </div>
       )}
 
-      {/* --------------------------------------------------------------------- */}
-      {/* TAB 6: DANGER ZONE                                                    */}
-      {/* --------------------------------------------------------------------- */}
       {activeTab === 'danger' && (
         <div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">

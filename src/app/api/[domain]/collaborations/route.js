@@ -23,7 +23,6 @@ export async function GET(request, context) {
       );
       collaborations = res.rows || [];
     } catch {
-      // Table may not exist yet; return empty array gracefully
       collaborations = [];
     }
 

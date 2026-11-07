@@ -17,10 +17,8 @@ function StudentSetupContent() {
   const [tokenInput, setTokenInput] = useState(urlToken);
   const [activeToken, setActiveToken] = useState(urlToken);
 
-  // Stepper: 1: Email OTP, 2: Password Setup, 3: Personal Info, 4: Guardian Info, 5: Address
   const [step, setStep] = useState(1);
 
-  // Email verification state (Step 1)
   const [emailInput, setEmailInput] = useState(urlEmail);
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -28,18 +26,15 @@ function StudentSetupContent() {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
-  // Loading & Saving states
   const [submittingStep, setSubmittingStep] = useState(false);
   const [studentData, setStudentData] = useState(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [configuredFields, setConfiguredFields] = useState([]);
   const [dynamicValues, setDynamicValues] = useState({});
 
-  // Step 2: Password
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Step 3: Personal Info
   const [name, setName] = useState('');
   const [email, setEmail] = useState(urlEmail);
   const [number, setNumber] = useState('');
@@ -48,7 +43,6 @@ function StudentSetupContent() {
   const [dob, setDob] = useState('');
   const [religion, setReligion] = useState('Islam');
 
-  // Step 4: Guardian Info
   const [fatherName, setFatherName] = useState('');
   const [fatherPhone, setFatherPhone] = useState('');
   const [fatherNid, setFatherNid] = useState('');
@@ -65,7 +59,6 @@ function StudentSetupContent() {
   const [guardianEmail, setGuardianEmail] = useState('');
   const [guardianAddress, setGuardianAddress] = useState('');
 
-  // Step 5: Address Info & Media
   const [presentAddress, setPresentAddress] = useState('');
   const [permanentAddress, setPermanentAddress] = useState('');
   const [city, setCity] = useState('');
@@ -76,7 +69,6 @@ function StudentSetupContent() {
   const [imageUrl, setImageUrl] = useState('');
   const [signatureUrl, setSignatureUrl] = useState('');
 
-  // Auto-fetch if token provided in URL
   useEffect(() => {
     if (!activeToken) return;
 
@@ -138,7 +130,6 @@ function StudentSetupContent() {
     setDynamicValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
-  // STEP 1: Dispatch OTP Code via Brevo
   const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!emailInput.trim()) {
@@ -177,7 +168,6 @@ function StudentSetupContent() {
     }
   };
 
-  // STEP 1: Verify OTP Code
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (!otpCode.trim()) {
@@ -246,7 +236,6 @@ function StudentSetupContent() {
     }
   };
 
-  // STEP 2: Password setup
   const handleStep2Password = async (e) => {
     e.preventDefault();
     if (!password || password.length < 6) {
@@ -285,7 +274,6 @@ function StudentSetupContent() {
     }
   };
 
-  // STEP 3: Personal Information
   const handleStep3Personal = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -326,7 +314,6 @@ function StudentSetupContent() {
     }
   };
 
-  // STEP 4: Guardian Information
   const handleStep4Guardian = async (e) => {
     e.preventDefault();
     if (!fatherName.trim() && !motherName.trim() && !guardianName.trim()) {
@@ -374,7 +361,6 @@ function StudentSetupContent() {
     }
   };
 
-  // STEP 5: Address Information & Finalization
   const handleStep5Address = async (e) => {
     e.preventDefault();
     if (!presentAddress.trim()) {
@@ -499,7 +485,6 @@ function StudentSetupContent() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 sm:p-6 lg:p-8 space-y-4">
-      {/* Page Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -519,7 +504,6 @@ function StudentSetupContent() {
         </div>
       </div>
 
-      {/* Stepper Navigation */}
       {!submittedSuccess && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3">
           <div className="grid grid-cols-5 gap-2 text-center text-xs">
@@ -554,7 +538,6 @@ function StudentSetupContent() {
         </div>
       )}
 
-      {/* SUCCESS COMPLETION VIEW */}
       {submittedSuccess && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 space-y-4">
           <div className="space-y-1">
@@ -592,7 +575,6 @@ function StudentSetupContent() {
         </div>
       )}
 
-      {/* STEP 1: EMAIL OTP VERIFICATION */}
       {!submittedSuccess && step === 1 && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -675,7 +657,6 @@ function StudentSetupContent() {
         </div>
       )}
 
-      {/* STEP 2: PASSWORD SETUP */}
       {!submittedSuccess && step === 2 && (
         <form onSubmit={handleStep2Password} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center justify-between">
@@ -734,7 +715,6 @@ function StudentSetupContent() {
         </form>
       )}
 
-      {/* STEP 3: PERSONAL INFORMATION */}
       {!submittedSuccess && step === 3 && (
         <form onSubmit={handleStep3Personal} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -829,7 +809,6 @@ function StudentSetupContent() {
             </div>
           </div>
 
-          {/* Dynamic Scoped Fields */}
           {renderDynamicFieldsForScope('info')}
 
           <div className="flex items-center justify-between pt-2">
@@ -851,7 +830,6 @@ function StudentSetupContent() {
         </form>
       )}
 
-      {/* STEP 4: GUARDIAN INFORMATION */}
       {!submittedSuccess && step === 4 && (
         <form onSubmit={handleStep4Guardian} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -946,7 +924,6 @@ function StudentSetupContent() {
             </div>
           </div>
 
-          {/* Dynamic Scoped Fields */}
           {renderDynamicFieldsForScope('guardians')}
 
           <div className="flex items-center justify-between pt-2">
@@ -968,7 +945,6 @@ function StudentSetupContent() {
         </form>
       )}
 
-      {/* STEP 5: ADDRESS INFORMATION */}
       {!submittedSuccess && step === 5 && (
         <form onSubmit={handleStep5Address} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -1050,7 +1026,6 @@ function StudentSetupContent() {
             </div>
           </div>
 
-          {/* Dynamic Scoped Fields */}
           {renderDynamicFieldsForScope('addresses')}
 
           <div className="flex items-center justify-between pt-2">

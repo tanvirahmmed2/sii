@@ -23,7 +23,6 @@ function CreatorVerifyContent() {
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
 
-  // Auto-verify if token & email are provided in URL
   useEffect(() => {
     if (!tokenParam || !emailParam) return;
 
@@ -68,7 +67,6 @@ function CreatorVerifyContent() {
     };
   }, [tokenParam, emailParam]);
 
-  // Manual verification handler
   const handleManualVerify = async (e) => {
     e.preventDefault();
     if (!emailInput || !codeInput) {
@@ -105,7 +103,6 @@ function CreatorVerifyContent() {
     }
   };
 
-  // Resend verification code handler
   const handleResend = async () => {
     const targetEmail = emailInput || emailParam;
     if (!targetEmail) {
@@ -166,7 +163,6 @@ function CreatorVerifyContent() {
       }}
     >
       <div className="w-full p-5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
-        {/* State 1: Auto-verifying from URL */}
         {verifyingAuto && (
           <div className="text-center space-y-2 py-6">
             <div className="text-xs uppercase tracking-wider text-secondary font-medium">Validating Token</div>
@@ -177,7 +173,6 @@ function CreatorVerifyContent() {
           </div>
         )}
 
-        {/* State 2: Verified Successfully */}
         {!verifyingAuto && success && (
           <div className="space-y-4 py-2">
             <div className="space-y-1">
@@ -210,7 +205,6 @@ function CreatorVerifyContent() {
           </div>
         )}
 
-        {/* State 3: Manual Code Entry */}
         {!verifyingAuto && !success && (
           <div className="space-y-4">
             <div className="space-y-1">
@@ -244,8 +238,7 @@ function CreatorVerifyContent() {
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="creator@example.com"
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-secondary"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                 />
               </div>
 
@@ -259,8 +252,7 @@ function CreatorVerifyContent() {
                   maxLength={6}
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
-                  className="w-full text-center tracking-[8px] font-mono text-xl font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-slate-900 dark:text-white placeholder-slate-300 focus:outline-none focus:border-secondary"
+                  className="w-full text-center tracking-[8px] font-mono text-xl font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                 />
               </div>
 

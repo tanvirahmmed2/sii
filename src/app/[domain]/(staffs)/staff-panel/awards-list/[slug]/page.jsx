@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +6,6 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { FiTrash2 } from 'react-icons/fi';
 
-// Dynamically import TiptapEditor to avoid SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -28,24 +25,20 @@ export default function UpdateAwardPage() {
   const [saving, setSaving] = useState(false);
   const [awardId, setAwardId] = useState(null);
 
-  // Form Fields (NO slug shown or edited in frontend)
   const [title, setTitle] = useState('');
   const [year, setYear] = useState('');
   const [issuer, setIssuer] = useState('');
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
 
-  // Single Image State (Strictly 1 image for Award)
-  const [image, setImage] = useState(null); // { image_url, image_id, caption }
+  const [image, setImage] = useState(null); 
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [removeImage, setRemoveImage] = useState(false);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
-  // Delete State
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -214,7 +207,6 @@ export default function UpdateAwardPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alerts */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
           <span>{toastMessage}</span>
@@ -226,7 +218,6 @@ export default function UpdateAwardPage() {
         </div>
       )}
 
-      {/* Top Header & Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link
           href={`/${domain}/staff-panel/awards-list`}
@@ -245,9 +236,7 @@ export default function UpdateAwardPage() {
         </button>
       </div>
 
-      {/* Main Update Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
-        {/* Header */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
           <h1 className="text-sm font-semibold text-slate-900 dark:text-white">
             Update Award
@@ -258,7 +247,6 @@ export default function UpdateAwardPage() {
         </div>
 
         <form onSubmit={handleSave} className="p-4 space-y-4">
-          {/* Main Info */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
               Award Title <span className="text-secondary">*</span>
@@ -303,7 +291,6 @@ export default function UpdateAwardPage() {
             </div>
           </div>
 
-          {/* Trophy Photograph Section (Strictly Single Image) */}
           <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -378,7 +365,6 @@ export default function UpdateAwardPage() {
             )}
           </div>
 
-          {/* Tiptap Rich Text Editor for Description */}
           <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -394,7 +380,6 @@ export default function UpdateAwardPage() {
             />
           </div>
 
-          {/* Active Status Toggle */}
           <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
@@ -408,7 +393,6 @@ export default function UpdateAwardPage() {
             </label>
           </div>
 
-          {/* Save Action Bar */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
             <Link
               href={`/${domain}/staff-panel/awards-list`}
@@ -431,7 +415,6 @@ export default function UpdateAwardPage() {
         </form>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md w-full max-w-md shadow-2xl p-5 space-y-4 animate-scale-up">

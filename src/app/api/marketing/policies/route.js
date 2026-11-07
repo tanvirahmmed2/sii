@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Public list of active policies (or single policy by slug)
-// Conforms strictly to Table 20 (policies) in psql/schema.psql
-// ============================================================================
 export async function GET(request) {
   try {
 

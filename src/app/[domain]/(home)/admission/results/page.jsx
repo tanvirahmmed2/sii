@@ -68,7 +68,6 @@ function PublicResultsContent() {
     [getApiEndpoint, apiBase, selectedCircularId]
   );
 
-  // Load circulars & initial merit list
   useEffect(() => {
     let isMounted = true;
     const applyUrl = getApiEndpoint ? getApiEndpoint('admissions/apply') : `${apiBase}/admissions/apply`;
@@ -114,7 +113,6 @@ function PublicResultsContent() {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-4xl mx-auto space-y-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -132,7 +130,6 @@ function PublicResultsContent() {
           </p>
         </motion.div>
 
-        {/* Search Toolbar */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -175,7 +172,6 @@ function PublicResultsContent() {
           </form>
         </motion.div>
 
-        {/* Individual Candidate Result Slip Card if Searched */}
         {hasSearched && (
           <div className="transition-all">
             {searchedCandidate ? (
@@ -249,7 +245,6 @@ function PublicResultsContent() {
           </div>
         )}
 
-        {/* Published Merit Ranking Table */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
           <div className="p-5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
             <h3 className="font-serif text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">

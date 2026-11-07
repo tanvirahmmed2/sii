@@ -26,7 +26,6 @@ export default function StudentFilterBar({
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
 
-  // Fetch departments, sessions, classes, sections on mount
   useEffect(() => {
     let isMounted = true;
     const loadAcademicMetadata = async () => {
@@ -51,7 +50,6 @@ export default function StudentFilterBar({
         setSections(secs);
         setSessions(sess);
 
-        // Pre-select current session if available
         const currentSes = sess.find((s) => s.is_current) || sess[0];
         if (currentSes) {
           setSelectedSession(String(currentSes.id));
@@ -69,13 +67,11 @@ export default function StudentFilterBar({
     };
   }, [getApiEndpoint]);
 
-  // Cascaded classes by selectedDepartment
   const availableClasses = classes.filter((c) => {
     if (selectedDepartment && c.department_id && String(c.department_id) !== String(selectedDepartment)) return false;
     return true;
   });
 
-  // Cascaded sections by selectedClass
   const availableSections = sections.filter(
     (s) => !selectedClass || String(s.class_id) === String(selectedClass)
   );
@@ -121,7 +117,6 @@ export default function StudentFilterBar({
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
-        {/* Department Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
             Department
@@ -145,7 +140,6 @@ export default function StudentFilterBar({
           </select>
         </div>
 
-        {/* Session Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
             Session
@@ -169,7 +163,6 @@ export default function StudentFilterBar({
           </select>
         </div>
 
-        {/* Class Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
             Class
@@ -192,7 +185,6 @@ export default function StudentFilterBar({
           </select>
         </div>
 
-        {/* Section Dropdown */}
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1">
             Section
@@ -212,10 +204,8 @@ export default function StudentFilterBar({
           </select>
         </div>
 
-        {/* Extra Filters (if any) */}
         {extraFilters && <div>{extraFilters}</div>}
 
-        {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <button
             type="submit"

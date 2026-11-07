@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useContext, useEffect, useState } from 'react';
@@ -81,7 +80,6 @@ const CampusPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
-        {/* Header */}
         <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
           <div className="flex items-center gap-2 mb-2">
             <Link
@@ -99,7 +97,6 @@ const CampusPage = () => {
           </p>
         </div>
 
-        {/* Dynamic Campus Zones from website_campus_data */}
         {!loading && campusData.length > 0 && (
           <div className="space-y-4">
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
@@ -113,7 +110,6 @@ const CampusPage = () => {
                   key={item.id || idx}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                 >
-                  {/* Photo Banner */}
                   {item.image && (
                     <div className="w-full h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden relative group">
                       <img
@@ -178,7 +174,6 @@ const CampusPage = () => {
           </div>
         )}
 
-        {/* Dynamic Infrastructure Facilities from Database */}
         {!loading && infrastructure.length > 0 && (
           <div className="space-y-4">
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
@@ -192,7 +187,6 @@ const CampusPage = () => {
                   key={fac.id || idx}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
                 >
-                  {/* Cloudinary Image Banner */}
                   {fac.image && (
                     <div className="w-full h-48 bg-slate-100 dark:bg-slate-800 overflow-hidden relative group">
                       <img
@@ -246,7 +240,6 @@ const CampusPage = () => {
           </div>
         )}
 
-        {/* Default Static Facilities fallback if neither campusData nor infrastructure exist */}
         {!loading && campusData.length === 0 && infrastructure.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {defaultFacilities.map((fac, idx) => (
@@ -268,7 +261,6 @@ const CampusPage = () => {
           </div>
         )}
 
-        {/* Map Location Section */}
         {website?.map_url && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xs">
             <h3 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">
@@ -297,7 +289,6 @@ const CampusPage = () => {
           </div>
         )}
 
-        {/* Inquiries */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
           <div>
             <h3 className="font-serif text-base sm:text-lg font-semibold text-slate-900 dark:text-white">

@@ -18,29 +18,24 @@ export default function ClubModeratorPage() {
   const [selectedClubChatMessages, setSelectedClubChatMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Moderator Assignment Form State
   const [assignedTeacherId, setAssignedTeacherId] = useState('');
   const [assigning, setAssigning] = useState(false);
 
-  // Chat Box Form State
   const [chatTitle, setChatTitle] = useState('');
   const [chatDescription, setChatDescription] = useState('');
   const [creatingChat, setCreatingChat] = useState(false);
   const [chatMessageText, setChatMessageText] = useState('');
   const [sendingMsg, setSendingMsg] = useState(false);
 
-  // Inline Add Member State (NO popup)
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [newMemberStudentId, setNewMemberStudentId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState('member');
   const [newMemberCanChat, setNewMemberCanChat] = useState(true);
   const [addingMember, setAddingMember] = useState(false);
 
-  // Inline Delete State
   const [confirmDeleteMemberId, setConfirmDeleteMemberId] = useState(null);
   const [deletingMemberId, setDeletingMemberId] = useState(null);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -104,7 +99,6 @@ export default function ClubModeratorPage() {
 
   const currentClub = clubs.find((c) => String(c.id) === String(selectedClubId));
 
-  // 1. Assign Teacher as Club Moderator
   const handleAssignModerator = async (e) => {
     e.preventDefault();
     if (!selectedClubId) {
@@ -139,7 +133,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 2. Create Chat Box for Club
   const handleCreateChatBox = async (e) => {
     e.preventDefault();
     if (!selectedClubId) return;
@@ -172,7 +165,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 3. Toggle Chat Box Status
   const handleToggleChatBox = async (newActiveStatus) => {
     if (!selectedClubId) return;
     try {
@@ -198,7 +190,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 4. Send Message from Workstation
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!chatMessageText.trim() || !selectedClubId) return;
@@ -231,7 +222,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 5. Add Member with Chat Box Access (Inline)
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedClubId || !newMemberStudentId) {
@@ -271,7 +261,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 6. Toggle Member Chat Access
   const handleToggleMemberChat = async (memberId, currentAccess) => {
     try {
       const res = await fetch(`/api/${domain}/staff/panel/clubs/moderator`, {
@@ -297,7 +286,6 @@ export default function ClubModeratorPage() {
     }
   };
 
-  // 7. Delete Member
   const handleRemoveMember = async (memberId) => {
     setDeletingMemberId(memberId);
     try {
@@ -325,7 +313,6 @@ export default function ClubModeratorPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {toastMessage && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>
@@ -339,7 +326,6 @@ export default function ClubModeratorPage() {
         </div>
       )}
 
-      {/* Top Club Selector Bar */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
         <div>
           <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -378,9 +364,7 @@ export default function ClubModeratorPage() {
         </div>
       ) : (
         <div className="w-full space-y-4">
-          {/* Section 1 & Section 2: Moderator Assignment & Chat Box Status */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Panel 1: Faculty Moderator Assignment */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -402,7 +386,6 @@ export default function ClubModeratorPage() {
                 </span>
               </div>
 
-              {/* Current Moderator Details */}
               {currentClub.moderator_name ? (
                 <div className="flex items-center gap-3 p-3 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                   {currentClub.moderator_photo ? (
@@ -436,7 +419,6 @@ export default function ClubModeratorPage() {
                 </div>
               )}
 
-              {/* Change / Reassign Form */}
               <form onSubmit={handleAssignModerator} className="space-y-3 pt-2">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -468,7 +450,6 @@ export default function ClubModeratorPage() {
               </form>
             </div>
 
-            {/* Panel 2: Club Official Chat Box */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                 <div>
@@ -493,7 +474,6 @@ export default function ClubModeratorPage() {
               </div>
 
               {!hasChat ? (
-                /* Chat not created yet - Create Box CTA */
                 <form onSubmit={handleCreateChatBox} className="space-y-3">
                   <p className="text-xs text-slate-600 dark:text-slate-400">
                     Initialize a designated chat box for <strong>{currentClub.name}</strong>. The assigned moderator teacher and approved members can communicate in real time.
@@ -533,7 +513,6 @@ export default function ClubModeratorPage() {
                   </div>
                 </form>
               ) : (
-                /* Chat is already created - Show status and toggle */
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 rounded border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                     <div>
@@ -557,7 +536,6 @@ export default function ClubModeratorPage() {
                     </button>
                   </div>
 
-                  {/* Quick message stream preview */}
                   <div className="border border-slate-200 dark:border-slate-800 rounded p-3 h-44 overflow-y-auto space-y-2 bg-slate-50 dark:bg-slate-950/40">
                     {selectedClubChatMessages.length === 0 ? (
                       <p className="text-center text-[11px] text-slate-400 pt-12">
@@ -585,7 +563,6 @@ export default function ClubModeratorPage() {
                     )}
                   </div>
 
-                  {/* Send Moderator Broadcast Form */}
                   <form onSubmit={handleSendMessage} className="flex gap-2">
                     <input
                       type="text"
@@ -607,7 +584,6 @@ export default function ClubModeratorPage() {
             </div>
           </div>
 
-          {/* Section 3: Club Members & Chat Access Permission Workstation */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
@@ -632,7 +608,6 @@ export default function ClubModeratorPage() {
               </div>
             </div>
 
-            {/* Inline Add Member Panel (NO popup) */}
             {isAddMemberOpen && (
               <div className="bg-slate-50 dark:bg-slate-800/50 border border-primary/30 rounded p-4 shadow-xs space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
@@ -721,7 +696,6 @@ export default function ClubModeratorPage() {
               </div>
             )}
 
-            {/* Member List Table */}
             <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
               <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
                 <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">

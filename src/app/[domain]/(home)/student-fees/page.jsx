@@ -64,7 +64,6 @@ const PublicMonthlyFeesPage = () => {
           </p>
         </motion.div>
 
-        {/* Tuition Rates Table Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,7 +123,6 @@ const PublicMonthlyFeesPage = () => {
           )}
         </motion.div>
 
-        {/* Academic Sections Structure */}
         <div className="space-y-6">
           <motion.h2
             initial={{ opacity: 0, y: 15 }}

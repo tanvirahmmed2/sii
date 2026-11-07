@@ -10,9 +10,8 @@ export default function StaffSettingsPage() {
   const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'experiences'
+  const [activeTab, setActiveTab] = useState('profile'); 
 
-  // Personal Profile Fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [number, setNumber] = useState('');
@@ -26,16 +25,13 @@ export default function StaffSettingsPage() {
   const [nidNumber, setNidNumber] = useState('');
   const [image, setImage] = useState('');
 
-  // Security & Password Fields
   const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Experiences List
   const [experiences, setExperiences] = useState([]);
 
-  // Fetch current staff profile
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -74,7 +70,6 @@ export default function StaffSettingsPage() {
     fetchProfile();
   }, []);
 
-  // Save changes
   const handleSaveAll = async (e) => {
     if (e) e.preventDefault();
 
@@ -145,7 +140,6 @@ export default function StaffSettingsPage() {
     }
   };
 
-  // Experience handlers
   const handleAddExperience = () => {
     setExperiences((prev) => [
       ...prev,
@@ -179,7 +173,6 @@ export default function StaffSettingsPage() {
   return (
     <div className="w-full space-y-5">
       
-      {/* Top Header Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -213,7 +206,6 @@ export default function StaffSettingsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto text-xs font-medium">
         {[
           { key: 'profile', label: 'Personal & Contact Details' },
@@ -235,10 +227,8 @@ export default function StaffSettingsPage() {
         ))}
       </div>
 
-      {/* Main Form Container */}
       <form onSubmit={handleSaveAll} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-2xs space-y-6">
 
-        {/* TAB 1: Personal Profile */}
         {activeTab === 'profile' && (
           <div className="space-y-5">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -414,7 +404,6 @@ export default function StaffSettingsPage() {
           </div>
         )}
 
-        {/* TAB 2: Security & Password */}
         {activeTab === 'security' && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -424,7 +413,6 @@ export default function StaffSettingsPage() {
               <p className="text-[11px] text-slate-500">Update your access password and configure multi-factor protection.</p>
             </div>
 
-            {/* 2FA Toggle Box */}
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
               <div className="space-y-1">
                 <span className="text-xs font-semibold text-slate-900 dark:text-white block">
@@ -446,7 +434,6 @@ export default function StaffSettingsPage() {
               </label>
             </div>
 
-            {/* Password Change Subform */}
             <div className="space-y-4 pt-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                 Change Password
@@ -497,7 +484,6 @@ export default function StaffSettingsPage() {
           </div>
         )}
 
-        {/* TAB 3: Work Experiences */}
         {activeTab === 'experiences' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -631,7 +617,6 @@ export default function StaffSettingsPage() {
           </div>
         )}
 
-        {/* Bottom Save Action Bar */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <Link
             href="/staff-panel/staff-profile"

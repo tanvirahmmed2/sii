@@ -4,30 +4,13 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword, revokeAllOfficerSessions, ensureOfficerSchema } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 function buildOfficerRecoveryUrl(website, token, request) {
-  const reqHost = request?.headers?.get?.('x-forwarded-host') || request?.headers?.get?.('host') || '';
-  const baseHost = (reqHost ? reqHost.split(',')[0].trim() : '') || 'localhost:3000';
-  const protocol = request?.headers?.get?.('x-forwarded-proto') || (baseHost.includes('localhost') ? 'http' : 'https');
-
-  const rawCustom = (website?.custom_domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  if (rawCustom) {
-    const customProto = rawCustom.includes('localhost') ? 'http' : 'https';
-    return `${customProto}://${rawCustom}/auth/access/officer/forget-password?token=${encodeURIComponent(token)}`;
-  }
-
-  const rawSub = (website?.subdomain || website?.slug || '').trim().toLowerCase();
-  const cleanSub = rawSub.includes('.') ? rawSub.split('.')[0] : rawSub;
-
-  if (baseHost.includes('localhost')) {
-    const port = baseHost.includes(':') ? `:${baseHost.split(':')[1]}` : '';
-    return `${protocol}://${cleanSub}.localhost${port}/auth/access/officer/forget-password?token=${encodeURIComponent(token)}`;
-  }
-
-  return `${protocol}://${cleanSub}.${baseHost}/auth/access/officer/forget-password?token=${encodeURIComponent(token)}`;
+  const origin = getWebsiteUrl(website, request);
+  return `${origin}/auth/access/officer/forget-password?token=${encodeURIComponent(token)}`;
 }
 
-// POST: Request password reset link
 export async function POST(request, context) {
   try {
     await ensureOfficerSchema().catch(() => {});
@@ -75,7 +58,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Rate limiting: 60-second cooldown on recovery requests
     if (officer.recovery_token_expires) {
       const remainingMs = new Date(officer.recovery_token_expires).getTime() - Date.now();
       if (remainingMs > 59 * 60 * 1000) {
@@ -135,7 +117,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Set new password using recovery token
 export async function PUT(request, context) {
   try {
     await ensureOfficerSchema().catch(() => {});

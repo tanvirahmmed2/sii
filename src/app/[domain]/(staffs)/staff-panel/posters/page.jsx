@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 
-// Helper to calculate canvas pixel dimensions directly from dimensions
 function computeExportCanvasPixels(w, h, unit) {
   let widthVal = parseFloat(w) || 1080;
   let heightVal = parseFloat(h) || 1080;
@@ -32,7 +31,6 @@ export default function StaffPostersHubPage() {
   const [exportingId, setExportingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Load posters for this institution
   const loadPosters = useCallback(async () => {
     setLoading(true);
     try {
@@ -55,7 +53,6 @@ export default function StaffPostersHubPage() {
     loadPosters();
   }, [loadPosters]);
 
-  // Filtered poster list
   const filteredPosters = useMemo(() => {
     return posters.filter((p) => {
       const matchesSearch =
@@ -71,7 +68,6 @@ export default function StaffPostersHubPage() {
     });
   }, [posters, searchQuery, orientationFilter]);
 
-  // Helper to render poster into data URL using Fabric
   const renderPosterDataUrl = async (poster) => {
     const fabricData = poster.custom_fabric_data || poster.fabric_data;
     if (!fabricData || !fabricData.objects || fabricData.objects.length === 0) {
@@ -116,7 +112,6 @@ export default function StaffPostersHubPage() {
     });
   };
 
-  // Direct Download JPEG handler
   const handleDownloadJpeg = async (poster) => {
     setExportingId(poster.id);
     const toastId = toast.loading(`Generating high-resolution JPEG for "${poster.name}"...`);
@@ -140,7 +135,6 @@ export default function StaffPostersHubPage() {
     }
   };
 
-  // Direct Download PDF handler
   const handleDownloadPdf = async (poster) => {
     setExportingId(poster.id);
     const toastId = toast.loading(`Generating print-ready PDF for "${poster.name}"...`);
@@ -184,7 +178,6 @@ export default function StaffPostersHubPage() {
     }
   };
 
-  // Delete Poster handler
   const handleDeletePoster = async (poster) => {
     if (!window.confirm(`Are you sure you want to delete "${poster.name}"? This action cannot be undone.`)) {
       return;
@@ -213,7 +206,6 @@ export default function StaffPostersHubPage() {
 
   return (
     <div className="w-full space-y-5 pb-10">
-      {/* Top Hub Header */}
       <div className="pb-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -245,7 +237,6 @@ export default function StaffPostersHubPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-800 shadow-2xs">
         <div className="w-full sm:w-72">
           <input
@@ -277,7 +268,6 @@ export default function StaffPostersHubPage() {
         </div>
       </div>
 
-      {/* Content State: Loading, Empty, or Poster Grid */}
       {loading ? (
         <div className="w-full py-16 flex flex-col items-center justify-center bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 space-y-2">
           <div className="text-xs font-medium text-slate-400 animate-pulse">
@@ -318,7 +308,6 @@ export default function StaffPostersHubPage() {
                 key={poster.id}
                 className="flex flex-col bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all overflow-hidden"
               >
-                {/* Poster Preview Window */}
                 <div className="relative w-full h-52 bg-slate-950 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-slate-800/80 group">
                   {poster.custom_html || poster.html_content ? (
                     <div
@@ -339,7 +328,6 @@ export default function StaffPostersHubPage() {
                     </div>
                   )}
 
-                  {/* Badges on top */}
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900/90 text-slate-300 border border-slate-700/80 shadow">
                       {poster.dimension_width}×{poster.dimension_height} {poster.dimension_unit}
@@ -357,7 +345,6 @@ export default function StaffPostersHubPage() {
                     </div>
                   )}
 
-                  {/* Hover Overlay Button to Studio */}
                   <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
                     <Link
                       href={`/staff-panel/posters/studio/${poster.id}`}
@@ -368,7 +355,6 @@ export default function StaffPostersHubPage() {
                   </div>
                 </div>
 
-                {/* Poster Details Body */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1" title={poster.name}>
@@ -391,10 +377,8 @@ export default function StaffPostersHubPage() {
                   </div>
                 </div>
 
-                {/* Card Action Footer */}
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    {/* Download JPEG Button */}
                     <button
                       type="button"
                       onClick={() => handleDownloadJpeg(poster)}
@@ -405,7 +389,6 @@ export default function StaffPostersHubPage() {
                       Download JPEG
                     </button>
 
-                    {/* Download PDF Button */}
                     <button
                       type="button"
                       onClick={() => handleDownloadPdf(poster)}
@@ -418,7 +401,6 @@ export default function StaffPostersHubPage() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {/* Open in Studio Link */}
                     <Link
                       href={`/staff-panel/posters/studio/${poster.id}`}
                       className="px-2.5 py-1 text-[11px] font-semibold rounded bg-sky-600 hover:bg-sky-500 text-white transition-colors cursor-pointer"
@@ -426,7 +408,6 @@ export default function StaffPostersHubPage() {
                       Studio
                     </Link>
 
-                    {/* Delete Poster Button */}
                     <button
                       type="button"
                       onClick={() => handleDeletePoster(poster)}

@@ -18,7 +18,6 @@ export default function LearnMore() {
   return (
     <section className="w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
       <div className="w-full space-y-12">
-        {/* Section Heading */}
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           
 
@@ -31,9 +30,7 @@ export default function LearnMore() {
           </p>
         </div>
 
-        {/* Feature Highlights Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Card 1 */}
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl">
               <CgIfDesign />
@@ -44,7 +41,6 @@ export default function LearnMore() {
             </p>
           </div>
 
-          {/* Card 2 */}
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl">
               <BiLayer />
@@ -55,7 +51,6 @@ export default function LearnMore() {
             </p>
           </div>
 
-          {/* Card 3 */}
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl">
               <DiDatabase className="text-3xl" />
@@ -66,7 +61,6 @@ export default function LearnMore() {
             </p>
           </div>
 
-          {/* Card 4 */}
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl">
               <BiDevices />
@@ -80,7 +74,6 @@ export default function LearnMore() {
 
      
 
-        {/* CTA Footer */}
         <div className="flex items-center justify-center gap-4 pt-4">
           <Link
             href="/about"

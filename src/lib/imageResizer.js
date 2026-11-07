@@ -1,8 +1,3 @@
-/**
- * Frontend Utility for verifying exact candidate image dimensions
- * Candidate Photo: exactly 500x500 pixels
- * Candidate Signature: exactly 150x30 pixels
- */
 
 export const validateImageDimensions = (file, reqWidth, reqHeight, label = 'Image') => {
   return new Promise((resolve, reject) => {
@@ -26,7 +21,7 @@ export const validateImageDimensions = (file, reqWidth, reqHeight, label = 'Imag
             )
           );
         } else {
-          resolve(e.target.result); // Returns original image as base64 without any canvas resizing
+          resolve(e.target.result); 
         }
       };
       img.onerror = () => reject(new Error('Invalid or corrupted image file.'));

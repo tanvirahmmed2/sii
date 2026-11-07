@@ -121,7 +121,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Verify exam exists and belongs to this website
     const examCheck = await queryDb(
       `SELECT id, class_id FROM website_exams WHERE id = $1 AND website_id = $2`,
       [exam_id, auth.website.id]

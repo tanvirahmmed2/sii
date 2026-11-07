@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
@@ -16,17 +15,14 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [applicableFilter, setApplicableFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Inline Form state (NO POPUP)
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form fields
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formLocation, setFormLocation] = useState('');
@@ -38,14 +34,12 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
   const [formIsApplicable, setFormIsApplicable] = useState(true);
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // Inline Applicants Workstation state (NO POPUP)
   const [activeEventForApplicants, setActiveEventForApplicants] = useState(null);
   const [applicants, setApplicants] = useState([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
   const [applicantSearch, setApplicantSearch] = useState('');
   const [applicantStatusFilter, setApplicantStatusFilter] = useState('all');
 
-  // Base API endpoints
   const apiEventsUrl = useMemo(() => {
     return portalType === 'officer'
       ? getApiEndpoint('officer/events')
@@ -58,7 +52,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
       : getApiEndpoint('staff/panel/events/applicants');
   }, [portalType, getApiEndpoint]);
 
-  // Image Preview URL (local blob or existing image URL)
   const imagePreview = useMemo(() => {
     if (selectedImageFile) {
       return URL.createObjectURL(selectedImageFile);
@@ -77,7 +70,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     };
   }, [imagePreview]);
 
-  // Load events
   const fetchEvents = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
@@ -118,7 +110,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     };
   }, [apiEventsUrl]);
 
-  // Open inline Create form
   const handleOpenCreateForm = () => {
     setEditingEvent(null);
     setFormTitle('');
@@ -139,7 +130,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     setActiveEventForApplicants(null);
   };
 
-  // Open inline Edit form
   const handleOpenEditForm = (event) => {
     setEditingEvent(event);
     setFormTitle(event.title || '');
@@ -156,7 +146,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     setActiveEventForApplicants(null);
   };
 
-  // Close inline form
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingEvent(null);
@@ -164,7 +153,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     setRemoveExistingImage(false);
   };
 
-  // Handle local file selection (no upload triggered)
   const handleImageFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -176,7 +164,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     setRemoveExistingImage(false);
   };
 
-  // Remove photo from current state
   const handleRemovePhoto = () => {
     setSelectedImageFile(null);
     if (editingEvent && formImage) {
@@ -184,7 +171,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Submit Event (Create or Update via Multipart Form Data)
   const handleSubmitEvent = async (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -247,7 +233,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Toggle is_applicable quickly
   const handleToggleApplicable = async (event) => {
     const nextVal = !event.is_applicable;
     try {
@@ -270,7 +255,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Toggle is_active
   const handleToggleActive = async (event) => {
     const nextVal = !event.is_active;
     try {
@@ -289,7 +273,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Delete event
   const handleDeleteEvent = async (event) => {
     if (!window.confirm(`Are you sure you want to delete "${event.title}"? All applicant registrations and event images will be permanently removed.`)) {
       return;
@@ -309,7 +292,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // View Applicants (Opens Inline Workstation, NO POPUP)
   const handleViewApplicants = async (event) => {
     setShowForm(false);
     setActiveEventForApplicants(event);
@@ -331,7 +313,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Update Applicant Status
   const handleUpdateApplicantStatus = async (applicantId, newStatus) => {
     try {
       const res = await axios.put(apiApplicantsUrl, {
@@ -349,7 +330,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Remove an Applicant
   const handleRemoveApplicant = async (applicant) => {
     if (!window.confirm(`Remove student ${applicant.student_name} from this event?`)) {
       return;
@@ -373,7 +353,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Download Applicants in Excel Sheet (.xlsx)
   const handleDownloadExcel = () => {
     if (!activeEventForApplicants) return;
     if (!applicants || applicants.length === 0) {
@@ -460,7 +439,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     }
   };
 
-  // Filtered Events
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
       const matchesSearch =
@@ -483,7 +461,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     });
   }, [events, searchTerm, applicableFilter, statusFilter]);
 
-  // Filtered Applicants
   const filteredApplicants = useMemo(() => {
     return applicants.filter((a) => {
       const matchesSearch =
@@ -501,7 +478,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
     });
   }, [applicants, applicantSearch, applicantStatusFilter]);
 
-  // KPI stats
   const stats = useMemo(() => {
     const total = events.length;
     const applicable = events.filter((e) => e.is_applicable).length;
@@ -513,7 +489,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <div className="text-primary text-[11px] font-semibold uppercase tracking-wider mb-0.5">
@@ -559,7 +534,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
           <p className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 tracking-wider">
@@ -622,9 +596,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* INLINE WORKSTATION SECTION 1: CREATE OR EDIT EVENT FORM (NO POPUP) */}
-      {/* ========================================================================= */}
       {showForm && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -647,7 +618,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
 
           <form onSubmit={handleSubmitEvent} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Event Title */}
               <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Event Title <span className="text-rose-600">*</span>
@@ -662,7 +632,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 />
               </div>
 
-              {/* Start Date & Time */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Event Date & Time <span className="text-rose-600">*</span>
@@ -676,7 +645,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 />
               </div>
 
-              {/* End Date & Time */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   End Date & Time (Optional)
@@ -689,7 +657,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 />
               </div>
 
-              {/* Location / Venue */}
               <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Venue / Location
@@ -703,7 +670,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-1 md:col-span-2">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Event Description & Guidelines
@@ -717,7 +683,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 />
               </div>
 
-              {/* Image Input (Table-first pattern like awards: held in local state, no direct upload) */}
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Event Banner / Poster Image
@@ -783,7 +748,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 </div>
               </div>
 
-              {/* is_applicable Toggle */}
               <div className="md:col-span-2 p-3 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60">
                 <label className="flex items-start gap-2.5 cursor-pointer">
                   <input
@@ -804,7 +768,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                 </label>
               </div>
 
-              {/* is_active Toggle */}
               <div className="md:col-span-2">
                 <label className="flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-200 cursor-pointer">
                   <input
@@ -818,7 +781,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
               </div>
             </div>
 
-            {/* Form Action Buttons */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -839,9 +801,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* INLINE WORKSTATION SECTION 2: APPLICANTS ROSTER & EXCEL DOWNLOAD (NO POPUP) */}
-      {/* ========================================================================= */}
       {activeEventForApplicants && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -893,7 +852,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
             </div>
           </div>
 
-          {/* Filter Bar */}
           <div className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-md flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="relative w-full sm:w-72">
               <input
@@ -923,7 +881,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
             </div>
           </div>
 
-          {/* Applicants List Table */}
           {loadingApplicants ? (
             <div className="py-12 text-center flex flex-col items-center justify-center">
               <Loader size="md" />
@@ -1038,9 +995,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* FILTER AND SEARCH BAR */}
-      {/* ========================================================================= */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         <div className="relative flex-1">
           <input
@@ -1053,7 +1007,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Applicable Filter */}
           <select
             value={applicableFilter}
             onChange={(e) => setApplicableFilter(e.target.value)}
@@ -1064,7 +1017,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
             <option value="non_applicable">Not Applicable (Info Only)</option>
           </select>
 
-          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1077,9 +1029,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* EVENTS TABLE WORKSTATION */}
-      {/* ========================================================================= */}
       {loading ? (
         <div className="min-h-56 flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md">
           <Loader size="md" />
@@ -1126,7 +1075,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                       key={event.id}
                       className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      {/* Event Details */}
                       <td className="py-3 px-3">
                         <div className="flex items-start gap-3">
                           <div className="w-12 h-12 rounded-md bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-200 dark:border-slate-700">
@@ -1158,7 +1106,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         </div>
                       </td>
 
-                      {/* Schedule & Venue */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <div className="space-y-0.5">
                           <div className="text-slate-800 dark:text-slate-200 font-medium text-xs">
@@ -1180,7 +1127,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         </div>
                       </td>
 
-                      {/* Student Application (is_applicable) */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <div className="space-y-0.5">
                           <button
@@ -1201,7 +1147,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <button
                           type="button"
@@ -1217,14 +1162,12 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         </button>
                       </td>
 
-                      {/* Interested Count */}
                       <td className="py-3 px-3 text-center whitespace-nowrap">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
                           {event.interested_count || 0}
                         </span>
                       </td>
 
-                      {/* Applicants */}
                       <td className="py-3 px-3 text-center whitespace-nowrap">
                         <button
                           type="button"
@@ -1235,7 +1178,6 @@ export default function EventsWorkstation({ portalType = 'staff' }) {
                         </button>
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1">
                           <button

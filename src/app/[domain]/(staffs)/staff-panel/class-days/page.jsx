@@ -93,7 +93,6 @@ export default function ClassDaysPage() {
     return days.reduce((sum, d) => sum + (parseInt(d.period_count, 10) || 0), 0);
   }, [days]);
   return <div className="w-full space-y-4">
-      {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Scheduled Days</p>
@@ -134,7 +133,6 @@ export default function ClassDaysPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       {successMsg && <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
           <span>{successMsg}</span>
           <span className="text-[10px] font-mono">OK</span>
@@ -144,9 +142,7 @@ export default function ClassDaysPage() {
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer">DISMISS</button>
         </div>}
 
-      {/* Workstation Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
@@ -168,7 +164,6 @@ export default function ClassDaysPage() {
           </div>
         </div>
 
-        {/* Days Table */}
         <div className="overflow-x-auto">
           {loading ? <div className="py-12 flex justify-center items-center">
               <div className="loader loader-sm" />

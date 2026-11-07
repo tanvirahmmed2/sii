@@ -58,7 +58,6 @@ export default function AuthPortalSelectionPage() {
             </div>
           </label>
 
-          {/* Administration Radio option */}
           <label
             className={`flex items-start gap-3 p-4 rounded-md border transition-colors cursor-pointer ${
               selectedRole === 'administration'
@@ -85,7 +84,6 @@ export default function AuthPortalSelectionPage() {
           </label>
         </div>
 
-        {/* Action Button */}
         {selectedRole && (
           <button
             onClick={handleNext}

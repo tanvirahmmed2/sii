@@ -36,7 +36,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
       if (!slug) return;
       try {
         setLoading(true);
-        // Try dedicated single endpoint
         const endpoint = `awards/${encodeURIComponent(slug)}`;
         const res = await fetch(getApiEndpoint(endpoint));
 
@@ -52,7 +51,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
             [];
           setRelatedAwards(related);
         } else {
-          // Fallback: fetch full list and find by slug or ID
           const listRes = await fetch(getApiEndpoint('awards'));
           if (listRes.ok) {
             const listData = await listRes.json();
@@ -160,7 +158,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-5xl mx-auto space-y-8 sm:space-y-10">
-        {/* Navigation & Breadcrumbs Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 pb-5">
           <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-nowrap">
             <Link
@@ -191,9 +188,7 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
           </Link>
         </div>
 
-        {/* Hero Showcase Card */}
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-sm overflow-hidden">
-          {/* Trophy / Certificate Visual */}
           {coverImage ? (
             <div className="relative w-full bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-900 dark:via-slate-850 dark:to-slate-950 flex flex-col items-center justify-center p-6 sm:p-10 border-b border-slate-100 dark:border-slate-800/80">
               <div
@@ -234,7 +229,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
             </div>
           )}
 
-          {/* Award Header Info */}
           <div className="p-6 sm:p-10 space-y-6">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
               <div className="space-y-3">
@@ -271,7 +265,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
                 )}
               </div>
 
-              {/* Action Buttons: Share & Print */}
               <div className="flex items-center gap-2 self-start shrink-0">
                 <button
                   type="button"
@@ -294,7 +287,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
               </div>
             </div>
 
-            {/* Citation & Detailed Description */}
             <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Award Citation &amp; Statement
@@ -312,7 +304,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
               )}
             </div>
 
-            {/* Institutional Verification Box */}
             <div className="bg-slate-50 dark:bg-slate-850/60 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
               <div>
                 <span className="text-slate-400 dark:text-slate-500 font-medium block">
@@ -351,7 +342,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
           </div>
         </div>
 
-        {/* Other / Related Institutional Awards Section */}
         {relatedAwards.length > 0 && (
           <div className="space-y-6 pt-6">
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-4">
@@ -382,7 +372,6 @@ const AwardDetailPage = ({ params: paramsPromise }) => {
         )}
       </div>
 
-      {/* Image Zoom Modal */}
       <AnimatePresence>
         {isImageZoomed && coverImage && (
           <motion.div

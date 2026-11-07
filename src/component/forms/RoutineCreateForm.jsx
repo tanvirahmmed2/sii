@@ -21,7 +21,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
   const [loadingLists, setLoadingLists] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load initial dropdown data (classes, class-subjects, days)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -58,7 +57,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
     fetchData();
   }, []);
 
-  // Fetch sections and filter class-subjects when classId changes
   useEffect(() => {
     if (!classId) {
       setSections([]);
@@ -77,7 +75,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
     };
     fetchSections();
 
-    // Filter class-subjects
     const filtered = classSubjects.filter(cs => String(cs.class_id) === String(classId));
     setFilteredClassSubjects(filtered);
     setClassSubjectId('');
@@ -146,7 +143,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-          {/* Day of Week */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Day of Week
@@ -167,7 +163,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
             </select>
           </div>
 
-          {/* Class selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiLayers className="text-slate-400" /> Class
@@ -188,7 +183,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
             </select>
           </div>
 
-          {/* Section selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiLayers className="text-slate-400" /> Section (Optional)
@@ -208,7 +202,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
             </select>
           </div>
 
-          {/* Subject selection */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiBook className="text-slate-400" /> Subject
@@ -231,7 +224,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Start Time */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Start Time *
@@ -246,7 +238,6 @@ const RoutineCreateForm = ({ initialClassId = '', initialSectionId = '', onSucce
             />
           </div>
 
-          {/* Finish Time */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
               <FiClock className="text-slate-400" /> Finish Time *

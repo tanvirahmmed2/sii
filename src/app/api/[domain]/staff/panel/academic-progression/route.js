@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load promotions, elective registrations, biometric hardware, punch logs, alumni
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -34,7 +33,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Promotions History (Recent 50)
     const promotionsRes = await queryDb(
       `SELECT p.*, s.name as student_name
        FROM website_student_promotions p
@@ -45,13 +43,11 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 2. Attendance Devices
     const devicesRes = await queryDb(
       `SELECT * FROM website_attendance_devices WHERE website_id = $1 ORDER BY created_at DESC`,
       [websiteId]
     );
 
-    // 3. Biometric Raw Logs (Recent 50)
     const punchesRes = await queryDb(
       `SELECT b.*, d.device_name
        FROM website_biometric_logs b
@@ -62,7 +58,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 4. Alumni Records
     const alumniRes = await queryDb(
       `SELECT * FROM website_alumni_records WHERE website_id = $1 ORDER BY graduation_year DESC, name ASC`,
       [websiteId]
@@ -81,7 +76,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add promotion, register biometric device, add alumni record
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -143,7 +137,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove device or alumni
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

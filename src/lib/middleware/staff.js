@@ -7,7 +7,6 @@ const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_20
 
 export const STAFF_COOKIE_NAME = STAFF_TOKEN || 'hiesci-staff';
 
-// Password helpers
 export async function hashPassword(password) {
   const salt = await bcrypt.genSalt(10);
   return bcrypt.hash(password, salt);
@@ -22,7 +21,6 @@ export async function comparePassword(password, hash) {
   }
 }
 
-// JWT helpers
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -47,7 +45,6 @@ async function getCookieStore() {
       return await nextHeaders.cookies();
     }
   } catch {
-    // Outside Next.js server runtime context
   }
   return null;
 }
@@ -58,7 +55,7 @@ export async function setStaffSessionCookie(response, token) {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -103,9 +100,6 @@ async function ensureStaffSchema() {
   } catch {}
 }
 
-/**
- * Extracts and decodes staff session from request or cookies
- */
 export async function getStaffSession(request) {
   try {
     await ensureStaffSchema().catch(() => {});
@@ -132,7 +126,6 @@ export async function getStaffSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // 1. Look up active session
     let sessRes = await queryDb(
       `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
               ws.id, ws.name, ws.email, ws.number, ws.address, ws.is_active AS staff_active,
@@ -148,7 +141,6 @@ export async function getStaffSession(request) {
       [token]
     );
 
-    // Auto-heal session if JWT is valid and staff exists in DB
     if (sessRes.rows.length === 0) {
       const staffCheck = await queryDb(
         `SELECT ws.*, w.id AS web_id, w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
@@ -183,7 +175,6 @@ export async function getStaffSession(request) {
             [token]
           );
         } catch {
-          // Non-fatal
         }
       }
     }
@@ -191,13 +182,11 @@ export async function getStaffSession(request) {
     if (sessRes.rows.length === 0) return null;
     const row = sessRes.rows[0];
 
-    // Non-blocking ping last_active_at
     queryDb(
       `UPDATE staff_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE id = $1`,
       [row.session_id]
     ).catch(() => {});
 
-    // 2. Fetch staff control module permissions (scoped to control modules available for this website's package)
     const permsRes = await queryDb(
       `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
               wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
@@ -290,28 +279,16 @@ export async function getStaffSession(request) {
   }
 }
 
-/**
- * Compatibility helper to retrieve the logged-in staff user
- */
 export async function getStaffUser(request) {
   const sessionData = await getStaffSession(request);
   return sessionData ? sessionData.staff : null;
 }
 
-/**
- * Check if the current requester is an active authenticated staff member
- */
 export async function isStaff(request) {
   const sessionData = await getStaffSession(request);
   return Boolean(sessionData && sessionData.staff && sessionData.staff.isActive);
 }
 
-/**
- * Check whether a staff member has permission for a specific module action
- * @param {Object} staffOrSession - Staff object or session
- * @param {string} moduleSlug - e.g. 'sis', 'attendance', 'fees', 'lms', etc.
- * @param {'view'|'create'|'edit'|'delete'} action
- */
 export function hasStaffModulePermission(staffOrSession, moduleSlug, action = 'view') {
   if (!staffOrSession || !moduleSlug) return false;
   const staff = staffOrSession.staff || staffOrSession;
@@ -333,9 +310,6 @@ export function hasStaffModulePermission(staffOrSession, moduleSlug, action = 'v
   }
 }
 
-/**
- * Creates an active staff session record in staff_sessions
- */
 export async function createStaffSession({ websiteId, staffId, token, request, expiresAt }) {
   try {
     let ip = null;
@@ -367,9 +341,6 @@ export async function createStaffSession({ websiteId, staffId, token, request, e
   }
 }
 
-/**
- * Revokes a single staff session token
- */
 export async function revokeStaffSession(token) {
   try {
     if (!token) return false;
@@ -381,9 +352,6 @@ export async function revokeStaffSession(token) {
   }
 }
 
-/**
- * Revokes all active sessions for a staff member
- */
 export async function revokeAllStaffSessions(staffId, websiteId = null) {
   try {
     if (!staffId) return false;
@@ -402,9 +370,6 @@ export async function revokeAllStaffSessions(staffId, websiteId = null) {
   }
 }
 
-/**
- * Specialized staff role helpers
- */
 export async function isCashier(request) {
   const staff = await getStaffUser(request);
   return Boolean(staff?.permissions?.fees?.can_view || staff?.permissions?.accounting?.can_view);
@@ -425,19 +390,6 @@ export async function isStaffRole(request) {
   return Boolean(staff && (staff.isActive || staff.is_active));
 }
 
-/**
- * Strict validator checking:
- * 1. Tenant website exists
- * 2. Tenant website package includes the requested module (tenant module allowance)
- * 3. Requester is an authenticated staff member belonging to this tenant
- * 4. Staff member has explicit permission (can_view, can_create, can_edit, can_delete)
- *
- * @param {Request} request
- * @param {Object} context
- * @param {string} moduleSlug e.g. 'sis', 'attendance', 'exams', 'hostel', 'library'
- * @param {'view'|'create'|'edit'|'delete'} action
- * @returns {Promise<{ website: object, staffSession: object, staff: object, allowed: boolean } | { error: string, status: number, code: string }>}
- */
 export async function verifyStaffModuleAccess(request, context, moduleSlug, action = 'view') {
   const { resolveWebsiteFromRequest, hasTenantModuleAllowance } = await import('./websiteResolver.js');
   const website = await resolveWebsiteFromRequest(request, context);
@@ -445,7 +397,6 @@ export async function verifyStaffModuleAccess(request, context, moduleSlug, acti
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  // 1. Verify Tenant Subscription Package Allowance
   const hasAllowance = await hasTenantModuleAllowance(website, moduleSlug);
   if (!hasAllowance) {
     return {
@@ -456,7 +407,6 @@ export async function verifyStaffModuleAccess(request, context, moduleSlug, acti
     };
   }
 
-  // 2. Verify Staff Authentication
   const staffSession = await getStaffSession(request);
   if (!staffSession) {
     return { error: 'Unauthorized: Staff authentication required.', status: 401, code: 'UNAUTHORIZED' };
@@ -472,7 +422,6 @@ export async function verifyStaffModuleAccess(request, context, moduleSlug, acti
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
   }
 
-  // 3. Verify Staff Module Permission
   const hasPerm = hasStaffModulePermission(staffSession, moduleSlug, action);
   if (!hasPerm) {
     return {

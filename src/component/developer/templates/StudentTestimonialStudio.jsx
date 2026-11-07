@@ -10,7 +10,6 @@ function computeCanvasPixels(w, h, unit) {
 
   if (unit === 'px') return { pxW: Math.round(widthVal), pxH: Math.round(heightVal) };
   if (unit === 'in') return { pxW: Math.round(widthVal * 96), pxH: Math.round(heightVal * 96) };
-  // mm: scale factor 2.85 for A4 (210x297 -> ~600x848px)
   return { pxW: Math.round(widthVal * 2.85), pxH: Math.round(heightVal * 2.85) };
 }
 
@@ -20,7 +19,7 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
   const fabricRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState('elements');
-  const [mobileView, setMobileView] = useState('canvas'); // 'canvas' | 'tools' | 'inspector'
+  const [mobileView, setMobileView] = useState('canvas'); 
   const [zoomLevel, setZoomLevel] = useState(0.85);
   const [selectedObject, setSelectedObject] = useState(null);
   const [canvasObjects, setCanvasObjects] = useState([]);
@@ -30,7 +29,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
   const [tagCategoryFilter, setTagCategoryFilter] = useState('all');
   const [tagSearchQuery, setTagSearchQuery] = useState('');
 
-  // Manual dimensions state
   const [dimWidth, setDimWidth] = useState(parseFloat(initialTemplate?.dimension_width) || 210);
   const [dimHeight, setDimHeight] = useState(parseFloat(initialTemplate?.dimension_height) || 297);
   const [dimUnit, setDimUnit] = useState(initialTemplate?.dimension_unit || 'mm');
@@ -345,7 +343,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
         </div>
       </header>
 
-      {/* Manual Dimensions Bar */}
       <div className="min-h-9 py-1 bg-slate-900/70 border-b border-slate-800/80 px-3 sm:px-4 flex items-center justify-between text-xs text-slate-400 overflow-x-auto whitespace-nowrap scrollbar-none gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-[11px] font-semibold text-slate-300">Dimensions:</span>
@@ -471,7 +468,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
                   <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block mb-1.5">
                     Database Merge Fields
                   </span>
-                  {/* Search Input */}
                   <input
                     type="text"
                     placeholder="Search student or testimonial fields..."
@@ -481,7 +477,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
                   />
                 </div>
 
-                {/* Category Pills */}
                 <div className="flex flex-wrap gap-1">
                   {DATA_CATEGORIES.map((cat) => (
                     <button
@@ -499,7 +494,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
                   ))}
                 </div>
 
-                {/* Tags List */}
                 <div className="space-y-1.5 max-h-[440px] overflow-y-auto pr-0.5">
                   {COMPREHENSIVE_TESTIMONIAL_TAGS.filter((tag) => {
                     const matchesCategory = tagCategoryFilter === 'all' || tag.category === tagCategoryFilter;
@@ -720,7 +714,6 @@ export default function StudentTestimonialStudio({ initialTemplate, onSave, onEx
         </aside>
       </div>
 
-      {/* Mobile Bottom Navigation Bar */}
       <nav className="lg:hidden h-12 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 shrink-0 z-30">
         <button
           type="button"

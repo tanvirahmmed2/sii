@@ -2,29 +2,20 @@ import crypto from 'crypto';
 import { queryDb } from './db.js';
 
 export const SUPPORTED_GATEWAYS = [
-  'bkash',
-  'nagad',
-  'stripe',
-  'paypal',
-  'sslcommerz',
-  'paddle',
-  'sonali_gateway',
-  'eps',
   'surjopay',
-  'razorpay'
+  'paypal',
+  'paddle'
 ];
 
 export const FEE_PURPOSES = [
-  { code: 'residential_fees', label: 'Residential / Hall & Hostel Fees', description: 'Seat rent, dormitory maintenance, utility and hall fees' },
+  { code: 'all_fees', label: 'All Institutional Fees (Default)', description: 'Universal routing for all student, applicant and institutional dues' },
+  { code: 'admission_fees', label: 'Admission Circular & Applicant Fees', description: 'New student admission form purchase and circular registration' },
   { code: 'education_fees', label: 'Education / Academic Tuition Fees', description: 'Monthly school/college tuition, lab fees, session charges' },
   { code: 'exam_fees', label: 'Examination & Admit Card Fees', description: 'Midterm, semester final, practical and board registration' },
-  { code: 'admission_fees', label: 'Admission Circular & Applicant Fees', description: 'New student admission form purchase and circular registration' },
+  { code: 'residential_fees', label: 'Residential / Hall & Hostel Fees', description: 'Seat rent, dormitory maintenance, utility and hall fees' },
   { code: 'other_fees', label: 'Other & Miscellaneous Institution Fees', description: 'Library fines, ID card re-issue, certificates and extra charges' }
 ];
 
-/**
- * Mask sensitive credentials for safe API return
- */
 export function maskSecretValue(value) {
   if (!value) return '';
   const str = String(value).trim();
@@ -69,21 +60,15 @@ export function maskAccountCredentials(credentials = {}, schema = []) {
   return masked;
 }
 
-/**
- * Merge existing credentials when editing so staff don't accidentally wipe
- * an existing secret when they didn't retype it.
- */
 export function mergeCredentials(existing = {}, incoming = {}) {
   const merged = { ...existing };
   for (const [key, val] of Object.entries(incoming || {})) {
     if (key.endsWith('_is_masked')) continue;
-    // If incoming value is masked or unchanged dummy, preserve original
     if (typeof val === 'string' && val.includes('••••')) {
       continue;
     }
     if (val !== undefined && val !== null) {
       const trimmed = typeof val === 'string' ? val.trim() : val;
-      // Do not overwrite existing stored secret with empty string unless intentional
       if (trimmed === '' && existing[key]) {
         continue;
       }
@@ -93,18 +78,10 @@ export function mergeCredentials(existing = {}, incoming = {}) {
   return merged;
 }
 
-
-/**
- * Unified gateway architecture: All tenant gateway accounts, environments, and
- * credentials are fully unified in the website_payment_gateway_accounts table.
- */
 export async function syncDedicatedGatewayAccount() {
   return true;
 }
 
-/**
- * Unified gateway architecture: Cascade deletion is handled cleanly by the database.
- */
 export async function deleteDedicatedGatewayAccount() {
   return true;
 }
@@ -136,11 +113,6 @@ export const GATEWAY_CURRENCY_SUPPORT = {
   razorpay: ['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD']
 };
 
-/**
- * Ensures institutional currencies table is populated for the website.
- * Seeds standard currencies if none exist and returns the active currency records.
- * Synchronizes base currency when cleanBase is provided.
- */
 export async function ensureWebsiteCurrencies(websiteId, baseCurrency = 'BDT') {
   const cleanBase = String(baseCurrency || 'BDT').toUpperCase().trim();
 
@@ -161,7 +133,6 @@ export async function ensureWebsiteCurrencies(websiteId, baseCurrency = 'BDT') {
       `, [websiteId, d.code, d.name, d.symbol, rate, isBase]);
     }
   } else {
-    // Check if the current base currency matches cleanBase
     const currentBase = existing.rows.find(r => r.is_base_currency);
     if (!currentBase || currentBase.code !== cleanBase) {
       const cleanBaseExists = existing.rows.some(r => r.code === cleanBase);
@@ -192,23 +163,16 @@ export async function ensureWebsiteCurrencies(websiteId, baseCurrency = 'BDT') {
   return res.rows;
 }
 
-/**
- * Sets and updates the website's primary operating currency.
- * Synchronizes website_currencies and websites table cleanly.
- */
 export async function setWebsiteBaseCurrency(websiteId, newBaseCurrency) {
   const cleanBase = String(newBaseCurrency || 'BDT').toUpperCase().trim();
 
-  // First seed defaults if not already present
   await ensureWebsiteCurrencies(websiteId, cleanBase);
 
-  // Unset previous base flags
   await queryDb(
     `UPDATE website_currencies SET is_base_currency = FALSE WHERE website_id = $1`,
     [websiteId]
   );
 
-  // Mark or insert cleanBase as primary base
   const defaultMatch = DEFAULT_CURRENCY_LIST.find(d => d.code === cleanBase);
   const name = defaultMatch ? defaultMatch.name : cleanBase;
   const symbol = defaultMatch ? defaultMatch.symbol : cleanBase;
@@ -224,7 +188,6 @@ export async function setWebsiteBaseCurrency(websiteId, newBaseCurrency) {
       updated_at = CURRENT_TIMESTAMP
   `, [websiteId, cleanBase, name, symbol]);
 
-  // Update websites table
   await queryDb(
     `UPDATE websites SET currency = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
     [cleanBase, websiteId]
@@ -233,9 +196,6 @@ export async function setWebsiteBaseCurrency(websiteId, newBaseCurrency) {
   return ensureWebsiteCurrencies(websiteId, cleanBase);
 }
 
-/**
- * Retrieves all payment gateway providers compatible with the specified currency.
- */
 export async function getGatewaysForCurrency(currencyCode) {
   const clean = String(currencyCode || 'BDT').toUpperCase().trim();
   const res = await queryDb(
@@ -248,10 +208,6 @@ export async function getGatewaysForCurrency(currencyCode) {
   return res.rows;
 }
 
-/**
- * Verifies staff or creator access for payment gateways and admission operations.
- * Enforces tenant subscription module allowance and staff permissions.
- */
 export async function verifyStaffPaymentAccess(request, context, moduleSlug = null, action = 'view') {
   const { resolveWebsiteFromRequest, hasTenantModuleAllowance } = await import('../middleware/websiteResolver.js');
   const { getCreatorSession } = await import('../middleware/creator.js');
@@ -290,7 +246,6 @@ export async function verifyStaffPaymentAccess(request, context, moduleSlug = nu
     }
   }
 
-  // Check staff session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId = staffSession?.website_id || staffSession?.websiteId || staffSession?.staff?.websiteId || staffSession?.staff?.website_id;
@@ -318,7 +273,6 @@ export async function verifyStaffPaymentAccess(request, context, moduleSlug = nu
     return { website, user: staffSession, staffSession, role: 'staff', allowed: true };
   }
 
-  // Alternatively check creator session (institution owner)
   const creatorSession = await getCreatorSession(request);
   if (creatorSession) {
     const creatorId = creatorSession?.id || creatorSession?.creator?.id;
@@ -333,13 +287,9 @@ export async function verifyStaffPaymentAccess(request, context, moduleSlug = nu
   return { error: 'Unauthorized: Staff or administrator access required.', status: 401, code: 'UNAUTHORIZED' };
 }
 
-/**
- * Test connectivity & configuration for a gateway account
- */
 export async function testGatewayAccountConnection({ gateway_code, environment, credentials, currency, website_currency }) {
   const isLive = environment === 'live';
 
-  // Check currency compatibility if provided
   if (gateway_code) {
     try {
       const gwRes = await queryDb(
@@ -508,10 +458,6 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
   }
 }
 
-/**
- * Resolves the configured and assigned payment gateway account for a specific task/purpose
- * e.g., 'residential_fees', 'education_fees', 'exam_fees', 'admission_fees'
- */
 export async function resolveGatewayRouteForTask(websiteId, purpose, options = {}) {
   const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
   const isStudentPortal = typeof options === 'object' && options !== null ? Boolean(options.isStudentPortal) : false;
@@ -541,14 +487,12 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
 
   let res;
   if (hostelId) {
-    // 1. Try to find route specifically assigned to this residential hall
     res = await queryDb(
       `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3 AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
       [websiteId, purpose, hostelId]
     );
   }
 
-  // 2. Fallback to default hall/purpose assignment (hostel_id IS NULL)
   if (!res || res.rows.length === 0) {
     res = await queryDb(
       `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
@@ -557,7 +501,6 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
   }
 
   if (res.rows.length === 0) {
-    // If no explicit route assignment exists, find any active default gateway account for this website
     const defaultRes = await queryDb(`
       SELECT ga.id AS account_id, ga.gateway_code, ga.account_name, ga.account_number,
              ga.environment, ga.currency, ga.credentials, ga.is_active AS account_active,
@@ -591,7 +534,6 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
 
   const row = res.rows[0];
 
-  // If primary account is inactive, try fallback account if active
   if (!row.account_active && row.fallback_account_active) {
     return {
       source: 'fallback_route',
@@ -629,9 +571,6 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
   };
 }
 
-/**
- * Prepares and initiates a payment checkout flow using the resolved gateway
- */
 export async function initiatePaymentForPurpose({
   websiteId,
   purpose,
@@ -648,12 +587,10 @@ export async function initiatePaymentForPurpose({
     throw new Error(`No active payment gateway account is assigned for task '${purpose}'. Please contact school administration.`);
   }
 
-  // Verify website base currency
   const webRes = await queryDb(`SELECT currency, name FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
   const webCurrency = webRes.rows[0]?.currency ? String(webRes.rows[0].currency).toUpperCase().trim() : 'BDT';
   const effectiveCurrency = String(currency || route.currency || webCurrency).toUpperCase().trim();
 
-  // Verify that the route account currency is compatible
   if (route.currency && String(route.currency).toUpperCase().trim() !== effectiveCurrency && String(route.currency).toUpperCase().trim() !== webCurrency) {
     throw new Error(`Payment currency mismatch: Transaction requested in ${effectiveCurrency}, but assigned gateway account '${route.account_name}' operates in ${route.currency}.`);
   }
@@ -664,7 +601,6 @@ export async function initiatePaymentForPurpose({
   let checkoutUrl = '';
   let gatewayRef = '';
 
-  // Simulate or build checkout URL according to gateway
   switch (route.gateway_code) {
     case 'bkash':
       gatewayRef = `BKASH-${Date.now()}`;
@@ -727,7 +663,6 @@ export async function initiatePaymentForPurpose({
       checkoutUrl = `/checkout/generic?ref=${txnId}`;
   }
 
-  // Insert transaction into ledger
   const txRes = await queryDb(`
     INSERT INTO website_payment_transactions (
       website_id, gateway_account_id, gateway_code, purpose, invoice_ref,
@@ -777,11 +712,6 @@ export async function initiatePaymentForPurpose({
   };
 }
 
-/**
- * Fetches the specific active payment gateways assigned to a purpose/fee category.
- * e.g., 'admission_fees', 'education_fees', 'exam_fees', 'residential_fees'
- * Only shows the assigned gateway accounts configured in website_payment_purpose_assignments.
- */
 export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, options = {}) {
   const hostelId = typeof options === 'object' && options !== null ? options.hostelId : options;
   const isStudentPortal = typeof options === 'object' && options !== null ? Boolean(options.isStudentPortal) : false;
@@ -843,7 +773,6 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
     }
   }
 
-  // Fallback if no specific purpose assignment exists: return active gateways deduplicated by gateway_code
   const fallbackGwRes = await queryDb(`
     SELECT DISTINCT ON (ga.gateway_code)
            ga.id, ga.gateway_code AS code, ga.account_name, ga.account_number,
@@ -867,9 +796,6 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
   }));
 }
 
-/**
- * Validates a credit/debit card number using the Luhn checksum formula.
- */
 export function checkLuhn(cardNumber) {
   const clean = String(cardNumber || '').replace(/\D/g, '');
   if (clean.length < 13 || clean.length > 19) return false;
@@ -887,17 +813,6 @@ export function checkLuhn(cardNumber) {
   return sum % 10 === 0;
 }
 
-/**
- * 100% SECURE ADMISSION FEE PAYMENT PROCESSOR
- * Strictly validates:
- * 1. Institution and cross-tenant isolation
- * 2. Applicant registration and current status
- * 3. Payment gateway account activity and currency compatibility
- * 4. Checks all gateway credentials & API keys (App Key, Secrets, Private Keys)
- * 5. Validates payer credentials (Mobile, PIN, OTP, Card Number via Luhn, CVC, Expiry)
- * 6. Executes cryptographic signature and transaction reference
- * 7. Atomically updates applicant status to 'paid', fee ledger to 'paid', and records audit transaction
- */
 export async function processSecureAdmissionFeePayment({
   websiteId,
   applicantIdentifier,
@@ -909,7 +824,6 @@ export async function processSecureAdmissionFeePayment({
 }) {
   const runner = client || { query: (text, params) => queryDb(text, params) };
 
-  // 1. Fetch website and base currency
   const webRes = await runner.query(`SELECT id, name, currency FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
   if (webRes.rows.length === 0) {
     return { success: false, error: 'Target academic domain not found.' };
@@ -921,7 +835,6 @@ export async function processSecureAdmissionFeePayment({
   }
   const gw = gatewayCode.toLowerCase().trim();
 
-  // 2. Lock & fetch applicant record and associated circular fees
   const cleanId = String(applicantIdentifier || '').trim();
   const isNumericId = /^\d+$/.test(cleanId);
 
@@ -946,7 +859,6 @@ export async function processSecureAdmissionFeePayment({
 
   const applicant = appRes.rows[0];
 
-  // Prevent double payment
   if (applicant.payment_status === 'paid' || ['paid', 'completed', 'selected', 'enrolled', 'accepted'].includes(applicant.status)) {
     return { success: false, error: 'Application fee has already been confirmed and settled for this candidate.' };
   }
@@ -954,7 +866,6 @@ export async function processSecureAdmissionFeePayment({
   const dueAmount = parseFloat(applicant.fee_amount || 500.00);
   const feeCurrency = (applicant.fee_currency || 'BDT').toUpperCase();
 
-  // 3. Resolve & Verify Gateway Account and Credentials
   let account = null;
   if (gatewayAccountId) {
     const accRes = await runner.query(`
@@ -969,7 +880,6 @@ export async function processSecureAdmissionFeePayment({
     }
     account = accRes.rows[0];
   } else {
-    // Check assigned route for 'admission_fees'
     const route = await resolveGatewayRouteForTask(websiteId, 'admission_fees', { isPublicCheckout: true });
     if (route && route.gateway_code === gw && route.account_active) {
       account = {
@@ -983,7 +893,6 @@ export async function processSecureAdmissionFeePayment({
         is_active: true
       };
     } else {
-      // Find default active account for this gateway code
       const defRes = await runner.query(`
         SELECT id, gateway_code, account_name, account_number, environment, currency, credentials, is_active
         FROM website_payment_gateway_accounts
@@ -1002,7 +911,6 @@ export async function processSecureAdmissionFeePayment({
     }
   }
 
-  // Currency compatibility check
   if (account.currency && account.currency.toUpperCase() !== feeCurrency && feeCurrency !== 'BDT') {
     return {
       success: false,
@@ -1010,7 +918,6 @@ export async function processSecureAdmissionFeePayment({
     };
   }
 
-  // 4. CHECK ALL CREDENTIALS AND API KEYS
   const credentials = typeof account.credentials === 'string'
     ? JSON.parse(account.credentials || '{}')
     : (account.credentials || {});
@@ -1030,7 +937,6 @@ export async function processSecureAdmissionFeePayment({
     };
   }
 
-  // 5. VALIDATE PAYER INPUT CREDENTIALS
   const isLive = account.environment === 'live';
   const payerPhone = String(paymentDetails.account_number || paymentDetails.phone || applicant.phone || '').trim();
 
@@ -1067,7 +973,6 @@ export async function processSecureAdmissionFeePayment({
     }
   }
 
-  // 6. GENERATE CRYPTOGRAPHIC SIGNATURE & AUDIT REF
   const secretSeed = String(
     credentials.secret_key ||
     credentials.app_secret ||
@@ -1087,8 +992,6 @@ export async function processSecureAdmissionFeePayment({
     .update(`${websiteId}:${applicant.id}:${dueAmount}:${feeCurrency}:${txnId}`)
     .digest('hex');
 
-  // 7. RECORD & ATOMICALLY UPDATE
-  // A. Upsert website_admission_fee_payments
   if (applicant.payment_id) {
     await runner.query(`
       UPDATE website_admission_fee_payments
@@ -1128,7 +1031,6 @@ export async function processSecureAdmissionFeePayment({
     ]);
   }
 
-  // B. Update website_admission_applicants status to 'paid'
   await runner.query(`
     UPDATE website_admission_applicants
     SET status = 'paid',
@@ -1136,7 +1038,6 @@ export async function processSecureAdmissionFeePayment({
     WHERE id = $1 AND website_id = $2
   `, [applicant.id, websiteId]);
 
-  // C. Record full transaction ledger in website_payment_transactions
   const rawAuditRequest = {
     applicant_id: applicant.id,
     application_no: applicant.application_no,

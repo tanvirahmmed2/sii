@@ -78,7 +78,6 @@ export default function UpdatesPage() {
 
   return (
     <main className="min-h-screen bg-slate-50/60 dark:bg-slate-950 pb-24 transition-colors">
-      {/* Hero Header */}
       <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
         <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center relative z-10 space-y-4">
@@ -94,7 +93,6 @@ export default function UpdatesPage() {
             Follow our journey as we continuously enhance the platform. Explore our latest system releases, feature rollouts, and improvements.
           </p>
 
-          {/* Search Bar */}
           <div className="pt-4 max-w-xl mx-auto">
             <div className="relative">
               <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-400" />
@@ -119,7 +117,6 @@ export default function UpdatesPage() {
         </div>
       </section>
 
-      {/* Main Updates Section (List View) */}
       <section className="w-full px-4 sm:px-6 lg:px-8 pt-12 max-w-4xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
           <div>
@@ -155,13 +152,11 @@ export default function UpdatesPage() {
           </div>
         )}
 
-        {/* Loading State */}
         {loading ? (
           <div className="pt-2">
             <LoadingScreen fullScreen={false} label="Loading product updates..." />
           </div>
         ) : filteredUpdates.length === 0 ? (
-          /* Empty State */
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center text-3xl mx-auto mb-4">
               <BiBell />
@@ -185,7 +180,6 @@ export default function UpdatesPage() {
             )}
           </div>
         ) : (
-          /* Clean List View with Title, Summary, and Link */
           <div className="space-y-4 pt-2">
             {filteredUpdates.map((item) => {
               const releaseDateVal = item.release_date || item.created_at;
@@ -204,7 +198,6 @@ export default function UpdatesPage() {
                   key={item.id}
                   className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-secondary/50 rounded-2xl p-6 sm:p-7 shadow-xs hover:shadow-md transition-all space-y-3.5 group"
                 >
-                  {/* Top Metadata: Version & Date */}
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <span className="inline-block px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary font-mono font-bold text-xs border border-secondary/20">
                       {item.version || 'Release'}
@@ -218,19 +211,16 @@ export default function UpdatesPage() {
                     )}
                   </div>
 
-                  {/* Title */}
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white group-hover:text-secondary transition-colors tracking-tight">
                     <Link href={targetUrl} className="hover:underline">
                       {item.title}
                     </Link>
                   </h3>
 
-                  {/* Summary */}
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     {summaryText || 'Click to view full release notes and feature improvements.'}
                   </p>
 
-                  {/* Link */}
                   <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
                     <Link
                       href={targetUrl}

@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -29,12 +27,10 @@ export default function NewsListPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [creating, setCreating] = useState(false);
 
-  // Delete Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [newsToDelete, setNewsToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -143,7 +139,6 @@ export default function NewsListPage() {
     }
   };
 
-  // KPIs
   const totalNews = newsList.length;
   const publishedNews = newsList.filter((n) => n.is_published).length;
   const draftsNews = newsList.filter((n) => !n.is_published).length;
@@ -154,7 +149,6 @@ export default function NewsListPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alerts */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
           <span>{toastMessage}</span>
@@ -166,7 +160,6 @@ export default function NewsListPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5 shadow-xs">
           <p className="text-[11px] uppercase font-medium text-slate-400 dark:text-slate-500 tracking-wider">Total Articles</p>
@@ -201,9 +194,7 @@ export default function NewsListPage() {
         </div>
       </div>
 
-      {/* Main Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
-        {/* Header Toolbar */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -215,7 +206,6 @@ export default function NewsListPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search Box */}
             <input
               type="text"
               placeholder="Search headlines..."
@@ -225,7 +215,6 @@ export default function NewsListPage() {
               className="text-xs px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition min-w-[200px]"
             />
 
-            {/* Category Filter */}
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -239,7 +228,6 @@ export default function NewsListPage() {
               ))}
             </select>
 
-            {/* Status Filter */}
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -271,7 +259,6 @@ export default function NewsListPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -312,7 +299,6 @@ export default function NewsListPage() {
                       key={article.id}
                       className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      {/* Cover Photo */}
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         {coverImage?.image_url ? (
                           <div className="w-10 h-10 rounded overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
@@ -396,7 +382,6 @@ export default function NewsListPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteModalOpen && newsToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md w-full max-w-md shadow-2xl p-5 space-y-4 animate-scale-up">

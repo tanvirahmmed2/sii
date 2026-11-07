@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-/**
- * API Route: /api/creator/packages
- * Dedicated to the `packages` table.
- */
-
 export async function GET() {
   try {
     const res = await queryDb(

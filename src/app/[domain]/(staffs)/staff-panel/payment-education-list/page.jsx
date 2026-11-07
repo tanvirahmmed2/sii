@@ -38,13 +38,11 @@ export default function PaymentEducationListPage() {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
 
-  // Filters
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
 
-  // Collect Modal State
   const [collectModalOpen, setCollectModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [collectData, setCollectData] = useState({
@@ -217,7 +215,6 @@ export default function PaymentEducationListPage() {
 
   return (
     <div className="w-full space-y-6 pb-10">
-      {/* Feedback Alert */}
       {feedback && (
         <div
           className={`p-4 rounded-2xl flex items-center justify-between text-sm shadow-xs transition-all ${
@@ -240,7 +237,6 @@ export default function PaymentEducationListPage() {
         </div>
       )}
 
-      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -255,7 +251,6 @@ export default function PaymentEducationListPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-2xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Invoiced</p>
@@ -308,9 +303,7 @@ export default function PaymentEducationListPage() {
         </div>
       </div>
 
-      {/* Main Ledger Workstation */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
-        {/* Filter Controls Toolbar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
           <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-md">
             <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -358,7 +351,6 @@ export default function PaymentEducationListPage() {
           </div>
         </div>
 
-        {/* Ledger Table */}
         {loading ? (
           <TenantLoader fullScreen={false} />
         ) : payments.length === 0 ? (
@@ -480,7 +472,6 @@ export default function PaymentEducationListPage() {
           </div>
         )}
 
-        {/* Pagination Bar */}
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
             <span className="text-slate-400 font-medium">
@@ -506,7 +497,6 @@ export default function PaymentEducationListPage() {
         )}
       </div>
 
-      {/* Collect Cash Modal */}
       {collectModalOpen && selectedPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">

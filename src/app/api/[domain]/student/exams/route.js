@@ -18,7 +18,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Fetch student's profile & class info
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id, s.registration_no, s.roll_no,
               s.class_id, s.section_id, s.session_id,
@@ -38,7 +37,6 @@ export async function GET(request, context) {
 
     const student = studentRes.rows[0];
 
-    // Fetch exams for the student's class
     const examsRes = await queryDb(
       `SELECT e.*,
               c.name AS class_name,
@@ -81,7 +79,6 @@ export async function GET(request, context) {
       success: true,
       student,
       exams: examsRes.rows,
-      // For backwards compatibility with legacy UI property shapes
       examSchedules: examsRes.rows.map(ex => ({
         id: ex.id,
         exam_name: ex.name,

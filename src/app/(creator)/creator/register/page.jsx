@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
-import GoogleAuthButton from 'src/component/marketing/creator/GoogleAuthButton';
 
 export default function CreatorRegisterPage() {
   const router = useRouter();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -145,21 +145,7 @@ export default function CreatorRegisterPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <GoogleAuthButton
-              mode="register"
-              onError={(msg) => setError(msg)}
-            />
-
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-slate-200 w-full"></div>
-              <span className="bg-white px-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium shrink-0">
-                or sign up with email
-              </span>
-              <div className="border-t border-slate-200 w-full"></div>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-3">
+          <form onSubmit={handleRegister} className="space-y-3">
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Full Name *
@@ -167,7 +153,6 @@ export default function CreatorRegisterPage() {
               <input
                 type="text"
                 required
-                placeholder="Alex Vance"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -181,7 +166,6 @@ export default function CreatorRegisterPage() {
               <input
                 type="email"
                 required
-                placeholder="alex@school.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -197,7 +181,6 @@ export default function CreatorRegisterPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   minLength={6}
-                  placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"
@@ -218,7 +201,6 @@ export default function CreatorRegisterPage() {
               </label>
               <input
                 type="tel"
-                placeholder="+8801XXXXXXXXX"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
@@ -233,7 +215,6 @@ export default function CreatorRegisterPage() {
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
-        </div>
         )}
 
         <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">

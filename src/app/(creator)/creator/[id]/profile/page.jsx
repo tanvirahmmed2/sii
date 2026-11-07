@@ -48,7 +48,6 @@ export default function CreatorProfilePage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <h1 className="text-base font-semibold text-slate-900">Creator Profile</h1>
         <p className="text-slate-500 text-xs mt-0.5">
@@ -67,7 +66,6 @@ export default function CreatorProfilePage() {
         </div>
       )}
 
-      {/* Form Card */}
       <div className="bg-white border border-slate-200 rounded p-4">
         <form onSubmit={handleSave} className="space-y-3">
           <div>

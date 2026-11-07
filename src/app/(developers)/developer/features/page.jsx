@@ -109,14 +109,12 @@ export default function AdminFeaturesPage() {
     });
   }, [features, searchTerm]);
 
-  // Metric KPIs
   const totalFeatures = features.length;
   const linkedFeatures = features.filter((f) => Number(f.packages_count || 0) > 0).length;
   const standaloneFeatures = totalFeatures - linkedFeatures;
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback Notification */}
       {feedback && (
         <div
           className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-lg border text-xs font-medium ${
@@ -129,7 +127,6 @@ export default function AdminFeaturesPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -178,7 +175,6 @@ export default function AdminFeaturesPage() {
         </div>
       </div>
 
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
           <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Features</div>
@@ -199,7 +195,6 @@ export default function AdminFeaturesPage() {
         </div>
       </div>
 
-      {/* Feature Form (Create or Edit) */}
       {showForm && isAdminUser && (
         <FeatureForm
           initialData={editingFeature}
@@ -220,7 +215,6 @@ export default function AdminFeaturesPage() {
         />
       )}
 
-      {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="w-full sm:w-80">

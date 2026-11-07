@@ -5,10 +5,6 @@ import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildTeacherVerificationUrl } from '../route.js';
 
-/**
- * POST /api/[domain]/staff/panel/teacher/resend-verification
- * Resends the account verification / activation invitation link to a teacher.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'edit');
@@ -53,7 +49,6 @@ export async function POST(request, context) {
 
     const teacher = teacherRes.rows[0];
 
-    // Generate fresh verification token valid for 7 days
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     await queryDb(
@@ -65,10 +60,8 @@ export async function POST(request, context) {
       [verificationToken, teacher.id, website.id]
     );
 
-    // Build verification URL
     const verificationUrl = buildTeacherVerificationUrl(website, verificationToken, request);
 
-    // Send verification email via website mailer (falling back to platform mailer if unconfigured)
     let emailSent = false;
     let emailError = null;
 

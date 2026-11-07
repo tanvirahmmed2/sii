@@ -80,7 +80,6 @@ const Sidebar = () => {
 
   const closeSidebar = () => setSidebar(false);
 
-  // Close on Escape key and prevent background body scrolling
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') closeSidebar();
@@ -101,7 +100,6 @@ const Sidebar = () => {
     <AnimatePresence>
       {sidebar && (
         <div className="fixed inset-0 z-50 md:hidden flex justify-end">
-          {/* Backdrop overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -112,7 +110,6 @@ const Sidebar = () => {
             aria-hidden="true"
           />
 
-          {/* Simple Drawer without icons */}
           <motion.aside
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -121,7 +118,6 @@ const Sidebar = () => {
             className="relative w-76 max-w-[85vw] h-full bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col justify-between shadow-2xl border-l border-slate-200 dark:border-slate-800 z-10"
             aria-label="Mobile Navigation"
           >
-            {/* Header */}
             <div
               className="px-5 py-4 text-white flex items-center justify-between shadow-xs"
               style={{ backgroundColor: navBg }}
@@ -144,7 +140,6 @@ const Sidebar = () => {
               </button>
             </div>
 
-            {/* Quick Actions (Pay / Apply) */}
             <div className="p-3 bg-slate-50 dark:bg-slate-850 border-b border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
               <Link
                 href={tenantUrl('/pay')}
@@ -162,7 +157,6 @@ const Sidebar = () => {
               </Link>
             </div>
 
-            {/* Main Navigation with All Categorized Links */}
             <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
               {linkGroups.map((group) => (
                 <div key={group.title} className="space-y-1">
@@ -192,7 +186,6 @@ const Sidebar = () => {
               ))}
             </nav>
 
-            {/* Footer with Portals (Mode/Theme option removed) */}
             <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-850">
               <div className="grid grid-cols-2 gap-2">
                 <Link

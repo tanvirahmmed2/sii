@@ -22,12 +22,10 @@ export default function DeveloperPayrollPage() {
   const [payrollDetail, setPayrollDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [targetItemToPay, setTargetItemToPay] = useState(null);
 
-  // Form states
   const [createForm, setCreateForm] = useState({
     title: '',
     pay_period_start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -60,7 +58,6 @@ export default function DeveloperPayrollPage() {
         setStats(data.stats || {});
         setDevelopers(data.developers || []);
 
-        // Prepopulate items for create modal
         if (data.developers && createForm.items.length === 0) {
           const defaultItems = data.developers.map((d) => ({
             developer_id: d.id,
@@ -194,7 +191,6 @@ export default function DeveloperPayrollPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Notification */}
       {toast && (
         <div
           className={`fixed bottom-6 right-6 z-50 px-4 py-2 rounded shadow-lg text-xs font-normal flex items-center gap-2 border ${
@@ -208,7 +204,6 @@ export default function DeveloperPayrollPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
@@ -236,7 +231,6 @@ export default function DeveloperPayrollPage() {
         </div>
       </div>
 
-      {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
           <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">Total Disbursed</span>
@@ -267,7 +261,6 @@ export default function DeveloperPayrollPage() {
         </div>
       </div>
 
-      {/* Main Content: Payroll Runs Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-sm font-medium text-slate-900 dark:text-white">Payroll Disbursement Runs</h2>
@@ -369,7 +362,6 @@ export default function DeveloperPayrollPage() {
         )}
       </div>
 
-      {/* Selected Payroll Detail Drawer / Section */}
       {selectedPayroll && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 sm:p-6 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -472,7 +464,6 @@ export default function DeveloperPayrollPage() {
         </div>
       )}
 
-      {/* Create Payroll Run Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-white dark:bg-slate-900 rounded shadow-xl max-w-2xl w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
@@ -526,7 +517,6 @@ export default function DeveloperPayrollPage() {
                 </div>
               </div>
 
-              {/* Developer Salary Allocations Table */}
               <div className="space-y-2 pt-1">
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase">
                   Staff Salary Allocations ({createForm.items.length} Developers)
@@ -616,7 +606,6 @@ export default function DeveloperPayrollPage() {
         </div>
       )}
 
-      {/* Record Payment Modal */}
       {showPayModal && targetItemToPay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 rounded shadow-xl max-w-md w-full p-5 space-y-4 border border-slate-200 dark:border-slate-800">

@@ -81,7 +81,6 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
       whileHover={{ y: -5, transition: { duration: 0.25 } }}
       className={`group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xs hover:shadow-xl hover:shadow-primary/5 hover:border-primary/40 transition-colors duration-200 flex flex-col overflow-hidden h-full ${className}`}
     >
-      {/* Poster Image or Banner */}
       <Link href={targetHref} className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-100 via-slate-50 to-primary/5 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 overflow-hidden block">
         {image ? (
           <Image
@@ -99,7 +98,6 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           </div>
         )}
 
-        {/* Date badge in corner */}
         {dateObj && (
           <div className="absolute top-3 left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl p-2 shadow-md border border-slate-200/60 dark:border-slate-700/60 flex flex-col items-center justify-center min-w-[50px] leading-tight">
             <span className="text-[10px] font-bold tracking-wider text-primary">{month}</span>
@@ -107,7 +105,6 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           </div>
         )}
 
-        {/* Status Pill */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5">
           {is_applicable ? (
             <span className="bg-primary/90 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-xs">
@@ -121,10 +118,8 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
         </div>
       </Link>
 
-      {/* Content */}
       <div className="p-4 sm:p-5 flex flex-col justify-between flex-1 gap-3">
         <div className="space-y-2">
-          {/* Metadata chips */}
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
             {time && (
               <span className="flex items-center gap-1">
@@ -140,14 +135,12 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
             )}
           </div>
 
-          {/* Title */}
           <Link href={targetHref} className="block group-hover:text-primary transition-colors">
             <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug line-clamp-2">
               {title}
             </h3>
           </Link>
 
-          {/* Description */}
           {description && (
             <p className="text-xs text-slate-600 dark:text-slate-400 font-normal line-clamp-2 leading-relaxed">
               {description}
@@ -155,9 +148,7 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           )}
         </div>
 
-        {/* Interested Counter & Actions */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 mt-auto">
-          {/* Students Interested Count */}
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary/10 text-secondary text-xs">
               <FiStar className={isInterested ? 'fill-current' : ''} />
@@ -168,7 +159,6 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Interactive Interested Toggle Button */}
             <button
               type="button"
               onClick={handleInterestToggle}
@@ -184,7 +174,6 @@ const EventCard = ({ event, href, className = '', onInterestChange }) => {
               <span>{isInterested ? 'Interested' : 'Interest'}</span>
             </button>
 
-            {/* View Details Link */}
             <Link
               href={targetHref}
               className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white text-slate-500 dark:text-slate-400 transition-colors"

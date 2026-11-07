@@ -25,15 +25,18 @@ function extractBrowserTenant() {
   const baseHost = baseDomain.split(':')[0];
 
   if (hostWithPort.endsWith(`.${baseDomain}`)) {
-    const sub = hostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    let sub = hostWithPort.slice(0, -(baseDomain.length + 1)).trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') return sub;
   }
   if (host.endsWith(`.${baseHost}`)) {
-    const sub = host.slice(0, -(baseHost.length + 1)).trim();
+    let sub = host.slice(0, -(baseHost.length + 1)).trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') return sub;
   }
   if (host.endsWith('.localhost')) {
-    const sub = host.replace('.localhost', '').trim();
+    let sub = host.replace('.localhost', '').trim();
+    if (sub.startsWith('www.')) sub = sub.slice(4).trim();
     if (sub && sub !== 'www') return sub;
   }
   if (host && host !== baseHost && host !== `www.${baseHost}` && host !== 'localhost' && host !== '127.0.0.1') {
@@ -46,7 +49,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   const params = useParams();
   const router = useRouter();
 
-  // Resolve slug/domain from props, route params, or browser host (custom domain / subdomain)
   const [activeSlug, setActiveSlug] = useState(() => {
     if (propSlug) return propSlug;
     if (params?.domain) return params.domain;
@@ -61,12 +63,10 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     }
   }, [propSlug, params?.domain, params?.slug]);
 
-  // Tenant website metadata
   const [website, setWebsite] = useState(initialWebsite);
   const [loading, setLoading] = useState(!initialWebsite && !!activeSlug);
   const [error, setError] = useState(null);
 
-  // Theme / Mode Management (Light vs Dark)
   const [theme, setThemeState] = useState('light');
 
   useEffect(() => {
@@ -114,8 +114,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     });
   }, []);
 
-
-  // Color Theme Application directly from websites table (primary_color, secondary_color)
   const colorTheme = useMemo(() => {
     const primaryShades = calculateColorShades(website?.primary_color, '#A2AB73');
     const secondaryShades = calculateColorShades(website?.secondary_color, '#CC3A63');
@@ -130,7 +128,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     };
   }, [website?.primary_color, website?.secondary_color, website?.theme]);
 
-  // Injects dynamic CSS color variables into :root
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
@@ -142,18 +139,15 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     root.style.setProperty('--secondary-dark', colorTheme.secondaryDark);
 
     return () => {
-      // Keep or restore defaults when unmounting
     };
   }, [colorTheme]);
 
-  // Tenant sidebar toggles (admin, teacher, student, staff, public)
   const [sidebar, setSidebar] = useState(false);
   const [adminSidebar, setAdminSidebar] = useState(false);
   const [teacherSidebar, setTeacherSidebar] = useState(false);
   const [studentSidebar, setStudentSidebar] = useState(false);
   const [staffSidebar, setStaffSidebar] = useState(false);
 
-  // Tenant shared data
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -278,12 +272,10 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     fetchClubs();
   }, [fetchWebsiteSettings, fetchDesignations, fetchDepartments, fetchClasses, fetchClubs]);
 
-  // Dynamic path helper to keep internal links scoped to this tenant
   const tenantUrl = useCallback(
     (path = '') => {
       const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-      // Staff panel routes always use clean root URLs (/staff-panel/...)
       if (cleanPath === '/staff-panel' || cleanPath.startsWith('/staff-panel/')) {
         return cleanPath;
       }
@@ -291,7 +283,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
       if (typeof window !== 'undefined') {
         const host = window.location.host.toLowerCase().split(':')[0];
 
-        // If accessed through subdomain (e.g. afit.localhost, afit.mysite.com)
         const isSubdomain =
           host.endsWith('.localhost') ||
           (activeSlug && (host === `${activeSlug}.localhost` || host.startsWith(`${activeSlug}.`)));
@@ -300,7 +291,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
           return cleanPath;
         }
 
-        // Only in explicit path preview mode on plain base domain when current URL explicitly starts with /${activeSlug}
         const isExplicitPathMode =
           (host === 'localhost' || host === '127.0.0.1') &&
           window.location.pathname.startsWith(`/${activeSlug}/`);
@@ -317,7 +307,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   const value = useMemo(
     () => ({
-      // Tenant website metadata
       website,
       setWebsite,
       slug: activeSlug,
@@ -326,35 +315,30 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
       tenantUrl,
       refetch: fetchWebsiteData,
 
-      // Color theme tokens from websites table
       colorTheme,
       primaryColor: colorTheme.primary,
       secondaryColor: colorTheme.secondary,
       themeVariant: colorTheme.themeName,
 
-      // Mode management (Light / Dark)
       theme,
       isDark: theme === 'dark',
       setTheme,
       toggleTheme,
 
-      // Navigation
       goBack,
 
-      // Tenant sidebar toggles
       sidebar,
       setSidebar,
       adminSidebar,
       setAdminSidebar,
       teacherSidebar,
-      TeacherSidebar: teacherSidebar, // Backwards compatibility
+      TeacherSidebar: teacherSidebar, 
       setTeacherSidebar,
       studentSidebar,
       setStudentSidebar,
       staffSidebar,
       setStaffSidebar,
 
-      // Tenant shared data
       departments,
       setDepartments,
       fetchDepartments,
@@ -369,7 +353,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
       fetchWebsiteSettings,
       getApiEndpoint,
 
-      // Module Allowance & Package Information
       package: website?.package || null,
       allowedModules: website?.allowed_modules || [],
       allowedModuleSlugs: website?.allowed_module_slugs || [],

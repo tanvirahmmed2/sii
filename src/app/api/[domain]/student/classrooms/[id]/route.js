@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyStudentClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: Specific classroom and all its materials for enrolled student
 export async function GET(request, context) {
   try {
     const { params } = context;

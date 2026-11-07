@@ -37,9 +37,8 @@ export default function WebsiteSettingsPage() {
   const { website, getApiEndpoint, fetchWebsiteSettings } = useTenantWebsite();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'contact' | 'mission' | 'social' | 'branding' | 'system'
+  const [activeTab, setActiveTab] = useState('general'); 
 
-  // General Fields
   const [name, setName] = useState('');
   const [institutionType, setInstitutionType] = useState('School');
   const [eiinNumber, setEiinNumber] = useState('');
@@ -64,48 +63,41 @@ export default function WebsiteSettingsPage() {
     });
   }, [allGatewaysList, selectedCleanCurrency]);
 
-  // Cloudinary Logo & Favicon states
   const [logoPreview, setLogoPreview] = useState('');
-  const [logoDataUri, setLogoDataUri] = useState(''); // New base64 image data to upload
+  const [logoDataUri, setLogoDataUri] = useState(''); 
   const [removeLogo, setRemoveLogo] = useState(false);
   const logoInputRef = useRef(null);
 
   const [faviconPreview, setFaviconPreview] = useState('');
-  const [faviconDataUri, setFaviconDataUri] = useState(''); // New base64 image data to upload
+  const [faviconDataUri, setFaviconDataUri] = useState(''); 
   const [removeFavicon, setRemoveFavicon] = useState(false);
   const faviconInputRef = useRef(null);
 
-  // Contact Fields
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [address, setAddress] = useState('');
   const [mapUrl, setMapUrl] = useState('');
 
-  // Mission / Identity Fields
   const [motto, setMotto] = useState('');
   const [mission, setMission] = useState('');
   const [vision, setVision] = useState('');
   const [history, setHistory] = useState('');
 
-  // Social Links
   const [facebookUrl, setFacebookUrl] = useState('');
   const [twitterUrl, setTwitterUrl] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
 
-  // Branding / Theme
   const [theme, setTheme] = useState('default');
   const [primaryColor, setPrimaryColor] = useState('#1e40af');
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
 
-  // System & Maintenance
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState(
     'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
   );
 
-  // Refresh website settings after updates
   const refreshSettings = async () => {
     try {
       const res = await fetch(getApiEndpoint('staff/settings'));
@@ -156,7 +148,6 @@ export default function WebsiteSettingsPage() {
           'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
       );
     } catch {
-      // Non-fatal
     }
   };
 
@@ -229,7 +220,6 @@ export default function WebsiteSettingsPage() {
     };
   }, [getApiEndpoint, website]);
 
-  // Handle Logo File selection
   const handleLogoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -260,7 +250,6 @@ export default function WebsiteSettingsPage() {
     if (logoInputRef.current) logoInputRef.current.value = '';
   };
 
-  // Handle Favicon File selection
   const handleFaviconSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -328,7 +317,6 @@ export default function WebsiteSettingsPage() {
         maintenance_message: maintenanceMessage.trim(),
       };
 
-      // Only pass logo if a new image was uploaded or explicitly removed
       if (removeLogo) {
         payload.remove_logo = true;
         payload.logo = '';
@@ -336,7 +324,6 @@ export default function WebsiteSettingsPage() {
         payload.logo = logoDataUri;
       }
 
-      // Only pass favicon if a new icon was uploaded or explicitly removed
       if (removeFavicon) {
         payload.remove_favicon = true;
         payload.favicon = '';
@@ -374,7 +361,6 @@ export default function WebsiteSettingsPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Top Banner Header */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -402,7 +388,6 @@ export default function WebsiteSettingsPage() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800 pb-0 overflow-x-auto text-xs font-medium">
         {[
           { key: 'general', label: 'General & Identity' },
@@ -427,10 +412,8 @@ export default function WebsiteSettingsPage() {
         ))}
       </div>
 
-      {/* Main Settings Form */}
       <form onSubmit={handleSaveSettings} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 sm:p-6 shadow-2xs space-y-6">
         
-        {/* TAB 1: General & Identity */}
         {activeTab === 'general' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -509,7 +492,6 @@ export default function WebsiteSettingsPage() {
                 </p>
               </div>
 
-              {/* CURRENCY & PAYMENT GATEWAYS COMPATIBILITY PANEL */}
               <div className="md:col-span-2 p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                   <div>
@@ -534,7 +516,6 @@ export default function WebsiteSettingsPage() {
                   </Link>
                 </div>
 
-                {/* Grid of Compatible Gateways */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pt-1">
                   {compatibleGateways.map((gw) => (
                     <div
@@ -557,7 +538,6 @@ export default function WebsiteSettingsPage() {
                   ))}
                 </div>
 
-                {/* Incompatible Gateways Notice */}
                 {incompatibleGateways.length > 0 && (
                   <div className="pt-2 text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 flex items-start gap-1.5">
                     <span className="font-semibold text-amber-600 dark:text-amber-400 shrink-0">Incompatible Gateways:</span>
@@ -571,7 +551,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 2: Branding (Cloudinary Logo & Favicon + Colors) */}
         {activeTab === 'branding' && (
           <div className="space-y-6">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -583,10 +562,8 @@ export default function WebsiteSettingsPage() {
               </p>
             </div>
 
-            {/* Logo and Favicon Upload Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
               
-              {/* LOGO UPLOADER */}
               <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -605,10 +582,8 @@ export default function WebsiteSettingsPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Preview Thumbnail */}
                   <div className="w-20 h-20 rounded border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs">
                     {logoPreview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={logoPreview}
                         alt="Logo Preview"
@@ -621,7 +596,6 @@ export default function WebsiteSettingsPage() {
                     )}
                   </div>
 
-                  {/* Upload Controls */}
                   <div className="flex-1 space-y-2">
                     <input
                       ref={logoInputRef}
@@ -649,7 +623,6 @@ export default function WebsiteSettingsPage() {
                 </div>
               </div>
 
-              {/* FAVICON UPLOADER */}
               <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -668,10 +641,8 @@ export default function WebsiteSettingsPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Preview Thumbnail */}
                   <div className="w-14 h-14 rounded border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center p-2 shrink-0 overflow-hidden shadow-2xs">
                     {faviconPreview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={faviconPreview}
                         alt="Favicon Preview"
@@ -684,7 +655,6 @@ export default function WebsiteSettingsPage() {
                     )}
                   </div>
 
-                  {/* Upload Controls */}
                   <div className="flex-1 space-y-2">
                     <input
                       ref={faviconInputRef}
@@ -714,7 +684,6 @@ export default function WebsiteSettingsPage() {
 
             </div>
 
-            {/* Colors and Theme Preset */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white block mb-3">
                 Color Palette &amp; Accents
@@ -781,7 +750,6 @@ export default function WebsiteSettingsPage() {
               </div>
             </div>
 
-            {/* Recommended Presets */}
             <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 space-y-2">
               <span className="text-[10px] font-semibold uppercase text-slate-400 block">Recommended Color Presets</span>
               <div className="flex flex-wrap gap-2">
@@ -810,7 +778,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 3: Contact & Location */}
         {activeTab === 'contact' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -876,7 +843,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 4: Mission, Vision & History */}
         {activeTab === 'mission' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -942,7 +908,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 5: Social Channels */}
         {activeTab === 'social' && (
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1021,7 +986,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* TAB 6: System & Maintenance */}
         {activeTab === 'system' && (
           <div className="space-y-5">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1033,7 +997,6 @@ export default function WebsiteSettingsPage() {
               </p>
             </div>
 
-            {/* Toggle Card */}
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -1066,7 +1029,6 @@ export default function WebsiteSettingsPage() {
               </label>
             </div>
 
-            {/* Maintenance Message */}
             <div className="space-y-2 text-xs">
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                 Public Maintenance Notice Message
@@ -1083,7 +1045,6 @@ export default function WebsiteSettingsPage() {
               </p>
             </div>
 
-            {/* Live Preview Card */}
             {isMaintenanceMode && (
               <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded space-y-2">
                 <div className="text-amber-800 dark:text-amber-300 font-semibold text-xs">
@@ -1092,7 +1053,6 @@ export default function WebsiteSettingsPage() {
                 <div className="p-4 bg-white dark:bg-slate-900 border border-amber-200/60 dark:border-amber-800/40 rounded shadow-2xs space-y-2">
                   <div className="flex items-center gap-2.5">
                     {logoPreview && (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={logoPreview} alt="Logo" className="w-6 h-6 object-contain" />
                     )}
                     <span className="font-bold text-slate-900 dark:text-white text-xs">{name || 'Your Institution'}</span>
@@ -1109,7 +1069,6 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        {/* Bottom Save Bar */}
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <Link
             href="/staff-panel"

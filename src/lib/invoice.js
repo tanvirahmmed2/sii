@@ -1,11 +1,5 @@
 import { SITE_NAME, SITE_MAIL, SITE_CONTACT, SITE_ADDRESS } from './database/secret.js';
 
-/**
- * Standard invoice data generator from payment and creator records.
- * @param {Object} payment - Payment row from payments table
- * @param {Object} [creator] - Creator details
- * @returns {Object} Structured invoice data
- */
 export function generateInvoiceData(payment, creator = {}) {
   const p = payment || {};
   const c = creator || {};
@@ -61,11 +55,6 @@ export function generateInvoiceData(payment, creator = {}) {
   };
 }
 
-/**
- * Prints the invoice receipt using browser print dialog.
- * @param {Object} payment 
- * @param {Object} [creator] 
- */
 export function printReceipt(payment, creator = {}) {
   if (typeof window === 'undefined') return;
   const inv = generateInvoiceData(payment, creator);
@@ -167,11 +156,6 @@ export function printReceipt(payment, creator = {}) {
   printWindow.document.close();
 }
 
-/**
- * Downloads a structured HTML receipt directly to the user device.
- * @param {Object} payment 
- * @param {Object} [creator] 
- */
 export function downloadReceiptFile(payment, creator = {}) {
   if (typeof window === 'undefined') return;
   const inv = generateInvoiceData(payment, creator);

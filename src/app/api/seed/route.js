@@ -2,11 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { runAllSeeds } from 'seed/index';
 
-/**
- * GET /api/seed
- * Introspect current database setup and counts across tables, developer accounts,
- * platform modules, public home modules, and staff control modules.
- */
 export async function GET() {
   try {
     const [tablesRes, devsRes, modsRes, hmodsRes, cmodsRes] = await Promise.all([
@@ -50,15 +45,6 @@ export async function GET() {
   }
 }
 
-/**
- * POST /api/seed
- * Triggers full automated setup:
- * 1. Uploads all tables (schema.psql + website_tables.psql)
- * 2. Directly seeds modules into tables (no defaults runtime hack)
- * 3. Seeds developer account & grants all module permissions
- * 4. Seeds website_home_modules directly from [domain]/(home)/*
- * 5. Seeds website_control_modules directly from [domain]/(staffs)/staff-panel/*
- */
 export async function POST(request) {
   try {
     let body = {};

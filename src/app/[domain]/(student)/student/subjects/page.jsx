@@ -9,7 +9,7 @@ const SubjectsPage = () => {
   const { getApiEndpoint, tenantUrl } = useTenantWebsite();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [viewMode, setViewMode] = useState('table'); 
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -47,7 +47,6 @@ const SubjectsPage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -61,7 +60,6 @@ const SubjectsPage = () => {
           </p>
         </div>
 
-        {/* View Switcher & Counter */}
         <div className="flex items-center gap-2">
           <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-md flex items-center gap-0.5 border border-slate-200 dark:border-slate-700">
             <button
@@ -90,7 +88,6 @@ const SubjectsPage = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3">
         <input
           type="text"
@@ -109,7 +106,6 @@ const SubjectsPage = () => {
           </p>
         </div>
       ) : viewMode === 'table' ? (
-        /* TABLE VIEW */
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
@@ -179,7 +175,6 @@ const SubjectsPage = () => {
           </div>
         </div>
       ) : (
-        /* GRID CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubjects.map((sub, idx) => (
             <div

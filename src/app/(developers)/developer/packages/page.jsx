@@ -151,13 +151,11 @@ export default function AdminPackagesPage() {
           return (a.name || '').localeCompare(b.name || '');
         }
 
-        // Default: PRICE_ASC
         const diff = getMonthlyPrice(a) - getMonthlyPrice(b);
         return diff !== 0 ? diff : (Number(a.id) || 0) - (Number(b.id) || 0);
       });
   }, [packages, searchTerm, statusFilter, sortOrder]);
 
-  // Statistics calculation
   const totalPackages = packages.length;
   const activePackages = packages.filter((p) => p.is_active !== false).length;
   const avgMonthlyUsd =
@@ -190,14 +188,12 @@ export default function AdminPackagesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Feedback */}
       {feedback && (
         <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded shadow-lg border border-slate-700 text-xs font-medium">
           {feedback}
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -242,7 +238,6 @@ export default function AdminPackagesPage() {
         </div>
       </div>
 
-      {/* Inline Create Package Form */}
       {showCreateForm && (
         <PackageForm
           onSuccess={(newPkg) => {
@@ -254,7 +249,6 @@ export default function AdminPackagesPage() {
         />
       )}
 
-      {/* Metrics KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
           <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Plans</div>
@@ -281,9 +275,7 @@ export default function AdminPackagesPage() {
         </div>
       </div>
 
-      {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
-        {/* Table Filters & Search */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex-1 max-w-md">
             <input
@@ -296,7 +288,6 @@ export default function AdminPackagesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Visibility Filter */}
             <select
               value={visibilityFilter}
               onChange={(e) => setVisibilityFilter(e.target.value)}
@@ -308,7 +299,6 @@ export default function AdminPackagesPage() {
               <option value="CUSTOM">Custom / Private</option>
             </select>
 
-            {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -319,7 +309,6 @@ export default function AdminPackagesPage() {
               <option value="DISABLED">Disabled Only</option>
             </select>
 
-            {/* Sort Filter */}
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
@@ -338,7 +327,6 @@ export default function AdminPackagesPage() {
           </div>
         </div>
 
-        {/* Table Content */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>

@@ -17,7 +17,6 @@ export default function CreatorPurchasesPage() {
   const [purchasesList, setPurchasesList] = useState([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
 
-  // Renewal Modal State
   const [renewalModalOpen, setRenewalModalOpen] = useState(false);
   const [renewalCycle, setRenewalCycle] = useState('monthly');
   const [renewalGateway, setRenewalGateway] = useState('BKASH');
@@ -46,7 +45,6 @@ export default function CreatorPurchasesPage() {
     loadPurchases();
   }, [creatorId]);
 
-  // Package prices for renewal
   const isYearly = renewalCycle === 'yearly';
   const pkgBdtPrice = isYearly
     ? Number(activeSubscription?.yearly_price_bdt || 35000)
@@ -104,7 +102,6 @@ export default function CreatorPurchasesPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Top Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -145,7 +142,6 @@ export default function CreatorPurchasesPage() {
         </div>
       )}
 
-      {/* 1. CURRENT PURCHASED PACKAGE CARD */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <div className="flex items-center gap-2">
@@ -241,7 +237,6 @@ export default function CreatorPurchasesPage() {
         )}
       </div>
 
-      {/* 2. PURCHASES & BILLING HISTORY TABLE */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <h3 className="text-sm font-semibold text-slate-900">
@@ -336,7 +331,6 @@ export default function CreatorPurchasesPage() {
         )}
       </div>
 
-      {/* 3. RENEWAL MODAL WITH PAYMENT GATEWAY */}
       {renewalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white border border-slate-200 rounded max-w-lg w-full p-5 space-y-4 text-xs text-slate-800 shadow-xl max-h-[92vh] overflow-y-auto">
@@ -365,9 +359,7 @@ export default function CreatorPurchasesPage() {
             )}
 
             {!activePaymentId ? (
-              /* Step 1: Renewal Terms & Gateway Selection */
               <div className="space-y-4">
-                {/* Billing Duration Option */}
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
                     Select Renewal Duration
@@ -401,7 +393,6 @@ export default function CreatorPurchasesPage() {
                   </div>
                 </div>
 
-                {/* Gateway Selection (Direct Pricing, Zero Formula) */}
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
                     Select Payment Gateway
@@ -439,7 +430,6 @@ export default function CreatorPurchasesPage() {
                   </div>
                 </div>
 
-                {/* Duration Summary */}
                 <div className="p-3 rounded bg-slate-50 border border-slate-200 space-y-1 font-mono text-[11px]">
                   <div className="flex justify-between text-slate-600">
                     <span>Package:</span>
@@ -476,7 +466,6 @@ export default function CreatorPurchasesPage() {
                 </div>
               </div>
             ) : (
-              /* Step 2: Payment Gateway Execution */
               <div className="space-y-3">
                 <PaymentGatewayCheckout
                   creatorId={creatorId}

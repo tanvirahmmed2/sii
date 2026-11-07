@@ -27,13 +27,11 @@ export default function OfficerSidebar({ isOpen, onClose }) {
     loadOfficerSession();
   }, [getApiEndpoint]);
 
-  // Core navigation links
   const coreLinks = [
     { label: 'Workstation Overview', href: '/officer' },
     { label: 'Officer ID Card', href: '/officer/id-card' },
   ];
 
-  // Dynamic modules based on permissions
   const moduleLinks = [];
   const hasHall = permissions['hostel']?.can_view || permissions['residence']?.can_view || officer?.department === 'Hall';
   if (hasHall || officer?.department === 'Hall') {
@@ -75,7 +73,6 @@ export default function OfficerSidebar({ isOpen, onClose }) {
         }`}
       >
         <div className="p-3 space-y-3">
-          {/* Officer identity block */}
           {officer && (
             <div className="px-2.5 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded space-y-0.5">
               <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
@@ -87,7 +84,6 @@ export default function OfficerSidebar({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* General Navigation */}
           <div className="space-y-0.5">
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
               General Operations
@@ -115,7 +111,6 @@ export default function OfficerSidebar({ isOpen, onClose }) {
             </nav>
           </div>
 
-          {/* Granted Package Modules */}
           {moduleLinks.length > 0 && (
             <div className="space-y-0.5 pt-1">
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
@@ -145,7 +140,6 @@ export default function OfficerSidebar({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Account Settings */}
           <div className="space-y-0.5 pt-1">
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
               Account & Desk
@@ -174,7 +168,6 @@ export default function OfficerSidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Footer note */}
         <div className="p-3 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400">
           Campus Officer Desk v2.4
         </div>

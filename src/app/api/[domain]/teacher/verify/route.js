@@ -3,12 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword } from 'src/lib/middleware/teacher.js';
 
-/**
- * API Route: /api/[domain]/teacher/verify
- * Handles teacher account invitation verification and profile completion with personal password setup.
- */
-
-// POST: Validate verification token and return teacher profile details
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -98,7 +92,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Finalize account setup with personal password and profile updates
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

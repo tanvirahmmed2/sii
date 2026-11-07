@@ -115,7 +115,6 @@ export default function StudentAttendanceUpdatePage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Modify &amp; Update Student Attendance
@@ -125,7 +124,6 @@ export default function StudentAttendanceUpdatePage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -136,7 +134,6 @@ export default function StudentAttendanceUpdatePage() {
         description="Select session, class, section, and date to modify attendance"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="✏️"

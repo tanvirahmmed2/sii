@@ -48,7 +48,6 @@ export default function StudentReceiptsPage() {
 
   const currencySymbol = website?.currency === 'USD' ? '$' : '৳';
 
-  // Compile active template with selected receipt details
   const compileReceiptHtml = (rec) => {
     if (!rec) return null;
     const tplHtml = template?.html_content || '';
@@ -118,7 +117,6 @@ export default function StudentReceiptsPage() {
 
   return (
     <div className="w-full space-y-4 pb-8">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -167,7 +165,6 @@ export default function StudentReceiptsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Receipts Sidebar List */}
           <div className="lg:col-span-4 space-y-2">
             <div className="pb-1">
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
@@ -207,7 +204,6 @@ export default function StudentReceiptsPage() {
             </div>
           </div>
 
-          {/* Receipt Document Preview Stage */}
           <div className="lg:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 flex flex-col items-center">
             {selectedReceipt && compiled ? (
               <div className="w-full flex flex-col items-center overflow-x-auto">

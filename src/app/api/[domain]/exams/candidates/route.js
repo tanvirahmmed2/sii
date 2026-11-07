@@ -137,7 +137,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Verify student exists and belongs to this website
     const studentRes = await queryDb(
       `SELECT s.id, s.class_id, s.session_id, s.roll_no, s.registration_no 
        FROM website_students s 
@@ -150,7 +149,6 @@ export async function POST(request, context) {
     }
     const student = studentRes.rows[0];
 
-    // Check duplicate
     const existing = await queryDb(
       `SELECT id FROM website_exam_candidates WHERE website_id = $1 AND exam_id = $2 AND student_id = $3`,
       [auth.website.id, exam_id, student_id]
@@ -170,7 +168,6 @@ export async function POST(request, context) {
 
     const approverStaffId = auth.actor?.type === 'staff' ? auth.actor.id : null;
 
-    // Insert candidate
     const candRes = await queryDb(
       `INSERT INTO website_exam_candidates (
         website_id, exam_id, student_id, class_id, session_id,
@@ -196,7 +193,6 @@ export async function POST(request, context) {
 
     const candidate = candRes.rows[0];
 
-    // Check exam fees and create pending payment records
     const feesRes = await queryDb(
       `SELECT id, amount FROM website_exam_fees WHERE website_id = $1 AND exam_id = $2 AND status = 'active'`,
       [auth.website.id, exam_id]
@@ -222,7 +218,6 @@ export async function POST(request, context) {
         );
       }
     } else {
-      // Default zero pending payment item for tracking
       const invoiceNo = `INV-EXM-${exam_id}-${student.id}-${Date.now().toString().slice(-4)}`;
       await queryDb(
         `INSERT INTO website_exam_fee_payments (

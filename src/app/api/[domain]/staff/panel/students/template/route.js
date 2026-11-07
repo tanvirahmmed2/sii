@@ -10,7 +10,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Institution not found.' }, { status: 404 });
     }
 
-    // Fetch departments, classes, sections, and sessions to provide reference hints
     const [deptsRes, classesRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT name, code FROM website_departments WHERE website_id = $1 LIMIT 5`, [website.id]),
       queryDb(`SELECT name, code FROM website_classes WHERE website_id = $1 LIMIT 5`, [website.id]),
@@ -21,7 +20,6 @@ export async function GET(request, context) {
     const sampleClass = classesRes.rows[0]?.name || 'Class 10';
     const sampleSession = sessionsRes.rows[0]?.name || '2026-2027';
 
-    // Required columns according to specification: Department, Session, Class, Section, Registration No, Roll No, Email
     const data = [
       {
         'Department': sampleDept,
@@ -45,15 +43,14 @@ export async function GET(request, context) {
 
     const worksheet = XLSX.utils.json_to_sheet(data);
 
-    // Set column widths
     worksheet['!cols'] = [
-      { wch: 20 }, // Department
-      { wch: 18 }, // Session
-      { wch: 18 }, // Class
-      { wch: 16 }, // Section
-      { wch: 20 }, // Registration No
-      { wch: 12 }, // Roll No
-      { wch: 28 }, // Email
+      { wch: 20 }, 
+      { wch: 18 }, 
+      { wch: 18 }, 
+      { wch: 16 }, 
+      { wch: 20 }, 
+      { wch: 12 }, 
+      { wch: 28 }, 
     ];
 
     const workbook = XLSX.utils.book_new();

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyEducationFeeAccess } from 'src/lib/middleware/education_fee_auth.js';
 
-// GET: List configured education fee structures
 export async function GET(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'view');
@@ -61,7 +60,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new fee structure for a class
 export async function POST(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'create');
@@ -98,7 +96,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Fee amount must be a valid positive number.' }, { status: 400 });
     }
 
-    // Verify class belongs to website
     const classCheck = await queryDb(
       `SELECT id, name AS class_name FROM website_classes WHERE id = $1 AND website_id = $2`,
       [class_id, website.id]
@@ -141,7 +138,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing education fee structure
 export async function PUT(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'edit');
@@ -170,7 +166,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Fee configuration ID is required.' }, { status: 400 });
     }
 
-    // Verify existing record
     const existing = await queryDb(
       `SELECT * FROM website_education_fees WHERE id = $1 AND website_id = $2`,
       [id, website.id]
@@ -231,7 +226,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove or deactivate fee structure
 export async function DELETE(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'delete');
@@ -247,14 +241,12 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Fee configuration ID is required.' }, { status: 400 });
     }
 
-    // Check if payments exist
     const paymentsCheck = await queryDb(
       `SELECT COUNT(*)::int AS count FROM website_education_fee_payments WHERE education_fee_id = $1 AND website_id = $2`,
       [id, website.id]
     );
 
     if (paymentsCheck.rows[0].count > 0) {
-      // Soft-delete / deactivate so historical invoices aren't orphaned
       await queryDb(
         `UPDATE website_education_fees SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND website_id = $2`,
         [id, website.id]

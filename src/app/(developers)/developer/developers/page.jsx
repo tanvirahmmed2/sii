@@ -17,13 +17,11 @@ export default function DevelopersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const router = useRouter();
 
-  // Modal / Form state for Editing Developer Profile
   const [editingDev, setEditingDev] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: '', designation: '', is_active: true, password: '' });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
-  // Modal state for Managing Module Permissions
   const [permsDev, setPermsDev] = useState(null);
   const [permsMap, setPermsMap] = useState({});
   const [permsLoading, setPermsLoading] = useState(false);
@@ -218,7 +216,6 @@ export default function DevelopersPage() {
     }
   };
 
-  // Open Permissions Matrix Modal
   const handleOpenPermissions = (dev) => {
     setPermsDev(dev);
     setPermsError('');
@@ -340,7 +337,6 @@ export default function DevelopersPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Action Notification Alert */}
       {actionNotice.text && (
         <div
           className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
@@ -362,7 +358,6 @@ export default function DevelopersPage() {
         </div>
       )}
 
-      {/* Edit Developer Account Modal */}
       {editingDev && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-lg max-w-md w-full p-4 sm:p-5 space-y-3">
@@ -468,7 +463,6 @@ export default function DevelopersPage() {
         </div>
       )}
 
-      {/* Module Permissions Matrix Modal */}
       {permsDev && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
@@ -496,7 +490,6 @@ export default function DevelopersPage() {
               </div>
             )}
 
-            {/* Modal Controls */}
             <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
               <input
                 type="text"
@@ -530,7 +523,6 @@ export default function DevelopersPage() {
               </div>
             </div>
 
-            {/* Scrollable Matrix Table */}
             <div className="flex-1 overflow-y-auto p-4">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
@@ -610,7 +602,6 @@ export default function DevelopersPage() {
               </table>
             </div>
 
-            {/* Footer */}
             <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2 bg-slate-50 dark:bg-slate-800/30">
               <button
                 type="button"
@@ -632,7 +623,6 @@ export default function DevelopersPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">Developers Team</h1>
@@ -672,7 +662,6 @@ export default function DevelopersPage() {
         />
       )}
 
-      {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3 shadow-xs">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <input
@@ -732,7 +721,6 @@ export default function DevelopersPage() {
                         </span>
                       </td>
 
-                      {/* Permissions button & badge */}
                       <td className="py-2.5">
                         <button
                           type="button"
@@ -744,7 +732,6 @@ export default function DevelopersPage() {
                         </button>
                       </td>
 
-                      {/* Status column */}
                       <td className="py-2.5">
                         <button
                           type="button"
@@ -760,7 +747,6 @@ export default function DevelopersPage() {
                         </button>
                       </td>
 
-                      {/* Verification column */}
                       <td className="py-2.5">
                         {isVerified ? (
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
@@ -783,14 +769,12 @@ export default function DevelopersPage() {
                         )}
                       </td>
 
-                      {/* Last Login */}
                       <td className="py-2.5 text-slate-500 text-xs font-mono">
                         {dev.last_login_at || dev.lastLoginAt
                           ? new Date(dev.last_login_at || dev.lastLoginAt).toLocaleDateString()
                           : 'Never'}
                       </td>
 
-                      {/* Actions */}
                       <td className="py-2.5 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           {isUserAdmin ? (

@@ -27,7 +27,6 @@ const Alumni = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="w-full max-w-5xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -47,7 +46,6 @@ const Alumni = () => {
           </p>
         </motion.div>
 
-        {/* Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -104,7 +102,6 @@ const Alumni = () => {
           </motion.div>
         </div>
 
-        {/* Testimonials */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}

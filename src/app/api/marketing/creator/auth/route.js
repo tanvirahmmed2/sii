@@ -12,16 +12,9 @@ import {
 } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 
-/**
- * API Route: /api/creator/auth
- * Dedicated to `creators` table authentication, verification, recovery, and session management.
- * Strictly adhering to schema.psql.
- */
-
 export async function handleAuthAction(body, request) {
   const { action } = body;
 
-  // 1. Register Creator
   if (action === 'register') {
     const d = body.creatorData || body;
     if (!d.name || !d.email || !d.password) {
@@ -29,16 +22,8 @@ export async function handleAuthAction(body, request) {
     }
 
     const cleanEmail = String(d.email).trim().toLowerCase();
-    const existing = await queryDb('SELECT id, auth_provider, google_id FROM creators WHERE LOWER(email) = $1 LIMIT 1', [cleanEmail]);
+    const existing = await queryDb('SELECT id FROM creators WHERE LOWER(email) = $1 LIMIT 1', [cleanEmail]);
     if (existing.rows.length > 0) {
-      const ex = existing.rows[0];
-      if (ex.auth_provider === 'google' || ex.google_id) {
-        return NextResponse.json({
-          success: false,
-          error: 'An account with this email was registered using Google. Please log in with Google.',
-          registeredWithGoogle: true,
-        }, { status: 409 });
-      }
       return NextResponse.json({
         success: false,
         error: 'An account with this email already exists. Please log in.',
@@ -111,178 +96,8 @@ export async function handleAuthAction(body, request) {
     });
   }
 
-  // 1B. Google Authentication (Register & Login)
-  if (action === 'google_auth') {
-    let googleEmail = (body.email || '').trim().toLowerCase();
-    let googleId = (body.googleId || body.google_id || '').trim();
-    let googleName = (body.name || '').trim();
-    let googlePicture = body.avatarUrl || body.avatar_url || body.picture || null;
-    const mode = body.mode || 'login'; // 'register' | 'login'
 
-    // Extract from Google credential (id_token JWT) if provided
-    if (body.credential) {
-      try {
-        const parts = String(body.credential).split('.');
-        if (parts.length >= 2) {
-          const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-          const decodedJson = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
-          if (decodedJson.email) {
-            googleEmail = decodedJson.email.trim().toLowerCase();
-          }
-          if (decodedJson.sub) {
-            googleId = decodedJson.sub;
-          }
-          if (decodedJson.name && !googleName) {
-            googleName = decodedJson.name.trim();
-          }
-          if (decodedJson.picture && !googlePicture) {
-            googlePicture = decodedJson.picture;
-          }
-        }
-      } catch (err) {
-        console.warn('Notice decoding Google credential:', err.message);
-      }
-    }
 
-    if (!googleEmail) {
-      return NextResponse.json({ success: false, error: 'Valid Google email is required.' }, { status: 400 });
-    }
-
-    // Check for existing account with this email or google_id
-    const existingRes = await queryDb(
-      `SELECT id, name, email, phone, auth_provider, google_id, avatar_url, is_active, email_verified, password
-       FROM creators
-       WHERE LOWER(email) = LOWER($1) OR (google_id IS NOT NULL AND google_id = $2)
-       LIMIT 1`,
-      [googleEmail, googleId || '__none__']
-    );
-    const existingCreator = existingRes.rows[0];
-
-    // REGISTRATION MODE: Prevent duplicate accounts
-    if (mode === 'register') {
-      if (existingCreator) {
-        if (existingCreator.auth_provider === 'google' || existingCreator.google_id) {
-          return NextResponse.json({
-            success: false,
-            error: 'An account with this Google email already exists. Please log in directly.',
-            registeredWithGoogle: true,
-          }, { status: 409 });
-        } else {
-          return NextResponse.json({
-            success: false,
-            error: 'An account with this email already exists with password login. Please log in with your password.',
-            registeredWithPassword: true,
-          }, { status: 409 });
-        }
-      }
-
-      // No existing account: create new Google creator account
-      const randomPass = generateAlphanumericToken(32);
-      const hashedFallbackPassword = await hashPassword(randomPass);
-
-      const insertRes = await queryDb(
-        `INSERT INTO creators (
-           name, email, google_id, auth_provider, avatar_url,
-           email_verified, is_active, password
-         )
-         VALUES ($1, $2, $3, 'google', $4, TRUE, TRUE, $5)
-         RETURNING id, name, email, phone, auth_provider, avatar_url, email_verified, is_active, created_at`,
-        [googleName || googleEmail.split('@')[0], googleEmail, googleId || null, googlePicture, hashedFallbackPassword]
-      );
-      const newCreator = insertRes.rows[0];
-
-      const sessionToken = generateToken(
-        { id: Number(newCreator.id), email: googleEmail, role: 'creator', type: 'creator' },
-        '7d'
-      );
-
-      const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
-      const userAgent = request?.headers?.get('user-agent') || 'Unknown';
-
-      await queryDb(
-        `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
-         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
-        [newCreator.id, sessionToken, ip, userAgent]
-      ).catch(() => {});
-
-      const resp = NextResponse.json({
-        success: true,
-        message: 'Account created with Google successfully! Redirecting...',
-        creator: {
-          id: Number(newCreator.id),
-          name: newCreator.name,
-          email: newCreator.email,
-          avatarUrl: newCreator.avatar_url,
-          authProvider: 'google',
-          emailVerified: true,
-          isVerified: true,
-        },
-        token: sessionToken,
-      });
-
-      await setCreatorSessionCookie(resp, sessionToken);
-      return resp;
-    }
-
-    // LOGIN MODE:
-    if (!existingCreator) {
-      return NextResponse.json({
-        success: false,
-        error: 'No creator account found with this Google email. Please register first.',
-        notRegistered: true,
-      }, { status: 404 });
-    }
-
-    if (existingCreator.is_active === false) {
-      return NextResponse.json({ success: false, error: 'Your creator account has been deactivated.' }, { status: 403 });
-    }
-
-    // Link google_id or update avatar if newly authenticating with Google
-    if (!existingCreator.google_id && googleId) {
-      await queryDb(
-        `UPDATE creators
-         SET google_id = $1, avatar_url = COALESCE(avatar_url, $2), email_verified = TRUE, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3`,
-        [googleId, googlePicture, existingCreator.id]
-      ).catch(() => {});
-    }
-
-    await queryDb('UPDATE creators SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [existingCreator.id]).catch(() => {});
-
-    const sessionToken = generateToken(
-      { id: Number(existingCreator.id), email: existingCreator.email, role: 'creator', type: 'creator' },
-      '7d'
-    );
-
-    const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
-    const userAgent = request?.headers?.get('user-agent') || 'Unknown';
-
-    await queryDb(
-      `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
-       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
-      [existingCreator.id, sessionToken, ip, userAgent]
-    ).catch(() => {});
-
-    const resp = NextResponse.json({
-      success: true,
-      message: 'Logged in with Google successfully! Redirecting...',
-      creator: {
-        id: Number(existingCreator.id),
-        name: existingCreator.name,
-        email: existingCreator.email,
-        avatarUrl: existingCreator.avatar_url,
-        authProvider: existingCreator.auth_provider || 'google',
-        emailVerified: true,
-        isVerified: true,
-      },
-      token: sessionToken,
-    });
-
-    await setCreatorSessionCookie(resp, sessionToken);
-    return resp;
-  }
-
-  // 2. Verify Email
   if (action === 'verify') {
     const { token, code, email } = body;
     const candidateCode = String(code || token || '').trim();
@@ -325,7 +140,6 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: false, error: 'This verification code has expired. Please request a new code.', expired: true }, { status: 400 });
     }
 
-    // Mark creator as verified adhering to schema.psql email_verified column
     await queryDb(
       `UPDATE creators 
        SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL, updated_at = CURRENT_TIMESTAMP 
@@ -364,7 +178,6 @@ export async function handleAuthAction(body, request) {
     return resp;
   }
 
-  // 3. Resend Verification
   if (action === 'resend_verification') {
     const { email } = body;
     if (!email) {
@@ -432,7 +245,6 @@ export async function handleAuthAction(body, request) {
     });
   }
 
-  // 4. Login
   if (action === 'login') {
     const { email, password, twoFactorCode } = body;
     const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
@@ -454,7 +266,6 @@ export async function handleAuthAction(body, request) {
         {
           success: false,
           error: authErr.message || 'Authentication failed.',
-          googleAuth: Boolean(authErr.googleAuth),
           twoFactorRequired: Boolean(authErr.twoFactorRequired),
           twoFactorInvalid: Boolean(authErr.twoFactorInvalid),
           unverified: Boolean(authErr.unverified),
@@ -466,7 +277,6 @@ export async function handleAuthAction(body, request) {
     }
   }
 
-  // 5. Logout
   if (action === 'logout') {
     const token =
       request?.cookies?.get?.(CREATOR_TOKEN)?.value ||
@@ -484,7 +294,6 @@ export async function handleAuthAction(body, request) {
     return response;
   }
 
-  // 6. Me
   if (action === 'me') {
     const current = await getCreatorSession(request);
     if (!current) {
@@ -493,7 +302,6 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({ success: true, creator: current });
   }
 
-  // 7. Recover / Forgot Password
   if (action === 'recover') {
     const { email } = body;
     if (!email) {
@@ -545,7 +353,6 @@ export async function handleAuthAction(body, request) {
     });
   }
 
-  // 8. Reset Password
   if (action === 'reset_password') {
     const { email, code, token, newPassword } = body;
     const recoveryCode = String(code || token || '').trim();

@@ -37,7 +37,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
             setIsJoined(Boolean(fetchedEvent.is_registered));
             setInterestedCount(parseInt(fetchedEvent.interested_count, 10) || 0);
 
-            // Also check student session to see if current user is logged in as student
             try {
               const studentRes = await axios.get(getApiEndpoint('student/events'));
               if (studentRes.data?.success) {
@@ -62,7 +61,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     if (slug) fetchData();
   }, [slug, getApiEndpoint]);
 
-  // Toggle student interest
   const handleToggleInterest = async () => {
     if (!event?.id || interestLoading) return;
     setInterestLoading(true);
@@ -94,7 +92,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
     }
   };
 
-  // Toggle RSVP / Registration
   const handleToggleParticipation = async () => {
     if (!event?.id) return;
     setActionLoading(true);
@@ -169,7 +166,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Navigation Breadcrumb */}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -184,14 +180,12 @@ const EventDetailPage = ({ params: paramsPromise }) => {
           </Link>
         </motion.div>
 
-        {/* Main Card */}
         <motion.article
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden"
         >
-          {/* Header Image */}
           {event.image ? (
             <div className="w-full h-64 sm:h-96 bg-slate-100 dark:bg-slate-800 relative">
               <Image
@@ -213,7 +207,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
           )}
 
           <div className="p-6 sm:p-10 space-y-6">
-            {/* Badges & Title */}
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary-dark dark:text-primary-light uppercase tracking-wider px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
@@ -235,7 +228,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
                 {event.title}
               </h1>
 
-              {/* Schedule Details Strip */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/80 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-medium">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -271,7 +263,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
               </div>
             </div>
 
-            {/* Interest Box */}
             <div className="p-5 rounded-2xl bg-secondary/5 dark:bg-secondary/10 border border-secondary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -304,7 +295,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
               </button>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <h2 className="text-sm uppercase font-bold text-slate-400 tracking-wider">About This Event</h2>
               <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -312,7 +302,6 @@ const EventDetailPage = ({ params: paramsPromise }) => {
               </div>
             </div>
 
-            {/* Student RSVP Attendance Box */}
             {event.is_applicable && (
               <div className="p-5 rounded-2xl bg-primary/5 dark:bg-primary/10 border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1">

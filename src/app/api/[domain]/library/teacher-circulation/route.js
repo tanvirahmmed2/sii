@@ -11,7 +11,7 @@ export async function GET(request, context) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || 'all'; // 'all', 'issued', 'returned', 'overdue'
+    const status = searchParams.get('status') || 'all'; 
     const teacherId = searchParams.get('teacher_id');
     const bookId = searchParams.get('book_id');
     const limit = parseInt(searchParams.get('limit') || '100', 10);
@@ -77,7 +77,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryText, params);
 
-    // Circulation KPI counts
     const countsRes = await queryDb(
       `SELECT
          COUNT(i.id)::int AS total_issues,
@@ -125,7 +124,6 @@ export async function POST(request, context) {
         }, { status: 400 });
       }
 
-      // 1. Lock and inspect book row
       const bookRes = await client.query(
         `SELECT id, title, total_copies, available_copies, is_available
          FROM website_books
@@ -148,7 +146,6 @@ export async function POST(request, context) {
         }, { status: 400 });
       }
 
-      // 2. Validate Teacher
       const teaRes = await client.query(
         `SELECT id, name, email FROM website_teachers WHERE id = $1 AND website_id = $2`,
         [teacher_id, auth.website.id]
@@ -159,7 +156,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Teacher record not found.' }, { status: 404 });
       }
 
-      // 3. Create issue record
       const issueRes = await client.query(
         `INSERT INTO website_book_teacher_issues (
            website_id, book_id, teacher_id,
@@ -180,7 +176,6 @@ export async function POST(request, context) {
         ]
       );
 
-      // 4. Reduce stock of available books; if available becomes 0, set is_available = FALSE
       const newAvail = book.available_copies - 1;
       const newIsAvailable = newAvail > 0 ? book.is_available : false;
 
@@ -209,7 +204,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'Issue ID is required for return.' }, { status: 400 });
       }
 
-      // 1. Lock and inspect issue row
       const issueRes = await client.query(
         `SELECT * FROM website_book_teacher_issues
          WHERE id = $1 AND website_id = $2
@@ -228,7 +222,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, error: 'This book has already been marked as returned.' }, { status: 400 });
       }
 
-      // 2. Lock book row
       const bookRes = await client.query(
         `SELECT id, total_copies, available_copies, is_available
          FROM website_books
@@ -243,7 +236,6 @@ export async function POST(request, context) {
       }
       const book = bookRes.rows[0];
 
-      // 3. Create return audit record
       const returnRes = await client.query(
         `INSERT INTO website_book_teacher_returns (
            website_id, issue_id, book_id, teacher_id,
@@ -266,7 +258,6 @@ export async function POST(request, context) {
         ]
       );
 
-      // 4. Update issue record
       await client.query(
         `UPDATE website_book_teacher_issues
          SET status = 'returned',
@@ -276,7 +267,6 @@ export async function POST(request, context) {
         [issue.id]
       );
 
-      // 5. Increase available stock and restore availability
       const restoredAvail = Math.min(book.total_copies, book.available_copies + 1);
 
       await client.query(
@@ -336,7 +326,6 @@ export async function DELETE(request, context) {
 
     const issue = issueRes.rows[0];
 
-    // If deleting an unreturned loan, restore the book copy to stock
     if (issue.status === 'issued' || issue.status === 'overdue') {
       await client.query(
         `UPDATE website_books

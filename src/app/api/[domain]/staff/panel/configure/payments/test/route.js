@@ -6,10 +6,6 @@ import {
   testGatewayAccountConnection
 } from 'src/lib/database/paymentGateways.js';
 
-/**
- * POST /api/[domain]/staff/panel/configure/payments/test
- * Tests connectivity or validates configuration of a gateway account
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context, null, 'view');
@@ -25,7 +21,6 @@ export async function POST(request, context) {
     let targetCreds = credentials;
     let targetCurrency = currency || auth.website.currency || 'BDT';
 
-    // If an existing account ID is passed, retrieve stored credentials and merge
     if (id) {
       const accRes = await queryDb(`
         SELECT gateway_code, environment, credentials, account_name, currency

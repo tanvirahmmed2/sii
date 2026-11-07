@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth.js';
 
-// GET: Fetch club chat box details, participants, and messages
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -18,7 +17,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Valid Club ID is required.' }, { status: 400 });
     }
 
-    // 1. Fetch club and chat room details
     const clubRes = await queryDb(
       `SELECT c.id, c.name, c.logo_url, c.moderator_teacher_id, c.has_chat_box, c.chat_box_title, c.chat_box_status,
               t.name AS moderator_name, t.photo_url AS moderator_photo,
@@ -37,7 +35,6 @@ export async function GET(request, context) {
 
     const club = clubRes.rows[0];
 
-    // 2. Fetch messages
     const msgsRes = await queryDb(
       `SELECT id, club_id, chat_id, sender_type, sender_id, sender_name, sender_photo, message, attachment_url, created_at
        FROM website_club_chat_messages
@@ -47,7 +44,6 @@ export async function GET(request, context) {
       [clubId, website.id]
     );
 
-    // 3. Fetch eligible chat members (can_access_chat = true)
     const membersRes = await queryDb(
       `SELECT scm.id, scm.student_id, scm.role, scm.can_access_chat,
               s.registration_no, s.roll_no,
@@ -81,7 +77,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Send a message in the club chat box
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -99,7 +94,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Club ID and Message text are required.' }, { status: 400 });
     }
 
-    // Verify club and chat room
     const clubRes = await queryDb(
       `SELECT c.id, c.name, ch.id AS chat_id, ch.is_active
        FROM website_clubs c
@@ -115,7 +109,6 @@ export async function POST(request, context) {
 
     let chatId = clubRes.rows[0].chat_id;
     if (!chatId) {
-      // Auto-initialize chat room if not yet created
       const initRes = await queryDb(
         `INSERT INTO website_club_chats (website_id, club_id, title, is_active)
          VALUES ($1, $2, $3, TRUE)

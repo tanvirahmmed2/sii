@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStudentSession } from 'src/lib/middleware/students.js';
 
-// GET: Student view of campus events
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -28,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch all active events with applicant counts and student interest status
     const eventsRes = await queryDb(
       `SELECT 
          e.*,
@@ -83,7 +81,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Student applies for an event, cancels registration, or toggles interest
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -114,7 +111,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Valid Event ID is required.' }, { status: 400 });
     }
 
-    // Verify event exists and belongs to current institution
     const eventRes = await queryDb(
       `SELECT * FROM website_events WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [parsedEventId, website.id]
@@ -132,7 +128,6 @@ export async function POST(request, context) {
 
     const studentId = session.id;
 
-    // Handle student interest toggle
     if (action === 'interest' || action === 'toggle_interest' || action === 'uninterest') {
       const existingInterest = await queryDb(
         `SELECT id FROM website_events_interested WHERE event_id = $1 AND student_id = $2 LIMIT 1`,
@@ -182,7 +177,6 @@ export async function POST(request, context) {
     }
 
     if (action === 'leave' || action === 'cancel') {
-      // Cancel registration
       await queryDb(
         `DELETE FROM website_events_applicants 
          WHERE event_id = $1 AND student_id = $2 AND website_id = $3`,
@@ -197,8 +191,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Applying for event (action === 'join' / 'apply')
-    // Option to make it applicable or not. Only if applicable can student apply!
     if (!event.is_applicable) {
       return NextResponse.json(
         {
@@ -210,7 +202,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Check if already registered
     const existingApp = await queryDb(
       `SELECT id FROM website_events_applicants 
        WHERE event_id = $1 AND student_id = $2 LIMIT 1`,
@@ -226,7 +217,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Register student
     const insertRes = await queryDb(
       `INSERT INTO website_events_applicants (
          website_id,

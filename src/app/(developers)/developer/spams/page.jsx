@@ -49,7 +49,6 @@ export default function AdminSpamModerationPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
@@ -68,7 +67,6 @@ export default function AdminSpamModerationPage() {
         </button>
       </div>
 
-      {/* Spam List */}
       <div className="space-y-3">
         {loading ? (
           <LoadingScreen fullScreen={false} size="sm" label="Scanning spam logs..." />

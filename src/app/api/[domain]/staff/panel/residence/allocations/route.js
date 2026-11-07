@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyResidenceStaffAccess } from 'src/lib/middleware/residence-auth.js';
 
-// GET: List student seat allocations
 export async function GET(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'view');
@@ -14,7 +13,7 @@ export async function GET(request, context) {
     const { searchParams } = new URL(request.url);
     const hallId = searchParams.get('hall_id');
     const roomId = searchParams.get('room_id');
-    const status = searchParams.get('status') || 'active'; // 'active', 'vacated', 'all'
+    const status = searchParams.get('status') || 'active'; 
     const search = searchParams.get('search')?.trim();
 
     const conditions = ['a.website_id = $1'];
@@ -76,7 +75,6 @@ export async function GET(request, context) {
       values
     );
 
-    // Summary counts
     const statsRes = await queryDb(
       `SELECT
          COUNT(CASE WHEN status = 'active' THEN 1 END)::int AS active_allocations,
@@ -100,7 +98,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Allocate a student to a seat
 export async function POST(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'create');
@@ -130,7 +127,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Student is required.' }, { status: 400 });
     }
 
-    // 1. Verify seat exists, belongs to website, and is currently available
     const seatRes = await queryDb(
       `SELECT s.id, s.seat_number, s.status, s.hall_id, s.room_id,
               r.room_number, r.rent_monthly, h.name AS hall_name
@@ -154,7 +150,6 @@ export async function POST(request, context) {
       );
     }
 
-    // 2. Verify student exists and belongs to this website
     const stuRes = await queryDb(
       `SELECT s.id, s.registration_no, COALESCE(s.name, info.data->>'name') AS name
        FROM website_students s
@@ -170,7 +165,6 @@ export async function POST(request, context) {
 
     const student = stuRes.rows[0];
 
-    // 3. Ensure student does NOT already have an active seat allocation
     const existingActive = await queryDb(
       `SELECT a.id, h.name AS hall_name, r.room_number, s.seat_number
        FROM website_hall_seat_allocations a
@@ -195,7 +189,6 @@ export async function POST(request, context) {
 
     const finalFee = fee_monthly !== undefined ? parseFloat(fee_monthly) : parseFloat(seat.rent_monthly || 0);
 
-    // 4. Insert allocation record
     const insertRes = await queryDb(
       `INSERT INTO website_hall_seat_allocations (
           website_id, hall_id, room_id, seat_id, student_id, session_id,
@@ -219,7 +212,6 @@ export async function POST(request, context) {
       ]
     );
 
-    // 5. Update seat status to 'allocated'
     await queryDb(
       `UPDATE website_hall_room_seats
        SET status = 'allocated', updated_at = CURRENT_TIMESTAMP
@@ -238,7 +230,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update allocation details (fees, remarks, dates) OR Vacate/Disallocate seat
 export async function PUT(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'update');
@@ -252,7 +243,7 @@ export async function PUT(request, context) {
     const body = await request.json();
     const {
       id,
-      action, // 'vacate' / 'disallocate' OR null for regular edit
+      action, 
       vacated_date = new Date().toISOString().split('T')[0],
       vacate_reason,
       fee_monthly,
@@ -281,7 +272,6 @@ export async function PUT(request, context) {
 
     const allocation = allocRes.rows[0];
 
-    // Handle Vacate / Disallocate action
     if (action === 'vacate' || action === 'disallocate') {
       if (allocation.status !== 'active') {
         return NextResponse.json({ success: false, error: 'Allocation is already vacated or cancelled.' }, { status: 400 });
@@ -304,7 +294,6 @@ export async function PUT(request, context) {
         ]
       );
 
-      // Free the seat
       await queryDb(
         `UPDATE website_hall_room_seats
          SET status = 'available', updated_at = CURRENT_TIMESTAMP
@@ -319,7 +308,6 @@ export async function PUT(request, context) {
       });
     }
 
-    // Standard field update
     const updateRes = await queryDb(
       `UPDATE website_hall_seat_allocations
        SET fee_monthly = COALESCE($1, fee_monthly),
@@ -348,7 +336,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Cancel or hard delete allocation record
 export async function DELETE(request, context) {
   try {
     const auth = await verifyResidenceStaffAccess(request, context, 'delete');
@@ -375,7 +362,6 @@ export async function DELETE(request, context) {
 
     const allocation = allocRes.rows[0];
 
-    // Free the seat if it was active
     if (allocation.status === 'active') {
       await queryDb(
         `UPDATE website_hall_room_seats

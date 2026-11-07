@@ -11,8 +11,8 @@ export async function GET(request, context) {
 
     const { website } = auth;
     const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month')?.trim() || new Date().toISOString().slice(0, 7); // Default YYYY-MM
-    const status = searchParams.get('status') || 'all'; // 'all', 'Pending', 'Paid'
+    const month = searchParams.get('month')?.trim() || new Date().toISOString().slice(0, 7); 
+    const status = searchParams.get('status') || 'all'; 
     const search = searchParams.get('search')?.trim() || '';
 
     let whereConditions = [`tsp.website_id = $1`];
@@ -76,7 +76,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(query, params);
 
-    // Summary metrics for the month
     const summaryRes = await queryDb(
       `SELECT 
         COUNT(*)::int AS total_slips,
@@ -111,7 +110,7 @@ export async function POST(request, context) {
 
     const { website } = auth;
     const body = await request.json();
-    const action = body.action || 'generate_month'; // 'generate_month' | 'single'
+    const action = body.action || 'generate_month'; 
 
     if (action === 'generate_month') {
       const month = body.month?.trim() || new Date().toISOString().slice(0, 7);
@@ -119,7 +118,6 @@ export async function POST(request, context) {
         return NextResponse.json({ success: false, message: 'Month is required (YYYY-MM).' }, { status: 400 });
       }
 
-      // Fetch all active teachers who have an assigned payroll scale
       const teachersToPay = await queryDb(
         `SELECT 
           ts.id AS salary_id,
@@ -162,13 +160,11 @@ export async function POST(request, context) {
       });
     }
 
-    // Single payment record creation
     const { teacher_id, month, amount_paid, payment_status, payment_method, payment_date, transaction_id, remarks } = body;
     if (!teacher_id || !month) {
       return NextResponse.json({ success: false, message: 'Teacher ID and Month are required.' }, { status: 400 });
     }
 
-    // Lookup salary_id
     const salLookup = await queryDb(
       `SELECT id FROM website_teacher_salaries WHERE website_id = $1 AND teacher_id = $2 LIMIT 1`,
       [website.id, teacher_id]

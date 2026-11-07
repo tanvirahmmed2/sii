@@ -7,10 +7,6 @@ import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniquen
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
 
-/**
- * GET /api/[domain]/staff/panel/admissions/enrollment
- * Lists selected candidates ready for manual student portal registration, plus classes & sections.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -20,7 +16,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // Fetch candidates with status = 'selected' (ready for enrollment)
     const candidatesRes = await queryDb(`
       SELECT a.*,
              adm.title AS circular_title, adm.class_id AS circular_class_id, adm.session_id AS circular_session_id,
@@ -54,7 +49,6 @@ export async function GET(request, context) {
       ...(row.address_data || {})
     }));
 
-    // Also fetch enrolled history
     const enrolledRes = await queryDb(`
       SELECT a.id, a.application_no, a.applicant_name, a.email, a.phone,
              a.enrolled_at, a.enrolled_student_id,
@@ -67,7 +61,6 @@ export async function GET(request, context) {
       ORDER BY a.enrolled_at DESC LIMIT 20
     `, [websiteId]);
 
-    // Fetch classes, sections, sessions for registration dropdowns
     const [classesRes, sectionsRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
       queryDb(`SELECT id, class_id, name FROM website_sections WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
@@ -89,10 +82,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/staff/panel/admissions/enrollment
- * Allowed staff manually registers a selected candidate into website_students.
- */
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -116,7 +105,6 @@ export async function POST(request, context) {
 
     const appId = parseInt(applicant_id, 10);
 
-    // 1. Fetch applicant and verify status is 'selected'
     const appRes = await queryDb(`
       SELECT a.*,
              inf.data AS info_data,
@@ -157,7 +145,6 @@ export async function POST(request, context) {
     }
 
     const year = new Date().getFullYear();
-    // Do not add REG- prefix in registration number; cleanly strip it if provided
     const cleanReg = registration_no?.trim() ? registration_no.trim().replace(/^REG-?/i, '') : '';
     const finalRegNo = cleanReg || `${year}-${String(appId).padStart(4, '0')}`;
     const studentUniqueId = `STU-${Date.now().toString().slice(-6)}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
@@ -166,7 +153,6 @@ export async function POST(request, context) {
     const finalSessionId = session_id ? parseInt(session_id, 10) : candidate.circular_session_id;
     const finalSectionId = section_id ? parseInt(section_id, 10) : null;
 
-    // Check uniqueness of registration_no per website
     const regCheck = await queryDb(`
       SELECT id FROM website_students
       WHERE website_id = $1 AND LOWER(TRIM(registration_no)) = LOWER(TRIM($2))
@@ -193,8 +179,6 @@ export async function POST(request, context) {
       }
     }
 
-
-    // 2. Perform atomic in-database enrollment via RPC
     const setupToken = crypto.randomBytes(32).toString('hex');
     const setupTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const staffId = auth.user?.id || null;
@@ -229,7 +213,6 @@ export async function POST(request, context) {
       student_unique_id: studentUniqueId
     };
 
-    // 8. Generate full student setup URL and send official setup email
     let setupUrl = `/auth/student/setup?email=${encodeURIComponent(candidateEmail || '')}`;
     if (candidateEmail) {
       try {

@@ -203,9 +203,6 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
   }
 }
 
-// ============================================================================
-// GET: Fetch a single blog by slug or ID
-// ============================================================================
 export async function GET(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -228,9 +225,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// ============================================================================
-// PUT / PATCH: Update blog article by slug or ID
-// ============================================================================
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -397,9 +391,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// ============================================================================
-// DELETE: Delete single blog article by slug or ID
-// ============================================================================
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'blogs');
@@ -420,7 +411,6 @@ export async function DELETE(request, { params }) {
 
     const blogId = existingRes.rows[0].id;
 
-    // Clean up all Cloudinary assets associated with this blog
     const imagesRes = await queryDb('SELECT image_id FROM blog_images WHERE blog_id = $1', [blogId]);
     for (const row of imagesRes.rows) {
       if (row.image_id) {

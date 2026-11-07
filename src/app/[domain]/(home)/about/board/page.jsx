@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useContext, useEffect, useState } from 'react';
@@ -44,7 +43,6 @@ const BoardMembersPage = () => {
   return (
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-5xl mx-auto space-y-8">
-        {/* Header */}
         <div className="border-b border-slate-200/80 dark:border-slate-800 pb-6">
           <div className="flex items-center gap-2 mb-2">
             <Link
@@ -63,7 +61,6 @@ const BoardMembersPage = () => {
           </p>
         </div>
 
-        {/* Governance Charter Notice */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 flex items-start gap-4 shadow-xs">
           <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0 mt-0.5 border border-primary/20">
             <FiShield className="w-5 h-5" />
@@ -80,7 +77,6 @@ const BoardMembersPage = () => {
           </div>
         </div>
 
-        {/* Board Members Grid */}
         {loading ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-16 flex flex-col items-center justify-center gap-3 shadow-xs">
             <Loader />
@@ -109,7 +105,6 @@ const BoardMembersPage = () => {
                 className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300"
               >
                 <div className="flex items-start gap-4">
-                  {/* Portrait */}
                   {member.image ? (
                     <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-primary/20 bg-slate-100 dark:bg-slate-800 shrink-0">
                       <img
@@ -124,7 +119,6 @@ const BoardMembersPage = () => {
                     </div>
                   )}
 
-                  {/* Name & Designation */}
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-slate-400">
@@ -142,7 +136,6 @@ const BoardMembersPage = () => {
                   </div>
                 </div>
 
-                {/* Biography */}
                 {member.bio && (
                   <div
                     className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed prose dark:prose-invert max-w-none border-t border-slate-100 dark:border-slate-800/80 pt-3"
@@ -150,7 +143,6 @@ const BoardMembersPage = () => {
                   />
                 )}
 
-                {/* Image Link if present */}
                 {member.image && (
                   <div className="flex justify-end pt-1">
                     <a

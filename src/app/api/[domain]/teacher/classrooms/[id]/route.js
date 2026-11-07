@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { query } from 'src/lib/database/db.js';
 import { verifyTeacherClassroomAccess } from 'src/lib/middleware/classroom_auth.js';
 
-// GET: Classroom detail & subjects for class
 export async function GET(request, context) {
   try {
     const { params } = context;
@@ -16,7 +15,6 @@ export async function GET(request, context) {
 
     const classroom = auth.classroom;
 
-    // Fetch subjects available for this class
     const subjectsRes = await query(
       `SELECT ws.id, ws.name, ws.code, ws.type
        FROM website_subjects ws
@@ -26,7 +24,6 @@ export async function GET(request, context) {
       [classroom.class_id, auth.website.id]
     );
 
-    // If no subjects mapped to class yet, fallback to all website subjects
     let subjects = subjectsRes.rows;
     if (subjects.length === 0) {
       const allSubjRes = await query(

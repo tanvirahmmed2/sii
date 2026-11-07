@@ -12,12 +12,10 @@ export default function StudentClassroomsHubPage() {
   const [loadingClassrooms, setLoadingClassrooms] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Active resource tab inside selected classroom
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'syllabus' | 'assignments' | 'lectures' | 'notes'
+  const [activeTab, setActiveTab] = useState('all'); 
   const [subjectFilter, setSubjectFilter] = useState('');
   const [search, setSearch] = useState('');
 
-  // Fetch student's classrooms
   useEffect(() => {
     async function fetchStudentClassrooms() {
       setLoadingClassrooms(true);
@@ -40,7 +38,6 @@ export default function StudentClassroomsHubPage() {
     fetchStudentClassrooms();
   }, [getApiEndpoint]);
 
-  // Fetch materials for selected classroom
   const fetchClassroomMaterials = useCallback(async (classroomId) => {
     if (!classroomId) return;
     setLoadingDetails(true);
@@ -63,7 +60,6 @@ export default function StudentClassroomsHubPage() {
     }
   }, [selectedClassroomId, fetchClassroomMaterials]);
 
-  // Extract unique subjects for filtering
   const allMaterials = classroomData ? [
     ...(classroomData.syllabus || []).map(item => ({ ...item, type: 'syllabus' })),
     ...(classroomData.assignments || []).map(item => ({ ...item, type: 'assignment' })),
@@ -75,7 +71,6 @@ export default function StudentClassroomsHubPage() {
     new Set(allMaterials.map(m => m.subject_name).filter(Boolean))
   );
 
-  // Filter items
   const filteredItems = allMaterials.filter(item => {
     if (activeTab !== 'all' && activeTab !== `${item.type}s` && activeTab !== item.type) {
       return false;
@@ -98,7 +93,6 @@ export default function StudentClassroomsHubPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -143,7 +137,6 @@ export default function StudentClassroomsHubPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Classroom Header Card */}
           {classroomData?.classroom && (
             <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5">
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -174,7 +167,6 @@ export default function StudentClassroomsHubPage() {
                   )}
                 </div>
 
-                {/* Counter Stats */}
                 <div className="grid grid-cols-4 gap-2 text-center shrink-0 w-full md:w-auto">
                   <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-md border border-slate-200 dark:border-slate-700 min-w-[70px]">
                     <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Syllabus</p>
@@ -205,9 +197,7 @@ export default function StudentClassroomsHubPage() {
             </div>
           )}
 
-          {/* Filters & Tabs Strip */}
           <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 flex flex-wrap items-center justify-between gap-3">
-            {/* Type Tabs */}
             <div className="flex flex-wrap gap-1">
               <button
                 type="button"
@@ -266,7 +256,6 @@ export default function StudentClassroomsHubPage() {
               </button>
             </div>
 
-            {/* Subject Filter & Search */}
             <div className="flex items-center gap-2 flex-wrap">
               {uniqueSubjects.length > 0 && (
                 <select
@@ -293,7 +282,6 @@ export default function StudentClassroomsHubPage() {
             </div>
           </div>
 
-          {/* Materials Stream */}
           {loadingDetails ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (

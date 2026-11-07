@@ -10,7 +10,6 @@ export default function DeveloperFaqsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // In-page form state
   const [showForm, setShowForm] = useState(false);
   const [editingFaq, setEditingFaq] = useState(null);
   const [formData, setFormData] = useState({ question: '', answer: '' });
@@ -176,7 +175,6 @@ export default function DeveloperFaqsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-2">
@@ -223,7 +221,6 @@ export default function DeveloperFaqsPage() {
         </div>
       )}
 
-      {/* Integrated In-Page Creation & Edit Form */}
       {showForm && (
         <div
           ref={formRef}
@@ -303,9 +300,7 @@ export default function DeveloperFaqsPage() {
         </div>
       )}
 
-      {/* Main List Card */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
-        {/* Search Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
             <input
@@ -331,7 +326,6 @@ export default function DeveloperFaqsPage() {
           </div>
         </div>
 
-        {/* FAQs Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

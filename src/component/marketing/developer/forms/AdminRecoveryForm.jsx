@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function AdminRecoveryForm() {
-  const [step, setStep] = useState('request'); // 'request' | 'reset' | 'success'
+  const [step, setStep] = useState('request'); 
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -14,7 +14,6 @@ export default function AdminRecoveryForm() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Step 1: Request recovery token
   const handleRequestToken = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -43,7 +42,6 @@ export default function AdminRecoveryForm() {
     }
   };
 
-  // Step 2: Reset password using token
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
@@ -103,7 +101,6 @@ export default function AdminRecoveryForm() {
         </div>
       )}
 
-      {/* Step 3: Password reset completed */}
       {step === 'success' && (
         <div className="space-y-4">
           <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal space-y-1">
@@ -119,7 +116,6 @@ export default function AdminRecoveryForm() {
         </div>
       )}
 
-      {/* Step 2: Reset Form (Token received) */}
       {step === 'reset' && (
         <form onSubmit={handleResetPassword} className="space-y-4">
           {successMessage && (
@@ -127,7 +123,6 @@ export default function AdminRecoveryForm() {
               {successMessage}
             </div>
           )}
-
 
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
@@ -181,7 +176,6 @@ export default function AdminRecoveryForm() {
         </form>
       )}
 
-      {/* Step 1: Request Form */}
       {step === 'request' && (
         <form onSubmit={handleRequestToken} className="space-y-4">
           <div className="space-y-1">

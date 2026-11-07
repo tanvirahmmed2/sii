@@ -14,7 +14,6 @@ export default function ResidenceApplicantsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [halls, setHalls] = useState([]);
 
-  // Fetch unallocated students who are verified and active
   const fetchApplicants = async () => {
     try {
       setLoading(true);
@@ -54,7 +53,6 @@ export default function ResidenceApplicantsPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -85,7 +83,6 @@ export default function ResidenceApplicantsPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-sm">

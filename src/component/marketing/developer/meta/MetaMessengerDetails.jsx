@@ -26,7 +26,6 @@ export default function MetaMessengerDetails({
   const [creatingTestConv, setCreatingTestConv] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Fetch Meta config
   const fetchConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/marketing/developer/meta/config');
@@ -39,7 +38,6 @@ export default function MetaMessengerDetails({
     }
   }, []);
 
-  // Fetch conversations
   const fetchConversations = useCallback(
     async (showLoading = false) => {
       try {
@@ -64,7 +62,6 @@ export default function MetaMessengerDetails({
     fetchConversations(true);
   }, [fetchConfig, fetchConversations]);
 
-  // Background polling every 5s
   useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations(false);
@@ -72,7 +69,6 @@ export default function MetaMessengerDetails({
     return () => clearInterval(interval);
   }, [fetchConversations]);
 
-  // Create test conversation
   const handleCreateTestConversation = async () => {
     try {
       setCreatingTestConv(true);
@@ -98,7 +94,6 @@ export default function MetaMessengerDetails({
     }
   };
 
-  // Delete conversation
   const handleDeleteConversation = async (id, e) => {
     if (e) e.stopPropagation();
     if (!confirm('Are you sure you want to delete this conversation and message history?')) return;
@@ -125,7 +120,6 @@ export default function MetaMessengerDetails({
       : channelConfig
   );
 
-  // Filter conversations
   const filteredConvs = conversations.filter((c) => {
     let matchesStatus = true;
     const st = String(c.status || 'OPEN').toUpperCase();
@@ -151,7 +145,6 @@ export default function MetaMessengerDetails({
     );
   });
 
-  // Calculate metrics
   const totalCount = conversations.length;
   const openCount = conversations.filter((c) => String(c.status || 'OPEN').toUpperCase() === 'OPEN').length;
   const activeCount = conversations.filter((c) => ['OPEN', 'ACTIVE'].includes(String(c.status || '').toUpperCase())).length;
@@ -170,7 +163,6 @@ export default function MetaMessengerDetails({
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div className="flex items-center gap-3">
           <Link
@@ -195,7 +187,6 @@ export default function MetaMessengerDetails({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Health status badge */}
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-normal border transition-colors ${
               isConfigured
@@ -228,7 +219,6 @@ export default function MetaMessengerDetails({
         </div>
       </div>
 
-      {/* Metrics Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setStatusFilter('ALL')}
@@ -276,7 +266,6 @@ export default function MetaMessengerDetails({
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="w-full sm:w-80">
           <input
@@ -311,7 +300,6 @@ export default function MetaMessengerDetails({
         </div>
       </div>
 
-      {/* Conversations List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && conversations.length === 0 ? (
           <div className="p-12 flex items-center justify-center">

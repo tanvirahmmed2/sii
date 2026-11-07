@@ -63,7 +63,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE PAYMENT
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'payments');
@@ -85,7 +84,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE PAYMENT & AUTO-PROVISION SUBSCRIPTION IF MARKED PAID
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'payments');
@@ -100,7 +98,6 @@ export async function PUT(request) {
     const data = body.data || body;
     const requestedStatus = (data.status || '').toLowerCase();
 
-    // Fetch existing payment record
     const existingRes = await queryDb('SELECT * FROM payments WHERE id = $1 LIMIT 1', [id]);
     const existing = existingRes.rows[0];
     if (!existing) {
@@ -111,7 +108,6 @@ export async function PUT(request) {
     const isBecomingPaid = (requestedStatus === 'successful' || requestedStatus === 'completed' || requestedStatus === 'paid') && existing.status !== 'successful';
 
     if (isBecomingPaid && existing.purchase_id) {
-      // Fetch purchase to determine duration
       const puRes = await queryDb('SELECT * FROM purchases WHERE id = $1', [existing.purchase_id]);
       const pu = puRes.rows[0];
       const isYearly = String(pu?.billing_cycle || '').toLowerCase() === 'yearly';
@@ -130,7 +126,6 @@ export async function PUT(request) {
       completedPurchase = updatedPuRes.rows[0];
     }
 
-    // Build update clauses
     const updateData = { ...data };
     delete updateData.id;
     delete updateData.action;
@@ -170,7 +165,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE PAYMENT
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'payments');

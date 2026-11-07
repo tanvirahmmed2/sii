@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: List all chats for current developer + all available developers
-// ============================================================================
 export async function GET(request) {
   try {
     const auth = await hasModulePermission(request, 'chats');
@@ -14,7 +11,6 @@ export async function GET(request) {
 
     const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
 
-    // 1. Fetch chats the user belongs to
     const chatsRes = await queryDb(`
       SELECT 
         c.id,
@@ -55,7 +51,6 @@ export async function GET(request) {
       ORDER BY COALESCE(lm.created_at, c.updated_at) DESC
     `, [currentDevId]);
 
-    // 2. Fetch all other active developers to initiate chats
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, 'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name
       FROM developers d
@@ -75,9 +70,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// POST: Create a new Direct (1-to-1) or Group Chat
-// ============================================================================
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'chats');
@@ -89,7 +81,6 @@ export async function POST(request) {
     const body = await request.json();
     const { type = 'DIRECT', title, recipient_developer_id, participant_developer_ids = [] } = body;
 
-    // DIRECT CHAT
     if (type === 'DIRECT') {
       if (!recipient_developer_id) {
         return NextResponse.json({ success: false, error: 'Recipient developer is required.' }, { status: 400 });
@@ -99,7 +90,6 @@ export async function POST(request) {
         return NextResponse.json({ success: false, error: 'Cannot create a direct chat with yourself.' }, { status: 400 });
       }
 
-      // Check if a direct chat already exists between these 2 developers
       const existingRes = await queryDb(`
         SELECT c.id 
         FROM internal_chats c
@@ -118,7 +108,6 @@ export async function POST(request) {
         });
       }
 
-      // Create new direct chat
       const chatRes = await queryDb(
         `INSERT INTO internal_chats (type, created_by_developer_id) VALUES ('DIRECT', $1) RETURNING id`,
         [currentDevId]
@@ -138,7 +127,6 @@ export async function POST(request) {
       });
     }
 
-    // GROUP CHAT
     if (type === 'GROUP') {
       if (!title || !title.trim()) {
         return NextResponse.json({ success: false, error: 'Group title is required.' }, { status: 400 });
@@ -159,7 +147,6 @@ export async function POST(request) {
         );
       }
 
-      // System greeting message
       await queryDb(
         `INSERT INTO chat_messages (chat_id, sender_developer_id, message, is_system)
          VALUES ($1, $2, $3, TRUE)`,

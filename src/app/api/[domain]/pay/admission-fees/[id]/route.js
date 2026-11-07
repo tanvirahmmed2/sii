@@ -5,10 +5,6 @@ import { fetchAssignedGatewaysForPurpose, processSecureAdmissionFeePayment } fro
 
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/[domain]/pay/admission-fees/[id]
- * Load applicant invoice details by applicant ID.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -21,7 +17,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: 'Missing applicant ID.' }, { status: 400 });
     }
 
-    // Active gateways specifically assigned for admission fees
     const sanitizedGateways = await fetchAssignedGatewaysForPurpose(website.id, 'admission_fees');
 
     const maskEmail = (email) => {
@@ -41,7 +36,6 @@ export async function GET(request, context) {
       return `${clean.slice(0, 3)}*****${clean.slice(-3)}`;
     };
 
-    // Fetch applicant details
     const appRes = await queryDb(`
       SELECT a.id, a.application_no, a.applicant_name, a.email, a.phone,
              a.status, a.admission_id, adm.title AS circular_title,
@@ -78,7 +72,6 @@ export async function GET(request, context) {
       masked_phone: maskPhone(row.phone)
     };
 
-    // Fetch fee payment record
     const feeRes = await queryDb(`
       SELECT p.id, p.invoice_no, p.amount, p.currency, p.payment_status,
              a.application_no, a.applicant_name,
@@ -133,10 +126,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * POST /api/[domain]/pay/admission-fees/[id]
- * Process payment for candidate admission fee.
- */
 export async function POST(request, context) {
   const client = await pool.connect();
   try {

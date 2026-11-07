@@ -38,7 +38,6 @@ export default function MySalariesPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
@@ -57,7 +56,6 @@ export default function MySalariesPage() {
         </button>
       </div>
 
-      {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
           <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">Total Received</span>
@@ -90,7 +88,6 @@ export default function MySalariesPage() {
         </div>
       </div>
 
-      {/* Salary History Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-sm font-medium text-slate-900 dark:text-white">Disbursement History</h2>

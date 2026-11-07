@@ -16,7 +16,6 @@ export async function GET(request, context) {
     const section = searchParams.get('section') || '';
     const shelfId = searchParams.get('shelf_id');
 
-    // If specific shelf details requested with its book inventory
     if (shelfId) {
       const shelfQuery = `
         SELECT
@@ -42,7 +41,6 @@ export async function GET(request, context) {
 
       const shelf = shelfRes.rows[0];
 
-      // Retrieve books placed on this shelf
       const booksQuery = `
         SELECT
           b.id,
@@ -73,7 +71,6 @@ export async function GET(request, context) {
       });
     }
 
-    // List all shelves with aggregation
     let queryText = `
       SELECT
         s.*,
@@ -117,7 +114,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryText, params);
 
-    // Compute macro summary metrics for KPI cards
     const summaryQuery = `
       SELECT
         COUNT(s.id)::int AS total_shelves,
@@ -255,7 +251,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Shelf name is required.' }, { status: 400 });
     }
 
-    // Check duplicate name on other shelf
     const check = await queryDb(
       `SELECT id FROM website_book_shelves WHERE website_id = $1 AND LOWER(shelf_name) = LOWER($2) AND id != $3`,
       [auth.website.id, shelf_name.trim(), id]
@@ -295,7 +290,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Shelf not found or unauthorized.' }, { status: 404 });
     }
 
-    // Sync books shelf_location text to the updated shelf_name
     await queryDb(
       `UPDATE website_books SET shelf_location = $1 WHERE website_id = $2 AND shelf_id = $3`,
       [shelf_name.trim(), auth.website.id, id]
@@ -322,7 +316,6 @@ export async function DELETE(request, context) {
       return NextResponse.json({ success: false, error: 'Shelf ID is required for deletion.' }, { status: 400 });
     }
 
-    // Unlink books assigned to this shelf
     await queryDb(
       `UPDATE website_books SET shelf_id = NULL, shelf_location = NULL WHERE website_id = $1 AND shelf_id = $2`,
       [auth.website.id, id]

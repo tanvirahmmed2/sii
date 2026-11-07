@@ -2,24 +2,12 @@ import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/mid
 import { getStaffSession, hasStaffModulePermission } from 'src/lib/middleware/staff.js';
 import { getOfficerSession } from 'src/lib/middleware/officer.js';
 
-/**
- * Validates whether the incoming request is authorized to perform library operations.
- * Requires:
- *  1. Tenant website subscription package must include 'library' module
- *  2. Authenticated Staff with 'library' permission, OR Officer with 'library' department/permission
- *
- * @param {Request} request
- * @param {Object} context
- * @param {'view'|'create'|'edit'|'delete'} action
- * @returns {Promise<{ website: Object, actor: Object, allowed: boolean } | { error: string, status: number }>}
- */
 export async function verifyLibraryAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404 };
   }
 
-  // 1. Check Tenant Subscription Package Module Allowance
   const hasAllowance = await hasTenantModuleAllowance(website, 'library');
   if (!hasAllowance) {
     return {
@@ -29,7 +17,6 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
     };
   }
 
-  // 2. Check Staff Session
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -67,7 +54,6 @@ export async function verifyLibraryAccess(request, context, action = 'view') {
     };
   }
 
-  // 3. Check Officer Session
   const officerSession = await getOfficerSession(request);
   if (officerSession) {
     if (officerSession.website_id && String(officerSession.website_id) !== String(website.id)) {

@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * GET /api/[domain]/modules/control
- * Returns the catalog of back-office staff & administrative control modules (website_control_modules)
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -62,10 +58,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PATCH /api/[domain]/modules/control
- * Toggle or update a control module
- */
 export async function PATCH(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

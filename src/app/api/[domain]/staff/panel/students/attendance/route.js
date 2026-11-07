@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 
-// GET: Fetch student attendance records by date, month, or class/section
 export async function GET(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -16,9 +15,9 @@ export async function GET(request, context) {
     const sessionId = searchParams.get('session_id');
     const classId = searchParams.get('class_id');
     const sectionId = searchParams.get('section_id');
-    const date = searchParams.get('date'); // YYYY-MM-DD
-    const month = searchParams.get('month'); // YYYY-MM
-    const year = searchParams.get('year'); // YYYY
+    const date = searchParams.get('date'); 
+    const month = searchParams.get('month'); 
+    const year = searchParams.get('year'); 
 
     const conditions = ['s.website_id = $1'];
     const values = [website.id];
@@ -39,7 +38,6 @@ export async function GET(request, context) {
 
     const whereStudents = conditions.join(' AND ');
 
-    // If specific date is requested: return roster with attendance on that date
     if (date) {
       const attDate = date.trim();
       const rosterQuery = `
@@ -69,7 +67,6 @@ export async function GET(request, context) {
       });
     }
 
-    // If month/year summary is requested
     const attConditions = ['a.website_id = $1'];
     const attValues = [website.id];
     let aIdx = 2;
@@ -134,7 +131,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Save or update batch attendance for students
 export async function POST(request, context) {
   try {
     const auth = await verifyStudentStaffAccess(request, context, 'create');
@@ -154,7 +150,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Attendance records are required.' }, { status: 400 });
     }
 
-    // Ensure student attendances table exists
     try {
       await queryDb(`
         CREATE TABLE IF NOT EXISTS website_student_attendances (
@@ -175,10 +170,8 @@ export async function POST(request, context) {
         );
       `);
     } catch {
-      // Ignore if table exists
     }
 
-    // Upsert each record
     let savedCount = 0;
     for (const rec of records) {
       if (!rec.student_id) continue;

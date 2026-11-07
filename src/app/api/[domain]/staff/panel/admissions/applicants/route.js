@@ -3,10 +3,6 @@ import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { autoPublishDueResults } from '../results/publish/route.js';
 
-/**
- * GET /api/[domain]/staff/panel/admissions/applicants
- * Fetches applicants with full candidate details, fees, previous background, and media.
- */
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -14,7 +10,6 @@ export async function GET(request, context) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
 
-    // Automatically check and publish any circulars whose result_date has arrived
     await autoPublishDueResults(auth.website.id);
 
     const { searchParams } = new URL(request.url);
@@ -22,7 +17,7 @@ export async function GET(request, context) {
     const status = searchParams.get('status') || 'all';
     const paymentStatus = searchParams.get('payment_status') || 'all';
     const search = searchParams.get('search')?.trim();
-    const sortBy = searchParams.get('sort_by') || 'created_at'; // 'created_at' | 'merit' | 'score'
+    const sortBy = searchParams.get('sort_by') || 'created_at'; 
 
     let sql = `
       SELECT a.*,
@@ -67,7 +62,7 @@ export async function GET(request, context) {
     const params = [auth.website.id];
     let paramIndex = 2;
 
-    const scope = searchParams.get('scope'); // 'applicants' | 'spam' | 'incomplete' | 'completed' | 'all_raw'
+    const scope = searchParams.get('scope'); 
 
     if (admissionId) {
       sql += ` AND a.admission_id = $${paramIndex++}`;
@@ -92,8 +87,6 @@ export async function GET(request, context) {
       sql += ` AND a.status = $${paramIndex++}`;
       params.push(status);
     } else if (scope !== 'all_raw') {
-      // Default for /staff-panel/admission-applicants (all / omitted):
-      // STRICT RULE: exclude 'incomplete' and 'unpaid' so they only appear in their dedicated desks!
       sql += ` AND a.status NOT IN ('incomplete', 'unpaid')`;
     }
 
@@ -124,7 +117,6 @@ export async function GET(request, context) {
 
     const res = await queryDb(sql, params);
 
-    // Compute status counts across this website/circular
     const statsRes = await queryDb(`
       SELECT
         COUNT(*)::int AS total,
@@ -190,10 +182,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PUT /api/[domain]/staff/panel/admissions/applicants
- * Allows staff to Select, Reject, issue admit cards, or update evaluation score/notes
- */
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -206,14 +194,13 @@ export async function PUT(request, context) {
       action,
       admission_id,
       id,
-      status, // 'selected' | 'rejected' | 'pending' | 'completed' | 'paid' | 'unpaid'
+      status, 
       selection_notes,
       score,
       roll_no,
       merit_position
     } = body;
 
-    // Handle bulk or single Admit Card Issuance
     if (action === 'issue_admit_cards' || body.issue_admit_cards) {
       const targetAdmId = admission_id || body.circular_id;
       if (!targetAdmId) {
@@ -258,7 +245,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Applicant ID is required.' }, { status: 400 });
     }
 
-    // Verify applicant belongs to this website
     const checkRes = await queryDb(`
       SELECT id, admission_id, applicant_name, email, status
       FROM website_admission_applicants
@@ -302,7 +288,6 @@ export async function PUT(request, context) {
 
     const updated = updateRes.rows[0];
 
-    // If candidate status is updated to 'selected', automatically sync into website_admission_results
     if (isSelected) {
       await queryDb(`
         INSERT INTO website_admission_results (
@@ -333,7 +318,6 @@ export async function PUT(request, context) {
         staffId
       ]);
     } else if (isRejected) {
-      // If rejected, remove from published results
       await queryDb(`
         DELETE FROM website_admission_results
         WHERE website_id = $1 AND admission_id = $2 AND applicant_id = $3
@@ -351,10 +335,6 @@ export async function PUT(request, context) {
   }
 }
 
-/**
- * DELETE /api/[domain]/staff/panel/admissions/applicants
- * Allows staff to permanently delete a candidate application record.
- */
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffPaymentAccess(request, context);
@@ -371,7 +351,6 @@ export async function DELETE(request, context) {
 
     const applicantId = parseInt(id, 10);
 
-    // Cascade delete any child records cleanly
     await queryDb(`DELETE FROM website_admission_applicant_images WHERE applicant_id = $1`, [applicantId]);
     await queryDb(`DELETE FROM website_admission_applicant_info WHERE applicant_id = $1`, [applicantId]);
     await queryDb(`DELETE FROM website_admission_exam_marks WHERE applicant_id = $1`, [applicantId]);

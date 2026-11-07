@@ -45,7 +45,6 @@ async function parseNewsImageRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// GET: List images for news articles
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -94,7 +93,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add an image to a news article (table-first verification and Cloudinary upload)
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -107,7 +105,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'News article ID is required.' }, { status: 400 });
     }
 
-    // 1. Verify news article exists in tenant database FIRST before any upload
     const newsCheck = await queryDb(
       `SELECT id, title FROM website_news WHERE id = $1 AND website_id = $2`,
       [news_id, auth.website.id]
@@ -120,7 +117,6 @@ export async function POST(request, context) {
     let finalImageUrl = image_url;
     let finalImageId = image_id || null;
 
-    // 2. Upload to Cloudinary only if the parent news record exists
     if (file && typeof file === 'object' && file.name) {
       try {
         const uploadRes = await uploadImage(file, `school/${auth.website.id}/news`);
@@ -138,7 +134,6 @@ export async function POST(request, context) {
 
     const isCoverBool = is_cover === 'true' || is_cover === true;
 
-    // If setting as cover, unset cover on any existing images for this news
     if (isCoverBool) {
       await queryDb(
         `UPDATE website_news_images SET is_cover = FALSE WHERE news_id = $1 AND website_id = $2`,
@@ -173,7 +168,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update news image metadata (cover status, caption, display order)
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -186,7 +180,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Image ID is required for update.' }, { status: 400 });
     }
 
-    // Check image existence
     const imgCheck = await queryDb(
       `SELECT * FROM website_news_images WHERE id = $1 AND website_id = $2`,
       [id, auth.website.id]
@@ -199,7 +192,6 @@ export async function PUT(request, context) {
     const currentImg = imgCheck.rows[0];
     const isCoverBool = is_cover !== undefined ? (is_cover === 'true' || is_cover === true) : undefined;
 
-    // If making this cover, unset others
     if (isCoverBool === true) {
       await queryDb(
         `UPDATE website_news_images SET is_cover = FALSE WHERE news_id = $1 AND website_id = $2`,
@@ -235,7 +227,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove news image and cleanup Cloudinary
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

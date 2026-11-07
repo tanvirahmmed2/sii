@@ -6,9 +6,6 @@ import { JWT_SECRET, STUDENT_TOKEN } from '../database/secret.js';
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 export const STUDENT_COOKIE_NAME = STUDENT_TOKEN || 'hiesci-student';
 
-// ============================================================================
-// Cookie helper
-// ============================================================================
 async function getCookieStore() {
   try {
     const nextHeaders = await import('next/headers');
@@ -16,14 +13,10 @@ async function getCookieStore() {
       return await nextHeaders.cookies();
     }
   } catch {
-    // Outside Next.js server runtime context
   }
   return null;
 }
 
-// ============================================================================
-// Password helpers
-// ============================================================================
 export async function hashPassword(password) {
   if (!password) throw new Error('Password is required for hashing.');
   const salt = await bcrypt.genSalt(10);
@@ -39,9 +32,6 @@ export async function comparePassword(password, hash) {
   }
 }
 
-// ============================================================================
-// JWT helpers
-// ============================================================================
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -59,16 +49,13 @@ export function verifyJWT(token) {
   }
 }
 
-// ============================================================================
-// Session Cookie helpers
-// ============================================================================
 export async function setStudentSessionCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -105,13 +92,6 @@ export async function clearStudentSessionCookie(response) {
   }
 }
 
-// ============================================================================
-// Student Session & RBAC Helpers
-// ============================================================================
-
-/**
- * Extracts and returns the authenticated student session from request or cookies
- */
 export async function getStudentSession(request) {
   try {
     let token = null;
@@ -137,7 +117,6 @@ export async function getStudentSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // Check website_students joined with website_student_info
     let res = await query(
       `SELECT s.id, s.website_id,
               COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
@@ -166,7 +145,6 @@ export async function getStudentSession(request) {
     ).catch(() => ({ rows: [] }));
 
     if (res.rows.length === 0) {
-      // Fallback for legacy table
       res = await query(
         `SELECT id, name, email, registration_number, is_active, is_registered,
                 TRUE AS is_verified, 'verified' AS verification_status, website_id, created_at
@@ -215,9 +193,6 @@ export const getStudentUser = async (request) => {
   return session?.student || null;
 };
 
-/**
- * Checks whether the current request is an authenticated, active, and verified student
- */
 export async function isStudent(request) {
   try {
     const session = await getStudentSession(request);
@@ -227,9 +202,6 @@ export async function isStudent(request) {
   }
 }
 
-/**
- * Route guard requiring student authentication
- */
 export async function requireStudent(request) {
   const session = await getStudentSession(request);
   if (!session || !session.isActive || !session.isVerified) {
@@ -238,9 +210,6 @@ export async function requireStudent(request) {
   return { student: session.student, session };
 }
 
-/**
- * Creates login session row in website_student_login_sessions
- */
 export async function createStudentLoginSession(studentId, websiteId, token, request) {
   try {
     const ip = request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
@@ -256,9 +225,6 @@ export async function createStudentLoginSession(studentId, websiteId, token, req
   }
 }
 
-/**
- * Revokes a student session in website_student_login_sessions
- */
 export async function revokeStudentLoginSession(token) {
   try {
     if (!token) return;

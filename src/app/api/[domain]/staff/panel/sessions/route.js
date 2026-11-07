@@ -6,7 +6,6 @@ async function verifyStaffAccess(request, context, action = 'view') {
   return verifyStaffModuleAccess(request, context, 'routine', action);
 }
 
-// GET: List all academic sessions (independent entity)
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'view');
@@ -44,7 +43,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create academic session
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'create');
@@ -59,7 +57,6 @@ export async function POST(request, context) {
 
     const trimmedName = String(name).trim();
 
-    // If marked as current, reset other sessions' is_current to false
     if (is_current) {
       await queryDb(
         `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1`,
@@ -95,7 +92,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update academic session
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'edit');
@@ -108,7 +104,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
     }
 
-    // If marked current, clear other current sessions first
     if (is_current) {
       await queryDb(
         `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1 AND id != $2`,
@@ -148,7 +143,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete academic session
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context, 'delete');

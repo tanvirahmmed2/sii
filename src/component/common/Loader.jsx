@@ -1,10 +1,5 @@
 import React from 'react';
 
-/**
- * Standard system Loader component.
- * Uses the custom 3-bar bouncing animation style.
- * Automatically adapts to `--primary` from globals.css or tenant theme.
- */
 export default function Loader({
   size = 'md',
   color,

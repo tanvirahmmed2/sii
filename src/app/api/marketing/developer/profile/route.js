@@ -10,9 +10,6 @@ import { queryDb } from 'src/lib/database/db';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// ============================================================================
-// GET: Fetch authenticated developer complete profile, stats, sessions & audit
-// ============================================================================
 export async function GET(request) {
   try {
     const authUser = await getAuthenticatedUser(request);
@@ -43,7 +40,6 @@ export async function GET(request) {
 
     const developer = devRes.rows[0];
 
-    // Fetch active login sessions with current session identification
     const currentToken = authUser.token || '';
     const sessionRes = await queryDb(
       `SELECT id, ip_address, user_agent, expires_at, last_active_at, created_at,
@@ -56,7 +52,6 @@ export async function GET(request) {
 
     const activeSessions = sessionRes.rows.length || 1;
 
-    // Fetch recent login history
     const loginRes = await queryDb(
       `SELECT id, status, ip_address, user_agent, failure_reason, login_time, created_at
        FROM developer_login_activities
@@ -66,7 +61,6 @@ export async function GET(request) {
       [developer.id]
     ).catch(() => ({ rows: [] }));
 
-    // Fetch granular permissions with module details directly from module_permissions
     let rolePermissions = [];
     const permRes = await queryDb(
       `SELECT m.name AS module_name, m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
@@ -78,7 +72,6 @@ export async function GET(request) {
     ).catch(() => ({ rows: [] }));
     rolePermissions = permRes.rows || [];
 
-    // Fetch operational stats (assigned tickets, ticket replies)
     const statsRes = await queryDb(
       `SELECT 
         (SELECT COUNT(*)::int FROM support_tickets WHERE assigned_developer_id = $1) AS assigned_tickets,
@@ -110,9 +103,6 @@ export async function GET(request) {
   }
 }
 
-// ============================================================================
-// PUT / PATCH: Update authenticated developer profile and credentials
-// ============================================================================
 export async function PUT(request) {
   try {
     const authUser = await getAuthenticatedUser(request);
@@ -126,7 +116,6 @@ export async function PUT(request) {
     const body = await request.json().catch(() => ({}));
     const data = body.data || body;
 
-    // Load current developer record including password hash
     const currentRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
               d.github_profile, d.linkedin_profile, d.password,
@@ -143,7 +132,6 @@ export async function PUT(request) {
 
     const currentDev = currentRes.rows[0];
 
-    // 1. Validate & sanitize Name
     let newName = currentDev.name;
     if (data.name !== undefined) {
       newName = data.name.trim();
@@ -152,7 +140,6 @@ export async function PUT(request) {
       }
     }
 
-    // 2. Validate & sanitize Email
     let newEmail = currentDev.email;
     let emailChanged = false;
     if (data.email !== undefined) {
@@ -179,7 +166,6 @@ export async function PUT(request) {
       }
     }
 
-    // 3. Profile details
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
     const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
@@ -187,7 +173,6 @@ export async function PUT(request) {
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
     const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
 
-    // 4. Password Change
     let newPasswordHash = currentDev.password;
     if (data.newPassword && data.newPassword.trim()) {
       const currentPassword = data.currentPassword?.trim();
@@ -216,7 +201,6 @@ export async function PUT(request) {
       newPasswordHash = await hashPassword(data.newPassword.trim());
     }
 
-    // Execute database update
     const updateRes = await queryDb(
       `UPDATE developers
        SET name = $1,
@@ -269,7 +253,6 @@ export async function PUT(request) {
       },
     });
 
-    // If email changed, refresh JWT cookie token seamlessly
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
@@ -294,9 +277,6 @@ export async function PUT(request) {
   }
 }
 
-// ============================================================================
-// DELETE: Revoke other sessions or a specific session
-// ============================================================================
 export async function DELETE(request) {
   try {
     const authUser = await getAuthenticatedUser(request);

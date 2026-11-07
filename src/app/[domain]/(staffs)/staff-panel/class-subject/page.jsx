@@ -12,7 +12,6 @@ export default function ClassSubjectPage() {
   const [selectedClassId, setSelectedClassId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMapping, setEditingMapping] = useState(null);
   const [formData, setFormData] = useState({
@@ -26,7 +25,6 @@ export default function ClassSubjectPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Delete State
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const fetchData = useCallback(async () => {
@@ -62,7 +60,6 @@ export default function ClassSubjectPage() {
     });
   }, [classSubjects, searchTerm, selectedClassId]);
 
-  // Unassigned subjects for the currently selected class
   const unassignedSubjects = useMemo(() => {
     if (!selectedClassId) return subjects;
     const assignedSubIds = new Set(classSubjects.filter(cs => String(cs.class_id) === String(selectedClassId)).map(cs => String(cs.subject_id)));
@@ -154,7 +151,6 @@ export default function ClassSubjectPage() {
     return classes.find(c => String(c.id) === String(selectedClassId));
   }, [classes, selectedClassId]);
   return <div className="w-full space-y-4">
-      {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Current Class</p>
@@ -197,7 +193,6 @@ export default function ClassSubjectPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       {successMsg && <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
           <span>{successMsg}</span>
           <span className="text-[10px] font-mono">OK</span>
@@ -207,9 +202,7 @@ export default function ClassSubjectPage() {
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer">DISMISS</button>
         </div>}
 
-      {/* Workstation Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Class Selection Tabs Bar */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-100 dark:border-slate-800">
           {classes.map(c => {
           const isActive = String(c.id) === String(selectedClassId);
@@ -219,7 +212,6 @@ export default function ClassSubjectPage() {
         })}
         </div>
 
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative w-full">
@@ -239,7 +231,6 @@ export default function ClassSubjectPage() {
           </div>
         </div>
 
-        {/* Mappings Table */}
         <div className="overflow-x-auto">
           {loading ? <div className="py-12 flex justify-center items-center">
               <div className="loader loader-sm" />
@@ -306,7 +297,6 @@ export default function ClassSubjectPage() {
         </div>
       </div>
 
-      {/* Assign / Edit Modal */}
       {isModalOpen && <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -393,7 +383,6 @@ export default function ClassSubjectPage() {
           </div>
         </div>}
 
-      {/* Delete Confirmation Modal */}
       {deleteId && <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-4 shadow-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">Unassign Subject?</h4>

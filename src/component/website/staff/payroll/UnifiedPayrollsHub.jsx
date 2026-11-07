@@ -5,11 +5,10 @@ import Link from 'next/link';
 import PayrollsScaleManager from './PayrollsScaleManager';
 
 export default function UnifiedPayrollsHub() {
-  const [activeTab, setActiveTab] = useState('teacher'); // 'teacher' | 'officer'
+  const [activeTab, setActiveTab] = useState('teacher'); 
 
   return (
     <div className="w-full space-y-4">
-      {/* Quick Navigation Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Link
           href="./salary-teacher"
@@ -60,7 +59,6 @@ export default function UnifiedPayrollsHub() {
         </Link>
       </div>
 
-      {/* Role Tabs for Scale Configuration */}
       <div className="border-b border-slate-200 dark:border-slate-800 flex gap-2">
         <button
           onClick={() => setActiveTab('teacher')}
@@ -84,7 +82,6 @@ export default function UnifiedPayrollsHub() {
         </button>
       </div>
 
-      {/* Embedded Scale Manager based on active role tab */}
       {activeTab === 'teacher' ? (
         <PayrollsScaleManager
           roleType="teacher"

@@ -65,7 +65,6 @@ const StaffCreateForm = ({ onSuccess, onCancel }) => {
         <FiUserPlus className="text-primary" /> Pre-create Staff Profile
       </h2>
 
-      {/* Verification link sent notice */}
       {verificationSentTo && (
         <div className="mb-4 flex items-start gap-3 p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
           <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">

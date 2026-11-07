@@ -32,7 +32,6 @@ export async function POST(request, context) {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // Look up staff under this website
     const staffRes = await queryDb(
       `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
               ws.password, ws.is_active, ws.is_registered, ws.is_two_factor_enabled,
@@ -69,7 +68,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Two-Factor Authentication Check
     if (staff.is_two_factor_enabled) {
       const otpCode = crypto.randomInt(100000, 1000000).toString();
 
@@ -110,7 +108,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Generate JWT token
     const token = generateToken({
       id: staff.id,
       email: staff.email,
@@ -118,7 +115,6 @@ export async function POST(request, context) {
       name: staff.name,
     });
 
-    // Create session in staff_sessions
     await createStaffSession({
       websiteId: website.id,
       staffId: staff.id,
@@ -149,10 +145,8 @@ export async function POST(request, context) {
       paylod: { staff: staffData },
     });
 
-    // Set HTTP-only session cookie
     await setStaffSessionCookie(response, token);
 
-    // Keep active tenant cookie synced
     const tenantSlug = website.subdomain || website.slug || '';
     if (tenantSlug) {
       response.cookies.set('x-website-domain', tenantSlug, { path: '/', maxAge: 7 * 86400 });

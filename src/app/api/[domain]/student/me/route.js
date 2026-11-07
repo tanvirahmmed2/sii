@@ -18,7 +18,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Fetch complete student record with joined academic and profile information
     const studentRes = await queryDb(
       `SELECT s.id, s.website_id,
               COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
@@ -69,7 +68,6 @@ export async function GET(request, context) {
     const picture = picRes.rows[0] || null;
     const signature = sigRes.rows[0] || null;
 
-    // Harmonize student fields with both modern and legacy portal keys
     const enrichedStudent = {
       ...student,
       registration_number: student.registration_no || student.student_unique_id || 'N/A',

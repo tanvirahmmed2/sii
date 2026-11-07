@@ -11,7 +11,6 @@ export default function ClassPeriodsPage() {
   const [selectedDayId, setSelectedDayId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState(null);
   const [formData, setFormData] = useState({
@@ -25,7 +24,6 @@ export default function ClassPeriodsPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Delete State
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const fetchData = useCallback(async () => {
@@ -140,7 +138,6 @@ export default function ClassPeriodsPage() {
     }
   };
   return <div className="w-full space-y-4">
-      {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Periods</p>
@@ -181,7 +178,6 @@ export default function ClassPeriodsPage() {
         </div>
       </div>
 
-      {/* Notifications */}
       {successMsg && <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
           <span>{successMsg}</span>
           <span className="text-[10px] font-mono">OK</span>
@@ -191,9 +187,7 @@ export default function ClassPeriodsPage() {
           <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer">DISMISS</button>
         </div>}
 
-      {/* Workstation Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Day Pills Filter */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-100 dark:border-slate-800">
           <button onClick={() => setSelectedDayId('all')} className={`px-3 py-1 rounded text-xs font-semibold shrink-0 transition-colors cursor-pointer ${selectedDayId === 'all' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}>
             All Days
@@ -206,7 +200,6 @@ export default function ClassPeriodsPage() {
         })}
         </div>
 
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative w-full">
@@ -226,7 +219,6 @@ export default function ClassPeriodsPage() {
           </div>
         </div>
 
-        {/* Periods Table */}
         <div className="overflow-x-auto">
           {loading ? <div className="py-12 flex justify-center items-center">
               <div className="loader loader-sm" />
@@ -287,7 +279,6 @@ export default function ClassPeriodsPage() {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
       {isModalOpen && <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -368,7 +359,6 @@ export default function ClassPeriodsPage() {
           </div>
         </div>}
 
-      {/* Delete Confirmation Modal */}
       {deleteId && <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-4 shadow-xl space-y-3">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">Delete Period?</h4>

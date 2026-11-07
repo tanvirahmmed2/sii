@@ -129,7 +129,6 @@ const GalleryPage = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
       <div className="w-full max-w-7xl mx-auto space-y-8">
         
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -149,7 +148,6 @@ const GalleryPage = () => {
           </p>
         </motion.div>
 
-        {/* Filter and Search Bar */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="w-full sm:w-64">
             <select
@@ -191,7 +189,6 @@ const GalleryPage = () => {
           </div>
         </div>
 
-        {/* Gallery Grid */}
         <div>
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -257,7 +254,6 @@ const GalleryPage = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-200/80 dark:border-slate-800">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -313,7 +309,6 @@ const GalleryPage = () => {
         </div>
       </div>
 
-      {/* Lightbox Modal */}
       {currentLightboxItem && (
         <div 
           className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"

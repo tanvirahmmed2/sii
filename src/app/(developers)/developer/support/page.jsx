@@ -41,7 +41,6 @@ export default function SupportChatPage() {
     setTimeout(() => setActionNotice({ text: '', type: '' }), 4000);
   };
 
-  // 1. Fetch tickets list
   const fetchTickets = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
@@ -77,7 +76,6 @@ export default function SupportChatPage() {
     fetchTickets(true);
   }, [fetchTickets]);
 
-  // 2. Fetch active ticket details and messages
   const fetchTicketDetails = useCallback(async (ticketId, showLoading = false) => {
     if (!ticketId) return;
     try {
@@ -101,7 +99,6 @@ export default function SupportChatPage() {
     }
   }, [activeTicketId, fetchTicketDetails]);
 
-  // Silent polling every 4 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchTickets(false);
@@ -112,7 +109,6 @@ export default function SupportChatPage() {
     return () => clearInterval(interval);
   }, [activeTicketId, fetchTickets, fetchTicketDetails]);
 
-  // Send reply
   const handleSendReply = async (e) => {
     if (e) e.preventDefault();
     const text = replyMessage.trim();
@@ -144,7 +140,6 @@ export default function SupportChatPage() {
     }
   };
 
-  // Toggle ticket status
   const handleToggleStatus = async (newStatus) => {
     if (!activeTicketId) return;
     try {
@@ -166,7 +161,6 @@ export default function SupportChatPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Touch-Swipeable Visitors Bar */}
       <ChatUsersSwipeBar
         users={tickets.map((t) => ({
           id: t.id,
@@ -180,7 +174,6 @@ export default function SupportChatPage() {
         activeId={activeTicketId}
       />
 
-      {/* Main Content Area */}
       {loading && tickets.length === 0 ? (
         <LoadingScreen fullScreen={false} label="Loading support chats..." />
       ) : tickets.length === 0 ? (
@@ -200,7 +193,6 @@ export default function SupportChatPage() {
         </div>
       ) : activeTicket ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden flex flex-col h-[650px]">
-          {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-semibold text-xs shrink-0">
@@ -258,9 +250,7 @@ export default function SupportChatPage() {
             </div>
           </div>
 
-          {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30 dark:bg-slate-900/30">
-            {/* Initial ticket message */}
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-4 text-xs space-y-1.5">
               <div className="flex items-center justify-between text-[11px] text-slate-400">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
@@ -311,7 +301,6 @@ export default function SupportChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input Box */}
           <form
             onSubmit={handleSendReply}
             className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"

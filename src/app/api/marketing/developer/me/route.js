@@ -68,7 +68,6 @@ export async function PUT(request) {
 
     const currentDev = currentRes.rows[0];
 
-    // 1. Name
     let newName = currentDev.name;
     if (data.name !== undefined) {
       newName = data.name.trim();
@@ -77,7 +76,6 @@ export async function PUT(request) {
       }
     }
 
-    // 2. Email
     let newEmail = currentDev.email;
     let emailChanged = false;
     if (data.email !== undefined) {
@@ -104,7 +102,6 @@ export async function PUT(request) {
       }
     }
 
-    // 3. Profile fields
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
     const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
@@ -112,7 +109,6 @@ export async function PUT(request) {
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
     const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
 
-    // 4. Password change
     let newPasswordHash = currentDev.password;
     if (data.newPassword && data.newPassword.trim()) {
       const currentPassword = data.currentPassword?.trim();

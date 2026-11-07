@@ -18,14 +18,12 @@ export default function ClubMembersPage() {
   const [loading, setLoading] = useState(true);
   const [searchingCandidates, setSearchingCandidates] = useState(false);
 
-  // Filters for Main Members Ledger
   const [selectedClub, setSelectedClub] = useState(initialClubId || 'all');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [chatOnly, setChatOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Inline Enrollment / Edit Workstation State (NO popup)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [formClubId, setFormClubId] = useState('');
@@ -34,18 +32,15 @@ export default function ClubMembersPage() {
   const [formCanChat, setFormCanChat] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Candidate Student Filters (Department, Class, Reg No, Name)
   const [candidateDept, setCandidateDept] = useState('all');
   const [candidateClass, setCandidateClass] = useState('all');
   const [candidateRegNo, setCandidateRegNo] = useState('');
   const [candidateKeyword, setCandidateKeyword] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
-  // Inline Delete State (NO popup)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Notifications
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
@@ -97,7 +92,6 @@ export default function ClubMembersPage() {
     fetchMembers();
   };
 
-  // Search candidate students dynamically by department, class, or registration number
   const handleSearchCandidates = async (e) => {
     if (e) e.preventDefault();
     setSearchingCandidates(true);
@@ -158,14 +152,12 @@ export default function ClubMembersPage() {
     setSelectedStudentIds([]);
   };
 
-  // Toggle single student checkbox
   const handleToggleSelectStudent = (studentId) => {
     setSelectedStudentIds((prev) =>
       prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId]
     );
   };
 
-  // Select all or deselect all visible candidate students
   const handleSelectAllVisible = () => {
     if (selectedStudentIds.length === candidateStudents.length && candidateStudents.length > 0) {
       setSelectedStudentIds([]);
@@ -174,7 +166,6 @@ export default function ClubMembersPage() {
     }
   };
 
-  // Save / Enroll members (supports single edit or multi-student bulk enrollment)
   const handleSaveMember = async (e) => {
     e.preventDefault();
     if (!formClubId) {
@@ -190,7 +181,6 @@ export default function ClubMembersPage() {
     setSubmitting(true);
     try {
       if (editingMember) {
-        // Single update
         const res = await fetch(`/api/${domain}/staff/panel/clubs/members`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -210,7 +200,6 @@ export default function ClubMembersPage() {
           showToast(data.error || 'Update failed', true);
         }
       } else {
-        // Multi or single student enrollment
         const res = await fetch(`/api/${domain}/staff/panel/clubs/members`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -286,13 +275,11 @@ export default function ClubMembersPage() {
     }
   };
 
-  // KPIs
   const totalMembers = members.length;
   const activeMembers = members.filter((m) => m.status === 'active').length;
   const chatMembers = members.filter((m) => m.can_access_chat).length;
   const execMembers = members.filter((m) => m.role !== 'member').length;
 
-  // Filter classes by selected department for candidate filter dropdown
   const filteredCandidateClasses =
     candidateDept === 'all'
       ? classes
@@ -300,7 +287,6 @@ export default function ClubMembersPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Toast Alert */}
       {toastMessage && (
         <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>
@@ -314,7 +300,6 @@ export default function ClubMembersPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Enrolled</p>
@@ -349,7 +334,6 @@ export default function ClubMembersPage() {
         </div>
       </div>
 
-      {/* Inline Multi-Student Enrollment & Edit Workstation Panel (NO popup) */}
       {isFormOpen && (
         <div className="bg-white dark:bg-slate-900 border border-primary/40 rounded p-4 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -372,7 +356,6 @@ export default function ClubMembersPage() {
           </div>
 
           <form onSubmit={handleSaveMember} className="space-y-4">
-            {/* Membership Configuration Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -447,10 +430,8 @@ export default function ClubMembersPage() {
               </div>
             </div>
 
-            {/* Candidate Student Filter & Selection (Only when enrolling new members) */}
             {!editingMember && (
               <div className="space-y-3 pt-1">
-                {/* Filter Toolbar: Department, Class, Reg No */}
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -462,7 +443,6 @@ export default function ClubMembersPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                    {/* Filter: Department */}
                     <div>
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Department</label>
                       <select
@@ -479,7 +459,6 @@ export default function ClubMembersPage() {
                       </select>
                     </div>
 
-                    {/* Filter: Class */}
                     <div>
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Class</label>
                       <select
@@ -496,7 +475,6 @@ export default function ClubMembersPage() {
                       </select>
                     </div>
 
-                    {/* Filter: Registration Number */}
                     <div>
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Registration Number</label>
                       <input
@@ -508,7 +486,6 @@ export default function ClubMembersPage() {
                       />
                     </div>
 
-                    {/* Filter: Keyword Search & Action Buttons */}
                     <div className="flex items-end gap-1.5">
                       <div className="flex-1">
                         <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Name / Roll No</label>
@@ -540,7 +517,6 @@ export default function ClubMembersPage() {
                   </div>
                 </div>
 
-                {/* Candidate Students Multi-Select Table */}
                 <div className="border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
                   <div className="bg-slate-100 dark:bg-slate-800/80 px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 text-xs">
                     <div className="flex items-center gap-2">
@@ -635,7 +611,6 @@ export default function ClubMembersPage() {
               </div>
             )}
 
-            {/* Bottom Form Action Buttons */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
               <span className="text-xs text-slate-500">
                 {!editingMember && (
@@ -670,9 +645,7 @@ export default function ClubMembersPage() {
         </div>
       )}
 
-      {/* Main Interactive Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -748,7 +721,6 @@ export default function ClubMembersPage() {
           </div>
         </div>
 
-        {/* Members Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">

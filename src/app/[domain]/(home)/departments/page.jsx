@@ -51,7 +51,6 @@ const DepartmentsPage = () => {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 space-y-8 transition-colors overflow-hidden">
-      {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -70,7 +69,6 @@ const DepartmentsPage = () => {
           </p>
         </div>
 
-        {/* Search Bar */}
         <div className="w-full md:w-72">
           <input
             type="text"
@@ -82,7 +80,6 @@ const DepartmentsPage = () => {
         </div>
       </motion.div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -166,7 +163,6 @@ const DepartmentsPage = () => {
                         `Explore the academic programs, curriculum standards, and faculty under ${dept.name}.`}
                     </p>
 
-                    {/* Classes Tags under Department */}
                     {classesList.length > 0 && (
                       <div className="pt-2">
                         <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1.5">
@@ -228,7 +224,6 @@ const DepartmentsPage = () => {
           </div>
         )}
 
-        {/* Admission Prompt Box */}
         <div className="mt-12 bg-linear-to-br from-white via-slate-50 to-primary/5 dark:from-slate-900 dark:via-slate-900 dark:to-primary/10 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
           <div className="space-y-1.5 text-center md:text-left">
             <h3 className="text-lg sm:text-xl font-serif font-medium text-slate-900 dark:text-white">

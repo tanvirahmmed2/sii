@@ -23,10 +23,8 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null);
 
-  // Modals
   const [generating, setGenerating] = useState(false);
 
-  // Edit / Record Payment Modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [paymentFormData, setPaymentFormData] = useState({
@@ -39,7 +37,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
   });
   const [savingPayment, setSavingPayment] = useState(false);
 
-  // Payslip View Modal
   const [payslipModalOpen, setPayslipModalOpen] = useState(false);
   const [viewingSlip, setViewingSlip] = useState(null);
 
@@ -71,7 +68,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
     fetchPayments();
   }, [fetchPayments]);
 
-  // Bulk generate monthly slips
   const handleGenerateSlips = async () => {
     if (!window.confirm(`Generate monthly salary slips for all active ${isTeacher ? 'teachers' : 'officers'} for ${month}?`)) {
       return;
@@ -168,7 +164,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -195,7 +190,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </div>
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
         <div
           className={`p-3 text-xs rounded border ${
@@ -213,7 +207,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </div>
       )}
 
-      {/* Monthly KPI Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Total Slips</p>
@@ -259,7 +252,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </div>
       </div>
 
-      {/* Filter / Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-2.5">
         <div className="flex flex-1 items-center gap-2">
           <input
@@ -286,7 +278,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </span>
       </div>
 
-      {/* Payments Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-x-auto shadow-2xs">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
@@ -396,7 +387,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </table>
       </div>
 
-      {/* Record / Edit Payment Modal */}
       {paymentModalOpen && editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-2xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-lg max-w-md w-full">
@@ -428,7 +418,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
                 </div>
               </div>
 
-              {/* Amount Paid */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Amount Paid (৳) *
@@ -443,7 +432,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
                 />
               </div>
 
-              {/* Status & Method */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -478,7 +466,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
                 </div>
               </div>
 
-              {/* Date & Transaction ID */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -505,7 +492,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
                 </div>
               </div>
 
-              {/* Remarks */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Remarks / Note
@@ -544,7 +530,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
         </div>
       )}
 
-      {/* Payslip View Modal */}
       {payslipModalOpen && viewingSlip && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-2xs p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xl max-w-md w-full p-5 space-y-4 text-xs font-sans">
@@ -567,7 +552,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
               </span>
             </div>
 
-            {/* Scale & Breakdown */}
             <div className="space-y-2 font-mono">
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">Payroll Scale</span>
@@ -603,7 +587,6 @@ export default function SalaryPaymentsManager({ roleType = 'teacher', title, sub
               </div>
             </div>
 
-            {/* Payout meta */}
             {viewingSlip.payment_status === 'Paid' && (
               <div className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
                 <div>Method: <span className="font-semibold">{viewingSlip.payment_method || 'Bank Transfer'}</span></div>

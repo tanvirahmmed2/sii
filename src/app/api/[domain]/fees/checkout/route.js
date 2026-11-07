@@ -5,11 +5,6 @@ import {
   initiatePaymentForPurpose
 } from 'src/lib/database/paymentGateways.js';
 
-/**
- * POST /api/[domain]/fees/checkout
- * Initiates payment checkout for a specific fee purpose/task.
- * Routes dynamically to the assigned gateway account for that task.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -63,10 +58,6 @@ export async function POST(request, context) {
   }
 }
 
-/**
- * GET /api/[domain]/fees/checkout?purpose=residential_fees&hostel_id=1
- * Returns the currently active gateway routing information for the given task.
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

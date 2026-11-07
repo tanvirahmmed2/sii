@@ -55,7 +55,6 @@ export default function TeacherClassroomsDirectoryPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Hero Header */}
       <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-sm border border-slate-800 relative overflow-hidden">
         <div className="relative z-10">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-2">
@@ -70,7 +69,6 @@ export default function TeacherClassroomsDirectoryPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
@@ -87,7 +85,6 @@ export default function TeacherClassroomsDirectoryPage() {
         </span>
       </div>
 
-      {/* Classroom Cards Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3].map((i) => (
@@ -141,7 +138,6 @@ export default function TeacherClassroomsDirectoryPage() {
                   />
                 )}
 
-                {/* Sub-resource Metric Counters */}
                 <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-center">
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl">
                     <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Syllabus</p>
@@ -170,7 +166,6 @@ export default function TeacherClassroomsDirectoryPage() {
                 </div>
               </div>
 
-              {/* Enter Workstation CTA */}
               <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <Link
                   href={`/teacher/classrooms/${cr.id}`}

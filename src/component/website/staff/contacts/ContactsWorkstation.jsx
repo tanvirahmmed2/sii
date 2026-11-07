@@ -15,10 +15,9 @@ export default function ContactsWorkstation() {
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'new', 'read', 'replied', 'closed', 'starred'
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [feedback, setFeedback] = useState(null);
 
-  // Staff granular permissions
   const [permissions, setPermissions] = useState({
     canView: true,
     canReply: true,
@@ -26,13 +25,11 @@ export default function ContactsWorkstation() {
     canDelete: true,
   });
 
-  // Active In-Page Selected Inquiry
   const [selectedContact, setSelectedContact] = useState(null);
   const [replyHistory, setReplyHistory] = useState([]);
   const [mailerConfig, setMailerConfig] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Reply Composer State
   const [replySubject, setReplySubject] = useState('');
   const [replyBody, setReplyBody] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
@@ -71,14 +68,12 @@ export default function ContactsWorkstation() {
     fetchContacts();
   }, [fetchContacts]);
 
-  // Open Inquiry In-Page & fetch reply history
   const openContactDetails = async (contact) => {
     setSelectedContact(contact);
     setReplySubject(contact.subject ? `Re: ${contact.subject}` : 'Re: Your Inquiry');
     setReplyBody('');
     setHistoryLoading(true);
 
-    // Auto mark as read if it was 'new'
     if (contact.status === 'new' && permissions.canEdit) {
       try {
         await fetch(baseApi, {
@@ -112,7 +107,6 @@ export default function ContactsWorkstation() {
     }
   };
 
-  // Toggle Star
   const handleToggleStar = async (contact, e) => {
     if (e) e.stopPropagation();
     if (!permissions.canEdit) {
@@ -139,7 +133,6 @@ export default function ContactsWorkstation() {
     }
   };
 
-  // Update Status
   const handleUpdateStatus = async (contactId, newStatus) => {
     if (!permissions.canEdit) {
       setFeedback({ type: 'error', message: 'You do not have permission to edit inquiry status.' });
@@ -169,7 +162,6 @@ export default function ContactsWorkstation() {
     }
   };
 
-  // Delete Inquiry
   const handleDeleteContact = async (contactId, name, e) => {
     if (e) e.stopPropagation();
     if (!permissions.canDelete) {
@@ -197,7 +189,6 @@ export default function ContactsWorkstation() {
     }
   };
 
-  // Send Email Reply
   const handleSendReply = async (e) => {
     e.preventDefault();
     if (!selectedContact) return;
@@ -257,7 +248,6 @@ export default function ContactsWorkstation() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -278,7 +268,6 @@ export default function ContactsWorkstation() {
         )}
       </div>
 
-      {/* Feedback banner */}
       {feedback && (
         <div
           className={`p-3 text-xs rounded-md border transition-all ${
@@ -299,7 +288,6 @@ export default function ContactsWorkstation() {
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Total Inquiries</p>
@@ -319,11 +307,8 @@ export default function ContactsWorkstation() {
         </div>
       </div>
 
-      {/* Main Workstation Body: Split-pane when an inquiry is selected */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 w-full items-start">
-        {/* Left Side: Search, Filter Tabs & Inquiries Table */}
         <div className={`space-y-3 ${selectedContact ? 'lg:col-span-5' : 'lg:col-span-12'}`}>
-          {/* Filter / Search Bar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-2.5">
             <div className="flex flex-wrap items-center gap-1.5">
               {['all', 'new', 'read', 'replied', 'closed', 'starred'].map((tab) => (
@@ -354,7 +339,6 @@ export default function ContactsWorkstation() {
             </div>
           </div>
 
-          {/* Table Container */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-x-auto shadow-2xs">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -475,10 +459,8 @@ export default function ContactsWorkstation() {
           </div>
         </div>
 
-        {/* Right Side: In-Page Detail & Reply Workstation (No popup modal!) */}
         {selectedContact && (
           <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 space-y-4 shadow-2xs">
-            {/* Detail Pane Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <div className="flex items-center gap-2">
@@ -539,7 +521,6 @@ export default function ContactsWorkstation() {
               </div>
             </div>
 
-            {/* Original visitor inquiry message */}
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border border-slate-200 dark:border-slate-700 space-y-2">
               <div className="flex justify-between items-center text-[11px] text-slate-500 font-mono">
                 <span>Received: {new Date(selectedContact.created_at).toLocaleString()}</span>
@@ -556,7 +537,6 @@ export default function ContactsWorkstation() {
               </div>
             </div>
 
-            {/* Thread History: Previous Staff Replies */}
             {historyLoading ? (
               <div className="py-4 text-center text-slate-400 text-xs">Loading previous replies...</div>
             ) : replyHistory.length > 0 ? (
@@ -601,7 +581,6 @@ export default function ContactsWorkstation() {
               </div>
             ) : null}
 
-            {/* In-Page Reply Composer Form */}
             {permissions.canReply ? (
               <form onSubmit={handleSendReply} className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">

@@ -74,7 +74,6 @@ export default function BlogsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50/60 pb-24">
-      {/* Hero Header */}
       <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
         <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto text-center relative z-10 space-y-4">
@@ -87,7 +86,6 @@ export default function BlogsPage() {
             In-depth tutorials, product playbooks, design system trends, and ecosystem announcements curated for web professionals.
           </p>
 
-          {/* Search Bar */}
           <div className="pt-6 max-w-xl mx-auto">
             <div className="relative">
               <BiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" />
@@ -112,7 +110,6 @@ export default function BlogsPage() {
         </div>
       </section>
 
-      {/* Main Articles Directory Grid */}
       <section className="w-full px-4 lg:px-8 pt-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-200">
           <div>
@@ -148,13 +145,11 @@ export default function BlogsPage() {
           </div>
         )}
 
-        {/* Loading State */}
         {loading ? (
           <div className="pt-8">
             <LoadingScreen fullScreen={false} label="Loading articles..." />
           </div>
         ) : filteredBlogs.length === 0 ? (
-          /* Empty State */
           <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center my-8 shadow-xs max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-3xl mx-auto mb-4">
               <BiBookOpen />
@@ -178,7 +173,6 @@ export default function BlogsPage() {
             )}
           </div>
         ) : (
-          /* Blogs Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-8">
             {filteredBlogs.map((blog) => (
               <HomeBlogCard key={blog.id} blog={blog} />
@@ -187,7 +181,6 @@ export default function BlogsPage() {
         )}
       </section>
 
-      {/* Creator Call To Action */}
       <section className="w-full px-4 lg:px-8 mt-20">
         <div className="bg-linear-to-r from-slate-900 to-slate-950 rounded-3xl p-8 sm:p-12 text-white border border-white/10 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-xl text-center md:text-left">

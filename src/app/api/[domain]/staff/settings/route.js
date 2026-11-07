@@ -9,9 +9,7 @@ import {
   getGatewaysForCurrency
 } from 'src/lib/database/paymentGateways';
 
-// Helper: Authorize staff or creator access for settings management
 async function authorizeSettingsAccess(request, website, action = 'view') {
-  // 1. Staff session check
   const staffSession = await getStaffSession(request);
   if (staffSession) {
     const staffWebsiteId =
@@ -49,7 +47,6 @@ async function authorizeSettingsAccess(request, website, action = 'view') {
     return { authorized: true, user: staffSession, role: 'staff' };
   }
 
-  // 2. Creator (Tenant Owner) session check
   const creatorSession = await getCreatorSession(request);
   if (creatorSession) {
     const creatorId = creatorSession?.id || creatorSession?.creator?.id;
@@ -73,7 +70,6 @@ async function authorizeSettingsAccess(request, website, action = 'view') {
   };
 }
 
-// GET: Fetch all website configuration, currencies, and compatible gateway catalog
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -91,13 +87,10 @@ export async function GET(request, context) {
 
     const baseCurrency = String(website.currency || 'BDT').toUpperCase().trim();
 
-    // Ensure institutional currencies table is synced
     const currencies = await ensureWebsiteCurrencies(website.id, baseCurrency);
 
-    // Get gateways supporting this active currency
     const compatibleGateways = await getGatewaysForCurrency(baseCurrency);
 
-    // Get all supported gateways in catalog
     const allGatewaysRes = await queryDb(
       `SELECT code, name, category, description, logo_icon, website_url, supported_currencies, is_active
        FROM website_payment_gateways
@@ -159,7 +152,6 @@ export async function GET(request, context) {
   }
 }
 
-// PUT: Update all website information and institutional settings (with currency sync)
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -178,7 +170,6 @@ export async function PUT(request, context) {
     const body = await request.json().catch(() => ({}));
     const data = body.data || body;
 
-    // Handle Cloudinary upload / removal for Logo
     let finalLogo = data.logo !== undefined ? (data.logo ? String(data.logo).trim() : null) : undefined;
     let finalLogoId = data.logo_id !== undefined ? (data.logo_id ? String(data.logo_id).trim() : null) : undefined;
 
@@ -213,7 +204,6 @@ export async function PUT(request, context) {
       }
     }
 
-    // Handle Cloudinary upload / removal for Favicon
     let finalFavicon =
       data.favicon !== undefined ? (data.favicon ? String(data.favicon).trim() : null) : undefined;
     let finalFaviconId =
@@ -254,14 +244,12 @@ export async function PUT(request, context) {
       }
     }
 
-    // Synchronize base currency if provided
     let cleanCurrency = null;
     if (data.currency !== undefined && String(data.currency).trim()) {
       cleanCurrency = String(data.currency).trim().toUpperCase();
       await setWebsiteBaseCurrency(website.id, cleanCurrency);
     }
 
-    // Update websites table
     const webRes = await queryDb(
       `UPDATE websites
        SET name = COALESCE($1, name),
@@ -319,7 +307,6 @@ export async function PUT(request, context) {
     const updatedWebsite = webRes.rows[0];
     const updatedCurrency = updatedWebsite.currency || 'BDT';
 
-    // Synchronize latest currency records and compatible gateways
     const updatedCurrencies = await ensureWebsiteCurrencies(website.id, updatedCurrency);
     const compatibleGateways = await getGatewaysForCurrency(updatedCurrency);
 

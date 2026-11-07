@@ -28,7 +28,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Fetch master templates and current website active template for a task category
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -41,7 +40,6 @@ export async function GET(request, context) {
     const categoryOrTask = searchParams.get('category') || searchParams.get('task') || 'student_id_card';
     const task = resolveTaskConfig(categoryOrTask) || ALL_TASKS[0];
 
-    // 1. Fetch available system templates from task's dedicated table
     const sysRes = await queryDb(
       `SELECT id, name, slug, '${task.category}' AS category, description,
               dimension_width, dimension_height, dimension_unit,
@@ -51,7 +49,6 @@ export async function GET(request, context) {
        ORDER BY is_system_default DESC, id ASC`
     );
 
-    // 2. Fetch website's current active template from task's dedicated table
     const webRes = await queryDb(
       `SELECT wt.id, wt.website_id, wt.system_template_id, wt.name, '${task.category}' AS category,
               wt.is_default, wt.custom_fabric_data, wt.custom_fabric_back_data,
@@ -87,7 +84,6 @@ export async function GET(request, context) {
         available_merge_tags: row.available_merge_tags || [],
       };
     } else if (sysRes.rows.length > 0) {
-      // Fallback to first system template in the dedicated table
       const defaultSys = sysRes.rows[0];
       activeTemplate = {
         system_template_id: defaultSys.id,
@@ -141,7 +137,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Activate a system template for this school or assign templates to specific classes
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -152,7 +147,6 @@ export async function POST(request, context) {
     const { website, staffSession } = auth;
     const body = await request.json();
 
-    // 1. Bulk or single class-wise template assignments
     if (body.action === 'assign_classes' || Array.isArray(body.class_assignments)) {
       const assignments = body.class_assignments || body.assignments || [];
       for (const item of assignments) {
@@ -226,13 +220,11 @@ export async function POST(request, context) {
     const sysTpl = sysRes.rows[0];
     const staffId = staffSession?.staff_id || staffSession?.id || null;
 
-    // Reset current default in this dedicated table
     await queryDb(
       `UPDATE ${task.websiteTable} SET is_default = FALSE WHERE website_id = $1`,
       [website.id]
     );
 
-    // Upsert template selection in this dedicated table
     const res = await queryDb(
       `INSERT INTO ${task.websiteTable} (website_id, system_template_id, name, is_active, is_default, created_by_staff_id)
        VALUES ($1, $2, $3, TRUE, TRUE, $4)
@@ -253,7 +245,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Customize school variables or custom Fabric/HTML/CSS in its dedicated task table
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

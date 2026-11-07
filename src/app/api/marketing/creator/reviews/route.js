@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 
-// GET: Fetch the creator's submitted review and eligibility
 export async function GET(request) {
   try {
     const creator = await getCreatorSession(request);
@@ -15,7 +14,6 @@ export async function GET(request) {
 
     const creatorId = creator.id;
 
-    // Fetch single review submitted by this creator (one review per creator rule)
     const reviewRes = await queryDb(
       `SELECT r.id,
               r.creator_id,
@@ -41,7 +39,6 @@ export async function GET(request) {
       [creatorId]
     );
 
-    // Fetch creator's websites if any to allow associating review
     const websitesRes = await queryDb(
       `SELECT id, name, subdomain, custom_domain 
        FROM websites 
@@ -74,7 +71,6 @@ export async function GET(request) {
   }
 }
 
-// POST: Create a review as PENDING (strictly one review per creator)
 export async function POST(request) {
   try {
     const creator = await getCreatorSession(request);
@@ -85,7 +81,6 @@ export async function POST(request) {
       );
     }
 
-    // 1. Strict Rule: Only one review per creator
     const existingCheck = await queryDb(
       'SELECT id FROM reviews WHERE creator_id = $1 LIMIT 1',
       [creator.id]
@@ -123,7 +118,6 @@ export async function POST(request) {
       );
     }
 
-    // Optional: Validate website belongs to this creator if provided
     if (websiteId) {
       const siteCheck = await queryDb(
         'SELECT id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1',
@@ -137,7 +131,6 @@ export async function POST(request) {
       }
     }
 
-    // 2. Insert review as pending (is_approved = false)
     const insertRes = await queryDb(
       `INSERT INTO reviews (creator_id, website_id, reviewer_name, institution_name, rating, title, review_text, is_featured, is_approved)
        VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, FALSE)
@@ -167,7 +160,6 @@ export async function POST(request) {
   }
 }
 
-// PUT: Update existing review (resets approval status to pending for re-moderation)
 export async function PUT(request) {
   try {
     const creator = await getCreatorSession(request);
@@ -249,7 +241,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE: Creator can delete their submitted review
 export async function DELETE(request) {
   try {
     const creator = await getCreatorSession(request);

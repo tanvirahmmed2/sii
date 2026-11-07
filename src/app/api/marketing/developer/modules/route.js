@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-// Explicit set of legacy / archive tables from previous system versions
 const LEGACY_TABLES = new Set([
   'privacy_policies',
   'terms_and_conditions',
@@ -48,15 +47,12 @@ const LEGACY_TABLES = new Set([
   'products',
 ]);
 
-// Helper to convert table_name (e.g. 'website_products') to clean title
 function formatTableToModuleTitle(tableName) {
   let clean = tableName;
   if (clean.startsWith('website_')) clean = clean.replace('website_', '');
   else if (clean.startsWith('tenant_')) clean = clean.replace('tenant_', '');
 
-  // Detailed mapping for all system and website tables
   const titleMap = {
-    // Website modules
     products: 'Products & Store',
     product_images: 'Product Gallery Images',
     purchase: 'Orders & Purchases',
@@ -85,7 +81,6 @@ function formatTableToModuleTitle(tableName) {
     home_modules: 'Tenant Home Modules (Public Frontend)',
     control_modules: 'Tenant Control Modules (Staff Panel Workstations)',
 
-    // Platform Core modules
     packages: 'Subscription Packages',
     packages_feature: 'Package Features Mapping',
     feature: 'Platform Features',
@@ -132,7 +127,6 @@ function formatTableToModuleTitle(tableName) {
     reviews: 'Customer Reviews & Moderation',
     reports: 'Client Incident & Bug Reports',
 
-    // Legacy tables
     privacy_policies: 'Legacy Privacy Policies',
     terms_and_conditions: 'Legacy Terms & Conditions',
     refund_conditions: 'Legacy Refund Policies',
@@ -193,12 +187,10 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const filter = searchParams.get('filter') || 'all'; // 'all', 'website', 'platform', 'legacy'
+    const filter = searchParams.get('filter') || 'all'; 
     const inspectTable = searchParams.get('table');
 
-    // If inspecting a specific table's schema and live sample rows
     if (inspectTable) {
-      // Validate table name to avoid SQL injection
       const safeTableName = inspectTable.replace(/[^a-zA-Z0-9_]/g, '');
 
       const colRes = await queryDb(
@@ -239,7 +231,6 @@ export async function GET(request) {
       });
     }
 
-    // Query database tables, column counts, and estimated row counts using PostgreSQL catalog
     const tablesRes = await queryDb(
       `SELECT 
          t.table_name,
@@ -262,7 +253,6 @@ export async function GET(request) {
        ORDER BY t.table_name ASC`
     );
 
-    // Deduplicate defensively by table_name
     const seen = new Set();
     const allTables = (tablesRes.rows || []).filter((t) => {
       if (seen.has(t.table_name)) return false;
@@ -270,7 +260,6 @@ export async function GET(request) {
       return true;
     });
 
-    // Map each database table into a module descriptor
     const modules = allTables.map((t) => {
       const isWebsiteModule = t.table_name.startsWith('website_');
       const isLegacy = LEGACY_TABLES.has(t.table_name) || t.table_name.startsWith('tenant_');
@@ -291,7 +280,6 @@ export async function GET(request) {
         category = 'legacy';
       }
 
-      // Check if primary website module suitable for package selection
       const isPrimary =
         isWebsiteModule &&
         !isChildOrRelation &&
@@ -310,7 +298,6 @@ export async function GET(request) {
       };
     });
 
-    // Extract selectable modules for packages from website primary modules
     const selectableModules = [
       'Products',
       'Orders & Payments',
@@ -327,12 +314,10 @@ export async function GET(request) {
       'Settings & Domain',
     ];
 
-    // Summary counts
     const websiteModules = modules.filter((m) => m.category === 'website');
     const platformModules = modules.filter((m) => m.category === 'platform');
     const legacyModules = modules.filter((m) => m.category === 'legacy');
 
-    // Apply query filter if requested
     let filteredModules = modules;
     if (filter === 'website') {
       filteredModules = websiteModules;
@@ -342,7 +327,6 @@ export async function GET(request) {
       filteredModules = legacyModules;
     }
 
-    // Fetch Home Modules, Control Modules, and Developer Panel Platform Modules
     const [homeRes, ctrlRes, devModsRes] = await Promise.all([
       queryDb('SELECT * FROM website_home_modules ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_control_modules ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),

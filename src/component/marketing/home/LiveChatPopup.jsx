@@ -14,9 +14,8 @@ import {
 import { SITE_NAME, LIVE_CHAT_TOKEN } from 'src/lib/database/secret';
 
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
-const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000; 
 
-// Cookie Helpers
 function getLiveCookie() {
   if (typeof document === 'undefined') return null;
   try {
@@ -36,7 +35,6 @@ function getLiveCookie() {
           } catch (_) { }
         }
         if (parsed) {
-          // Check 24-hour window
           if (parsed.createdAt && Date.now() - parsed.createdAt > COOKIE_EXPIRY_MS) {
             clearLiveCookie();
             return null;
@@ -51,7 +49,6 @@ function getLiveCookie() {
     }
   } catch (_) { }
 
-  // Fallback to localStorage
   try {
     const stored = localStorage.getItem('hiesci_live_chat_session');
     if (stored) {
@@ -98,7 +95,6 @@ export default function LiveChatPopup() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [sessionRemainingHours, setSessionRemainingHours] = useState(24);
 
-  // Dragging state (null = default primary bottom-left position)
   const [position, setPosition] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -126,7 +122,6 @@ export default function LiveChatPopup() {
     }
   }, [messages, isOpen]);
 
-  // Load saved icon drag position from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('hiesci_live_chat_icon_pos');
@@ -146,7 +141,6 @@ export default function LiveChatPopup() {
     } catch (_) {}
   }, []);
 
-  // Window resize handler: clamp icon within viewport if dragged and update localStorage
   useEffect(() => {
     const handleResize = () => {
       setPosition((prev) => {
@@ -169,7 +163,6 @@ export default function LiveChatPopup() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Pointer drag start
   const handlePointerDown = (clientX, clientY) => {
     if (!launcherRef.current) return;
     const rect = launcherRef.current.getBoundingClientRect();
@@ -185,7 +178,6 @@ export default function LiveChatPopup() {
     setIsDragging(true);
   };
 
-  // Pointer drag move
   const handlePointerMove = useCallback((clientX, clientY) => {
     if (!dragRef.current.isDragging) return;
     const deltaX = clientX - dragRef.current.startX;
@@ -214,7 +206,6 @@ export default function LiveChatPopup() {
     }
   }, []);
 
-  // Pointer drag end
   const handlePointerUp = useCallback(() => {
     if (!dragRef.current.isDragging) return;
     const moved = dragRef.current.hasMoved;
@@ -222,20 +213,17 @@ export default function LiveChatPopup() {
     dragRef.current.isDragging = false;
     setIsDragging(false);
 
-    // If dragged and moved, persist position to localStorage
     if (moved && finalPos) {
       try {
         localStorage.setItem('hiesci_live_chat_icon_pos', JSON.stringify(finalPos));
       } catch (_) {}
     }
 
-    // If user clicked without dragging, toggle chat popup open/closed
     if (!moved) {
       setIsOpen((prev) => !prev);
     }
   }, []);
 
-  // Attach global mouse and touch events while dragging
   useEffect(() => {
     if (!isDragging) return;
 
@@ -268,7 +256,6 @@ export default function LiveChatPopup() {
     };
   }, [isDragging, handlePointerMove, handlePointerUp]);
 
-  // Initial load: check 24-hour cookie session
   useEffect(() => {
     let isMounted = true;
     const cookie = getLiveCookie();
@@ -286,13 +273,11 @@ export default function LiveChatPopup() {
           setMessages(data.messages || []);
           lastMessageCountRef.current = (data.messages || []).length;
 
-          // Calculate remaining time
           const createdTime = new Date(data.chat.created_at).getTime() || Date.now();
           const elapsed = Date.now() - createdTime;
           const remainingHrs = Math.max(1, Math.round((COOKIE_EXPIRY_MS - elapsed) / (1000 * 60 * 60)));
           setSessionRemainingHours(remainingHrs);
 
-          // Refresh client cookie to stay in sync
           setLiveCookie({
             sessionId: data.chat.session_id,
             chatId: data.chat.id,
@@ -316,7 +301,6 @@ export default function LiveChatPopup() {
     };
   }, []);
 
-  // Live polling for staff replies (polls when session is active)
   useEffect(() => {
     if (!chatSession?.id) return;
 
@@ -354,7 +338,6 @@ export default function LiveChatPopup() {
     return () => clearInterval(interval);
   }, [chatSession, isOpen]);
 
-  // Start new 24-hour live chat session
   const handleStartChat = async (e) => {
     e.preventDefault();
     if (!visitorName.trim()) return;
@@ -408,7 +391,6 @@ export default function LiveChatPopup() {
         lastMessageCountRef.current = (data.messages || []).length;
         setSessionRemainingHours(24);
 
-        // Store 24-hour cookie
         if (data.cookieData) {
           setLiveCookie(data.cookieData);
         } else {
@@ -431,7 +413,6 @@ export default function LiveChatPopup() {
     }
   };
 
-  // Visitor sends message
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputMessage.trim() || !chatSession || sending) return;
@@ -440,7 +421,6 @@ export default function LiveChatPopup() {
     setInputMessage('');
     setSending(true);
 
-    // Optimistic visitor message
     const tempMsg = {
       id: 'temp_' + Date.now(),
       chat_id: chatSession.id,
@@ -476,7 +456,6 @@ export default function LiveChatPopup() {
     }
   };
 
-  // End chat session & clear 24h cookie
   const handleEndChat = async () => {
     if (!confirm('Are you sure you want to end this live chat session? Your 24-hour cookie and session history will be cleared.')) return;
     try {
@@ -498,11 +477,9 @@ export default function LiveChatPopup() {
     lastMessageCountRef.current = 0;
   };
 
-  // Compute smart positioning for the popup window relative to icon
   const getPopupStyle = () => {
     if (typeof window === 'undefined') return {};
     if (!position) {
-      // Primary default placement: bottom-left
       return {
         position: 'fixed',
         left: '32px',
@@ -518,14 +495,12 @@ export default function LiveChatPopup() {
     const btnSize = 56;
     const margin = 16;
 
-    // Horizontal placement
     let left = position.x;
     if (left + popupWidth > window.innerWidth - margin) {
       left = window.innerWidth - popupWidth - margin;
     }
     if (left < margin) left = margin;
 
-    // Vertical placement: open above button if enough room, otherwise below
     let top = position.y - popupHeight - 12;
     if (top < margin) {
       top = position.y + btnSize + 12;
@@ -547,13 +522,11 @@ export default function LiveChatPopup() {
 
   return (
     <>
-      {/* Expanded Chat Popup Window */}
       {isOpen && (
         <div
           style={getPopupStyle()}
           className="bg-white border border-slate-200 shadow-2xl rounded-3xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 font-sans"
         >
-          {/* Header */}
           <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="relative">
@@ -604,9 +577,7 @@ export default function LiveChatPopup() {
             </div>
           </div>
 
-          {/* Body Content */}
           {!chatSession ? (
-            /* STEP 1: Visitor Start Chat Form */
             <div className="flex-1 p-6 flex flex-col justify-between overflow-y-auto bg-slate-50">
               <div className="space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl mx-auto mb-2 border border-indigo-100">
@@ -666,9 +637,7 @@ export default function LiveChatPopup() {
               </div>
             </div>
           ) : (
-            /* STEP 2: Live Conversation Stream */
             <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
-              {/* Session Status Banner */}
               <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-[11px] text-slate-600 flex items-center justify-between shrink-0">
                 <span className="truncate">
                   Chatting as <strong className="text-slate-800">{chatSession.visitor_name}</strong>
@@ -679,7 +648,6 @@ export default function LiveChatPopup() {
                 </span>
               </div>
 
-              {/* Messages Container */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3.5">
                 {messages.map((msg, idx) => {
                   const isVisitor = String(msg.sender_type || '').toUpperCase() === 'VISITOR';
@@ -716,7 +684,6 @@ export default function LiveChatPopup() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input Footer */}
               <form
                 onSubmit={handleSendMessage}
                 className="p-3 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0"
@@ -747,7 +714,6 @@ export default function LiveChatPopup() {
         </div>
       )}
 
-      {/* Floating Draggable Launcher Button */}
       <div
         ref={launcherRef}
         style={
@@ -793,13 +759,11 @@ export default function LiveChatPopup() {
             <>
               <BiMessageRoundedDots className="text-2xl pointer-events-none" />
 
-              {/* Online Pulse Indicator */}
               <span className="absolute -top-1 -right-1 flex h-4 w-4 pointer-events-none">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white"></span>
               </span>
 
-              {/* Unread Message Count Badge */}
               {unreadCount > 0 && (
                 <span className="absolute -top-2 -left-2 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce pointer-events-none">
                   {unreadCount}

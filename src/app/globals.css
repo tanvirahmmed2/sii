@@ -97,7 +97,6 @@
 .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 .animate-shimmer { animation: shimmer 3s linear infinite; }
 
-/* HTML: <div class="loader"></div> */
 .loader {
   width: 40px;
   aspect-ratio: 1;

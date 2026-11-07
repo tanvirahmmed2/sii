@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: List all class information records or single by id/class_id
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -39,7 +38,6 @@ export async function GET(request, context) {
     const classId = searchParams.get('class_id')?.trim();
     const id = searchParams.get('id')?.trim();
 
-    // 1. Fetch available website classes
     const classesResult = await queryDb(
       `SELECT c.id, c.name, c.code, c.max_seats,
               COALESCE((SELECT COUNT(*) FROM website_sections s WHERE s.class_id = c.id), 0)::int AS section_count,
@@ -50,7 +48,6 @@ export async function GET(request, context) {
       [auth.website.id]
     );
 
-    // 2. Query class information joined with class metadata and staff author
     let query = `
       SELECT ci.*,
              c.name AS class_name,
@@ -101,7 +98,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create or upsert class information
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -122,7 +118,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Please select a valid academic class.' }, { status: 400 });
     }
 
-    // Verify class belongs to this website
     const classCheck = await queryDb(
       `SELECT id, name, code FROM website_classes WHERE id = $1 AND website_id = $2`,
       [class_id, auth.website.id]
@@ -162,7 +157,6 @@ export async function POST(request, context) {
 
     const savedRow = upsertResult.rows[0];
 
-    // Query joined record for comprehensive response
     const enrichedResult = await queryDb(
       `SELECT ci.*,
               c.name AS class_name,
@@ -187,7 +181,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update existing class information
 export async function PUT(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -210,7 +203,6 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Record ID or Class ID is required for update.' }, { status: 400 });
     }
 
-    // Verify record exists for website
     const existingResult = await queryDb(
       `SELECT id, class_id FROM website_class_information 
        WHERE (id = $1 OR class_id = $1) AND website_id = $2`,
@@ -244,7 +236,6 @@ export async function PUT(request, context) {
       ]
     );
 
-    // Retrieve updated joined record
     const updatedResult = await queryDb(
       `SELECT ci.*,
               c.name AS class_name,
@@ -269,7 +260,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove class information record
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

@@ -28,12 +28,9 @@ export default function ConfigureMetaPage() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [copiedWebhook, setCopiedWebhook] = useState(false);
 
-  // Exact fields specified by user:
-  // Inbound Webhooks:
   const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState('');
   const [metaAppSecret, setMetaAppSecret] = useState('');
   const [metaAppId, setMetaAppId] = useState('');
-  // Outbound / Reply:
   const [metaPageAccessToken, setMetaPageAccessToken] = useState('');
   const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState('');
 
@@ -163,7 +160,6 @@ export default function ConfigureMetaPage() {
 
   return (
     <div className="w-full space-y-6 pb-10">
-      {/* Notifications */}
       {statusMessage && (
         <div className="p-4 rounded-2xl text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
@@ -187,7 +183,6 @@ export default function ConfigureMetaPage() {
         </div>
       )}
 
-      {/* Header Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -210,7 +205,6 @@ export default function ConfigureMetaPage() {
         </div>
       </div>
 
-      {/* Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
@@ -272,9 +266,7 @@ export default function ConfigureMetaPage() {
         </div>
       </div>
 
-      {/* Main Form Surface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Form: Inbound & Outbound Keys */}
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-6">
           <div className="pb-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div>
@@ -297,13 +289,11 @@ export default function ConfigureMetaPage() {
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
-            {/* Section 1: Inbound Webhooks */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 pb-2">
                 Meta Message Receiver (Inbound Webhooks)
               </h3>
 
-              {/* META_APP_ID */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   META_APP_ID
@@ -320,7 +310,6 @@ export default function ConfigureMetaPage() {
                 </p>
               </div>
 
-              {/* META_APP_SECRET */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   META_APP_SECRET
@@ -346,7 +335,6 @@ export default function ConfigureMetaPage() {
                 </p>
               </div>
 
-              {/* META_WEBHOOK_VERIFY_TOKEN */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -373,13 +361,11 @@ export default function ConfigureMetaPage() {
               </div>
             </div>
 
-            {/* Section 2: Outbound / Reply */}
             <div className="space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 pb-2">
                 Meta Message Reply / Outbound (Optional)
               </h3>
 
-              {/* META_PAGE_ACCESS_TOKEN */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   META_PAGE_ACCESS_TOKEN
@@ -405,7 +391,6 @@ export default function ConfigureMetaPage() {
                 </p>
               </div>
 
-              {/* WHATSAPP_PHONE_NUMBER_ID */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   WHATSAPP_PHONE_NUMBER_ID
@@ -423,7 +408,6 @@ export default function ConfigureMetaPage() {
               </div>
             </div>
 
-            {/* Active Toggle */}
             <div className="pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
               <div>
                 <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Active Meta Messaging Service</p>
@@ -442,7 +426,6 @@ export default function ConfigureMetaPage() {
               </label>
             </div>
 
-            {/* Submit */}
             <div className="pt-2 flex justify-end">
               <button
                 type="submit"
@@ -455,7 +438,6 @@ export default function ConfigureMetaPage() {
           </form>
         </div>
 
-        {/* Right Info Card: Webhook Callback Guide */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Webhook Setup Guide</h3>

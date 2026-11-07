@@ -5,7 +5,7 @@ import { query, queryDb } from '../database/db.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_jwt_secret_key_2026';
 export const DEVELOPER_COOKIE_NAME = DEVELOPER_TOKEN;
-export const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN; // Compatibility alias
+export const ADMIN_COOKIE_NAME = DEVELOPER_TOKEN; 
 
 async function getCookieStore() {
   try {
@@ -14,14 +14,10 @@ async function getCookieStore() {
       return await nextHeaders.cookies();
     }
   } catch {
-    // Outside Next.js server runtime context
   }
   return null;
 }
 
-// ============================================================================
-// Password Helpers (Bcrypt)
-// ============================================================================
 export async function hashPassword(password) {
   if (!password) {
     throw new Error('Password is required for hashing.');
@@ -40,9 +36,6 @@ export async function comparePassword(password, hash) {
   }
 }
 
-// ============================================================================
-// JWT Helpers
-// ============================================================================
 export function signJWT(payload, expiresIn = '7d') {
   return jwt.sign(payload, DEFAULT_JWT_SECRET, { expiresIn });
 }
@@ -60,16 +53,13 @@ export function verifyJWT(token) {
   }
 }
 
-// ============================================================================
-// Cookie Helpers
-// ============================================================================
 export async function setDeveloperSessionCookie(response, token) {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 7 * 24 * 60 * 60, // 7 days
+    maxAge: 7 * 24 * 60 * 60, 
   };
 
   if (response && response.cookies) {
@@ -81,7 +71,6 @@ export async function setDeveloperSessionCookie(response, token) {
         cookieStore.set(DEVELOPER_COOKIE_NAME, token, cookieOptions);
       }
     } catch {
-      // Non-server-action context
     }
   }
 }
@@ -96,24 +85,13 @@ export async function clearDeveloperSessionCookie(response) {
         cookieStore.delete(DEVELOPER_COOKIE_NAME);
       }
     } catch {
-      // Ignore
     }
   }
 }
 
-// Compatibility aliases
 export const setAdminSessionCookie = setDeveloperSessionCookie;
 export const clearAdminSessionCookie = clearDeveloperSessionCookie;
 
-// ============================================================================
-// Developer Session Management (Direct Developers & Module Permissions)
-// Adheres strictly to psql/schema.psql (developers, developer_login_sessions, module_permissions)
-// ============================================================================
-
-/**
- * Extracts and decodes developer session from request or cookies.
- * Contains NO roles; permissions are mapped directly from module_permissions.
- */
 export async function getDeveloperSession(request) {
   try {
     let token = null;
@@ -134,7 +112,6 @@ export async function getDeveloperSession(request) {
           token = cookieStore.get(DEVELOPER_COOKIE_NAME)?.value;
         }
       } catch {
-        // Not in server request context
       }
     }
 
@@ -143,7 +120,6 @@ export async function getDeveloperSession(request) {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    // Verify against database developers table
     const res = await query(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.bio,
               d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
@@ -157,7 +133,6 @@ export async function getDeveloperSession(request) {
 
     if (!dev.is_active) return null;
 
-    // Check developer_login_sessions for revocation and activity
     try {
       const sessRes = await query(
         `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 AND developer_id = $2 LIMIT 1`,
@@ -165,7 +140,6 @@ export async function getDeveloperSession(request) {
       );
 
       if (sessRes.rows.length === 0) {
-        // Auto-heal session in database for valid, active JWT
         await query(
           `INSERT INTO developer_login_sessions (developer_id, token, ip_address, user_agent, expires_at, is_active)
            VALUES ($1, $2, '127.0.0.1', 'Active Session', CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
@@ -177,7 +151,6 @@ export async function getDeveloperSession(request) {
         if (s.is_active === false) return null;
         if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
 
-        // Touch last_active_at asynchronously
         query(
           `UPDATE developer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
           [token]
@@ -187,7 +160,6 @@ export async function getDeveloperSession(request) {
       console.warn('Notice verifying developer session against database:', e.message);
     }
 
-    // Fetch granular permissions from developer_role_permissions via dev.role_id, with fallback to module_permissions
     let permRes = { rows: [] };
     if (dev.role_id) {
       permRes = await queryDb(
@@ -213,7 +185,6 @@ export async function getDeveloperSession(request) {
       .filter((r) => r.can_view)
       .map((r) => r.module_slug);
 
-    // Platform root developer / owner fallback
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
     if (permissions.length === 0 || isOwner) {
       const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
@@ -252,13 +223,9 @@ export async function getDeveloperSession(request) {
   }
 }
 
-// Compatibility aliases
 export const getAdminSession = getDeveloperSession;
 export const getAuthenticatedUser = getDeveloperSession;
 
-/**
- * Checks whether the request is from an active developer session.
- */
 export async function isDeveloper(request) {
   try {
     const session = await getDeveloperSession(request);
@@ -279,14 +246,6 @@ export async function isStaff(request) {
 }
 export const authenticateStaff = isStaff;
 
-// ============================================================================
-// Direct Module Permissions Validation (No Roles)
-// Combines Developer directly with Module per schema.psql
-// ============================================================================
-
-/**
- * Checks if current developer has permission for a specific module or action.
- */
 export async function hasModulePermission(request, moduleSlug) {
   try {
     const session = await getDeveloperSession(request);
@@ -294,18 +253,15 @@ export async function hasModulePermission(request, moduleSlug) {
       return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated' };
     }
 
-    // Default global developer pages
     if (!moduleSlug || moduleSlug === 'overview' || moduleSlug === 'profile' || moduleSlug === 'settings') {
       return { success: true, user: session, staff: session, developer: session };
     }
 
-    // Platform owner check
     const isOwner = Number(session.id) === 1 || String(session.email).toLowerCase() === 'tanvir004006@gmail.com';
     if (isOwner) {
       return { success: true, user: session, staff: session, developer: session };
     }
 
-    // Normalize module slugs into an array of lowercase strings
     const slugs = (Array.isArray(moduleSlug) ? moduleSlug : [moduleSlug])
       .map((s) => String(s || '').toLowerCase().trim())
       .filter(Boolean);
@@ -314,7 +270,6 @@ export async function hasModulePermission(request, moduleSlug) {
       return { success: true, user: session, staff: session, developer: session };
     }
 
-    // Direct developer module_permissions lookup (combines developer with modules)
     const permRes = await queryDb(
       `SELECT 1 FROM module_permissions mp
        JOIN modules m ON mp.module_id = m.id
@@ -327,7 +282,6 @@ export async function hasModulePermission(request, moduleSlug) {
       return { success: true, user: session, staff: session, developer: session };
     }
 
-    // Fallback: check session permissions array
     const userPerms = (session.permissions || []).map((p) => String(p).toLowerCase().trim());
     const hasPerm = slugs.some((slug) => userPerms.includes(slug));
 
@@ -355,11 +309,6 @@ export async function requireDeveloperPermission(request, moduleSlug) {
   }
   return check;
 }
-
-// ============================================================================
-// Direct Developer Authentication Handler
-// Validates credentials against developers table and records activities & sessions
-// ============================================================================
 
 export async function authenticateDeveloper(email, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -403,7 +352,6 @@ export async function authenticateDeveloper(email, password, { ip = '127.0.0.1',
     throw new Error('Invalid email or password.');
   }
 
-  // Check if account email is verified
   if (dev.email_verified === false) {
     const err = new Error('Your developer account has not been verified yet. Please check your email for the activation link.');
     err.unverified = true;
@@ -411,19 +359,16 @@ export async function authenticateDeveloper(email, password, { ip = '127.0.0.1',
     throw err;
   }
 
-  // Clear stale verification token if any
   if (dev.verification_token) {
     queryDb(`UPDATE developers SET verification_token = NULL, verification_token_expires = NULL WHERE id = $1`, [dev.id]).catch(() => {});
   }
 
-  // Generate unique session token
   const token = generateToken({
     id: dev.id,
     email: dev.email,
     designation: dev.designation,
   });
 
-  // Log successful activity and session adhering to schema.psql
   try {
     await queryDb(
       `UPDATE developers SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -457,16 +402,14 @@ export async function authenticateDeveloper(email, password, { ip = '127.0.0.1',
 
   return {
     developer: developerProfile,
-    admin: developerProfile, // Compatibility alias
+    admin: developerProfile, 
     token,
   };
 }
 
-// Compatibility alias
 export const authenticateAdmin = authenticateDeveloper;
 
 const DeveloperMiddleware = {
-  // Password & Auth
   hashPassword,
   comparePassword,
   signJWT,
@@ -479,7 +422,6 @@ const DeveloperMiddleware = {
   authenticateDeveloper,
   authenticateAdmin,
 
-  // Session & Permissions
   getDeveloperSession,
   getAdminSession,
   getAuthenticatedUser,

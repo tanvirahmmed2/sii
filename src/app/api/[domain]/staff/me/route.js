@@ -6,7 +6,6 @@ import {
   hashPassword,
 } from 'src/lib/middleware/staff';
 
-// GET: Fetch currently authenticated staff member's complete profile
 export async function GET(request) {
   try {
     const sessionData = await getStaffSession(request);
@@ -19,7 +18,6 @@ export async function GET(request) {
 
     const { staff, permissions, allowedModules } = sessionData;
 
-    // Fetch pay grade details
     let payGrade = null;
     if (staff.gradeId) {
       const gradeRes = await queryDb(
@@ -33,7 +31,6 @@ export async function GET(request) {
       }
     }
 
-    // Fetch work experiences
     const expRes = await queryDb(
       `SELECT id, title, organization, start_date, end_date, is_current, description
        FROM website_staff_experiences
@@ -42,7 +39,6 @@ export async function GET(request) {
       [staff.id, staff.websiteId]
     );
 
-    // Fetch active session stats
     const sessionsRes = await queryDb(
       `SELECT id, ip_address, user_agent, last_active_at, created_at,
               (id = $1) AS is_current_session
@@ -85,7 +81,6 @@ export async function GET(request) {
   }
 }
 
-// PUT: Update staff self information (personal info, credentials, 2FA, experiences)
 export async function PUT(request) {
   try {
     const sessionData = await getStaffSession(request);
@@ -100,7 +95,6 @@ export async function PUT(request) {
     const body = await request.json().catch(() => ({}));
     const data = body.data || body;
 
-    // 1. Fetch current staff row
     const currentRes = await queryDb(
       `SELECT ws.* FROM website_staffs ws WHERE ws.id = $1 LIMIT 1`,
       [staff.id]
@@ -115,7 +109,6 @@ export async function PUT(request) {
 
     const current = currentRes.rows[0];
 
-    // Name
     let newName = current.name;
     if (data.name !== undefined) {
       newName = String(data.name).trim();
@@ -127,14 +120,12 @@ export async function PUT(request) {
       }
     }
 
-    // Number / Phone
     let newNumber = current.number;
     if (data.number !== undefined || data.phone !== undefined) {
       const candidate = (data.number !== undefined ? data.number : data.phone) || '';
       newNumber = String(candidate).trim();
     }
 
-    // Username check
     let newUsername = current.username;
     if (data.username !== undefined) {
       newUsername = String(data.username).trim() || null;
@@ -152,7 +143,6 @@ export async function PUT(request) {
       }
     }
 
-    // Password change verification
     let newPasswordHash = current.password;
     if (data.newPassword && String(data.newPassword).trim()) {
       const curPass = String(data.currentPassword || '').trim();
@@ -181,7 +171,6 @@ export async function PUT(request) {
       newPasswordHash = await hashPassword(String(data.newPassword).trim());
     }
 
-    // Other optional fields
     const newAddress = data.address !== undefined ? String(data.address).trim() : current.address;
     const newBio = data.bio !== undefined ? String(data.bio).trim() : current.bio;
     const newDob = data.date_of_birth !== undefined || data.dateOfBirth !== undefined 
@@ -200,7 +189,6 @@ export async function PUT(request) {
       : current.is_two_factor_enabled;
     const newImage = data.image !== undefined ? String(data.image).trim() : current.image;
 
-    // Execute update
     const updateRes = await queryDb(
       `UPDATE website_staffs
        SET name = $1,
@@ -239,9 +227,7 @@ export async function PUT(request) {
       ]
     );
 
-    // Sync work experiences if provided
     if (Array.isArray(data.experiences)) {
-      // Clear and re-insert experiences or sync
       await queryDb(
         `DELETE FROM website_staff_experiences WHERE staff_id = $1 AND website_id = $2`,
         [staff.id, staff.websiteId]

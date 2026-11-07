@@ -230,11 +230,6 @@ export const DEFAULT_ADMISSION_FIELDS = [
   }
 ];
 
-/**
- * GET /api/[domain]/admissions/fields?admission_id=...
- * Public endpoint to fetch active modular fields assigned to this institution / circular.
- * Primary source of truth is website_student_form_fields (custom columns configured by staff for students table).
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -246,7 +241,6 @@ export async function GET(request, context) {
     const admissionIdParam = searchParams.get('admission_id') || searchParams.get('circular_id');
     const admId = admissionIdParam ? parseInt(admissionIdParam, 10) : null;
 
-    // Fetch unified modular fields for the institution
     const fieldsRes = await queryDb(`
       SELECT * FROM website_form_fields
       WHERE website_id = $1 AND is_active = TRUE
@@ -255,7 +249,6 @@ export async function GET(request, context) {
 
     const fields = fieldsRes.rows.length > 0 ? fieldsRes.rows : DEFAULT_ADMISSION_FIELDS;
 
-    // Group fields by section for seamless client rendering
     const sections = {};
     for (const f of fields) {
       const sec = f.section || 'general';

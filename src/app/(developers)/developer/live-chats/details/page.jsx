@@ -14,7 +14,6 @@ export default function LiveChatDetailsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deletingId, setDeletingId] = useState(null);
 
-  // Fetch all chat sessions
   const fetchChats = useCallback(async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
@@ -51,7 +50,6 @@ export default function LiveChatDetailsPage() {
     };
   }, []);
 
-  // Background polling every 4s
   useEffect(() => {
     const interval = setInterval(() => {
       fetchChats(false);
@@ -59,7 +57,6 @@ export default function LiveChatDetailsPage() {
     return () => clearInterval(interval);
   }, [fetchChats]);
 
-  // Delete chat session
   const handleDelete = async (id, e) => {
     if (e) e.stopPropagation();
     if (!confirm('Are you sure you want to delete this live chat session? All message history will be removed.')) return;
@@ -81,7 +78,6 @@ export default function LiveChatDetailsPage() {
     }
   };
 
-  // Filter chats by search term and status
   const filteredChats = chats.filter((chat) => {
     let matchesStatus = true;
     if (statusFilter === 'MY_CHATS') {
@@ -105,7 +101,6 @@ export default function LiveChatDetailsPage() {
     );
   });
 
-  // Calculate metrics
   const totalCount = chats.length;
   const openCount = chats.filter((c) => String(c.status).toUpperCase() === 'OPEN').length;
   const activeCount = chats.filter((c) => String(c.status).toUpperCase() === 'ACTIVE').length;
@@ -114,7 +109,6 @@ export default function LiveChatDetailsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div className="flex items-center gap-3">
           <Link
@@ -154,7 +148,6 @@ export default function LiveChatDetailsPage() {
         </div>
       </div>
 
-      {/* Metrics Counters */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div
           onClick={() => setStatusFilter('ALL')}
@@ -213,7 +206,6 @@ export default function LiveChatDetailsPage() {
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="w-full sm:w-80">
           <input
@@ -251,7 +243,6 @@ export default function LiveChatDetailsPage() {
         </div>
       </div>
 
-      {/* Chat Sessions List */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         {loading && chats.length === 0 ? (
           <LoadingScreen fullScreen={false} label="Loading live chat conversations..." />

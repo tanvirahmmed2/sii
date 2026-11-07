@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import React, { useContext, useEffect, useState } from 'react';
@@ -39,7 +38,6 @@ const About = () => {
             teachersCount = payload.totalTeachers || payload.teachers || 0;
           }
         } catch {
-          // ignore
         }
 
         let clubsCount = 0;
@@ -52,7 +50,6 @@ const About = () => {
             clubsCount = clubsList.length;
           }
         } catch {
-          // ignore
         }
 
         if (!ignore) {
@@ -63,7 +60,6 @@ const About = () => {
           });
         }
 
-        // Fetch official board members
         try {
           const boardRes = await fetch(getApiEndpoint('board-members'));
           if (boardRes.ok) {
@@ -82,10 +78,8 @@ const About = () => {
             }
           }
         } catch {
-          // ignore
         }
 
-        // Fetch official about sections from database
         try {
           const aboutRes = await fetch(getApiEndpoint('abouts'));
           if (aboutRes.ok) {
@@ -96,7 +90,6 @@ const About = () => {
             }
           }
         } catch {
-          // ignore
         }
       } catch (err) {
         console.error('Error fetching about page data:', err);
@@ -156,7 +149,6 @@ const About = () => {
     <div className="w-full min-h-[calc(100vh-120px)] bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="w-full max-w-6xl mx-auto space-y-8">
 
-        {/* Hero Banner */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -200,7 +192,6 @@ const About = () => {
           </p>
         </motion.div>
 
-        {/* Metrics Strip */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {stats.map((stat, idx) => (
             <motion.div
@@ -225,7 +216,6 @@ const About = () => {
           ))}
         </div>
 
-        {/* Dynamic Institutional About Sections */}
         {abouts.length > 0 && (
           <div className="space-y-6">
             {abouts.map((ab, idx) => (
@@ -263,7 +253,6 @@ const About = () => {
           </div>
         )}
 
-        {/* History Preview */}
         {website?.history && (
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
             <h2 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">
@@ -276,7 +265,6 @@ const About = () => {
           </div>
         )}
 
-        {/* Core Pillars Nav Grid */}
         <div className="space-y-4">
           <div>
             <h2 className="font-serif text-xl sm:text-2xl font-normal text-slate-900 dark:text-white tracking-tight">
@@ -308,7 +296,6 @@ const About = () => {
           </div>
         </div>
 
-        {/* Chairman & Governance */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
@@ -370,7 +357,6 @@ const About = () => {
           )}
         </div>
 
-        {/* Charter Note */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 sm:p-8 rounded-2xl space-y-2 shadow-xs">
           <span className="text-xs uppercase tracking-[0.2em] font-semibold text-primary block">
             Quality Assurance Charter

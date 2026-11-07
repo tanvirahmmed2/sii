@@ -12,19 +12,16 @@ export default function DeveloperTasksPage() {
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Filters
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState('board'); // 'board' or 'list'
+  const [viewMode, setViewMode] = useState('board'); 
 
-  // Task Detail Modal & Comments
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskComments, setTaskComments] = useState([]);
   const [commentInput, setCommentInput] = useState('');
   const [postingComment, setPostingComment] = useState(false);
 
-  // Create Task Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     title: '',
@@ -187,7 +184,6 @@ export default function DeveloperTasksPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -227,7 +223,6 @@ export default function DeveloperTasksPage() {
         </div>
       </div>
 
-      {/* Filters Bar */}
       <div className="bg-white border border-slate-200 rounded p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-slate-600">
@@ -277,7 +272,6 @@ export default function DeveloperTasksPage() {
         </button>
       </div>
 
-      {/* Main View: Kanban Board */}
       {loading ? (
         <LoadingScreen fullScreen={false} label="Loading developer tasks..." />
       ) : viewMode === 'board' ? (
@@ -344,7 +338,6 @@ export default function DeveloperTasksPage() {
           })}
         </div>
       ) : (
-        /* List View */
         <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -393,7 +386,6 @@ export default function DeveloperTasksPage() {
         </div>
       )}
 
-      {/* Task Detail Modal & Discussion */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded border border-slate-200 shadow-lg max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -465,7 +457,6 @@ export default function DeveloperTasksPage() {
               </div>
             </div>
 
-            {/* Comments Stream */}
             <div className="pt-3 border-t border-slate-100 space-y-3">
               <h3 className="text-xs font-semibold text-slate-900">
                 Discussion &amp; Activity ({taskComments.length})
@@ -489,7 +480,6 @@ export default function DeveloperTasksPage() {
                 )}
               </div>
 
-              {/* Comment Input */}
               <form onSubmit={handlePostComment} className="flex gap-2">
                 <input
                   type="text"
@@ -511,7 +501,6 @@ export default function DeveloperTasksPage() {
         </div>
       )}
 
-      {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded border border-slate-200 shadow-lg max-w-lg w-full p-4 sm:p-6 space-y-4">

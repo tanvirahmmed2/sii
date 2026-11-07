@@ -35,7 +35,6 @@ function slugify(text) {
     .replace(/^-+|-+$/g, '');
 }
 
-// GET: Load LMS courses, modules, video streaming assets, live classes, student progress
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -43,7 +42,6 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Courses
     const coursesRes = await queryDb(
       `SELECT c.*, 
               (SELECT COUNT(*) FROM website_course_modules m WHERE m.course_id = c.id) AS module_count,
@@ -56,7 +54,6 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 2. Scheduled Live Classes (Zoom / Meet)
     const liveRes = await queryDb(
       `SELECT lc.*, c.title as course_title, t.name as teacher_name
        FROM website_live_classes lc
@@ -67,13 +64,11 @@ export async function GET(request, context) {
       [websiteId]
     );
 
-    // 3. Video Assets
     const videosRes = await queryDb(
       `SELECT * FROM website_video_assets WHERE website_id = $1 ORDER BY created_at DESC LIMIT 30`,
       [websiteId]
     );
 
-    // 4. Classes & Teachers for dropdowns
     const classesRes = await queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY id`, [websiteId]);
     const teachersRes = await queryDb(`SELECT id, name FROM website_teachers WHERE website_id = $1 ORDER BY name ASC`, [websiteId]);
 
@@ -91,7 +86,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create course, module, live class
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -152,7 +146,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove course or live class
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

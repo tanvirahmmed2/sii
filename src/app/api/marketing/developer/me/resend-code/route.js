@@ -65,7 +65,6 @@ export async function POST(request) {
     const baseUrl = getBaseUrl(request);
     const verifyUrl = `${baseUrl}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(cleanEmail)}`;
 
-    // Send link via Brevo mailer
     try {
       const emailHtml = buildStyledEmail({
         title: `${SITE_NAME} Developer Portal`,

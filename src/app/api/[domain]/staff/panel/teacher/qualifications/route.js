@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 
-// GET: Fetch qualifications for a teacher
 export async function GET(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'view');
@@ -37,7 +36,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add new qualification for a teacher
 export async function POST(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'create');
@@ -68,7 +66,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Institute/University name is required.' }, { status: 400 });
     }
 
-    // Verify teacher belongs to this website
     const teacherCheck = await queryDb(
       `SELECT id FROM website_teachers WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [teacher_id, website.id]
@@ -106,7 +103,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update qualification
 export async function PUT(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'edit');
@@ -171,7 +167,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Delete qualification
 export async function DELETE(request, context) {
   try {
     const auth = await verifyTeacherStaffAccess(request, context, 'delete');

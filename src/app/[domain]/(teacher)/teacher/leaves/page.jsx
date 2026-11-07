@@ -69,7 +69,6 @@ const LeavesPage = () => {
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-200">
         <div>
           <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -85,7 +84,6 @@ const LeavesPage = () => {
         </button>
       </div>
 
-      {/* Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         {loading ? (
           <div className="py-12 flex justify-center items-center">
@@ -127,7 +125,6 @@ const LeavesPage = () => {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-5 w-full max-w-lg shadow-xl flex flex-col gap-4">

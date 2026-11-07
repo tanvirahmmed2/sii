@@ -24,7 +24,6 @@ import {
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
 
-// Dynamically import TiptapEditor to prevent SSR hydration mismatch
 const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
   ssr: false,
   loading: () => (
@@ -45,26 +44,21 @@ const TARGET_AUDIENCES = [
 export default function NoticesStaffPage() {
   const { website, getApiEndpoint } = useContext(TenantWebsiteContext);
 
-  // Data states
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [selectedStatus, setSelectedStatus] = useState('all'); 
   const [selectedAudience, setSelectedAudience] = useState('all');
 
-  // In-Page Form State (NO POPUP MODAL)
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState(null);
 
-  // In-Page Delete Confirmation (NO POPUP MODAL)
   const [noticeToDelete, setNoticeToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Form Fields
   const [formTitle, setFormTitle] = useState('');
   const [formAudience, setFormAudience] = useState('All');
   const [formPublishedDate, setFormPublishedDate] = useState('');
@@ -74,17 +68,14 @@ export default function NoticesStaffPage() {
   const [formIsPinned, setFormIsPinned] = useState(false);
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // PDF File Upload State
   const [selectedPdfFile, setSelectedPdfFile] = useState(null);
   const [existingPdfUrl, setExistingPdfUrl] = useState('');
   const [existingFileName, setExistingFileName] = useState('');
   const [existingFileSize, setExistingFileSize] = useState(0);
   const [removeExistingPdf, setRemoveExistingPdf] = useState(false);
 
-  // API Endpoint
   const apiEndpoint = useMemo(() => getApiEndpoint('staff/panel/notices'), [getApiEndpoint]);
 
-  // Format file size
   const formatBytes = (bytes) => {
     if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
@@ -93,7 +84,6 @@ export default function NoticesStaffPage() {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
-  // Fetch notices
   const fetchNotices = useCallback(
     async (showFeedback = false) => {
       if (!apiEndpoint) return;
@@ -133,7 +123,6 @@ export default function NoticesStaffPage() {
     };
   }, [fetchNotices]);
 
-  // Handle open create form
   const handleOpenCreate = () => {
     setEditingNotice(null);
     setFormTitle('');
@@ -153,7 +142,6 @@ export default function NoticesStaffPage() {
     setIsFormOpen(true);
   };
 
-  // Handle open edit form
   const handleOpenEdit = (notice) => {
     setEditingNotice(notice);
     setFormTitle(notice.title || '');
@@ -187,7 +175,6 @@ export default function NoticesStaffPage() {
     setSelectedPdfFile(null);
   };
 
-  // Handle PDF file selection
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -206,7 +193,6 @@ export default function NoticesStaffPage() {
     }
   };
 
-  // Save notice (Create or Update)
   const handleSaveNotice = async (e) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -218,7 +204,6 @@ export default function NoticesStaffPage() {
     try {
       let res;
 
-      // When a file is selected or PDF is being removed, send as multipart/form-data
       if (selectedPdfFile || removeExistingPdf) {
         const formData = new FormData();
         if (editingNotice) formData.append('id', editingNotice.id);
@@ -248,7 +233,6 @@ export default function NoticesStaffPage() {
           res = await axios.post(apiEndpoint, formData, config);
         }
       } else {
-        // Send as regular JSON
         const payload = {
           title: formTitle.trim(),
           target_audience: formAudience,
@@ -287,7 +271,6 @@ export default function NoticesStaffPage() {
     }
   };
 
-  // Delete notice execution
   const handleConfirmDelete = async () => {
     if (!noticeToDelete) return;
     setDeleting(true);
@@ -308,7 +291,6 @@ export default function NoticesStaffPage() {
     }
   };
 
-  // Toggle active status
   const handleToggleStatus = async (notice) => {
     try {
       const res = await axios.put(apiEndpoint, {
@@ -327,7 +309,6 @@ export default function NoticesStaffPage() {
     }
   };
 
-  // KPIs
   const totalCount = notices.length;
   const activeCount = notices.filter((n) => n.is_active).length;
   const pinnedCount = notices.filter((n) => n.is_pinned).length;
@@ -335,7 +316,6 @@ export default function NoticesStaffPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Header & Overview Bar */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
@@ -370,7 +350,6 @@ export default function NoticesStaffPage() {
         </div>
       </div>
 
-      {/* KPI Cards (High-Density Metric Bar) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -421,7 +400,6 @@ export default function NoticesStaffPage() {
         </div>
       </div>
 
-      {/* IN-PAGE DELETE CONFIRMATION BANNER (NO POPUP MODAL) */}
       {noticeToDelete && (
         <div className="w-full bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-md p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -455,7 +433,6 @@ export default function NoticesStaffPage() {
         </div>
       )}
 
-      {/* IN-PAGE FORM SECTION (NO POPUP MODAL) */}
       {isFormOpen && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -477,7 +454,6 @@ export default function NoticesStaffPage() {
           </div>
 
           <form onSubmit={handleSaveNotice} className="space-y-4">
-            {/* Notice Title */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                 Notice Title *
@@ -492,9 +468,7 @@ export default function NoticesStaffPage() {
               />
             </div>
 
-            {/* Target Audience & Dates Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Target Audience */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Target Audience
@@ -512,7 +486,6 @@ export default function NoticesStaffPage() {
                 </select>
               </div>
 
-              {/* Published Date */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Publish Date
@@ -525,7 +498,6 @@ export default function NoticesStaffPage() {
                 />
               </div>
 
-              {/* Expiry Date */}
               <div className="space-y-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Expiry Date (Optional)
@@ -539,7 +511,6 @@ export default function NoticesStaffPage() {
               </div>
             </div>
 
-            {/* Cloudinary PDF Upload & Document Section */}
             <div className="border border-slate-200 dark:border-slate-800 rounded-md p-3.5 bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -549,7 +520,6 @@ export default function NoticesStaffPage() {
                 <span className="text-[10px] text-slate-400">PDF up to 25MB</span>
               </div>
 
-              {/* Existing PDF Alert in Edit Mode */}
               {existingPdfUrl && !removeExistingPdf && (
                 <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs">
                   <div className="flex items-center gap-2 overflow-hidden">
@@ -585,7 +555,6 @@ export default function NoticesStaffPage() {
                 </div>
               )}
 
-              {/* Show removal notice if marked for delete */}
               {removeExistingPdf && (
                 <div className="flex items-center justify-between p-2 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-md text-xs text-rose-700 dark:text-rose-300">
                   <span>Current PDF will be removed upon saving.</span>
@@ -599,7 +568,6 @@ export default function NoticesStaffPage() {
                 </div>
               )}
 
-              {/* File Input */}
               <div className="space-y-1">
                 <input
                   type="file"
@@ -615,7 +583,6 @@ export default function NoticesStaffPage() {
                 )}
               </div>
 
-              {/* Optional Secondary Google Drive Link */}
               <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800">
                 <label className="text-[11px] font-medium text-slate-600 dark:text-slate-400 block mb-1">
                   Optional External Document / Google Drive Link (Alternative fallback)
@@ -630,7 +597,6 @@ export default function NoticesStaffPage() {
               </div>
             </div>
 
-            {/* Description (Tiptap Editor) */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
                 <span>Notice Briefing &amp; Text Content</span>
@@ -644,7 +610,6 @@ export default function NoticesStaffPage() {
               />
             </div>
 
-            {/* Checkboxes: Pin & Status */}
             <div className="flex flex-wrap items-center gap-6 pt-1">
               <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-300">
                 <input
@@ -667,7 +632,6 @@ export default function NoticesStaffPage() {
               </label>
             </div>
 
-            {/* Form Action Buttons */}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -695,9 +659,7 @@ export default function NoticesStaffPage() {
         </div>
       )}
 
-      {/* SEARCH & FILTER CONTROLS */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3 flex flex-col md:flex-row items-center justify-between gap-3 shadow-2xs">
-        {/* Search */}
         <div className="relative w-full md:w-72">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
@@ -709,9 +671,7 @@ export default function NoticesStaffPage() {
           />
         </div>
 
-        {/* Filters */}
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
-          {/* Status Tab Filter */}
           <div className="flex items-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 p-0.5 text-xs">
             {['all', 'active', 'inactive'].map((st) => (
               <button
@@ -729,7 +689,6 @@ export default function NoticesStaffPage() {
             ))}
           </div>
 
-          {/* Target Audience Filter */}
           <select
             value={selectedAudience}
             onChange={(e) => setSelectedAudience(e.target.value)}
@@ -745,7 +704,6 @@ export default function NoticesStaffPage() {
         </div>
       </div>
 
-      {/* NOTICES LIST TABLE */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden shadow-2xs">
         {loading ? (
           <div className="py-16 flex flex-col items-center justify-center space-y-2">
@@ -789,7 +747,6 @@ export default function NoticesStaffPage() {
                       key={n.id}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
                     >
-                      {/* Title & Pinned */}
                       <td className="py-3 px-3 max-w-xs sm:max-w-sm">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -810,14 +767,12 @@ export default function NoticesStaffPage() {
                         </div>
                       </td>
 
-                      {/* Audience */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span className="text-[11px] text-slate-600 dark:text-slate-400">
                           {n.target_audience || 'All'}
                         </span>
                       </td>
 
-                      {/* Attachment (Cloudinary PDF or Drive) */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         {effectivePdf ? (
                           <div className="flex items-center gap-1.5">
@@ -855,7 +810,6 @@ export default function NoticesStaffPage() {
                         )}
                       </td>
 
-                      {/* Published Date */}
                       <td className="py-3 px-3 whitespace-nowrap text-slate-500 dark:text-slate-400">
                         {n.published_date
                           ? new Date(n.published_date).toLocaleDateString(undefined, {
@@ -866,14 +820,12 @@ export default function NoticesStaffPage() {
                           : '—'}
                       </td>
 
-                      {/* Views */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <span className="font-mono text-slate-600 dark:text-slate-400">
                           {n.views_count || 0}
                         </span>
                       </td>
 
-                      {/* Status Toggle */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         <button
                           type="button"
@@ -888,7 +840,6 @@ export default function NoticesStaffPage() {
                         </button>
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
                           <button

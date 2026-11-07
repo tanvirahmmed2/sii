@@ -13,7 +13,6 @@ const StudentTestimonialPage = () => {
   const [isProvided, setIsProvided] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Application Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [certificateType, setCertificateType] = useState('Character Certificate');
   const [purpose, setPurpose] = useState('');
@@ -114,7 +113,6 @@ const StudentTestimonialPage = () => {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 border border-primary/20 inline-block mb-1">
@@ -153,7 +151,6 @@ const StudentTestimonialPage = () => {
         </div>
       )}
 
-      {/* Candidate Profile Strip */}
       {student && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -186,7 +183,6 @@ const StudentTestimonialPage = () => {
         </div>
       )}
 
-      {/* Latest Approved Testimonial Card */}
       {isProvided && testimonial && (
         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 sm:p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -239,7 +235,6 @@ const StudentTestimonialPage = () => {
         </div>
       )}
 
-      {/* History Table */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden">
         <div className="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
@@ -319,7 +314,6 @@ const StudentTestimonialPage = () => {
         )}
       </div>
 
-      {/* Apply Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 rounded-md max-w-lg w-full p-5 shadow-lg border border-slate-200 dark:border-slate-800 space-y-4">

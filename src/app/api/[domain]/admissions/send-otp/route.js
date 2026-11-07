@@ -6,10 +6,6 @@ import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
 import { buildStyledEmail } from 'src/lib/database/brevo.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
-/**
- * POST /api/[domain]/admissions/send-otp
- * Sends a cryptographically secure 6-digit email OTP for applicant email verification.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -26,13 +22,11 @@ export async function POST(request, context) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Verify email uniqueness across institution roles (no student can apply, cannot duplicate staff/teacher/officer/applicant)
     const emailCheck = await checkInstitutionEmailAvailability(website.id, cleanEmail);
     if (!emailCheck.available) {
       return NextResponse.json({ success: false, error: emailCheck.message }, { status: 409 });
     }
 
-    // 1. Rate-limiting check: enforce a 60-second cooldown per email
     const recentOtpRes = await queryDb(`
       SELECT created_at FROM website_email_verifications
       WHERE website_id = $1 AND email = $2 AND purpose = 'admission'
@@ -47,23 +41,19 @@ export async function POST(request, context) {
       }, { status: 429 });
     }
 
-    // 2. Invalidate any previous unverified OTPs for this email to prevent reuse
     await queryDb(`
       DELETE FROM website_email_verifications
       WHERE website_id = $1 AND email = $2 AND purpose = 'admission' AND is_verified = FALSE
     `, [website.id, cleanEmail]);
 
-    // 3. Cryptographically secure 6-digit numeric OTP
     const otpCode = crypto.randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins validity
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
 
-    // 4. Store in website_email_verifications
     await queryDb(`
       INSERT INTO website_email_verifications (website_id, email, purpose, otp_code, expires_at)
       VALUES ($1, $2, 'admission', $3, $4)
     `, [website.id, cleanEmail, otpCode, expiresAt]);
 
-    // 5. Send secure email via institution mailer
     const appName = website.name || 'Admissions Portal';
     const emailHtml = buildStyledEmail({
       title: 'Admission Email Verification',
@@ -88,7 +78,6 @@ export async function POST(request, context) {
       console.warn('Error dispatching admission OTP email:', emailErr.message);
     }
 
-    // NEVER return OTP in response body
     return NextResponse.json({
       success: true,
       message: 'A 6-digit verification code has been dispatched to your email address. Please check your inbox and spam folder.',

@@ -58,7 +58,6 @@ export default function SearchSingleStudentPage() {
         setFullDetail(data.payload);
       }
     } catch {
-      // Ignored
     } finally {
       setDetailLoading(false);
     }
@@ -74,7 +73,6 @@ export default function SearchSingleStudentPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Single Student Inspection &amp; Profile Lookup
@@ -84,7 +82,6 @@ export default function SearchSingleStudentPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -93,7 +90,6 @@ export default function SearchSingleStudentPage() {
         description="Select session, class, and section to inspect individual profiles"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🔎"
@@ -102,7 +98,6 @@ export default function SearchSingleStudentPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Left Student Selector List */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-2xs space-y-2">
             <div className="pb-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -141,7 +136,6 @@ export default function SearchSingleStudentPage() {
             </div>
           </div>
 
-          {/* Right Profile Inspector Dossier */}
           <div className="md:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-5 shadow-2xs space-y-4">
             {!selectedStudent ? (
               <div className="py-20 text-center text-xs text-slate-400">
@@ -153,7 +147,6 @@ export default function SearchSingleStudentPage() {
               </div>
             ) : (
               <div className="space-y-4 text-xs">
-                {/* Header card with photo and key credentials */}
                 <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
                   <div className="w-24 h-28 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center shrink-0">
                     {selectedStudent.primary_photo_url ? (
@@ -189,7 +182,6 @@ export default function SearchSingleStudentPage() {
                   </div>
                 </div>
 
-                {/* Grid details */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="p-2.5 rounded bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
                     <span className="text-[10px] text-slate-400 uppercase font-semibold block">Email</span>
@@ -217,7 +209,6 @@ export default function SearchSingleStudentPage() {
                   </div>
                 </div>
 
-                {/* Addresses */}
                 {fullDetail?.address && (
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
                     <span className="text-[10px] text-slate-400 uppercase font-semibold block">Residence Data</span>
@@ -229,7 +220,6 @@ export default function SearchSingleStudentPage() {
                   </div>
                 )}
 
-                {/* Guardians */}
                 {fullDetail?.guardian && (
                   <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
                     <span className="text-[10px] text-slate-400 uppercase font-semibold block">Guardians</span>

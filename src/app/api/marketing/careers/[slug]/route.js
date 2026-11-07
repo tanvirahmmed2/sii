@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Public details of a career post by slug
-// ============================================================================
 export async function GET(request, context) {
   try {
 

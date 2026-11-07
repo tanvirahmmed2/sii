@@ -15,7 +15,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE SPAM LOG
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'spams');
@@ -37,7 +36,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE SPAM STATUS
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'spams');
@@ -58,7 +56,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE SPAM
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'spams');

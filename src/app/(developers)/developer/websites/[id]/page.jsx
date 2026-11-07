@@ -44,14 +44,13 @@ export default function WebsiteDetailsPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'edit_website' | 'edit_creator' | 'modules' | 'billing'
+  const [activeTab, setActiveTab] = useState('overview'); 
 
   const [saving, setSaving] = useState(false);
   const [moduleToggling, setModuleToggling] = useState({});
   const [copiedKey, setCopiedKey] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
-  // Website Edit Form State
   const [websiteForm, setWebsiteForm] = useState({
     name: '',
     subdomain: '',
@@ -75,7 +74,6 @@ export default function WebsiteDetailsPage({ params }) {
     subscription_expires_at: '',
   });
 
-  // Creator Edit Form State
   const [creatorForm, setCreatorForm] = useState({
     name: '',
     phone: '',
@@ -110,7 +108,6 @@ export default function WebsiteDetailsPage({ params }) {
         const w = json.website;
         const c = json.creator;
 
-        // Initialize website edit form
         setWebsiteForm({
           name: w.name || '',
           subdomain: w.subdomain || '',
@@ -136,7 +133,6 @@ export default function WebsiteDetailsPage({ params }) {
             : '',
         });
 
-        // Initialize creator edit form
         if (c) {
           setCreatorForm({
             name: c.name || '',
@@ -225,7 +221,6 @@ export default function WebsiteDetailsPage({ params }) {
     };
   }, [isAuthorized, websiteId]);
 
-  // Handle Save Website Updates
   const handleSaveWebsite = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -257,7 +252,6 @@ export default function WebsiteDetailsPage({ params }) {
     }
   };
 
-  // Handle Save Creator Updates
   const handleSaveCreator = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -286,7 +280,6 @@ export default function WebsiteDetailsPage({ params }) {
     }
   };
 
-  // Handle Toggle Tenant Module for this website
   const handleToggleModule = async (moduleId, currentEnabled) => {
     setModuleToggling((prev) => ({ ...prev, [moduleId]: true }));
     try {
@@ -312,7 +305,6 @@ export default function WebsiteDetailsPage({ params }) {
     }
   };
 
-  // Handle Delete Website Container
   const handleDeleteWebsite = async () => {
     if (!confirm(`Are you sure you want to delete website "${data?.website?.name}"? All hosted subdomain data and module links will be permanently removed.`)) {
       return;
@@ -389,7 +381,6 @@ export default function WebsiteDetailsPage({ params }) {
 
   return (
     <div className="w-full space-y-5 pb-12">
-      {/* Top Breadcrumbs & Actions */}
       <div className="flex items-center justify-between">
         <Link
           href="/developer/websites"
@@ -408,7 +399,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Feedback Banner */}
       {feedback && (
         <div
           className={`p-3 rounded text-xs font-medium border flex items-center justify-between ${
@@ -427,7 +417,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       )}
 
-      {/* Header Overview Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
@@ -436,7 +425,6 @@ export default function WebsiteDetailsPage({ params }) {
                 Site #{website.id}
               </span>
 
-              {/* Status Badge */}
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
                   website.status === 'active'
@@ -448,7 +436,6 @@ export default function WebsiteDetailsPage({ params }) {
                 {website.status || 'Active'}
               </span>
 
-              {/* Publish State */}
               <span
                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${
                   isOnline
@@ -504,10 +491,15 @@ export default function WebsiteDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* Quick External Actions */}
           <div className="flex flex-wrap items-center gap-2">
             <a
-              href={website.custom_domain && website.custom_domain_verified ? `https://${website.custom_domain}` : (baseDomain.includes('localhost') ? `http://${website.subdomain}.${baseDomain}` : `https://${website.subdomain}.${baseDomain}`)}
+              href={
+                website.custom_domain && website.custom_domain_verified
+                  ? `https://${website.custom_domain}`
+                  : (baseDomain.includes('localhost') || baseDomain.includes('127.0.0.1') || /^\d+\.\d+\.\d+\.\d+/.test(baseDomain) || baseDomain.includes(':')
+                      ? `http://${website.subdomain}.${baseDomain}`
+                      : `https://${website.subdomain}.${baseDomain}`)
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-semibold shadow-xs transition-colors"
@@ -526,7 +518,6 @@ export default function WebsiteDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Highlights Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
           <div className="p-3 rounded bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80">
             <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Package Plan</span>
@@ -572,7 +563,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
         <button
           type="button"
@@ -631,12 +621,8 @@ export default function WebsiteDetailsPage({ params }) {
         </button>
       </div>
 
-      {/* ========================================================================= */}
-      {/* TAB 1: OVERVIEW & ENTITIES */}
-      {/* ========================================================================= */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Main Website Summary Card */}
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -693,13 +679,11 @@ export default function WebsiteDetailsPage({ params }) {
                 </div>
               </div>
 
-              {/* Branding and Visual Assets */}
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
                 <span className="text-[10px] uppercase font-semibold text-slate-400 block">Branding Assets</span>
                 <div className="flex flex-wrap items-center gap-4">
                   {website.logo ? (
                     <div className="flex items-center gap-2 p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={website.logo} alt="Website Logo" className="w-8 h-8 object-contain rounded" />
                       <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Custom Logo</span>
                     </div>
@@ -709,7 +693,6 @@ export default function WebsiteDetailsPage({ params }) {
 
                   {website.favicon && (
                     <div className="flex items-center gap-2 p-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={website.favicon} alt="Favicon" className="w-5 h-5 object-contain" />
                       <span className="text-xs text-slate-600 dark:text-slate-300 font-mono">Favicon</span>
                     </div>
@@ -734,7 +717,6 @@ export default function WebsiteDetailsPage({ params }) {
               </div>
             </div>
 
-            {/* Package Plan Quotas Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -784,9 +766,7 @@ export default function WebsiteDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* Sidebar / Column 3: Creator Details & Subscription Link */}
           <div className="space-y-5">
-            {/* Creator / Owner Card */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -865,7 +845,6 @@ export default function WebsiteDetailsPage({ params }) {
               )}
             </div>
 
-            {/* Subscription Quick Link */}
             {subscription && (
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -900,9 +879,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 2: UPDATE WEBSITE DATA */}
-      {/* ========================================================================= */}
       {activeTab === 'edit_website' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs max-w-4xl space-y-5">
           <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -1071,7 +1047,6 @@ export default function WebsiteDetailsPage({ params }) {
               </div>
             </div>
 
-            {/* Branding Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Theme</label>
@@ -1135,7 +1110,6 @@ export default function WebsiteDetailsPage({ params }) {
               </div>
             </div>
 
-            {/* Contact details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Contact Email</label>
@@ -1188,12 +1162,8 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 3: MANAGE CREATOR / OWNER */}
-      {/* ========================================================================= */}
       {activeTab === 'edit_creator' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl">
-          {/* Card 1: Edit Current Creator Profile */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-4">
             <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">Update Owner Account Information</h3>
@@ -1295,7 +1265,6 @@ export default function WebsiteDetailsPage({ params }) {
             </form>
           </div>
 
-          {/* Card 2: Reassign Website Ownership */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-4">
             <div className="pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transfer Website Ownership</h3>
@@ -1343,9 +1312,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 4: TENANT MODULES */}
-      {/* ========================================================================= */}
       {activeTab === 'modules' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -1406,9 +1372,6 @@ export default function WebsiteDetailsPage({ params }) {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB 5: BILLING & PURCHASES */}
-      {/* ========================================================================= */}
       {activeTab === 'billing' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">

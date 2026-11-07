@@ -265,7 +265,6 @@ const AdmissionApplyForm = ({
   const domain = params?.domain || '';
   const apiBase = domain ? `/api/${domain}` : '/api';
 
-  // Email check & verification state (Step 1)
   const [emailToVerify, setEmailToVerify] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -275,13 +274,11 @@ const AdmissionApplyForm = ({
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState('');
 
-  // Modular Form Fields State
   const [formFields, setFormFields] = useState(FALLBACK_ADMISSION_FIELDS);
   const [loadingFields, setLoadingFields] = useState(false);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Sync server validation errors
   useEffect(() => {
     if (serverValidationErrors && serverValidationErrors.length > 0) {
       const errMap = {};
@@ -294,7 +291,6 @@ const AdmissionApplyForm = ({
     }
   }, [serverValidationErrors]);
 
-  // Fetch modular form fields whenever circular changes
   useEffect(() => {
     const fetchFields = async () => {
       if (!selectedCircular?.id) return;
@@ -327,7 +323,6 @@ const AdmissionApplyForm = ({
   const isMeritBased = selectedCircular?.selection_method === 'merit';
   const isExamBased = selectedCircular?.selection_method === 'exam';
 
-  // Group active fields by section
   const sections = useMemo(() => {
     const active = formFields.filter((f) => f.is_active !== false);
     const groups = {
@@ -346,7 +341,6 @@ const AdmissionApplyForm = ({
     return Object.entries(groups).filter(([_, group]) => group.fields.length > 0);
   }, [formFields]);
 
-  // Handle dynamic field changes
   const handleFieldChange = (fieldKey, value) => {
     setFieldValues((prev) => ({ ...prev, [fieldKey]: value }));
     if (fieldErrors[fieldKey]) {
@@ -358,7 +352,6 @@ const AdmissionApplyForm = ({
     }
   };
 
-  // Handle File Upload (read as Base64)
   const handleFileUpload = (fieldKey, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -377,7 +370,6 @@ const AdmissionApplyForm = ({
     reader.readAsDataURL(file);
   };
 
-  // Step 1: Check if applicant already exists for this circular
   const handleCheckEmail = async () => {
     if (!emailToVerify.trim() || !emailToVerify.includes('@')) {
       toast.error('Please enter a valid candidate email address.');
@@ -407,7 +399,6 @@ const AdmissionApplyForm = ({
         setIsEmailVerified(true);
         setVerifiedEmail(app.email);
 
-        // Prepopulate existing field values
         const newVals = {
           applicant_name: app.applicant_name || '',
           email: app.email || '',
@@ -517,7 +508,6 @@ const AdmissionApplyForm = ({
     }
   };
 
-  // Validate form client-side before calling onSubmit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isEmailVerified) {
@@ -536,7 +526,6 @@ const AdmissionApplyForm = ({
       const val = fieldValues[f.field_key];
       const strVal = val !== undefined && val !== null ? String(val).trim() : '';
 
-      // Required Check
       if (f.is_required) {
         if (f.field_type === 'boolean' && !val) {
           errors[f.field_key] = `${f.label} must be confirmed.`;
@@ -546,17 +535,14 @@ const AdmissionApplyForm = ({
       }
 
       if (strVal) {
-        // Number Check
         if (f.field_type === 'number' && isNaN(Number(strVal))) {
           errors[f.field_key] = `${f.label} must be a valid number.`;
         }
 
-        // Date Check
         if (f.field_type === 'date' && isNaN(Date.parse(strVal))) {
           errors[f.field_key] = `${f.label} must be a valid date.`;
         }
 
-        // Select Check
         if (f.field_type === 'select') {
           let opts = [];
           if (Array.isArray(f.options)) opts = f.options;
@@ -568,7 +554,6 @@ const AdmissionApplyForm = ({
           }
         }
 
-        // Regex Validation
         if (f.validation_regex) {
           try {
             const re = new RegExp(f.validation_regex);
@@ -580,7 +565,6 @@ const AdmissionApplyForm = ({
       }
     }
 
-    // Merit-based circular validation
     if (isMeritBased) {
       const pastClass = fieldValues.past_school_class || fieldValues.last_class;
       const pastGrade = fieldValues.past_school_result || fieldValues.last_class_grade;
@@ -606,7 +590,6 @@ const AdmissionApplyForm = ({
       return;
     }
 
-    // Prepare complete form payload
     const payload = {
       ...fieldValues,
       email: verifiedEmail || emailToVerify.trim(),
@@ -621,7 +604,6 @@ const AdmissionApplyForm = ({
     onSubmit(payload);
   };
 
-  // Render individual input control based on field_type
   const renderFieldControl = (f) => {
     const val = fieldValues[f.field_key] ?? '';
     const err = fieldErrors[f.field_key];
@@ -775,7 +757,6 @@ const AdmissionApplyForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
-      {/* Target Circular Selector */}
       <div className="flex flex-col gap-2 w-full">
         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
           <FiLayers className="text-secondary" /> Target Admission Circular *
@@ -813,7 +794,6 @@ const AdmissionApplyForm = ({
               <div>• Admission Fee: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">BDT {parseFloat(selectedCircular.fee_amount || selectedCircular.fees || 0).toFixed(2)}</strong></div>
             </div>
 
-            {/* Exam Based Info */}
             {isExamBased && (
               <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/50 p-3 rounded-xl text-xs text-purple-900 dark:text-purple-200 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
@@ -831,7 +811,6 @@ const AdmissionApplyForm = ({
               </div>
             )}
 
-            {/* Merit Based Info */}
             {isMeritBased && (
               <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 p-3 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
@@ -855,7 +834,6 @@ const AdmissionApplyForm = ({
         )}
       </div>
 
-      {/* STEP 1: Email Verification & Smart Lookup Gate */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <h3 className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
@@ -906,7 +884,6 @@ const AdmissionApplyForm = ({
               </button>
             </div>
 
-            {/* OTP Code Entry if Sent */}
             {otpSent && (
               <div className="p-4 bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-xl space-y-3">
                 <span className="text-xs font-semibold text-blue-900 dark:text-blue-200 block">
@@ -949,7 +926,6 @@ const AdmissionApplyForm = ({
         )}
       </div>
 
-      {/* DYNAMIC MODULAR SECTIONS (Unlocked when email is verified) */}
       <div className={!isEmailVerified ? 'opacity-40 pointer-events-none transition-opacity' : 'transition-opacity'}>
         {sections.map(([secKey, group]) => {
           const IconComp = group.icon;
@@ -976,7 +952,6 @@ const AdmissionApplyForm = ({
           );
         })}
 
-        {/* Submit Action */}
         <div className="flex items-center justify-end gap-3 pt-2">
           {onGoBack && (
             <button

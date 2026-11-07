@@ -15,13 +15,11 @@ export default function DeveloperChatsPage() {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
-  // New message composer
   const [textInput, setTextInput] = useState('');
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [showImageInput, setShowImageInput] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Modals
   const [showDirectModal, setShowDirectModal] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupTitle, setGroupTitle] = useState('');
@@ -44,7 +42,6 @@ export default function DeveloperChatsPage() {
         setAvailableDevs(data.availableDevelopers || []);
         setCurrentDevId(data.currentDeveloperId);
 
-        // Auto-select first chat if none selected
         if (!selectedChat && data.chats && data.chats.length > 0) {
           setSelectedChat(data.chats[0]);
         }
@@ -188,7 +185,6 @@ export default function DeveloperChatsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <h1 className="text-base font-semibold text-slate-900">
@@ -214,9 +210,7 @@ export default function DeveloperChatsPage() {
         </div>
       </div>
 
-      {/* Main Chat Interface Grid */}
       <div className="bg-white border border-slate-200 rounded overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-[580px] max-h-[720px]">
-        {/* Left Column: Chat List */}
         <div className="md:col-span-4 border-r border-slate-200 flex flex-col h-full bg-slate-50/50">
           <div className="p-3 border-b border-slate-200">
             <input
@@ -273,11 +267,9 @@ export default function DeveloperChatsPage() {
           </div>
         </div>
 
-        {/* Right Column: Active Chat Thread */}
         <div className="md:col-span-8 flex flex-col h-full bg-white">
           {selectedChat ? (
             <>
-              {/* Active Chat Header */}
               <div className="p-3 px-4 border-b border-slate-200 flex items-center justify-between bg-white">
                 <div>
                   <h3 className="font-semibold text-slate-900 text-xs">
@@ -299,7 +291,6 @@ export default function DeveloperChatsPage() {
                 </button>
               </div>
 
-              {/* Messages Scroll Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30">
                 {loadingMessages ? (
                   <div className="py-8">
@@ -344,7 +335,6 @@ export default function DeveloperChatsPage() {
                         >
                           {m.message && <p className="whitespace-pre-wrap">{m.message}</p>}
 
-                          {/* Images attached */}
                           {m.images && m.images.length > 0 && (
                             <div className="space-y-1.5 pt-1">
                               {m.images.map((img) => (
@@ -372,7 +362,6 @@ export default function DeveloperChatsPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Composer */}
               <div className="p-3 border-t border-slate-200 bg-white space-y-2">
                 {showImageInput && (
                   <div className="flex items-center gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded">
@@ -437,7 +426,6 @@ export default function DeveloperChatsPage() {
         </div>
       </div>
 
-      {/* Start Direct Chat Modal */}
       {showDirectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded border border-slate-200 shadow-lg max-w-md w-full p-4 sm:p-6 space-y-4">
@@ -478,7 +466,6 @@ export default function DeveloperChatsPage() {
         </div>
       )}
 
-      {/* Create Group Chat Modal */}
       {showGroupModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded border border-slate-200 shadow-lg max-w-md w-full p-4 sm:p-6 space-y-4">

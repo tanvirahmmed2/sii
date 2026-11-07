@@ -4,12 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
-/**
- * UniversalGatewayCheckout
- * Authentic, brand-accurate payment modal & form for:
- * bKash, Nagad, Rocket, SSLCommerz, Stripe, Sonali Gateway, SurjoPay, and EPS.
- * Conforms strictly to STYLE.MD and globals.css design system.
- */
 export default function UniversalGatewayCheckout({
   isOpen,
   onClose,
@@ -21,17 +15,14 @@ export default function UniversalGatewayCheckout({
 }) {
   const router = useRouter();
 
-  // Selected Gateway
   const [selectedGateway, setSelectedGateway] = useState('bkash');
 
-  // Multi-step verification state
   const [step, setStep] = useState(1);
   const [accountNumber, setAccountNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [pin, setPin] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(true);
 
-  // Card details (Stripe / SSLCommerz / Sonali)
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -40,12 +31,10 @@ export default function UniversalGatewayCheckout({
   const [sslSubMethod, setSslSubMethod] = useState('visa');
   const [sonaliChannel, setSonaliChannel] = useState('account');
 
-  // Processing & Confirmation State
   const [submitting, setSubmitting] = useState(false);
   const [completedReceipt, setCompletedReceipt] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Sync with available gateways during render (React recommended pattern)
   const [prevAvailableGateways, setPrevAvailableGateways] = useState(availableGateways);
   const [prevSelectedGateway, setPrevSelectedGateway] = useState(selectedGateway);
 
@@ -88,14 +77,12 @@ export default function UniversalGatewayCheckout({
     { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'CA$', AUD: 'AU$', AED: 'د.إ', SAR: '﷼', MYR: 'RM', SGD: 'S$' }[currency] ||
     (currency === 'BDT' ? '৳' : currency);
 
-  // Format Card Number (4-4-4-4)
   const handleCardNumberChange = (e) => {
     const val = e.target.value.replace(/\D/g, '').slice(0, 16);
     const formatted = val.replace(/(\d{4})(?=\d)/g, '$1 ');
     setCardNumber(formatted);
   };
 
-  // Format Expiry (MM/YY)
   const handleExpiryChange = (e) => {
     let val = e.target.value.replace(/\D/g, '').slice(0, 4);
     if (val.length >= 3) {
@@ -104,7 +91,6 @@ export default function UniversalGatewayCheckout({
     setCardExpiry(val);
   };
 
-  // Next step handler for multi-step gateways (bKash, Nagad, Rocket)
   const handleNextStep = () => {
     setErrorMessage('');
 
@@ -137,7 +123,6 @@ export default function UniversalGatewayCheckout({
     }
   };
 
-  // Submit payment to backend API
   const executePayment = async () => {
     setSubmitting(true);
     setErrorMessage('');
@@ -175,6 +160,12 @@ export default function UniversalGatewayCheckout({
         throw new Error(data.error || 'Payment execution failed. Please verify credentials.');
       }
 
+      if (data.checkoutUrl) {
+        toast.success('Redirecting to secure gateway...');
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+
       toast.success('Payment cleared successfully!');
       setCompletedReceipt(data.receipt);
 
@@ -189,17 +180,11 @@ export default function UniversalGatewayCheckout({
     }
   };
 
-  // Gateway Selector Component
   const renderGatewaySelector = () => {
     const list = availableGateways.length > 0 ? availableGateways : [
-      { code: 'bkash', label: 'bKash' },
-      { code: 'nagad', label: 'Nagad' },
-      { code: 'rocket', label: 'Rocket' },
-      { code: 'sonali_gateway', label: 'Sonali Gateway' },
-      { code: 'sslcommerz', label: 'SSLCommerz' },
-      { code: 'stripe', label: 'Stripe (Cards)' },
+      { code: 'surjopay', label: 'shurjoPay (bKash/Nagad/Cards)' },
       { code: 'paypal', label: 'PayPal' },
-      { code: 'razorpay', label: 'Razorpay' }
+      { code: 'paddle', label: 'Paddle Billing' }
     ];
 
     return (
@@ -229,7 +214,6 @@ export default function UniversalGatewayCheckout({
     );
   };
 
-  // 1. BKASH THEMED COMPONENT
   const renderBkashTheme = () => (
     <div className="w-full bg-[#D12053] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-pink-700/50">
@@ -351,7 +335,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 2. NAGAD THEMED COMPONENT
   const renderNagadTheme = () => (
     <div className="w-full bg-[#F7921E] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-orange-400/40">
@@ -458,7 +441,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 3. ROCKET (DBBL) THEMED COMPONENT
   const renderRocketTheme = () => (
     <div className="w-full bg-[#8C3494] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-purple-800">
@@ -558,7 +540,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 4. SONALI GATEWAY THEMED COMPONENT
   const renderSonaliTheme = () => (
     <div className="w-full bg-[#0B6623] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-emerald-800">
@@ -579,7 +560,6 @@ export default function UniversalGatewayCheckout({
           </div>
         )}
 
-        {/* Channel Selector */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { id: 'account', label: 'Bank Account' },
@@ -706,7 +686,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 5. SSLCOMMERZ THEMED COMPONENT
   const renderSSLCommerzTheme = () => (
     <div className="w-full bg-[#1F3A60] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-slate-700">
@@ -872,7 +851,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 6. STRIPE THEMED COMPONENT
   const renderStripeTheme = () => (
     <div className="w-full bg-[#635BFF] rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-indigo-400/30">
@@ -961,7 +939,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 7. GENERIC THEMED COMPONENT
   const renderGenericTheme = () => (
     <div className="w-full bg-slate-900 rounded-md overflow-hidden text-white font-sans">
       <div className="p-3.5 flex items-center justify-between border-b border-slate-800">
@@ -1013,7 +990,6 @@ export default function UniversalGatewayCheckout({
     </div>
   );
 
-  // 8. SUCCESS RECEIPT COMPONENT
   if (completedReceipt) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
@@ -1032,7 +1008,6 @@ export default function UniversalGatewayCheckout({
             </span>
           </div>
 
-          {/* Receipt Data Table */}
           <div className="bg-slate-50 dark:bg-slate-800/40 rounded border border-slate-200 dark:border-slate-700 p-3 space-y-1.5 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-500">Transaction ID:</span>
@@ -1097,11 +1072,9 @@ export default function UniversalGatewayCheckout({
     );
   }
 
-  // Modal Container
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
       <div className="w-full max-w-lg my-auto bg-white dark:bg-slate-900 rounded-md p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3">
-        {/* Header & Close */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
           <div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -1120,7 +1093,6 @@ export default function UniversalGatewayCheckout({
           </button>
         </div>
 
-        {/* Gateway Selection Tabs */}
         <div>
           <div className="text-[10px] uppercase font-semibold text-slate-400 mb-1">
             Choose Payment Method
@@ -1128,7 +1100,6 @@ export default function UniversalGatewayCheckout({
           {renderGatewaySelector()}
         </div>
 
-        {/* Themed Checkout Body */}
         <div className="pt-1">
           {selectedGateway === 'bkash' && renderBkashTheme()}
           {selectedGateway === 'nagad' && renderNagadTheme()}

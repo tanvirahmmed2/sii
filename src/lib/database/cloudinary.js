@@ -7,21 +7,12 @@ cloudinary.config({
   api_secret: CLOUDINARY_API_SECRET,
 });
 
-/**
- * Uploads a file, File/Blob instance, base64 string, URL, or local path to Cloudinary
- * Supports images, PDFs, raw documents, and media assets.
- * @param {string|File|Blob|Buffer} fileInput - Web File/Blob, base64 data URI, URL, or local path
- * @param {string} [folder] - folder in Cloudinary
- * @param {object} [options] - additional Cloudinary upload options (e.g. { resource_type: 'auto' })
- * @returns {Promise<{url: string, publicId: string, id: string, secure_url: string, bytes: number, format: string, original_filename: string}>}
- */
 export const uploadImage = async (fileInput, folder = 'school', options = {}) => {
   try {
     let fileToUpload = fileInput;
     let detectedMime = 'image/jpeg';
     let originalName = '';
 
-    // If fileInput is a Web API File or Blob (from request.formData())
     if (fileInput && typeof fileInput === 'object' && typeof fileInput.arrayBuffer === 'function') {
       const bytes = await fileInput.arrayBuffer();
       const buffer = Buffer.from(bytes);
@@ -64,12 +55,6 @@ export const uploadImage = async (fileInput, folder = 'school', options = {}) =>
   }
 };
 
-/**
- * Deletes an asset (image, raw file, pdf) from Cloudinary using its public ID
- * @param {string} publicId - Cloudinary public ID
- * @param {object} [options] - { resource_type: 'image' | 'raw' | 'video' }
- * @returns {Promise<any>}
- */
 export const deleteImage = async (publicId, options = {}) => {
   if (!publicId) return null;
   try {
@@ -78,7 +63,6 @@ export const deleteImage = async (publicId, options = {}) => {
       resource_type: resourceType,
       ...options,
     });
-    // If not found as image, attempt raw deletion (common for PDFs / raw documents)
     if (deleteResponse?.result === 'not found' && resourceType !== 'raw') {
       deleteResponse = await cloudinary.uploader.destroy(publicId, {
         resource_type: 'raw',
@@ -101,6 +85,5 @@ export const deletePdf = (publicId) =>
 
 export default cloudinary;
 
-// Aliases used by marketing routes
 export const uploadToCloudinary = uploadImage;
 export const deleteFromCloudinary = deleteImage;

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-// GET: Latest active popup announcement for homepage
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -13,7 +12,6 @@ export async function GET(request, context) {
       );
     }
 
-    // Check latest active notice as an announcement
     const noticeRes = await queryDb(
       `SELECT id,
               title AS name,

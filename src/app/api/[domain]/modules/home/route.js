@@ -2,10 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 
-/**
- * GET /api/[domain]/modules/home
- * Returns the catalog of public frontend home modules (website_home_modules)
- */
 export async function GET(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -62,10 +58,6 @@ export async function GET(request, context) {
   }
 }
 
-/**
- * PATCH /api/[domain]/modules/home
- * Toggle or update a home module
- */
 export async function PATCH(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

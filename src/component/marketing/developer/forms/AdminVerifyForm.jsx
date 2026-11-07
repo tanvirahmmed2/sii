@@ -46,7 +46,6 @@ export default function AdminVerifyForm() {
     }
   }, [resendCooldown]);
 
-  // Automatic token verification on landing
   useEffect(() => {
     if (initialToken && !autoVerifyAttempted.current) {
       autoVerifyAttempted.current = true;

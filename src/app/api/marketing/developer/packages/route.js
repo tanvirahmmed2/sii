@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
 
-// Generate unique slug for packages
 async function generateUniqueSlug(name, excludeId = null) {
   const baseSlug = slugify(name || 'package', { lower: true, strict: true, trim: true }) || 'package';
   let slug = baseSlug;
@@ -20,7 +19,6 @@ async function generateUniqueSlug(name, excludeId = null) {
   }
 }
 
-// Helper to query package with connected home and control modules
 async function fetchPackageById(id) {
   const res = await queryDb(
     `SELECT p.*,
@@ -94,7 +92,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
-    // Fetch available home & control modules for UI selection
     const [homeModsRes, controlModsRes] = await Promise.all([
       queryDb('SELECT * FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
       queryDb('SELECT * FROM website_control_modules WHERE is_active = TRUE ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),
@@ -208,7 +205,6 @@ export async function POST(request) {
     const tagline = (data.tagline || '').trim();
     const description = (data.description || '').trim();
 
-    // Dual Currency Pricing Fields
     const monthlyPriceUsd = Math.max(
       0,
       Number(
@@ -230,14 +226,12 @@ export async function POST(request) {
 
     const discountPercentage = Math.min(100, Math.max(0, Number(data.discount_percentage) || 0));
 
-    // Capacity quotas & limits (no max_websites)
     const maxStudents = data.max_students !== undefined ? Math.max(1, Number(data.max_students)) : 500;
     const maxTeachers = data.max_teachers !== undefined ? Math.max(1, Number(data.max_teachers)) : 30;
     const maxStaff = data.max_staff !== undefined ? Math.max(1, Number(data.max_staff)) : 20;
     const maxStorageMb = data.max_storage_mb !== undefined ? Math.max(100, Number(data.max_storage_mb)) : 5120;
     const maxStorage = data.max_storage ? String(data.max_storage).trim() : `${Math.round(maxStorageMb / 1024)} GB`;
 
-    // Panel & domain feature availability
     const isAvailableStudentPanel = data.is_available_student_panel !== undefined ? Boolean(data.is_available_student_panel) : true;
     const isAvailableTeacherPanel = data.is_available_teacher_panel !== undefined ? Boolean(data.is_available_teacher_panel) : true;
     const isAvailableCustomDomain = data.is_available_custom_domain !== undefined ? Boolean(data.is_available_custom_domain) : false;
@@ -285,7 +279,6 @@ export async function POST(request) {
 
     const newPackage = res.rows[0];
 
-    // Link Home Modules into package_home_modules
     let homeModuleIds = [];
     if (Array.isArray(data.home_module_ids)) {
       homeModuleIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
@@ -304,7 +297,6 @@ export async function POST(request) {
       ).catch((e) => console.warn('Error linking package_home_module:', e.message));
     }
 
-    // Link Control Modules into package_control_modules
     let controlModuleIds = [];
     if (Array.isArray(data.control_module_ids)) {
       controlModuleIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
@@ -491,7 +483,6 @@ export async function PUT(request) {
       ]
     );
 
-    // Sync package_home_modules if home_module_ids provided
     if (data.home_module_ids !== undefined || data.home_modules !== undefined) {
       let homeIds = [];
       if (Array.isArray(data.home_module_ids)) {
@@ -513,7 +504,6 @@ export async function PUT(request) {
       }
     }
 
-    // Sync package_control_modules if control_module_ids provided
     if (data.control_module_ids !== undefined || data.control_modules !== undefined) {
       let controlIds = [];
       if (Array.isArray(data.control_module_ids)) {

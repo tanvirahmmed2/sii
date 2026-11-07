@@ -10,7 +10,7 @@ export default function AdminCreatorsPage() {
   const [creators, setCreators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all | active | suspended
+  const [statusFilter, setStatusFilter] = useState('all'); 
   const [copiedEmail, setCopiedEmail] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
@@ -89,7 +89,6 @@ export default function AdminCreatorsPage() {
     setTimeout(() => setCopiedEmail(null), 2000);
   };
 
-  // Filtered creators list
   const filteredCreators = useMemo(() => {
     return creators.filter((c) => {
       const matchesSearch =
@@ -108,13 +107,11 @@ export default function AdminCreatorsPage() {
     });
   }, [creators, searchTerm, statusFilter]);
 
-  // Aggregate stats
   const totalCount = creators.length;
   const activeCount = creators.filter((c) => c.is_active).length;
   const suspendedCount = totalCount - activeCount;
   const totalWebsites = creators.reduce((acc, c) => acc + Number(c.websites_count || 0), 0);
 
-  // If user role is not authorized
   if (!isAuthorized && user) {
     return (
       <div className="w-full min-h-[60vh] flex items-center justify-center p-4">
@@ -138,7 +135,6 @@ export default function AdminCreatorsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-1.5 mb-1 text-xs text-slate-500">
@@ -169,7 +165,6 @@ export default function AdminCreatorsPage() {
         </div>
       </div>
 
-      {/* Metrics Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
           <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Creators</div>
@@ -196,7 +191,6 @@ export default function AdminCreatorsPage() {
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="w-full sm:w-80">
@@ -246,7 +240,6 @@ export default function AdminCreatorsPage() {
           </div>
         </div>
 
-        {/* Creators Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -395,7 +388,6 @@ export default function AdminCreatorsPage() {
           </table>
         </div>
 
-        {/* Footer info bar */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
           <div>
             Showing {filteredCreators.length} of {creators.length} creators

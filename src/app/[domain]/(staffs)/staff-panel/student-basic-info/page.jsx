@@ -16,7 +16,6 @@ export default function StudentBasicInfoPage() {
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Edit Modal State
   const [editingStudent, setEditingStudent] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -104,7 +103,6 @@ export default function StudentBasicInfoPage() {
       }
 
       toast.success('Student basic info updated successfully!');
-      // Update local state
       setStudents((prev) =>
         prev.map((s) => (s.id === editingStudent.id ? { ...s, ...formData } : s))
       );
@@ -131,7 +129,6 @@ export default function StudentBasicInfoPage() {
     );
   });
 
-  // Export to Excel sheet (.xlsx) with all fields in one row per student
   const handleDownloadExcel = () => {
     if (!filtered || filtered.length === 0) {
       toast.error('No student records available to download.');
@@ -192,7 +189,6 @@ export default function StudentBasicInfoPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -214,7 +210,6 @@ export default function StudentBasicInfoPage() {
         )}
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -223,7 +218,6 @@ export default function StudentBasicInfoPage() {
         description="Filter by Department, Session, Class, and Section to view records"
       />
 
-      {/* View Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="👥"
@@ -232,7 +226,6 @@ export default function StudentBasicInfoPage() {
         />
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
-          {/* Active Filter Bar & Search & Download */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
@@ -274,7 +267,6 @@ export default function StudentBasicInfoPage() {
             </div>
           </div>
 
-          {/* IN-PAGE EDIT BASIC INFO FORM */}
           {editingStudent && (
             <div className="bg-white dark:bg-slate-900 border-2 border-primary/30 rounded-xl p-5 space-y-4 shadow-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -416,7 +408,6 @@ export default function StudentBasicInfoPage() {
             </div>
           )}
 
-          {/* ALL INFORMATION OF THE STUDENT IN ONE ROW (OVERFLOW HORIZONTAL SCROLL) */}
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400">
               No student records found matching the chosen criteria.

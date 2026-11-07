@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword } from 'src/lib/middleware/staff';
 
-// POST: Validate verification token and return staff details
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -86,7 +85,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Finalize account setup with password and residential address
 export async function PUT(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);

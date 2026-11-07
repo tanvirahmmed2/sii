@@ -52,7 +52,6 @@ export default function CreateWebsitePage() {
     typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000'
   );
 
-  // Form states
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState(querySubId || '');
   const [name, setName] = useState('');
   const [institutionType, setInstitutionType] = useState('school');
@@ -67,9 +66,8 @@ export default function CreateWebsitePage() {
   const [secondaryColor, setSecondaryColor] = useState('#0ea5e9');
   const [theme, setTheme] = useState('default');
 
-  // Real-time Subdomain Verification
   const [domainStatus, setDomainStatus] = useState({
-    state: 'idle', // 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'
+    state: 'idle', 
     message: '',
     fullDomain: '',
   });
@@ -78,7 +76,6 @@ export default function CreateWebsitePage() {
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
 
-  // Auto-select subscription from query param or first available with slots
   useEffect(() => {
     if (querySubId) {
       const timer = setTimeout(() => setSelectedSubscriptionId(querySubId), 0);
@@ -96,7 +93,6 @@ export default function CreateWebsitePage() {
     }
   }, [querySubId, activeSubs, selectedSubscriptionId]);
 
-  // Fetch configured base domain from server
   useEffect(() => {
     async function fetchConfig() {
       try {
@@ -114,7 +110,6 @@ export default function CreateWebsitePage() {
     }
   }, [creatorId]);
 
-  // Sync creator email/phone if initially empty
   useEffect(() => {
     if ((creator?.email && !contactEmail) || (creator?.phone && !contactPhone)) {
       const timer = setTimeout(() => {
@@ -125,7 +120,6 @@ export default function CreateWebsitePage() {
     }
   }, [creator, contactEmail, contactPhone]);
 
-  // Auto-generate subdomain from institution name until user manually alters it
   const handleNameChange = (val) => {
     setName(val);
     if (!subdomainTouched) {
@@ -140,7 +134,6 @@ export default function CreateWebsitePage() {
     }
   };
 
-  // Real-time debounce check for subdomain
   useEffect(() => {
     const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     if (!clean) {
@@ -300,7 +293,6 @@ export default function CreateWebsitePage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header Card */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -334,7 +326,6 @@ export default function CreateWebsitePage() {
         </div>
       </div>
 
-      {/* Warning if No Active Subscriptions */}
       {noActiveSubs && (
         <div className="p-3.5 rounded border bg-rose-50 border-rose-200 text-rose-700 space-y-1">
           <div className="font-semibold text-xs">No Active Subscription Found</div>
@@ -352,7 +343,6 @@ export default function CreateWebsitePage() {
         </div>
       )}
 
-      {/* Quota Warning if Selected Subscription is Full */}
       {!noActiveSubs && isSelectedSubQuotaReached && (
         <div className="p-3.5 rounded border bg-amber-50 border-amber-200 text-amber-700 space-y-1">
           <div className="font-semibold text-xs">Package Website Limit Reached</div>
@@ -370,9 +360,7 @@ export default function CreateWebsitePage() {
         </div>
       )}
 
-      {/* Form Container */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-5">
-        {/* Feedback Messages */}
         {createError && (
           <div className="p-3 rounded border bg-rose-50 border-rose-200 text-rose-700 text-xs font-medium">
             {createError}
@@ -386,7 +374,6 @@ export default function CreateWebsitePage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section 1: Subscription Selection */}
           <div className="space-y-3">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
@@ -474,7 +461,6 @@ export default function CreateWebsitePage() {
             )}
           </div>
 
-          {/* Section 2: Institution Identity */}
           <div className="space-y-3">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">2. Institution Identity</h2>
@@ -539,7 +525,6 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Section 3: Subdomain Routing */}
           <div className="space-y-3">
             <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
               <div>
@@ -581,7 +566,6 @@ export default function CreateWebsitePage() {
                 </span>
               </div>
 
-              {/* Status Indicator Badge */}
               <div className="min-h-[22px] flex items-center gap-2 pt-0.5">
                 {domainStatus.state === 'checking' && (
                   <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-slate-100 text-slate-600 border-slate-200 font-mono">
@@ -614,19 +598,17 @@ export default function CreateWebsitePage() {
                 )}
               </div>
 
-              {/* Live Preview Bar */}
               {subdomain && (
                 <div className="p-2.5 rounded border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
                   <span className="text-slate-500">Public URL:</span>
                   <span className="font-mono font-medium text-slate-900">
-                    https://{subdomain}.{baseDomain}
+                    {baseDomain.includes('localhost') || baseDomain.includes('127.0.0.1') || /^\d+\.\d+\.\d+\.\d+/.test(baseDomain) || baseDomain.includes(':') ? 'http' : 'https'}://{subdomain}.{baseDomain}
                   </span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Section 4: Contact & Campus Location */}
           <div className="space-y-3">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">4. Contact & Campus Location</h2>
@@ -669,7 +651,6 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Section 5: Branding & Visual Theme */}
           <div className="space-y-3">
             <div className="border-b border-slate-100 pb-2">
               <h2 className="text-sm font-semibold text-slate-900">5. Branding & Visual Theme</h2>
@@ -677,7 +658,6 @@ export default function CreateWebsitePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Primary Color */}
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-slate-700">Primary Brand Color</label>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -713,7 +693,6 @@ export default function CreateWebsitePage() {
                 </div>
               </div>
 
-              {/* Secondary Color */}
               <div className="space-y-2">
                 <label className="block text-xs font-medium text-slate-700">Secondary Brand Color</label>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -750,7 +729,6 @@ export default function CreateWebsitePage() {
               </div>
             </div>
 
-            {/* Portal Theme Mode */}
             <div className="space-y-1 pt-2">
               <label className="block text-xs font-medium text-slate-700">Portal Theme Preset</label>
               <select
@@ -766,7 +744,6 @@ export default function CreateWebsitePage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-2.5">
             <Link
               href={`/creator/${creatorId}/workspace`}

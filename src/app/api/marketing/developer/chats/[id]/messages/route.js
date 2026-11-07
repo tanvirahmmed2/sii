@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
 
-// ============================================================================
-// GET: Fetch messages and image attachments for a chat
-// ============================================================================
 export async function GET(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'chats');
@@ -15,7 +12,6 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
 
-    // Verify user is a participant
     const partCheck = await queryDb(
       'SELECT id FROM chat_participants WHERE chat_id = $1 AND developer_id = $2',
       [id, currentDevId]
@@ -25,13 +21,11 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Forbidden: You are not a participant in this conversation.' }, { status: 403 });
     }
 
-    // Mark as read
     await queryDb(
       'UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE chat_id = $1 AND developer_id = $2',
       [id, currentDevId]
     );
 
-    // Fetch messages with sender info and attached images
     const messagesRes = await queryDb(`
       SELECT 
         m.id,
@@ -74,9 +68,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// ============================================================================
-// POST: Send a message with optional image attachments
-// ============================================================================
 export async function POST(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'chats');
@@ -94,7 +85,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: 'Message text or image attachment required.' }, { status: 400 });
     }
 
-    // Verify participation
     const partCheck = await queryDb(
       'SELECT id FROM chat_participants WHERE chat_id = $1 AND developer_id = $2',
       [id, currentDevId]
@@ -104,7 +94,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: 'Forbidden: You cannot post in this chat.' }, { status: 403 });
     }
 
-    // Insert message
     const msgRes = await queryDb(
       `INSERT INTO chat_messages (chat_id, sender_developer_id, message, is_system)
        VALUES ($1, $2, $3, FALSE)
@@ -113,7 +102,6 @@ export async function POST(request, { params }) {
     );
     const newMsg = msgRes.rows[0];
 
-    // Insert attached images if any
     const savedImages = [];
     for (const img of images) {
       if (!img.url && !img.image_url) continue;
@@ -127,7 +115,6 @@ export async function POST(request, { params }) {
       savedImages.push(imgRes.rows[0]);
     }
 
-    // Touch chat updated_at and update sender's last_read_at
     await queryDb('UPDATE internal_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
     await queryDb('UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
 

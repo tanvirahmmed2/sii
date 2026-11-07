@@ -26,7 +26,6 @@ async function verifyStaffAccess(request, context) {
   return { website, staffSession };
 }
 
-// GET: Load tenant domains, storage usages, quotas, and feature flags
 export async function GET(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -34,25 +33,21 @@ export async function GET(request, context) {
 
     const websiteId = auth.website.id;
 
-    // 1. Domains
     const domainsRes = await queryDb(
       `SELECT * FROM website_domains WHERE website_id = $1 ORDER BY is_primary DESC, created_at DESC`,
       [websiteId]
     );
 
-    // 2. Storage Usages
     const storageRes = await queryDb(
       `SELECT * FROM website_storage_usages WHERE website_id = $1 ORDER BY storage_type ASC`,
       [websiteId]
     );
 
-    // 3. Quotas
     let quotasRes = await queryDb(
       `SELECT * FROM website_usage_quotas WHERE website_id = $1`,
       [websiteId]
     );
 
-    // Initialize default quota row if not exists
     if (quotasRes.rows.length === 0) {
       const initQuota = await queryDb(
         `INSERT INTO website_usage_quotas (website_id, max_storage_bytes, sms_credits_total, sms_credits_used, email_credits_total, max_students, max_staff, max_custom_domains)
@@ -63,7 +58,6 @@ export async function GET(request, context) {
       quotasRes = initQuota;
     }
 
-    // 4. Feature Flags
     const flagsRes = await queryDb(
       `SELECT * FROM website_feature_flags WHERE website_id = $1 ORDER BY feature_key ASC`,
       [websiteId]
@@ -82,7 +76,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Add new custom domain or create/toggle a feature flag
 export async function POST(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);
@@ -139,7 +132,6 @@ export async function POST(request, context) {
   }
 }
 
-// DELETE: Remove domain or feature flag
 export async function DELETE(request, context) {
   try {
     const auth = await verifyStaffAccess(request, context);

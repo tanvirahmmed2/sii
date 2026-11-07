@@ -27,7 +27,6 @@ export async function GET(request, context) {
 
     const studentId = session.id;
 
-    // Fetch clubs and student membership
     let clubs = [];
     try {
       const clubsRes = await queryDb(
@@ -100,7 +99,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Valid Club ID is required.' }, { status: 400 });
     }
 
-    // Verify club exists in this institution
     const clubCheck = await queryDb(
       `SELECT id FROM website_clubs WHERE id = $1 AND website_id = $2 AND is_active = TRUE LIMIT 1`,
       [parsedClubId, website.id]

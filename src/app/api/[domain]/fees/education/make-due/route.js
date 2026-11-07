@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyEducationFeeAccess } from 'src/lib/middleware/education_fee_auth.js';
 
-// GET: Preview eligible students for fee due generation
 export async function GET(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'view');
@@ -43,7 +42,6 @@ export async function GET(request, context) {
     const studentsRes = await queryDb(studentQuery, params);
     const totalStudents = studentsRes.rows.length;
 
-    // Check how many already have due generated for this fee & month
     let existingDuesCount = 0;
     if (feeId && monthName) {
       const existingCheck = await queryDb(
@@ -71,7 +69,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Batch generate dues for class students
 export async function POST(request, context) {
   try {
     const auth = await verifyEducationFeeAccess(request, context, 'create');
@@ -106,7 +103,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Billing month or period name is required (e.g. "October 2026").' }, { status: 400 });
     }
 
-    // Fetch the education fee configuration
     const feeRes = await queryDb(
       `SELECT * FROM website_education_fees WHERE id = $1 AND website_id = $2`,
       [education_fee_id, website.id]
@@ -120,7 +116,6 @@ export async function POST(request, context) {
     const finalAmount = custom_amount !== undefined && custom_amount !== '' ? parseFloat(custom_amount) : parseFloat(feeConfig.amount);
     const initialFine = parseFloat(fine_amount || 0);
 
-    // Fetch active students for the class/section
     let studentQuery = `
       SELECT s.id, s.class_id, s.section_id, s.session_id, s.roll_no, s.registration_no
       FROM website_students s
@@ -144,7 +139,6 @@ export async function POST(request, context) {
       }, { status: 400 });
     }
 
-    // Default due date calculation
     let targetDueDate = due_date;
     if (!targetDueDate) {
       const today = new Date();
@@ -158,7 +152,6 @@ export async function POST(request, context) {
     const datePrefix = new Date().toISOString().slice(2, 7).replace('-', '');
 
     for (const stu of students) {
-      // Check if fee due already exists for this student, fee, and month
       const existing = await queryDb(
         `SELECT id FROM website_education_fee_payments 
          WHERE website_id = $1 AND student_id = $2 AND education_fee_id = $3 AND month_name = $4

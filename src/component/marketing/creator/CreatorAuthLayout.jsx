@@ -16,7 +16,6 @@ export default function CreatorAuthLayout({
 }) {
   return (
     <div className="min-h-screen w-full bg-slate-50 text-slate-900 lg:flex lg:flex-row text-xs">
-      {/* Left Branding Column */}
       <div className="hidden lg:flex lg:w-5/12 bg-slate-900 text-white p-8 lg:p-12 flex-col justify-between shrink-0">
         <div className="flex items-center justify-between">
           <Link
@@ -56,7 +55,6 @@ export default function CreatorAuthLayout({
         </div>
       </div>
 
-      {/* Right Form Column */}
       <div className="flex-1 flex flex-col justify-center px-4 py-8 sm:px-6 lg:p-10 bg-slate-50">
         <div className="max-w-sm w-full mx-auto">
           {children}

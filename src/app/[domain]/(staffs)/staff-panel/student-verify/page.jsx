@@ -13,7 +13,7 @@ export default function StudentVerifyPage() {
   const [hasFiltered, setHasFiltered] = useState(false);
   const [filterParams, setFilterParams] = useState(null);
 
-  const [activeTab, setActiveTab] = useState('submitted'); // 'submitted', 'verified', 'rejected', 'pending_setup', 'all'
+  const [activeTab, setActiveTab] = useState('submitted'); 
   const [searchTerm, setSearchTerm] = useState('');
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,6 @@ export default function StudentVerifyPage() {
     total_count: 0,
   });
 
-  // Modal / Drawer state for inspecting student details
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -114,7 +113,6 @@ export default function StudentVerifyPage() {
 
   return (
     <div className="w-full space-y-5">
-      {/* Page Title & Breadcrumb Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block mb-1">
@@ -137,7 +135,6 @@ export default function StudentVerifyPage() {
         </button>
       </div>
 
-      {/* Academic Filter Bar */}
       <StudentFilterBar
         onFilter={handleFilter}
         onReset={handleReset}
@@ -154,7 +151,6 @@ export default function StudentVerifyPage() {
         />
       ) : (
         <>
-          {/* Metric KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setActiveTab('submitted')}
@@ -233,7 +229,6 @@ export default function StudentVerifyPage() {
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1 text-xs">
@@ -276,7 +271,6 @@ export default function StudentVerifyPage() {
           </div>
         </div>
 
-        {/* Verification Roster Table */}
         {loading ? (
           <TenantLoader fullScreen={false} size="sm" />
         ) : students.length === 0 ? (
@@ -396,10 +390,8 @@ export default function StudentVerifyPage() {
         </>
       )}
 
-      {/* IN-PAGE DETAILED VERIFICATION INSPECTION DESK */}
       {selectedStudent && (
         <div className="bg-white dark:bg-slate-900 rounded-lg border-2 border-primary/30 shadow-sm overflow-hidden space-y-5 p-6 animate-in fade-in slide-in-from-top-2 duration-150">
-          {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <div>
               <span className="text-[10px] uppercase font-bold text-primary tracking-wider">
@@ -418,11 +410,8 @@ export default function StudentVerifyPage() {
             </button>
           </div>
 
-          {/* Profile Grid */}
           <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1 text-xs">
-            {/* Row: Photo, Signature, Academic Credentials */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-950 p-3.5 rounded border border-slate-200 dark:border-slate-800">
-              {/* Photo Preview */}
               <div className="flex flex-col items-center justify-center p-2 text-center">
                 <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Student Photo</p>
                 <div className="w-24 h-28 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -434,7 +423,6 @@ export default function StudentVerifyPage() {
                 </div>
               </div>
 
-              {/* Signature Preview */}
               <div className="flex flex-col items-center justify-center p-2 text-center">
                 <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Digital Signature</p>
                 <div className="w-36 h-20 rounded border border-slate-300 dark:border-slate-700 overflow-hidden bg-white flex items-center justify-center p-1">
@@ -446,7 +434,6 @@ export default function StudentVerifyPage() {
                 </div>
               </div>
 
-              {/* Academic Metadata */}
               <div className="space-y-1 text-[11px] justify-center flex flex-col">
                 <div><span className="text-slate-400">Class:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.class_name || 'N/A'}</span></div>
                 <div><span className="text-slate-400">Section:</span> <span className="font-semibold text-slate-900 dark:text-white">{selectedStudent.section_name || 'N/A'}</span></div>
@@ -456,7 +443,6 @@ export default function StudentVerifyPage() {
               </div>
             </div>
 
-            {/* Personal Details */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
               <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Personal Information
@@ -471,7 +457,6 @@ export default function StudentVerifyPage() {
               </div>
             </div>
 
-            {/* Address Details */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
               <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Addresses
@@ -493,7 +478,6 @@ export default function StudentVerifyPage() {
               </div>
             </div>
 
-            {/* Parents & Guardians Details */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 space-y-2">
               <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Parents & Guardians
@@ -525,7 +509,6 @@ export default function StudentVerifyPage() {
               </div>
             </div>
 
-            {/* Feedback / Review Notes */}
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Staff Verification Notes (Sent to student if rejected or saved with approval)
@@ -540,7 +523,6 @@ export default function StudentVerifyPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <button
               type="button"

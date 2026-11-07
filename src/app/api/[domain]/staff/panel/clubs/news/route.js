@@ -47,7 +47,6 @@ async function parseNewsRequest(request) {
   return await request.json().catch(() => ({}));
 }
 
-// GET: List club news
 export async function GET(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -93,7 +92,6 @@ export async function GET(request, context) {
 
     const result = await queryDb(queryStr, params);
 
-    // Clubs list for dropdown
     const clubsRes = await queryDb(
       `SELECT id, name, category FROM website_clubs WHERE website_id = $1 AND is_active = true ORDER BY name ASC`,
       [website.id]
@@ -111,7 +109,6 @@ export async function GET(request, context) {
   }
 }
 
-// POST: Create a new club news item (Slug auto-generated in API)
 export async function POST(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -128,7 +125,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Club and News Title are required.' }, { status: 400 });
     }
 
-    // Verify club
     const clubCheck = await queryDb(
       `SELECT id, name FROM website_clubs WHERE id = $1 AND website_id = $2 LIMIT 1`,
       [clubId, website.id]
@@ -137,7 +133,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Selected club not found.' }, { status: 404 });
     }
 
-    // Auto-generate slug in API
     const slug = await generateUniqueNewsSlug(website.id, clubId, title);
 
     let imageUrl = body.image_url || null;
@@ -174,7 +169,6 @@ export async function POST(request, context) {
   }
 }
 
-// PUT: Update an existing club news item (Slug auto-updated in API)
 export async function PUT(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);
@@ -240,7 +234,6 @@ export async function PUT(request, context) {
   }
 }
 
-// DELETE: Remove a club news item
 export async function DELETE(request, context) {
   try {
     const auth = await verifyClubStaffAccess(request, context);

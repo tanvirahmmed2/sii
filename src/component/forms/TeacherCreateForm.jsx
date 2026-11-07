@@ -16,7 +16,6 @@ const TeacherCreateForm = ({ onSuccess, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [verificationSentTo, setVerificationSentTo] = useState('');
 
-  // Load pay scales on mount
   useEffect(() => {
     const fetchPayScales = async () => {
       try {
@@ -69,7 +68,6 @@ const TeacherCreateForm = ({ onSuccess, onCancel }) => {
         <FiUserPlus className="text-primary" /> Pre-create Teacher Profile
       </h2>
 
-      {/* Verification link sent notice */}
       {verificationSentTo && (
         <div className="mb-5 flex items-start gap-3 p-4 bg-primary-light border border-primary-light rounded-2xl">
           <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
@@ -147,7 +145,6 @@ const TeacherCreateForm = ({ onSuccess, onCancel }) => {
           />
         </div>
 
-        {/* Pay Grade Dropdown Selector */}
         <div className="flex flex-col gap-1.5 md:col-span-2">
           <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
             <FiDollarSign className="text-slate-450" /> Assigned Pay Grade Scale (Optional)
@@ -167,7 +164,6 @@ const TeacherCreateForm = ({ onSuccess, onCancel }) => {
           </select>
         </div>
 
-        {/* Employment Type Checkbox */}
         <div className="flex items-center gap-3 md:col-span-2 py-2">
           <input
             type="checkbox"

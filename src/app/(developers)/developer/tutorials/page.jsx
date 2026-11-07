@@ -20,7 +20,6 @@ export default function DeveloperTutorialsPage() {
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
 
-  // In-page creation / edit form state
   const [showForm, setShowForm] = useState(false);
   const [editingTut, setEditingTut] = useState(null);
   const [form, setForm] = useState({
@@ -233,7 +232,6 @@ export default function DeveloperTutorialsPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 rounded p-4">
         <div>
           <div className="flex items-center gap-2">
@@ -280,7 +278,6 @@ export default function DeveloperTutorialsPage() {
         </div>
       )}
 
-      {/* Integrated In-Page Creation & Edit Form */}
       {showForm && (
         <div
           ref={formRef}
@@ -409,7 +406,6 @@ export default function DeveloperTutorialsPage() {
         </div>
       )}
 
-      {/* Main List Card */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
@@ -436,7 +432,6 @@ export default function DeveloperTutorialsPage() {
           </div>
         </div>
 
-        {/* Table View */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

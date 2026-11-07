@@ -18,14 +18,12 @@ const GenericForm = ({
 }) => {
   return (
     <form onSubmit={onSubmit} className="w-full flex flex-col gap-5">
-      {/* Read Only Details Section (optional) */}
       {readOnlySection && (
         <div className="w-full mb-1">
           {readOnlySection}
         </div>
       )}
 
-      {/* Grid containing fields */}
       <div className={gridClass}>
         {fields.map((field) => {
           const {
@@ -92,14 +90,12 @@ const GenericForm = ({
         })}
       </div>
 
-      {/* Extra Link/Content in form footer (like forgot password, register setups) */}
       {extraLink && (
         <div className="w-full">
           {extraLink}
         </div>
       )}
 
-      {/* Actions (Buttons) */}
       <div className="flex justify-end gap-3 items-center mt-2">
         {onCancel && cancelText && (
           <button

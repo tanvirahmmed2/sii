@@ -21,7 +21,6 @@ export default function LibraryManagementHub({ isOfficer = false }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Banner */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <h2 className="text-base font-semibold text-slate-900 dark:text-white">
           Library Management Subsystem
@@ -31,7 +30,6 @@ export default function LibraryManagementHub({ isOfficer = false }) {
         </p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">
@@ -88,9 +86,7 @@ export default function LibraryManagementHub({ isOfficer = false }) {
         </div>
       </div>
 
-      {/* Quick Launchpad Navigation */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Setup Cards */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
             Setup &amp; Entities
@@ -127,7 +123,6 @@ export default function LibraryManagementHub({ isOfficer = false }) {
           </div>
         </div>
 
-        {/* Catalog & Inventory */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
             Books &amp; Stock
@@ -153,7 +148,6 @@ export default function LibraryManagementHub({ isOfficer = false }) {
           </div>
         </div>
 
-        {/* Circulation Desks */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
           <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
             Circulation Desks

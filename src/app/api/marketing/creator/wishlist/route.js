@@ -70,7 +70,7 @@ export async function POST(request) {
     const body = await request.json();
     const creatorId = Number(body.creatorId || sessionCreator?.id);
     const packageId = Number(body.packageId || body.id);
-    const action = body.action || 'toggle'; // 'toggle' | 'add'
+    const action = body.action || 'toggle'; 
 
     if (!creatorId) {
       return NextResponse.json(
@@ -83,14 +83,12 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Package ID is required.' }, { status: 400 });
     }
 
-    // Verify package exists
     const pkgCheck = await queryDb('SELECT id, name FROM packages WHERE id = $1', [packageId]);
     if (pkgCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Package not found.' }, { status: 404 });
     }
     const pkgName = pkgCheck.rows[0].name;
 
-    // Check existing wishlisted item for creator
     const existing = await queryDb(
       'SELECT id, package_id FROM wishlists WHERE creator_id = $1 LIMIT 1',
       [creatorId]
@@ -99,7 +97,6 @@ export async function POST(request) {
     const isCurrentPackageWishlisted = existing.rows.length > 0 && Number(existing.rows[0].package_id) === packageId;
 
     if (action === 'toggle' && isCurrentPackageWishlisted) {
-      // Toggle off: remove package from wishlist
       await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
       return NextResponse.json({
         success: true,
@@ -110,8 +107,6 @@ export async function POST(request) {
       });
     }
 
-    // Otherwise, enforce single package in wishlist:
-    // Remove any previously wishlisted package and replace with the new one
     await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
     await queryDb(
       `INSERT INTO wishlists (creator_id, package_id)
@@ -152,7 +147,6 @@ export async function DELETE(request) {
     }
 
     if (clearAll || !packageId) {
-      // Clear entire wishlist for creator
       await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
       return NextResponse.json({
         success: true,

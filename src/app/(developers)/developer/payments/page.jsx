@@ -51,7 +51,6 @@ export default function AdminPaymentsPage() {
     };
   }, []);
 
-  // Quick Action: Mark as Paid & Activate Subscription
   const handleMarkAsPaid = async (payment) => {
     if (!confirm(`Mark payment #${payment.id} as PAID? This will automatically provision and activate a subscription for Creator #${payment.creator_id}.`)) {
       return;
@@ -83,7 +82,6 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  // Modal Status Update
   const handleSaveModalStatus = async (e) => {
     e.preventDefault();
     if (!editingPayment || !editStatus) return;
@@ -173,7 +171,6 @@ export default function AdminPaymentsPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -231,7 +228,6 @@ export default function AdminPaymentsPage() {
         />
       )}
 
-      {/* Table Card */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -302,7 +298,7 @@ export default function AdminPaymentsPage() {
                   const isUnpaid = p.status === 'UNPAID' || p.status === 'PENDING' || p.status === 'pending';
                   const isCompleted = p.status === 'COMPLETED' || p.status === 'successful' || p.status === 'SUCCESSFUL';
                   const numAmount = Number(p.amount !== undefined ? p.amount : (Number(p.amount_in_cents || 0) / 100));
-                  const curr = String(p.currency || (p.payment_method === 'bkash' || p.gateway === 'bkash' ? 'BDT' : 'USD')).toUpperCase();
+                  const curr = String(p.currency || (p.payment_method === 'surjopay' || p.gateway === 'surjopay' ? 'BDT' : 'USD')).toUpperCase();
                   const sym = curr === 'BDT' ? '৳' : '$';
                   const formattedAmount = `${sym}${numAmount.toFixed(2)} ${curr}`;
 
@@ -406,7 +402,6 @@ export default function AdminPaymentsPage() {
         </div>
       </div>
 
-      {/* Edit Status Modal */}
       {editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white dark:bg-slate-900 rounded p-4 max-w-md w-full shadow-lg space-y-4 border border-slate-200 dark:border-slate-800">

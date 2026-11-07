@@ -15,13 +15,11 @@ export default function StudentMeritMigrationPage() {
   const [students, setStudents] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Target Migration Controls
   const [targetSessionId, setTargetSessionId] = useState('');
   const [targetClassId, setTargetClassId] = useState('');
   const [targetSectionId, setTargetSectionId] = useState('');
   const [migrating, setMigrating] = useState(false);
 
-  // References
   const [allClasses, setAllClasses] = useState([]);
   const [allSections, setAllSections] = useState([]);
   const [allSessions, setAllSessions] = useState([]);
@@ -50,7 +48,6 @@ export default function StudentMeritMigrationPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Sort students by roll_no or id
         const sorted = (data.payload?.students || []).sort((a, b) => {
           const rA = parseInt(a.roll_no, 10) || 99999;
           const rB = parseInt(b.roll_no, 10) || 99999;
@@ -129,7 +126,6 @@ export default function StudentMeritMigrationPage() {
 
   return (
     <div className="w-full space-y-4">
-      {/* Page Header */}
       <div className="pb-3 border-b border-slate-200 dark:border-slate-800">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
           Merit-Based Student Migration
@@ -139,7 +135,6 @@ export default function StudentMeritMigrationPage() {
         </p>
       </div>
 
-      {/* Filter Bar */}
       <StudentFilterBar
         onFilter={loadData}
         onReset={handleReset}
@@ -148,7 +143,6 @@ export default function StudentMeritMigrationPage() {
         description="Select session, class, and section to inspect academic merit standings"
       />
 
-      {/* Show Data Only After Filter */}
       {!hasFiltered ? (
         <StudentFilterEmptyState
           icon="🏆"
@@ -157,7 +151,6 @@ export default function StudentMeritMigrationPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Target Migration Form */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <div className="border-b border-slate-100 dark:border-slate-800 pb-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -239,7 +232,6 @@ export default function StudentMeritMigrationPage() {
             </form>
           </div>
 
-          {/* Merit Ranked Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-4 shadow-2xs space-y-3">
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
               <span className="font-semibold text-slate-800 dark:text-slate-200">

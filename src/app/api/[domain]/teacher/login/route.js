@@ -10,10 +10,6 @@ import {
 } from 'src/lib/middleware/teacher.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 
-/**
- * API Route: /api/[domain]/teacher/login
- * Handles teacher authentication, 2FA challenge, JWT issuance, and session creation.
- */
 export async function POST(request, context) {
   try {
     const website = await resolveWebsiteFromRequest(request, context);
@@ -36,7 +32,6 @@ export async function POST(request, context) {
 
     const cleanEmail = String(email).trim().toLowerCase();
 
-    // Query teacher under this website
     const teacherRes = await queryDb(
       `SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
               wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
@@ -85,7 +80,6 @@ export async function POST(request, context) {
       );
     }
 
-    // Two-Factor Authentication Check
     if (teacher.is_two_factor_enabled) {
       const otpCode = crypto.randomInt(100000, 1000000).toString();
 
@@ -128,7 +122,6 @@ export async function POST(request, context) {
       });
     }
 
-    // Generate JWT token
     const token = generateToken({
       id: teacher.id,
       email: teacher.email,
@@ -137,7 +130,6 @@ export async function POST(request, context) {
       role: 'teacher',
     });
 
-    // Create session in website_teacher_login_sessions
     await createTeacherSession({
       websiteId: website.id,
       teacherId: teacher.id,
@@ -168,10 +160,8 @@ export async function POST(request, context) {
       paylod: { teacher: teacherPayload },
     });
 
-    // Set HTTP-only session cookie
     await setTeacherSessionCookie(response, token);
 
-    // Keep active tenant domain cookies synced
     const tenantSlug = website.subdomain || website.slug || '';
     if (tenantSlug) {
       response.cookies.set('x-website-domain', tenantSlug, { path: '/', maxAge: 7 * 86400 });

@@ -44,7 +44,6 @@ export default function Package({
       ? `${Math.round(maxStorageMb / 1024)} GB`
       : `${maxStorageMb} MB`;
 
-  // Merge tenant modules and features for rich display
   const moduleNames = Array.isArray(pkg.tenant_modules) && pkg.tenant_modules.length > 0
     ? pkg.tenant_modules.map((m) => m.name || m.title || m)
     : Array.isArray(pkg.allowed_modules) && pkg.allowed_modules.length > 0
@@ -55,7 +54,6 @@ export default function Package({
     ? pkg.features.map((f) => (typeof f === 'string' ? f : f.name || f.description || ''))
     : [];
 
-  // Combine and deduplicate
   const combinedFeatures = Array.from(new Set([...moduleNames, ...rawFeatures])).filter(Boolean);
   const displayFeatures = combinedFeatures.length > 0
     ? combinedFeatures
@@ -69,7 +67,6 @@ export default function Package({
           : 'bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-secondary/40 dark:hover:border-secondary/40'
       }`}
     >
-      {/* Most Popular Badge */}
       {isPopular && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-linear-to-r from-secondary to-secondary-dark text-white text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5 z-20">
           <BiStar className="text-sm fill-current text-white" />
@@ -77,7 +74,6 @@ export default function Package({
         </div>
       )}
 
-      {/* Wishlist Button (Heart) */}
       <button
         type="button"
         onClick={(e) => {
@@ -102,7 +98,6 @@ export default function Package({
       </button>
 
       <div className="space-y-6">
-        {/* Header info */}
         <div className="pr-10">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -121,7 +116,6 @@ export default function Package({
           </p>
         </div>
 
-        {/* Pricing Display */}
         <div className="pt-1 border-t border-slate-100 dark:border-slate-800/80">
           <div className="flex items-baseline gap-1.5 flex-wrap">
             <span className="text-4xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
@@ -146,7 +140,6 @@ export default function Package({
           </p>
         </div>
 
-        {/* Resource Quotas Grid */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
             <BiGlobe className="text-base text-secondary shrink-0" />
@@ -177,7 +170,6 @@ export default function Package({
           </div>
         </div>
 
-        {/* Included Features & Modules */}
         <div className="border-t border-slate-100 dark:border-slate-800 pt-5 space-y-3">
           <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
             What is included:
@@ -198,7 +190,6 @@ export default function Package({
         </div>
       </div>
 
-      {/* CTA Button */}
       <div className="pt-7">
         <Link
           href={`/creator/checkout?packageId=${pkg.id}&currency=${currency}&interval=${billingCycle.toLowerCase()}`}

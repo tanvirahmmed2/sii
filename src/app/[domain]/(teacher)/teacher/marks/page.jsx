@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fi';
 
 const MarksEntryPage = () => {
-  const [activeMode, setActiveMode] = useState('manual'); // 'manual' | 'spreadsheet'
+  const [activeMode, setActiveMode] = useState('manual'); 
 
   const [exams, setExams] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -25,7 +25,6 @@ const MarksEntryPage = () => {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Spreadsheet Upload States
   const [xlsxLoaded, setXlsxLoaded] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [fileName, setFileName] = useState('');
@@ -34,7 +33,6 @@ const MarksEntryPage = () => {
   const fileInputRef = useRef(null);
   const [uploadSummary, setUploadSummary] = useState(null);
 
-  // Load SheetJS for Spreadsheet handling
   useEffect(() => {
     if (typeof window !== 'undefined' && window.XLSX) {
       setXlsxLoaded(true);
@@ -48,7 +46,6 @@ const MarksEntryPage = () => {
     document.head.appendChild(script);
   }, []);
 
-  // Load dropdown resources
   useEffect(() => {
     const fetchResources = async () => {
       try {
@@ -76,7 +73,6 @@ const MarksEntryPage = () => {
     fetchResources();
   }, []);
 
-  // Fetch sections when class changes
   useEffect(() => {
     if (!classId) {
       const timer = setTimeout(() => {
@@ -100,7 +96,6 @@ const MarksEntryPage = () => {
     fetchSections();
   }, [classId]);
 
-  // Load student list for manual marks entry
   const handleLoadStudents = async () => {
     if (!examId || !classId || !subjectId) {
       toast.error('Exam, Class, and Subject are required to load student lists.');
@@ -176,7 +171,6 @@ const MarksEntryPage = () => {
     }
   };
 
-  // --- SPREADSHEET DOWNLOAD & UPLOAD LOGIC ---
   const handleDownloadTemplate = async () => {
     if (!examId || !classId || !subjectId) {
       toast.error('Please select Exam, Class, and Subject to download template.');
@@ -356,12 +350,10 @@ const MarksEntryPage = () => {
     }
   };
 
-  // Filter subjects assigned to the selected class
   const filteredSubjects = subjects.filter((s) => String(s.class_id) === String(classId));
 
   return (
     <div className="w-full space-y-5">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
           <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -370,7 +362,6 @@ const MarksEntryPage = () => {
           <p className="text-xs text-slate-500 mt-0.5">Record and update student exam marks via manual roster or Excel spreadsheet upload.</p>
         </div>
 
-        {/* Mode Selector Tabs */}
         <div className="flex gap-1 bg-slate-100 p-1 rounded-lg w-fit">
           <button
             onClick={() => setActiveMode('manual')}
@@ -391,7 +382,6 @@ const MarksEntryPage = () => {
         </div>
       </div>
 
-      {/* Shared Control Bar */}
       <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs grid grid-cols-2 sm:grid-cols-5 gap-2">
         <select
           value={examId}
@@ -453,7 +443,6 @@ const MarksEntryPage = () => {
         )}
       </div>
 
-      {/* MODE 1: MANUAL ENTRY */}
       {activeMode === 'manual' && (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
           {students.length === 0 ? (
@@ -521,10 +510,8 @@ const MarksEntryPage = () => {
         </div>
       )}
 
-      {/* MODE 2: SPREADSHEET UPLOAD */}
       {activeMode === 'spreadsheet' && (
         <div className="flex flex-col gap-4">
-          {/* Upload bar */}
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-slate-500">Required columns: <strong>Subject Code</strong>, <strong>Student Registration Number</strong>, <strong>Mark</strong>, <strong>Exam ID</strong></p>
             <div className="flex items-center gap-2">

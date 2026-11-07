@@ -15,7 +15,6 @@ export async function GET(request) {
   }
 }
 
-// CREATE REPORT
 export async function POST(request) {
   try {
     const auth = await hasModulePermission(request, 'reports');
@@ -37,7 +36,6 @@ export async function POST(request) {
   }
 }
 
-// UPDATE REPORT
 export async function PUT(request) {
   try {
     const auth = await hasModulePermission(request, 'reports');
@@ -63,7 +61,6 @@ export async function PUT(request) {
   }
 }
 
-// DELETE REPORT
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'reports');

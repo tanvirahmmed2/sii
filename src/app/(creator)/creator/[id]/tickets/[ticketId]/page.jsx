@@ -52,7 +52,6 @@ export default function CreatorSingleTicketPage() {
   }, [ticketId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTicketThread();
   }, [fetchTicketThread]);
 
@@ -181,7 +180,6 @@ export default function CreatorSingleTicketPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Top Bar */}
       <div className="flex items-center justify-between">
         <Link
           href={`/creator/${creatorId}/tickets`}
@@ -198,7 +196,6 @@ export default function CreatorSingleTicketPage() {
         </button>
       </div>
 
-      {/* Ticket Details Header */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -229,7 +226,6 @@ export default function CreatorSingleTicketPage() {
         )}
       </div>
 
-      {/* Conversation Thread */}
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="border-b border-slate-100 pb-2">
           <h2 className="text-xs font-semibold text-slate-900">
@@ -278,7 +274,6 @@ export default function CreatorSingleTicketPage() {
                       <p className="whitespace-pre-wrap break-words">{m.message}</p>
                     )}
 
-                    {/* Render attached images */}
                     {messageImages.length > 0 && (
                       <div className="space-y-2 pt-1">
                         {messageImages.map((img, idx) => {
@@ -312,7 +307,6 @@ export default function CreatorSingleTicketPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Selected Image Preview Bar */}
         {selectedImage && imagePreview && (
           <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-3 animate-in fade-in duration-150">
             <div className="flex items-center gap-2.5 overflow-hidden">
@@ -339,9 +333,7 @@ export default function CreatorSingleTicketPage() {
           </div>
         )}
 
-        {/* Reply Form */}
         <form onSubmit={handleSendReply} className="pt-2 border-t border-slate-100 flex items-center gap-2">
-          {/* File Upload Trigger */}
           <input
             type="file"
             ref={fileInputRef}
@@ -383,7 +375,6 @@ export default function CreatorSingleTicketPage() {
         </form>
       </div>
 
-      {/* Lightbox / Full-Size Image Preview Modal */}
       {previewModalImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"

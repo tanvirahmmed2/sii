@@ -19,7 +19,6 @@ export default function BuilderNavbar({
   return (
     <header className="sticky top-0 z-50 w-full border-b border-indigo-500/20 bg-slate-950/90 backdrop-blur-xl shadow-lg shadow-indigo-950/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand & Studio Mode */}
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2.5 group" title="Return to Creator Dashboard">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
@@ -39,7 +38,6 @@ export default function BuilderNavbar({
             </div>
           </Link>
 
-          {/* Active Website Context */}
           <div className="hidden md:flex items-center gap-2 bg-slate-900/80 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span className="text-slate-400">Website:</span>
@@ -47,7 +45,6 @@ export default function BuilderNavbar({
           </div>
         </div>
 
-        {/* Right Actions */}
         <div className="hidden sm:flex items-center gap-3">
           <Link
             href="/dashboard"
@@ -85,7 +82,6 @@ export default function BuilderNavbar({
           </Link>
         </div>
 
-        {/* Mobile menu button */}
         <div className="sm:hidden flex items-center gap-2">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -103,7 +99,6 @@ export default function BuilderNavbar({
         </div>
       </div>
 
-      {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="sm:hidden border-t border-white/10 bg-slate-950 px-4 py-3 space-y-2">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-xs">

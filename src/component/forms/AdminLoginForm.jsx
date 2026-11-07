@@ -8,14 +8,13 @@ import { FiMail, FiLock, FiArrowRight, FiShield, FiKey, FiRefreshCw, FiArrowLeft
 
 const AdminLoginForm = () => {
   const router = useRouter();
-  const [step, setStep] = useState('credentials'); // 'credentials' | '2fa'
+  const [step, setStep] = useState('credentials'); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
-  // Step 1: Submit Credentials
   const handleCredentialsSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -51,7 +50,6 @@ const AdminLoginForm = () => {
     }
   };
 
-  // Step 2: Submit 2FA Code
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     if (!otpCode || otpCode.trim().length !== 6) {
@@ -82,7 +80,6 @@ const AdminLoginForm = () => {
     }
   };
 
-  // Resend 2FA Code
   const handleResendCode = async () => {
     if (resending) return;
     setResending(true);

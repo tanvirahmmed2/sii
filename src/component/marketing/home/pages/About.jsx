@@ -33,7 +33,6 @@ export default function About() {
           </p>
         </div>
 
-        {/* 4 Stats Cards Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {data.map((item) => {
             const Icon = item.icon || BiCube;

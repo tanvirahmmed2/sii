@@ -75,7 +75,6 @@ export default function PublicReviewsPage() {
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 w-full space-y-12">
-      {/* Header & Hero Section */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         
         <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
@@ -86,9 +85,7 @@ export default function PublicReviewsPage() {
         </p>
       </div>
 
-      {/* Social Proof Statistics Card */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
-        {/* Overall Score */}
         <div className="flex flex-col items-center justify-center text-center space-y-1">
           <div className="text-5xl font-black text-slate-900 leading-none">
             {stats.averageRating}
@@ -106,7 +103,6 @@ export default function PublicReviewsPage() {
           </p>
         </div>
 
-        {/* Rating Breakdown Bars */}
         <div className="md:col-span-2 pt-4 md:pt-0 md:pl-6 space-y-2">
           {[5, 4, 3, 2, 1].map((rating) => {
             const count = stats.ratingBreakdown?.[rating] || 0;
@@ -135,7 +131,6 @@ export default function PublicReviewsPage() {
         </div>
       </div>
 
-      {/* Filter Tabs */}
       <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-200 pb-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           <button
@@ -171,7 +166,6 @@ export default function PublicReviewsPage() {
         </span>
       </div>
 
-      {/* Reviews Grid */}
       {loading ? (
         <LoadingScreen fullScreen={false} label="Loading verified reviews..." />
       ) : reviews.length === 0 ? (
@@ -201,7 +195,6 @@ export default function PublicReviewsPage() {
               className="bg-white border border-slate-200 hover:border-slate-300 rounded-3xl p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-5 group"
             >
               <div className="space-y-3">
-                {/* Header: Stars & Verified Badge */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex text-amber-400 text-base">
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -218,20 +211,17 @@ export default function PublicReviewsPage() {
                   </span>
                 </div>
 
-                {/* Review Title */}
                 {rev.title && (
                   <h3 className="text-sm font-bold text-slate-900 leading-snug">
                     {rev.title}
                   </h3>
                 )}
 
-                {/* Review Comment / Text */}
                 <p className="text-xs text-slate-600 leading-relaxed italic">
                   &ldquo;{rev.comment || rev.review_text}&rdquo;
                 </p>
               </div>
 
-              {/* Reviewer Footnote */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   {rev.creator_avatar ? (
@@ -271,7 +261,6 @@ export default function PublicReviewsPage() {
         </div>
       )}
 
-      {/* Pagination Controls */}
       {!loading && pagination.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-6">
           <button
@@ -335,7 +324,6 @@ export default function PublicReviewsPage() {
         </div>
       )}
 
-      {/* Call to Action Card */}
       <div className="rounded-3xl bg-primary text-white p-8 sm:p-12 text-center w-full space-y-6 shadow-xl">
         <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
           Ready to Elevate Your Portfolio?

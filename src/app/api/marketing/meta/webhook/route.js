@@ -3,13 +3,8 @@ import { pool } from 'src/lib/database/db';
 import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from 'src/lib/database/secret';
 import { parseIncomingMetaWebhook, verifyMetaWebhookSignature } from 'src/lib/meta/graph';
 
-// Max allowed payload size (1MB) to defend against payload exhaustion attacks
 const MAX_PAYLOAD_BYTES = 1024 * 1024;
 
-/**
- * GET /api/meta/webhook
- * Timing-safe Meta Webhook Handshake Verification
- */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,7 +16,6 @@ export async function GET(request) {
       return new Response('Bad Request: Invalid hub parameters', { status: 400 });
     }
 
-    // Guard against unconfigured or empty server token
     if (
       !META_WEBHOOK_VERIFY_TOKEN ||
       typeof META_WEBHOOK_VERIFY_TOKEN !== 'string' ||
@@ -53,7 +47,6 @@ export async function GET(request) {
       return new Response('Forbidden: Verification token mismatch', { status: 403 });
     }
 
-    // Validate challenge to prevent response splitting or injection
     if (!challenge || !/^[a-zA-Z0-9_\-\.\=\+]+$/.test(challenge) || challenge.length > 255) {
       return new Response('Bad Request: Invalid challenge parameter', { status: 400 });
     }
@@ -71,22 +64,16 @@ export async function GET(request) {
   }
 }
 
-/**
- * POST /api/meta/webhook
- * Ingest incoming events from Facebook Messenger, Instagram Direct, and WhatsApp
- */
 export async function POST(request) {
   try {
     const rawBody = await request.text();
 
-    // Payload size defense
     if (rawBody.length > MAX_PAYLOAD_BYTES) {
       return new Response('Payload Too Large', { status: 413 });
     }
 
     const signature = request.headers.get('x-hub-signature-256');
 
-    // If META_APP_SECRET is configured, enforce strict signature verification
     if (META_APP_SECRET) {
       if (!signature) {
         console.warn('Meta webhook POST rejected: Missing X-Hub-Signature-256 header.');
@@ -114,7 +101,6 @@ export async function POST(request) {
 
     for (const evt of events) {
       try {
-        // Sanitize parameters
         const safePlatform = ['facebook', 'instagram', 'whatsapp'].includes(evt.platform) ? evt.platform : null;
         if (!safePlatform) continue;
 
@@ -125,7 +111,6 @@ export async function POST(request) {
         const safeText = String(evt.messageText || '').replace(/\0/g, '').slice(0, 4000);
         const safeMsgId = evt.externalMessageId ? String(evt.externalMessageId).slice(0, 255) : null;
 
-        // 1. Upsert global conversation
         const convUpsert = await pool.query(
           `INSERT INTO meta_conversations (
              platform, external_conversation_id, recipient_id, recipient_name,
@@ -153,7 +138,6 @@ export async function POST(request) {
 
         const convId = convUpsert.rows[0]?.id;
 
-        // 2. Insert incoming message to global table
         if (convId) {
           await pool.query(
             `INSERT INTO meta_messages (
@@ -173,7 +157,6 @@ export async function POST(request) {
           );
         }
 
-        // 3. Multi-tenant ingestion: Also store in website_meta_conversations if tenant configured
         try {
           const webMetaRes = await pool.query(
             `SELECT website_id FROM website_meta

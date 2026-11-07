@@ -92,7 +92,6 @@ export default function CreatorOverviewPage() {
 
   return (
     <div className="w-full space-y-4 text-xs text-slate-800">
-      {/* Header */}
       <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
@@ -125,7 +124,6 @@ export default function CreatorOverviewPage() {
         </div>
       </div>
 
-      {/* Summary KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-white border border-slate-200 rounded p-3">
           <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">
@@ -187,7 +185,6 @@ export default function CreatorOverviewPage() {
         </div>
       </div>
 
-      {/* Section Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sections.map((s) => (
           <Link

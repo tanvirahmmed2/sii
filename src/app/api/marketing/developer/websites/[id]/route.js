@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
-/**
- * Helper to fetch complete website data with creator, package, subscription, and modules
- */
 async function fetchFullWebsite(websiteId) {
   const res = await queryDb(
     `SELECT w.*,
@@ -79,13 +76,6 @@ export async function GET(request, { params }) {
 
     const creatorId = Number(website.creator_id);
 
-    // Parallel fetch:
-    // 1. Website modules active for this website joined with tenant_modules catalog
-    // 2. All tenant modules
-    // 3. Available packages
-    // 4. Purchases for this website / creator
-    // 5. List of creators for quick re-assignment
-    // 6. Subscriptions of this creator for linking
     const [modulesRes, allTenantModsRes, packagesRes, purchasesRes, creatorsRes, subscriptionsRes] = await Promise.all([
       queryDb(
         `SELECT cm.id AS website_module_id,
@@ -155,7 +145,6 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
     ]);
 
-    // Calculate days remaining on website subscription
     let daysRemaining = null;
     if (website.subscription_expires_at) {
       const diff = new Date(website.subscription_expires_at).getTime() - Date.now();
@@ -221,9 +210,6 @@ export async function GET(request, { params }) {
   }
 }
 
-/**
- * PUT handler: Update website data, update creator info, and toggle modules
- */
 export async function PUT(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'websites');
@@ -245,9 +231,6 @@ export async function PUT(request, { params }) {
     const body = await request.json();
     const rawData = body.data || body;
 
-    // ------------------------------------------------------------------------
-    // 1. UPDATE CREATOR DATA (IF PROVIDED)
-    // ------------------------------------------------------------------------
     const creatorPayload = rawData.creator_data || rawData.creator || null;
     let targetCreatorId = Number(rawData.creator_id || currentWebsite.creator_id);
 
@@ -268,19 +251,13 @@ export async function PUT(request, { params }) {
       }
     }
 
-    // Note: website control and home modules are governed by subscription package (package_control_modules / package_home_modules)
-
-    // ------------------------------------------------------------------------
-    // 3. UPDATE WEBSITE DATA
-    // ------------------------------------------------------------------------
     const websiteData = { ...rawData };
     delete websiteData.creator_data;
     delete websiteData.creator;
     delete websiteData.toggle_module_id;
     delete websiteData.module_ids;
-    delete websiteData.package_id; // Website table does not store package_id; derived via subscription
+    delete websiteData.package_id; 
 
-    // Bidirectional sync when subscription_id is updated
     if (websiteData.subscription_id !== undefined) {
       const targetSubId = websiteData.subscription_id ? Number(websiteData.subscription_id) : null;
       if (targetSubId) {
@@ -291,15 +268,11 @@ export async function PUT(request, { params }) {
           if (sub.current_period_end) {
             websiteData.subscription_expires_at = sub.current_period_end;
           }
-          // Unlink other website previously pointing to this subscription
           await queryDb(`UPDATE websites SET subscription_id = NULL WHERE subscription_id = $1 AND id != $2`, [targetSubId, websiteId]);
-          // Unlink other subscription previously pointing to this website
           await queryDb(`UPDATE subscriptions SET website_id = NULL WHERE website_id = $1 AND id != $2`, [websiteId, targetSubId]);
-          // Connect target subscription to this website
           await queryDb(`UPDATE subscriptions SET website_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [websiteId, targetSubId]);
         }
       } else {
-        // Detaching subscription
         websiteData.subscription_id = null;
         await queryDb(`UPDATE subscriptions SET website_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE website_id = $1`, [websiteId]);
       }
@@ -356,9 +329,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-/**
- * DELETE handler: Remove website container
- */
 export async function DELETE(request, { params }) {
   try {
     const auth = await hasModulePermission(request, 'websites');

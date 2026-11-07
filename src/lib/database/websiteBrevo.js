@@ -8,13 +8,6 @@ export function maskApiKey(key) {
   return key.slice(0, 8) + '••••••••••••••••' + key.slice(-4);
 }
 
-/**
- * Returns mailer configuration for a tenant website.
- * Always resolves to the central main website mailer with the tenant's display name and package limits.
- *
- * @param {string|number} websiteId
- * @returns {Promise<Object>}
- */
 export async function getWebsiteBrevoConfig(websiteId) {
   let institutionName = BREVO_SENDER_NAME || 'Campus Administration';
   if (websiteId) {
@@ -41,30 +34,15 @@ export async function getWebsiteBrevoConfig(websiteId) {
   };
 }
 
-/**
- * Sends a transactional email using the central main platform Brevo mailer,
- * enforcing the tenant website's monthly package quota limits.
- *
- * @param {string|number} websiteId - Website tenant ID
- * @param {Object} options
- * @param {string} options.to - Recipient email address
- * @param {string} [options.toName] - Recipient display name
- * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML email body
- * @param {string} [options.text] - Plain text email body (optional)
- * @returns {Promise<Object>} Brevo API response { messageId, mailerType, senderEmail }
- */
 export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
   if (!BREVO_API_KEY) {
     throw new Error('Main platform BREVO_API_KEY is not configured in environment secrets.');
   }
 
-  // 1. Enforce monthly package email quota limit & increment usage counter
   if (websiteId) {
     await checkAndIncrementMailUsage(websiteId, 1);
   }
 
-  // 2. Fetch institution name for sender branding
   let senderName = BREVO_SENDER_NAME || 'Campus Administration';
   if (websiteId) {
     try {
@@ -75,7 +53,6 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
     } catch (_) {}
   }
 
-  // 3. Dispatch email via central platform Brevo API
   const payload = {
     sender: {
       name: senderName,

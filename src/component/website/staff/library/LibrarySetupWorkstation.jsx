@@ -3,25 +3,22 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
-  const [activeTab, setActiveTab] = useState(initialTab); // 'categories' | 'writers' | 'publishers'
+  const [activeTab, setActiveTab] = useState(initialTab); 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [feedback, setFeedback] = useState(null);
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
+  const [modalMode, setModalMode] = useState('add'); 
   const [currentItem, setCurrentItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Delete State
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const endpointMap = {
@@ -143,7 +140,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
 
   return (
     <div className="w-full space-y-4">
-      {/* Tab Switcher */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 text-xs font-medium space-x-4">
         {[
           { key: 'categories', label: 'Categories' },
@@ -168,7 +164,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
         ))}
       </div>
 
-      {/* Feedback Banner */}
       {feedback && (
         <div
           className={`p-3 rounded text-xs border flex items-center justify-between ${
@@ -187,9 +182,7 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
         </div>
       )}
 
-      {/* Main Container */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <input
@@ -221,7 +214,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
           </div>
         </div>
 
-        {/* Data Table */}
         <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
@@ -328,7 +320,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
           </table>
         </div>
 
-        {/* Pagination Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-3.5 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-500">
           <div>
             Showing <span className="font-semibold text-slate-700 dark:text-slate-300">{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}</span> to{' '}
@@ -369,7 +360,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-md w-full p-4 shadow-lg space-y-4">
@@ -568,7 +558,6 @@ export default function LibrarySetupWorkstation({ initialTab = 'categories' }) {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded max-w-sm w-full p-4 shadow-lg space-y-3">

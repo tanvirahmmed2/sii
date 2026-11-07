@@ -38,13 +38,11 @@ export default function GenericBuilderDispatcherPage() {
     async function dispatch() {
       if (!id) return;
 
-      // If task query is already provided in URL, redirect immediately
       if (taskQuery && TASK_ROUTE_MAP[taskQuery]) {
         router.replace(`${TASK_ROUTE_MAP[taskQuery]}/${id}`);
         return;
       }
 
-      // Otherwise fetch template to discover which dedicated task table it resides in
       try {
         const res = await fetch(`/api/marketing/developer/templates/${id}`);
         const data = await res.json();
