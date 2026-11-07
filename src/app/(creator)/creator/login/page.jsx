@@ -194,13 +194,15 @@ function CreatorLoginForm() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleLogin} className="space-y-3">
+        <form onSubmit={handleLogin} autoComplete="off" className="space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Email Address *
             </label>
             <input
               type="email"
+              name="creator_login_email"
+              autoComplete="off"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -223,6 +225,8 @@ function CreatorLoginForm() {
             <div className="relative flex items-center">
               <input
                 type={showPassword ? 'text' : 'password'}
+                name="creator_login_password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

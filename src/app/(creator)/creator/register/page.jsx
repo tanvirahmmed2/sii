@@ -145,13 +145,31 @@ export default function CreatorRegisterPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleRegister} className="space-y-3">
+          <form onSubmit={handleRegister} autoComplete="off" className="space-y-3">
+            <input
+              type="text"
+              name="fake_username_prevent_autofill"
+              style={{ display: 'none' }}
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="off"
+            />
+            <input
+              type="password"
+              name="fake_password_prevent_autofill"
+              style={{ display: 'none' }}
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="new-password"
+            />
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
                 Full Name *
               </label>
               <input
                 type="text"
+                name="creator_full_name"
+                autoComplete="off"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -165,6 +183,8 @@ export default function CreatorRegisterPage() {
               </label>
               <input
                 type="email"
+                name="creator_registration_email"
+                autoComplete="off"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -179,6 +199,8 @@ export default function CreatorRegisterPage() {
               <div className="relative flex items-center">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="creator_registration_password"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   value={password}
@@ -201,6 +223,8 @@ export default function CreatorRegisterPage() {
               </label>
               <input
                 type="tel"
+                name="creator_phone_number"
+                autoComplete="off"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
