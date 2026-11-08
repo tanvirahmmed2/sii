@@ -13,6 +13,15 @@ async function handleCreateAdmin(d, request) {
   const phone = data.phone?.trim();
   const password = data.password?.trim();
   const designation = data.designation?.trim() || null;
+  let roleId = data.role_id || data.roleId || null;
+  if (!roleId) {
+    const defaultRoleRes = await queryDb(
+      `SELECT id FROM developer_roles WHERE slug = 'developer' OR is_system = TRUE ORDER BY id ASC LIMIT 1`
+    );
+    if (defaultRoleRes.rows.length > 0) {
+      roleId = defaultRoleRes.rows[0].id;
+    }
+  }
   const isActive = data.isActive !== undefined ? Boolean(data.isActive) : (data.is_active !== undefined ? Boolean(data.is_active) : true);
 
   if (!name || !email || !phone || !password) {
@@ -46,25 +55,27 @@ async function handleCreateAdmin(d, request) {
 
   const insertRes = await queryDb(
     `INSERT INTO developers (
-       name, email, phone, designation, password, is_active, email_verified,
+       name, email, phone, designation, role_id, password, is_active, email_verified,
        verification_token, verification_token_expires, two_factor_code, two_factor_expires
      )
-     VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7, CURRENT_TIMESTAMP + INTERVAL '24 hours', $8, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-     RETURNING id, name, email, phone, designation, is_active, email_verified, created_at`,
-    [name, email, phone, designation, hashedPassword, isActive, verificationToken, verificationCode]
+     VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', $9, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, phone, designation, role_id, is_active, email_verified, created_at`,
+    [name, email, phone, designation, roleId, hashedPassword, isActive, verificationToken, verificationCode]
+  );
+
+  const devWithRole = await queryDb(
+    `SELECT d.id, d.name, d.email, d.phone, d.designation, d.role_id, r.name AS role_name, r.slug AS role_slug,
+            d.is_active, d.email_verified, d.created_at, d.updated_at
+     FROM developers d
+     LEFT JOIN developer_roles r ON d.role_id = r.id
+     WHERE d.id = $1 LIMIT 1`,
+    [insertRes.rows[0].id]
   );
 
   const newAdmin = {
-    ...insertRes.rows[0],
+    ...(devWithRole.rows[0] || insertRes.rows[0]),
     is_verified: false,
   };
-
-  await queryDb(
-    `INSERT INTO module_permissions (developer_id, module_id, can_view, can_create, can_edit, can_delete)
-     SELECT $1, id, TRUE, TRUE, TRUE, TRUE FROM modules WHERE is_active = TRUE
-     ON CONFLICT (developer_id, module_id) DO NOTHING`,
-    [newAdmin.id]
-  );
 
   const baseUrl = getBaseUrl(request);
   const verifyUrl = `${baseUrl}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
@@ -98,8 +109,10 @@ export async function GET() {
   try {
     const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
+             d.role_id, r.name AS role_name,
              d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
       FROM developers d
+      LEFT JOIN developer_roles r ON d.role_id = r.id
       ORDER BY d.id DESC
     `);
 
@@ -213,7 +226,7 @@ export async function PUT(request) {
             [
               targetId,
               modId,
-              Boolean(p?.can_view ?? p?.view ?? true),
+              Boolean(p?.can_view ?? p?.view ?? false),
               Boolean(p?.can_create ?? p?.create ?? false),
               Boolean(p?.can_edit ?? p?.edit ?? false),
               Boolean(p?.can_delete ?? p?.delete ?? false),
@@ -227,11 +240,15 @@ export async function PUT(request) {
       });
     }
 
-    if (action === 'change_role') {
-      return NextResponse.json({
-        success: true,
-        message: 'Developer permissions are managed directly per module.',
-      });
+    if (action === 'change_role' || body.role_id !== undefined || body.roleId !== undefined) {
+      const nextRoleId = body.role_id !== undefined ? body.role_id : body.roleId;
+      await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [nextRoleId || null, targetId]);
+      if (action === 'change_role') {
+        return NextResponse.json({
+          success: true,
+          message: 'Developer role updated successfully.',
+        });
+      }
     }
 
     if (action === 'toggle_status' || body.is_active !== undefined) {
@@ -262,9 +279,10 @@ export async function PUT(request) {
 
       const fullRes = await queryDb(
         `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-                'developer' AS role, 'Developer' AS role_name,
-                d.is_active, d.created_at
+                d.role_id, r.name AS role_name, r.slug AS role_slug,
+                d.is_active, d.created_at, d.updated_at
          FROM developers d
+         LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.id = $1 LIMIT 1`,
         [targetId]
       );
@@ -282,8 +300,13 @@ export async function PUT(request) {
     delete data.adminId;
     delete data.action;
     delete data.role;
-    delete data.role_id;
     delete data.permissions;
+
+    const targetRoleId = data.role_id !== undefined ? data.role_id : data.roleId;
+    delete data.roleId;
+    if (targetRoleId !== undefined) {
+      data.role_id = targetRoleId || null;
+    }
 
     if (data.phone) {
       data.phone = data.phone.trim();
@@ -320,9 +343,10 @@ export async function PUT(request) {
 
     const fullRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
-              d.is_active, d.created_at
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
+              d.is_active, d.created_at, d.updated_at
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
       [targetId]
     );

@@ -109,6 +109,21 @@ const ALL_MODULES = [
   },
 
   {
+    slug: 'templates',
+    label: 'Document Templates',
+    path: '/developer/templates/student-id-card',
+    category: 'Templates',
+    desc: 'Student and staff ID cards, certificates, receipts, and testimonial templates.',
+  },
+  {
+    slug: 'themes',
+    label: 'Platform Themes',
+    path: '/developer/modules',
+    category: 'Templates',
+    desc: 'Visual themes, styles, and institution front-end color palettes.',
+  },
+
+  {
     slug: 'blogs',
     label: 'Blogs',
     path: '/developer/blogs',
@@ -208,6 +223,13 @@ const ALL_MODULES = [
     path: '/developer/developers',
     category: 'Team',
     desc: 'Platform engineering roster, direct module permissions, and team access.',
+  },
+  {
+    slug: 'roles',
+    label: 'Roles & Permissions',
+    path: '/developer/roles',
+    category: 'Team',
+    desc: 'Developer roles, system authority levels, and granular module access control.',
   },
   {
     slug: 'payroll',
@@ -321,13 +343,21 @@ export default function DeveloperOverviewPage() {
     const dev = developer || contextUser;
     if (!dev) return [];
 
-    const permissionsList = Array.isArray(dev.permissions) ? dev.permissions : [];
+    const isSuperAdmin = Boolean(
+      dev && (
+        Number(dev.id) === 1 ||
+        String(dev.email).toLowerCase() === 'tanvir004006@gmail.com' ||
+        (Array.isArray(dev.permissions) && dev.permissions.includes('*'))
+      )
+    );
+
+    const permissionsList = (Array.isArray(dev.permissions) ? dev.permissions : [])
+      .map((p) => String(p).toLowerCase().trim());
 
     const isAllowed = (slug) => {
-      if (slug === 'overview' || slug === 'profile' || slug === 'settings') return true;
-      if (permissionsList.includes(slug)) return true;
-      if (permissionsList.some((p) => p === slug || p.startsWith(`${slug}:`))) return true;
-      return false;
+      if (isSuperAdmin) return true;
+      if (slug === 'profile') return true;
+      return permissionsList.includes(slug.toLowerCase().trim());
     };
 
     return ALL_MODULES.filter((mod) => isAllowed(mod.slug));
@@ -344,6 +374,59 @@ export default function DeveloperOverviewPage() {
         mod.category.toLowerCase().includes(q)
     );
   }, [allowedModules, searchQuery]);
+
+  const allowedFolders = useMemo(() => {
+    const foldersMap = {};
+    for (const mod of filteredModules) {
+      const cat = mod.category || 'Platform';
+      if (!foldersMap[cat]) {
+        foldersMap[cat] = [];
+      }
+      foldersMap[cat].push(mod);
+    }
+
+    const categoriesOrder = [
+      { name: 'Workspace', title: 'Workspace & Overview' },
+      { name: 'Audience', title: 'Websites & Audience' },
+      { name: 'Commerce', title: 'Commerce & Plans' },
+      { name: 'Templates', title: 'Template Studio & Design' },
+      { name: 'Content', title: 'Content & Policies' },
+      { name: 'Support', title: 'Support & Comms' },
+      { name: 'Channels', title: 'Meta Channels' },
+      { name: 'Team', title: 'Team & Organization' },
+      { name: 'Platform', title: 'Platform & Settings' },
+      { name: 'Account', title: 'Developer Account' },
+    ];
+
+    const result = [];
+    for (const cat of categoriesOrder) {
+      if (foldersMap[cat.name] && foldersMap[cat.name].length > 0) {
+        result.push({
+          key: cat.name,
+          title: cat.title,
+          modules: foldersMap[cat.name],
+        });
+      }
+    }
+    return result;
+  }, [filteredModules]);
+
+  const [panelOpenFolders, setPanelOpenFolders] = useState({});
+
+  useEffect(() => {
+    const initial = {};
+    allowedFolders.forEach((f) => {
+      initial[f.key] = panelOpenFolders[f.key] ?? true;
+    });
+    setPanelOpenFolders(initial);
+  }, [allowedFolders]);
+
+  const togglePanelFolder = (key) => {
+    setPanelOpenFolders((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const activeDev = developer || contextUser;
 
@@ -540,43 +623,90 @@ export default function DeveloperOverviewPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search allowed modules..."
-              className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-slate-500"
+              className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-500"
             />
           </div>
         </div>
 
-        {filteredModules.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {filteredModules.map((item) => (
-              <Link
-                key={item.slug}
-                href={item.path}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col justify-between space-y-2.5 cursor-pointer group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 mb-1">
-                    <span className="truncate">{item.category}</span>
-                    <span className="text-[8px] px-1 py-0.2 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0">
-                      Allowed
-                    </span>
-                  </div>
-                  <h3 className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-slate-700 dark:group-hover:text-slate-200">
-                    {item.label}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 font-normal">
-                    {item.desc}
-                  </p>
-                </div>
+        {allowedFolders.length > 0 ? (
+          <div className="space-y-4">
+            {allowedFolders.map((folder) => {
+              const isFolderOpen = panelOpenFolders[folder.key] ?? true;
+              return (
+                <div
+                  key={folder.key}
+                  className="rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs"
+                >
+                  <button
+                    type="button"
+                    onClick={() => togglePanelFolder(folder.key)}
+                    className="w-full flex items-center justify-between p-3.5 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-left cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4 text-slate-500 dark:text-slate-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.75}
+                          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                        />
+                      </svg>
+                      <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+                        {folder.title}
+                      </h3>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-mono">
+                        {folder.modules.length} {folder.modules.length === 1 ? 'Module' : 'Modules'} Allowed
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                      <span>{isFolderOpen ? 'Collapse Folder' : 'Open Folder'}</span>
+                      <span className={`text-slate-400 transition-transform duration-150 ${isFolderOpen ? 'rotate-90' : ''}`}>
+                        &rsaquo;
+                      </span>
+                    </div>
+                  </button>
 
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between font-mono text-[10px] text-slate-400 dark:text-slate-500">
-                  <span className="truncate">{item.path}</span>
-                  <span className="text-slate-600 dark:text-slate-300 font-sans text-xs group-hover:translate-x-0.5 transition-transform">
-                    &rarr;
-                  </span>
+                  {isFolderOpen && (
+                    <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                      {folder.modules.map((item) => (
+                        <Link
+                          key={item.slug}
+                          href={item.path}
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 hover:border-slate-400 dark:hover:border-slate-600 transition-colors flex flex-col justify-between space-y-2.5 cursor-pointer group"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1 text-[9px] uppercase font-semibold text-slate-400 dark:text-slate-500 mb-1">
+                              <span className="truncate">{item.category}</span>
+                              <span className="text-[8px] px-1 py-0.2 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0">
+                                Allowed
+                              </span>
+                            </div>
+                            <h4 className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-slate-700 dark:group-hover:text-slate-200">
+                              {item.label}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 font-normal">
+                              {item.desc}
+                            </p>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                            <span className="truncate">{item.path}</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-sans text-xs group-hover:translate-x-0.5 transition-transform">
+                              &rarr;
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-2">

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/devs' }) {
+export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/devs', roles = [] }) {
+  const [availableRoles, setAvailableRoles] = useState(roles);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    role_id: roles[0]?.id || '',
     password: '',
     designation: '',
     isActive: true,
@@ -15,6 +17,23 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    if (Array.isArray(roles) && roles.length > 0) {
+      setAvailableRoles(roles);
+      setFormData((prev) => ({ ...prev, role_id: prev.role_id || roles[0]?.id || '' }));
+    } else {
+      fetch('/api/marketing/developer/roles')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && Array.isArray(d.roles)) {
+            setAvailableRoles(d.roles);
+            setFormData((prev) => ({ ...prev, role_id: prev.role_id || d.roles[0]?.id || '' }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [roles]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,6 +57,7 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             name: formData.name.trim(),
             email: formData.email.trim(),
             phone: formData.phone.trim(),
+            role_id: formData.role_id || null,
             password: formData.password.trim(),
             designation: formData.designation.trim() || null,
             isActive: Boolean(formData.isActive),
@@ -48,7 +68,15 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
       if (data.success) {
         setSuccessMsg(`Developer account created for ${formData.email}. An activation link has been sent to their email.`);
         const createdRecord = data.admin || data.record;
-        setFormData({ name: '', email: '', phone: '', password: '', designation: '', isActive: true });
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          role_id: availableRoles[0]?.id || '',
+          password: '',
+          designation: '',
+          isActive: true,
+        });
         if (onSuccess) {
           setTimeout(() => {
             onSuccess(createdRecord);
@@ -70,7 +98,7 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
         <div>
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Add Developer Account</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Create a developer account with required unique phone number and credentials.
+            Create a developer account with required unique phone number, assigned role, and credentials.
           </p>
         </div>
         {onCancel && (
@@ -172,21 +200,20 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Password <span className="text-rose-600">*</span>
+              Developer Role <span className="text-rose-600">*</span>
             </label>
-            <input
-              type="password"
-              name="developer_password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              readOnly={readOnly}
-              onFocus={() => setReadOnly(false)}
-              onPointerDown={() => setReadOnly(false)}
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            <select
+              name="developer_role_id"
+              value={formData.role_id}
+              onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
               className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-            />
+            >
+              {availableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} {r.is_system ? '(System)' : '(Custom)'}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -206,6 +233,27 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             />
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Password <span className="text-rose-600">*</span>
+            </label>
+            <input
+              type="password"
+              name="developer_password"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              readOnly={readOnly}
+              onFocus={() => setReadOnly(false)}
+              onPointerDown={() => setReadOnly(false)}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Account Status

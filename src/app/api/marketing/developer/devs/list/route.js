@@ -38,11 +38,13 @@ async function checkLastActiveAdminGuard(targetId, willDeactivateOrDelete = true
 export async function GET(request) {
   try {
     const auth = await getAuthenticatedUser(request);
-    const [devsRes, modsRes, permsRes] = await Promise.all([
+    const [devsRes, modsRes, permsRes, rolePermsRes, rolesRes] = await Promise.all([
       queryDb(`
         SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-               d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
+               d.role_id, r.name AS role_name, r.slug AS role_slug, r.description AS role_description,
+               d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at, d.updated_at
         FROM developers d
+        LEFT JOIN developer_roles r ON d.role_id = r.id
         ORDER BY d.id DESC
       `),
       queryDb(`
@@ -57,7 +59,33 @@ export async function GET(request) {
         FROM module_permissions mp
         JOIN modules m ON m.id = mp.module_id
       `).catch(() => ({ rows: [] })),
+      queryDb(`
+        SELECT drp.role_id, drp.module_id, m.slug AS module_slug, m.name AS module_name,
+               drp.can_view, drp.can_create, drp.can_edit, drp.can_delete
+        FROM developer_role_permissions drp
+        JOIN modules m ON m.id = drp.module_id
+        WHERE m.is_active = TRUE
+      `).catch(() => ({ rows: [] })),
+      queryDb(`
+        SELECT id, name, slug, description, is_system, is_active
+        FROM developer_roles
+        WHERE is_active = TRUE
+        ORDER BY id ASC
+      `).catch(() => ({ rows: [] })),
     ]);
+
+    const permsByRole = {};
+    for (const p of rolePermsRes.rows) {
+      if (!permsByRole[p.role_id]) permsByRole[p.role_id] = {};
+      permsByRole[p.role_id][p.module_slug] = {
+        can_view: Boolean(p.can_view),
+        can_create: Boolean(p.can_create),
+        can_edit: Boolean(p.can_edit),
+        can_delete: Boolean(p.can_delete),
+        module_id: p.module_id,
+        module_name: p.module_name,
+      };
+    }
 
     const permsByDev = {};
     for (const p of permsRes.rows) {
@@ -72,18 +100,24 @@ export async function GET(request) {
       };
     }
 
-    const records = devsRes.rows.map((r) => ({
-      ...r,
-      is_verified: Boolean(r.email_verified),
-      permissions: permsByDev[r.id] || {},
-      allowedModules: Object.keys(permsByDev[r.id] || {}).filter((k) => permsByDev[r.id][k].can_view),
-    }));
+    const records = devsRes.rows.map((r) => {
+      const devDirect = permsByDev[r.id] || {};
+      const rolePerms = r.role_id ? (permsByRole[r.role_id] || {}) : {};
+      const combined = { ...rolePerms, ...devDirect };
+      return {
+        ...r,
+        is_verified: Boolean(r.email_verified),
+        permissions: combined,
+        allowedModules: Object.keys(combined).filter((k) => combined[k].can_view),
+      };
+    });
 
     return NextResponse.json({
       success: true,
       table: 'developers',
       records,
       modules: modsRes.rows,
+      roles: rolesRes.rows,
       currentUser: auth
         ? {
             id: auth.id,

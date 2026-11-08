@@ -121,7 +121,7 @@ export async function getDeveloperSession(request) {
     if (!decoded || !decoded.id) return null;
 
     const res = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url, d.bio,
+      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.designation, d.avatar_url, d.bio,
               d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
        FROM developers d
        WHERE d.id = $1 LIMIT 1`,
@@ -186,7 +186,7 @@ export async function getDeveloperSession(request) {
       .map((r) => r.module_slug);
 
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
-    if (permissions.length === 0 || isOwner) {
+    if (isOwner) {
       const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
       permissions = Array.from(new Set([...permissions, ...allMods.rows.map((r) => r.slug)]));
     }
@@ -206,6 +206,7 @@ export async function getDeveloperSession(request) {
       name: dev.name,
       email: dev.email,
       phone: dev.phone,
+      roleId: dev.role_id,
       designation: dev.designation,
       avatarUrl: dev.avatar_url,
       bio: dev.bio,
@@ -253,7 +254,7 @@ export async function hasModulePermission(request, moduleSlug) {
       return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated' };
     }
 
-    if (!moduleSlug || moduleSlug === 'overview' || moduleSlug === 'profile' || moduleSlug === 'settings') {
+    if (!moduleSlug || moduleSlug === 'profile') {
       return { success: true, user: session, staff: session, developer: session };
     }
 
@@ -401,6 +402,7 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
     name: dev.name,
     email: dev.email,
     phone: dev.phone,
+    roleId: dev.role_id,
     designation: dev.designation,
     avatarUrl: dev.avatar_url,
   };

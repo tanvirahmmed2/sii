@@ -8,6 +8,7 @@ import LoadingScreen from 'src/component/common/LoadingScreen';
 export default function DevelopersPage() {
   const [developers, setDevelopers] = useState([]);
   const [modules, setModules] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resendingEmail, setResendingEmail] = useState(null);
@@ -15,10 +16,18 @@ export default function DevelopersPage() {
   const [actionNotice, setActionNotice] = useState({ text: '', type: 'info' });
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [expandedDevIds, setExpandedDevIds] = useState([]);
   const router = useRouter();
 
   const [editingDev, setEditingDev] = useState(null);
-  const [editFormData, setEditFormData] = useState({ name: '', phone: '', designation: '', is_active: true, password: '' });
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    phone: '',
+    role_id: '',
+    designation: '',
+    is_active: true,
+    password: '',
+  });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -37,6 +46,9 @@ export default function DevelopersPage() {
         setDevelopers(data.records || []);
         if (Array.isArray(data.modules)) {
           setModules(data.modules);
+        }
+        if (Array.isArray(data.roles)) {
+          setRoles(data.roles);
         }
         if (data.currentUser) {
           setCurrentUser(data.currentUser);
@@ -61,6 +73,9 @@ export default function DevelopersPage() {
         if (Array.isArray(adminData.modules)) {
           setModules(adminData.modules);
         }
+        if (Array.isArray(adminData.roles)) {
+          setRoles(adminData.roles);
+        }
         if (adminData.currentUser) {
           setCurrentUser(adminData.currentUser);
         }
@@ -83,6 +98,20 @@ export default function DevelopersPage() {
   );
 
   const activeDevCount = developers.filter((d) => d.is_active).length;
+
+  const handleToggleExpandDev = (id) => {
+    setExpandedDevIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleExpandAll = () => {
+    if (expandedDevIds.length === filteredDevelopers.length) {
+      setExpandedDevIds([]);
+    } else {
+      setExpandedDevIds(filteredDevelopers.map((d) => d.id));
+    }
+  };
 
   const handleToggleStatus = async (dev) => {
     setUpdatingStatusId(dev.id);
@@ -162,6 +191,7 @@ export default function DevelopersPage() {
     setEditFormData({
       name: dev.name || '',
       phone: dev.phone || '',
+      role_id: dev.role_id || (roles[0]?.id || ''),
       designation: dev.designation || '',
       is_active: dev.is_active !== false,
       password: '',
@@ -179,6 +209,7 @@ export default function DevelopersPage() {
         id: editingDev.id,
         name: editFormData.name.trim(),
         phone: editFormData.phone.trim(),
+        role_id: editFormData.role_id || null,
         designation: editFormData.designation.trim(),
         is_active: editFormData.is_active,
       };
@@ -194,6 +225,7 @@ export default function DevelopersPage() {
 
       const data = await res.json();
       if (data.success) {
+        const assignedRole = roles.find((r) => String(r.id) === String(payload.role_id));
         setDevelopers((prev) =>
           prev.map((d) =>
             d.id === editingDev.id
@@ -201,6 +233,9 @@ export default function DevelopersPage() {
                   ...d,
                   name: payload.name,
                   phone: payload.phone,
+                  role_id: payload.role_id,
+                  role_name: assignedRole?.name || d.role_name,
+                  role_slug: assignedRole?.slug || d.role_slug,
                   designation: payload.designation,
                   is_active: payload.is_active,
                 }
@@ -229,7 +264,7 @@ export default function DevelopersPage() {
     for (const mod of modules) {
       const p = existing[mod.slug] || {};
       initial[mod.slug] = {
-        can_view: Boolean(p.can_view ?? true),
+        can_view: Boolean(p.can_view ?? false),
         can_create: Boolean(p.can_create ?? false),
         can_edit: Boolean(p.can_edit ?? false),
         can_delete: Boolean(p.can_delete ?? false),
@@ -325,6 +360,7 @@ export default function DevelopersPage() {
       (d.name || '').toLowerCase().includes(term) ||
       (d.email || '').toLowerCase().includes(term) ||
       (d.phone || '').toLowerCase().includes(term) ||
+      (d.role_name || '').toLowerCase().includes(term) ||
       (d.designation || '').toLowerCase().includes(term)
     );
   });
@@ -345,17 +381,17 @@ export default function DevelopersPage() {
         <div
           className={`p-3 rounded border text-xs font-normal flex items-center justify-between ${
             actionNotice.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
               : actionNotice.type === 'success'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-slate-50 border-slate-200 text-slate-800'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+              : 'bg-slate-50 border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200'
           }`}
         >
           <span>{actionNotice.text}</span>
           <button
             type="button"
             onClick={() => setActionNotice({ text: '', type: 'info' })}
-            className="text-slate-500 hover:text-slate-800 ml-2 cursor-pointer font-medium"
+            className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 ml-2 cursor-pointer font-medium"
           >
             ✕
           </button>
@@ -424,6 +460,21 @@ export default function DevelopersPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Developer Role</label>
+                  <select
+                    value={editFormData.role_id}
+                    onChange={(e) => setEditFormData({ ...editFormData, role_id: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                  >
+                    {roles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Designation</label>
                   <input
                     type="text"
@@ -432,18 +483,18 @@ export default function DevelopersPage() {
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Account Status</label>
-                  <select
-                    value={editFormData.is_active ? 'active' : 'inactive'}
-                    onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.value === 'active' })}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Account Status</label>
+                <select
+                  value={editFormData.is_active ? 'active' : 'inactive'}
+                  onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.value === 'active' })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
 
               <div>
@@ -554,7 +605,7 @@ export default function DevelopersPage() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {filteredModulesForModal.map((mod) => {
                     const current = permsMap[mod.slug] || {
-                      can_view: true,
+                      can_view: false,
                       can_create: false,
                       can_edit: false,
                       can_delete: false,
@@ -575,9 +626,6 @@ export default function DevelopersPage() {
                         <td className="py-2">
                           <div className="font-semibold text-slate-900 dark:text-white">
                             {mod.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            /{mod.slug}
                           </div>
                         </td>
                         <td className="py-2 text-center">
@@ -644,11 +692,20 @@ export default function DevelopersPage() {
         <div>
           <h1 className="text-base font-semibold text-slate-900 dark:text-white">Developers Team</h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage platform engineers and assign direct module permissions.
+            Manage platform engineers, assign roles, and audit access privileges.
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleToggleExpandAll}
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors cursor-pointer"
+          >
+            {expandedDevIds.length === filteredDevelopers.length && filteredDevelopers.length > 0
+              ? 'Collapse All Details'
+              : 'Expand All Details'}
+          </button>
           <button
             type="button"
             onClick={() => fetchDevelopers(true)}
@@ -671,6 +728,7 @@ export default function DevelopersPage() {
       {showAddForm && isUserAdmin && (
         <AdminForm
           apiEndpoint="/api/marketing/developer/devs"
+          roles={roles}
           onSuccess={() => {
             setShowAddForm(false);
             fetchDevelopers();
@@ -696,10 +754,12 @@ export default function DevelopersPage() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
-                <th className="pb-2">ID</th>
+                <th className="pb-2 w-10">ID</th>
                 <th className="pb-2">Developer</th>
+                <th className="pb-2">Phone Number</th>
+                <th className="pb-2">Role</th>
                 <th className="pb-2">Designation</th>
-                <th className="pb-2">Permissions</th>
+                <th className="pb-2">Modules</th>
                 <th className="pb-2">Status</th>
                 <th className="pb-2">Verification</th>
                 <th className="pb-2">Last Login</th>
@@ -709,119 +769,208 @@ export default function DevelopersPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center">
+                  <td colSpan={10} className="py-8 text-center">
                     <LoadingScreen fullScreen={false} size="sm" label="Loading developers..." />
                   </td>
                 </tr>
               ) : filteredDevelopers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400 font-normal">No developer records found.</td>
+                  <td colSpan={10} className="py-8 text-center text-slate-400 font-normal">No developer records found.</td>
                 </tr>
               ) : (
                 filteredDevelopers.map((dev) => {
                   const isVerified = dev.is_verified === true || dev.isVerified === true;
                   const isActive = dev.is_active !== false && dev.isActive !== false;
                   const allowedCount = dev.allowedModules?.length || Object.keys(dev.permissions || {}).length || 0;
-                  const totalMods = modules.length || 37;
+                  const totalMods = modules.length || 41;
+                  const isExpanded = expandedDevIds.includes(dev.id);
 
                   return (
-                    <tr key={dev.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 font-mono text-slate-500">#{dev.id}</td>
-                      <td className="py-2.5">
-                        <div className="font-semibold text-slate-900 dark:text-white">{dev.name}</div>
-                        <div className="font-mono text-[11px] text-slate-500">{dev.email}</div>
-                        {dev.phone && <div className="font-mono text-[11px] text-slate-500">{dev.phone}</div>}
-                      </td>
-                      <td className="py-2.5">
-                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                          {dev.designation || 'Software Engineer'}
-                        </span>
-                      </td>
-
-                      <td className="py-2.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPermissions(dev)}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          <span>{allowedCount} / {totalMods} modules</span>
-                        </button>
-                      </td>
-
-                      <td className="py-2.5">
-                        <button
-                          type="button"
-                          disabled={!isUserAdmin || updatingStatusId === dev.id || (isActive && activeDevCount <= 1)}
-                          onClick={() => handleToggleStatus(dev)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
-                            isActive
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-rose-50 text-rose-800 border-rose-200'
-                          } disabled:opacity-50`}
-                        >
-                          {updatingStatusId === dev.id ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-
-                      <td className="py-2.5">
-                        {isVerified ? (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                            Verified
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
-                              Unverified
+                    <tr key={dev.id} className="group">
+                      <td colSpan={10} className="p-0">
+                        <div className="flex items-center px-2 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                          <div className="w-10 font-mono text-slate-500 shrink-0">#{dev.id}</div>
+                          <div className="flex-1 min-w-[180px] pr-3">
+                            <div className="font-semibold text-slate-900 dark:text-white">{dev.name}</div>
+                            <div className="font-mono text-[11px] text-slate-500">{dev.email}</div>
+                          </div>
+                          <div className="w-32 min-w-[120px] font-mono text-[11px] text-slate-600 dark:text-slate-400 pr-3 shrink-0">
+                            {dev.phone || '—'}
+                          </div>
+                          <div className="w-36 min-w-[130px] pr-3 shrink-0">
+                            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300">
+                              {dev.role_name || 'Software Engineer'}
                             </span>
+                          </div>
+                          <div className="w-32 min-w-[120px] pr-3 shrink-0">
+                            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                              {dev.designation || 'Software Engineer'}
+                            </span>
+                          </div>
+                          <div className="w-28 min-w-[100px] pr-3 shrink-0">
                             <button
                               type="button"
-                              disabled={resendingEmail === dev.email}
-                              onClick={() => handleResendCode(dev.email)}
-                              className="text-[10px] text-slate-600 dark:text-slate-400 hover:underline font-medium cursor-pointer"
+                              onClick={() => handleOpenPermissions(dev)}
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-medium border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
                             >
-                              {resendingEmail === dev.email ? 'Sending...' : 'Resend'}
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              <span>{allowedCount}/{totalMods}</span>
                             </button>
                           </div>
-                        )}
-                      </td>
-
-                      <td className="py-2.5 text-slate-500 text-xs font-mono">
-                        {dev.last_login_at || dev.lastLoginAt
-                          ? new Date(dev.last_login_at || dev.lastLoginAt).toLocaleDateString()
-                          : 'Never'}
-                      </td>
-
-                      <td className="py-2.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {isUserAdmin ? (
-                            <>
+                          <div className="w-20 min-w-[70px] pr-3 shrink-0">
+                            <button
+                              type="button"
+                              disabled={!isUserAdmin || updatingStatusId === dev.id || (isActive && activeDevCount <= 1)}
+                              onClick={() => handleToggleStatus(dev)}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-pointer ${
+                                isActive
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                                  : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
+                              } disabled:opacity-50`}
+                            >
+                              {updatingStatusId === dev.id ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
+                            </button>
+                          </div>
+                          <div className="w-28 min-w-[100px] pr-3 shrink-0">
+                            {isVerified ? (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+                                Verified
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+                                  Unverified
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={resendingEmail === dev.email}
+                                  onClick={() => handleResendCode(dev.email)}
+                                  className="text-[10px] text-slate-600 dark:text-slate-400 hover:underline font-medium cursor-pointer"
+                                >
+                                  {resendingEmail === dev.email ? 'Sending...' : 'Resend'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="w-24 min-w-[90px] font-mono text-slate-500 text-[11px] pr-3 shrink-0">
+                            {dev.last_login_at || dev.lastLoginAt
+                              ? new Date(dev.last_login_at || dev.lastLoginAt).toLocaleDateString()
+                              : 'Never'}
+                          </div>
+                          <div className="w-44 min-w-[160px] text-right shrink-0">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
                                 type="button"
-                                onClick={() => handleOpenPermissions(dev)}
-                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+                                onClick={() => handleToggleExpandDev(dev.id)}
+                                className={`px-2 py-1 rounded text-xs font-medium cursor-pointer border transition-colors ${
+                                  isExpanded
+                                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-slate-900 dark:border-slate-100'
+                                    : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                }`}
                               >
-                                Permissions
+                                {isExpanded ? 'Hide Info' : 'Show Info'}
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEdit(dev)}
-                                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteDeveloper(dev.id)}
-                                className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">Read-only</span>
-                          )}
+                              {isUserAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(dev)}
+                                    className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDeveloper(dev.id)}
+                                    className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
+
+                        {isExpanded && (
+                          <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-b border-slate-200 dark:border-slate-800 space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                              <div className="p-3 bg-white dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 space-y-1">
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                  Role & Security
+                                </div>
+                                <div className="font-semibold text-slate-900 dark:text-white">
+                                  {dev.role_name || 'Standard Developer'}
+                                </div>
+                                <div className="text-slate-500 text-[11px]">
+                                  {dev.designation || 'Software Engineer'}
+                                </div>
+                                {dev.role_description && (
+                                  <p className="text-[11px] text-slate-600 dark:text-slate-400 pt-1">
+                                    {dev.role_description}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="p-3 bg-white dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 space-y-1">
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                  Direct Contact
+                                </div>
+                                <div className="font-mono text-slate-800 dark:text-slate-200 text-xs">
+                                  Phone: {dev.phone}
+                                </div>
+                                <div className="font-mono text-slate-800 dark:text-slate-200 text-xs">
+                                  Email: {dev.email}
+                                </div>
+                                <div className="text-[11px] text-slate-500 pt-1">
+                                  Designation: {dev.designation || 'Software Engineer'}
+                                </div>
+                              </div>
+
+                              <div className="p-3 bg-white dark:bg-slate-800/80 rounded border border-slate-200 dark:border-slate-700 space-y-1">
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                  Account Lifecycle
+                                </div>
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                                  Created: {dev.created_at ? new Date(dev.created_at).toLocaleString() : 'N/A'}
+                                </div>
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                                  Updated: {dev.updated_at ? new Date(dev.updated_at).toLocaleString() : 'N/A'}
+                                </div>
+                                <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                                  Last Login: {dev.last_login_at ? new Date(dev.last_login_at).toLocaleString() : 'Never'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                                Permitted Modules ({dev.allowedModules?.length || 0} Allowed)
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {Array.isArray(dev.allowedModules) && dev.allowedModules.length > 0 ? (
+                                  dev.allowedModules.map((slug) => {
+                                    const p = dev.permissions?.[slug] || {};
+                                    const modObj = modules.find((m) => m.slug === slug);
+                                    return (
+                                      <span
+                                        key={slug}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                                      >
+                                        <span>{modObj?.name || slug}</span>
+                                        {p.can_create && <span className="text-[8px] px-1 rounded bg-blue-100 text-blue-800">C</span>}
+                                        {p.can_edit && <span className="text-[8px] px-1 rounded bg-amber-100 text-amber-800">E</span>}
+                                        {p.can_delete && <span className="text-[8px] px-1 rounded bg-rose-100 text-rose-800">D</span>}
+                                      </span>
+                                    );
+                                  })
+                                ) : (
+                                  <span className="text-xs text-slate-400">No permitted modules assigned to this developer.</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

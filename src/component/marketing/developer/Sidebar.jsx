@@ -78,6 +78,7 @@ export const ADMIN_NAV_SECTIONS = [
     title: 'Team & Organization',
     links: [
       { href: '/developer/developers', label: 'Developers Team' },
+      { href: '/developer/roles', label: 'Roles & Permissions' },
       { href: '/developer/payroll', label: 'Payroll & Salaries' },
       { href: '/developer/my-salaries', label: 'My Salaries' },
     ],
@@ -99,23 +100,24 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   const pathname = usePathname();
   const router = useRouter();
 
-  const isSuperAdmin = currentUser?.id === 1 || currentUser?.email === 'tanvir004006@gmail.com';
-  const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : null;
-  const allowedModules = (userPerms && userPerms.length > 0 ? userPerms : ['overview', 'profile', 'settings', 'templates'])
-    .map(m => String(m).toLowerCase());
+  const isSuperAdmin = Boolean(
+    currentUser && (
+      Number(currentUser.id) === 1 ||
+      String(currentUser.email).toLowerCase() === 'tanvir004006@gmail.com' ||
+      (Array.isArray(currentUser.permissions) && currentUser.permissions.includes('*'))
+    )
+  );
+
+  const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
+  const allowedModules = userPerms.map((m) => String(m).toLowerCase().trim());
 
   const isLinkAllowed = (link) => {
     if (isSuperAdmin) return true;
+    if (link.href === '/developer' || link.href === '/developer/profile') return true;
     const rawPath = link.href.split('?')[0];
     const segments = rawPath.split('/').filter(Boolean);
-    const moduleName = (segments[1] || 'overview').toLowerCase();
-    return (
-      moduleName === 'overview' ||
-      moduleName === 'profile' ||
-      moduleName === 'settings' ||
-      moduleName === 'templates' ||
-      allowedModules.includes(moduleName)
-    );
+    const moduleName = (segments[1] || '').toLowerCase().trim();
+    return allowedModules.includes(moduleName);
   };
 
   const handleLogout = async () => {
@@ -132,7 +134,13 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
 
   const isLinkActive = (link) => {
     const linkBase = link.href.split('?')[0];
-    if (link.exact) return pathname === linkBase && (!link.href.includes('?') || typeof window !== 'undefined' && window.location.search === link.href.slice(link.href.indexOf('?')));
+    if (link.exact) {
+      return (
+        pathname === linkBase &&
+        (!link.href.includes('?') ||
+          (typeof window !== 'undefined' && window.location.search === link.href.slice(link.href.indexOf('?'))))
+      );
+    }
     return pathname === linkBase || pathname.startsWith(`${linkBase}/`);
   };
 
