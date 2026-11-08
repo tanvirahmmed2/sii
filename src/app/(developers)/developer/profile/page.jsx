@@ -21,7 +21,6 @@ export default function DeveloperProfilePage() {
     name: '',
     email: '',
     phone: '',
-    designation: '',
     bio: '',
     github_profile: '',
     linkedin_profile: '',
@@ -88,7 +87,6 @@ export default function DeveloperProfilePage() {
       name: profile.name || '',
       email: profile.email || '',
       phone: profile.phone || '',
-      designation: profile.designation || '',
       bio: profile.bio || '',
       github_profile: profile.github_profile || '',
       linkedin_profile: profile.linkedin_profile || '',
@@ -142,7 +140,6 @@ export default function DeveloperProfilePage() {
         name: editForm.name.trim(),
         email: editForm.email.trim(),
         phone: editForm.phone.trim(),
-        designation: editForm.designation.trim(),
         bio: editForm.bio.trim(),
         github_profile: editForm.github_profile.trim(),
         linkedin_profile: editForm.linkedin_profile.trim(),
@@ -248,7 +245,6 @@ export default function DeveloperProfilePage() {
                 {profile?.email_verified ? 'Verified' : 'Unverified'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-normal">{profile?.designation || 'Software Engineer'}</p>
             <p className="text-xs text-slate-400 font-mono font-normal">{profile?.email}</p>
           </div>
         </div>
@@ -315,11 +311,6 @@ export default function DeveloperProfilePage() {
             <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800/60">
               <span className="text-slate-500">Phone</span>
               <span className="font-normal text-slate-900 dark:text-white">{profile?.phone || 'Not set'}</span>
-            </div>
-
-            <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800/60">
-              <span className="text-slate-500">Designation</span>
-              <span className="font-normal text-slate-900 dark:text-white">{profile?.designation || 'Software Engineer'}</span>
             </div>
 
             <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800/60">
@@ -502,28 +493,14 @@ export default function DeveloperProfilePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
-                  <input
-                    type="text"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Designation</label>
-                  <input
-                    type="text"
-                    value={editForm.designation}
-                    onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                    placeholder="Staff Engineer"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-                  />
-                </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
+                <input
+                  type="text"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+                />
               </div>
 
               <div className="space-y-1">
@@ -532,7 +509,6 @@ export default function DeveloperProfilePage() {
                   type="url"
                   value={editForm.avatar_url}
                   onChange={(e) => setEditForm({ ...editForm, avatar_url: e.target.value })}
-                  placeholder="https://..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
@@ -544,7 +520,6 @@ export default function DeveloperProfilePage() {
                     type="url"
                     value={editForm.github_profile}
                     onChange={(e) => setEditForm({ ...editForm, github_profile: e.target.value })}
-                    placeholder="https://github.com/..."
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
@@ -555,7 +530,6 @@ export default function DeveloperProfilePage() {
                     type="url"
                     value={editForm.linkedin_profile}
                     onChange={(e) => setEditForm({ ...editForm, linkedin_profile: e.target.value })}
-                    placeholder="https://linkedin.com/in/..."
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
@@ -567,7 +541,6 @@ export default function DeveloperProfilePage() {
                   rows={2}
                   value={editForm.bio}
                   onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                  placeholder="Tell your team about yourself..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
@@ -592,7 +565,6 @@ export default function DeveloperProfilePage() {
                         required={editForm.changePassword}
                         value={editForm.currentPassword}
                         onChange={(e) => setEditForm({ ...editForm, currentPassword: e.target.value })}
-                        placeholder="••••••••"
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500"
                       />
                     </div>
@@ -605,7 +577,6 @@ export default function DeveloperProfilePage() {
                           required={editForm.changePassword}
                           value={editForm.newPassword}
                           onChange={(e) => setEditForm({ ...editForm, newPassword: e.target.value })}
-                          placeholder="Min 6 chars"
                           className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500"
                         />
                       </div>
@@ -617,7 +588,6 @@ export default function DeveloperProfilePage() {
                           required={editForm.changePassword}
                           value={editForm.confirmPassword}
                           onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
-                          placeholder="Repeat new password"
                           className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500"
                         />
                       </div>

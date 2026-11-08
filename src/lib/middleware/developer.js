@@ -121,7 +121,7 @@ export async function getDeveloperSession(request) {
     if (!decoded || !decoded.id) return null;
 
     const res = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.designation, d.avatar_url, d.bio,
+      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.avatar_url, d.bio,
               d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
        FROM developers d
        WHERE d.id = $1 LIMIT 1`,
@@ -207,7 +207,6 @@ export async function getDeveloperSession(request) {
       email: dev.email,
       phone: dev.phone,
       roleId: dev.role_id,
-      designation: dev.designation,
       avatarUrl: dev.avatar_url,
       bio: dev.bio,
       githubProfile: dev.github_profile,
@@ -372,7 +371,6 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
   const token = generateToken({
     id: dev.id,
     email: dev.email,
-    designation: dev.designation,
   });
 
   try {
@@ -403,7 +401,6 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
     email: dev.email,
     phone: dev.phone,
     roleId: dev.role_id,
-    designation: dev.designation,
     avatarUrl: dev.avatar_url,
   };
 

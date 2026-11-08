@@ -962,9 +962,6 @@ export default function RolesPage() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            {dev.designation || 'Engineer'}
-                          </span>
                         </label>
                       );
                     })}
@@ -1014,9 +1011,6 @@ export default function RolesPage() {
                               </div>
                             </div>
                           </div>
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            {dev.designation || 'Engineer'}
-                          </span>
                         </label>
                       );
                     })}

@@ -13,7 +13,7 @@ export async function GET(request) {
     }
 
     const devRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url,
               d.github_profile, d.linkedin_profile, d.is_active, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
        WHERE d.id = $1
@@ -78,9 +78,10 @@ export async function PUT(request) {
 
     const currentRes = await queryDb(
       `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -158,14 +159,14 @@ export async function PUT(request) {
            password = $7,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $8
-       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
+       RETURNING id, name, email, phone, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
       [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
     );
 
     const updatedDev = {
       ...updateRes.rows[0],
-      role: currentDev.role,
-      role_name: currentDev.role_name,
+      role: currentDev.role_slug || 'developer',
+      role_name: currentDev.role_name || 'Developer',
     };
 
     const response = NextResponse.json({
@@ -182,7 +183,6 @@ export async function PUT(request) {
         name: updatedDev.name,
         email: updatedDev.email,
         phone: updatedDev.phone,
-        designation: updatedDev.designation,
         avatarUrl: updatedDev.avatar_url,
         bio: updatedDev.bio,
         githubProfile: updatedDev.github_profile,
@@ -200,7 +200,7 @@ export async function PUT(request) {
       try {
         const { generateToken, setDeveloperSessionCookie } = await import('src/lib/middleware/developer');
         const refreshedToken = generateToken(
-          { id: updatedDev.id, email: newEmail, designation: updatedDev.designation },
+          { id: updatedDev.id, email: newEmail },
           '7d'
         );
         await queryDb('UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE', [

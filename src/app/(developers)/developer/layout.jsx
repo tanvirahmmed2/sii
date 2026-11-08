@@ -66,7 +66,7 @@ export default function DeveloperLayout({ children }) {
             <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
               <h2 className="text-sm font-medium text-slate-900 dark:text-white">Access Restricted</h2>
               <p className="text-xs font-normal text-slate-600 dark:text-slate-400">
-                Your account ({user.designation || 'Developer'}) does not have permission to access the module <span className="font-mono">/{moduleName}</span>.
+                Your account ({user.roleName || user.role_name || user.role || 'Developer'}) does not have permission to access the module <span className="font-mono">/{moduleName}</span>.
               </p>
               <div className="pt-2">
                 <Link

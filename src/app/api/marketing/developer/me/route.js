@@ -24,11 +24,12 @@ export async function GET(request) {
         name: user.name,
         email: user.email,
         phone: user.phone || '',
-        designation: user.designation || 'Software Engineer',
         avatarUrl: user.avatarUrl || null,
         bio: user.bio || '',
         githubProfile: user.githubProfile || '',
         linkedinProfile: user.linkedinProfile || '',
+        role: user.role,
+        roleName: user.roleName || 'Developer',
         permissions: user.permissions || [],
         isActive: user.isActive !== false,
         isVerified: true,
@@ -53,11 +54,12 @@ export async function PUT(request) {
     const data = body.data || body;
 
     const currentRes = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url,
               d.github_profile, d.linkedin_profile, d.password,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -103,7 +105,6 @@ export async function PUT(request) {
     }
 
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
-    const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
@@ -139,15 +140,14 @@ export async function PUT(request) {
 
     const updateRes = await query(
       `UPDATE developers
-       SET name = $1, email = $2, phone = $3, designation = $4, bio = $5, github_profile = $6, linkedin_profile = $7, avatar_url = $8, password = $9, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $10
-       RETURNING id, name, email, phone, designation, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
+       SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, avatar_url = $7, password = $8, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9
+       RETURNING id, name, email, phone, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
     const updated = {
       ...updateRes.rows[0],
-      role: currentDev.role,
       role_name: currentDev.role_name,
     };
 
@@ -159,13 +159,12 @@ export async function PUT(request) {
         name: updated.name,
         email: updated.email,
         phone: updated.phone || '',
-        designation: updated.designation || 'Software Engineer',
         avatarUrl: updated.avatar_url || null,
         bio: updated.bio || '',
         githubProfile: updated.github_profile || '',
         linkedinProfile: updated.linkedin_profile || '',
-        role: updated.role,
-        roleName: updated.role_name || updated.role,
+        role: updated.role_slug || 'developer',
+        roleName: updated.role_name || 'Developer',
         permissions: authUser.permissions || [],
         isAdmin: Boolean(authUser.isAdmin),
         isActive: updated.is_active !== false,
@@ -176,7 +175,7 @@ export async function PUT(request) {
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
-          { id: updated.id, email: newEmail, designation: updated.designation },
+          { id: updated.id, email: newEmail },
           '7d'
         );
         await query(

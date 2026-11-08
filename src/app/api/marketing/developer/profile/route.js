@@ -21,11 +21,12 @@ export async function GET(request) {
     }
 
     const devRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.avatar_id,
               d.github_profile, d.linkedin_profile,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.email_verified, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1
        LIMIT 1`,
       [authUser.id]
@@ -86,6 +87,8 @@ export async function GET(request) {
       success: true,
       developer: {
         ...developer,
+        role: developer.role_slug || 'developer',
+        role_name: developer.role_name || 'Developer',
         is_verified: Boolean(developer.email_verified),
         isVerified: Boolean(developer.email_verified),
         permissions: authUser.permissions || [],
@@ -117,11 +120,12 @@ export async function PUT(request) {
     const data = body.data || body;
 
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.bio, d.avatar_url, d.avatar_id,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.avatar_id,
               d.github_profile, d.linkedin_profile, d.password,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.email_verified
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
       [authUser.id]
     );
@@ -167,7 +171,6 @@ export async function PUT(request) {
     }
 
     const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
-    const newDesignation = data.designation !== undefined ? data.designation.trim() : currentDev.designation;
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
@@ -206,22 +209,21 @@ export async function PUT(request) {
        SET name = $1,
            email = $2,
            phone = $3,
-           designation = $4,
-           bio = $5,
-           github_profile = $6,
-           linkedin_profile = $7,
-           avatar_url = $8,
-           password = $9,
+           bio = $4,
+           github_profile = $5,
+           linkedin_profile = $6,
+           avatar_url = $7,
+           password = $8,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $10
-       RETURNING id, name, email, phone, designation, bio, avatar_url, avatar_id, github_profile, linkedin_profile, is_active, email_verified, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newDesignation, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
+       WHERE id = $9
+       RETURNING id, name, email, phone, bio, avatar_url, avatar_id, github_profile, linkedin_profile, is_active, email_verified, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
     );
 
     const updatedDev = {
       ...updateRes.rows[0],
-      role: currentDev.role,
-      role_name: currentDev.role_name,
+      role: currentDev.role_slug || 'developer',
+      role_name: currentDev.role_name || 'Developer',
     };
 
     const response = NextResponse.json({
@@ -239,7 +241,6 @@ export async function PUT(request) {
         name: updatedDev.name,
         email: updatedDev.email,
         phone: updatedDev.phone,
-        designation: updatedDev.designation,
         avatarUrl: updatedDev.avatar_url,
         bio: updatedDev.bio,
         githubProfile: updatedDev.github_profile,
@@ -256,7 +257,7 @@ export async function PUT(request) {
     if (emailChanged) {
       try {
         const refreshedToken = generateToken(
-          { id: updatedDev.id, email: newEmail, designation: updatedDev.designation },
+          { id: updatedDev.id, email: newEmail },
           '7d'
         );
         await queryDb('UPDATE developer_login_sessions SET token = $1 WHERE developer_id = $2 AND is_active = TRUE', [

@@ -12,7 +12,6 @@ async function handleCreateAdmin(d, request) {
   const email = data.email?.trim().toLowerCase();
   const phone = data.phone?.trim();
   const password = data.password?.trim();
-  const designation = data.designation?.trim() || null;
   let roleId = data.role_id || data.roleId || null;
   if (!roleId) {
     const defaultRoleRes = await queryDb(
@@ -55,16 +54,16 @@ async function handleCreateAdmin(d, request) {
 
   const insertRes = await queryDb(
     `INSERT INTO developers (
-       name, email, phone, designation, role_id, password, is_active, email_verified,
+       name, email, phone, role_id, password, is_active, email_verified,
        verification_token, verification_token_expires, two_factor_code, two_factor_expires
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', $9, CURRENT_TIMESTAMP + INTERVAL '24 hours')
-     RETURNING id, name, email, phone, designation, role_id, is_active, email_verified, created_at`,
-    [name, email, phone, designation, roleId, hashedPassword, isActive, verificationToken, verificationCode]
+     VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7, CURRENT_TIMESTAMP + INTERVAL '24 hours', $8, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, phone, role_id, is_active, email_verified, created_at`,
+    [name, email, phone, roleId, hashedPassword, isActive, verificationToken, verificationCode]
   );
 
   const devWithRole = await queryDb(
-    `SELECT d.id, d.name, d.email, d.phone, d.designation, d.role_id, r.name AS role_name, r.slug AS role_slug,
+    `SELECT d.id, d.name, d.email, d.phone, d.role_id, r.name AS role_name, r.slug AS role_slug,
             d.is_active, d.email_verified, d.created_at, d.updated_at
      FROM developers d
      LEFT JOIN developer_roles r ON d.role_id = r.id
@@ -108,7 +107,7 @@ async function handleCreateAdmin(d, request) {
 export async function GET() {
   try {
     const devsRes = await queryDb(`
-      SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
+      SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
              d.role_id, r.name AS role_name,
              d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
       FROM developers d
@@ -278,7 +277,7 @@ export async function PUT(request) {
       }
 
       const fullRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
+        `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
                 d.role_id, r.name AS role_name, r.slug AS role_slug,
                 d.is_active, d.created_at, d.updated_at
          FROM developers d
@@ -301,6 +300,7 @@ export async function PUT(request) {
     delete data.action;
     delete data.role;
     delete data.permissions;
+    delete data.designation;
 
     const targetRoleId = data.role_id !== undefined ? data.role_id : data.roleId;
     delete data.roleId;
@@ -342,7 +342,7 @@ export async function PUT(request) {
     );
 
     const fullRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.created_at, d.updated_at
        FROM developers d

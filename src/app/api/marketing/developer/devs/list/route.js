@@ -40,7 +40,7 @@ export async function GET(request) {
     const auth = await getAuthenticatedUser(request);
     const [devsRes, modsRes, permsRes, rolePermsRes, rolesRes] = await Promise.all([
       queryDb(`
-        SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
+        SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
                d.role_id, r.name AS role_name, r.slug AS role_slug, r.description AS role_description,
                d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at, d.updated_at
         FROM developers d
@@ -123,7 +123,6 @@ export async function GET(request) {
             id: auth.id,
             name: auth.name,
             email: auth.email,
-            designation: auth.designation,
             permissions: auth.permissions || [],
           }
         : null,
@@ -210,7 +209,7 @@ export async function POST(request) {
 
       const res = await queryDb(
         `UPDATE developers SET is_active = $1 WHERE id = $2 
-         RETURNING id, name, email, designation, is_active, created_at`,
+         RETURNING id, name, email, is_active, created_at`,
         [Boolean(nextActive), targetId]
       );
       if (res.rows.length === 0) {
@@ -218,10 +217,11 @@ export async function POST(request) {
       }
 
       const fullRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-                'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+        `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+                d.role_id, r.name AS role_name, r.slug AS role_slug,
                 d.is_active, d.created_at
          FROM developers d
+         LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.id = $1 LIMIT 1`,
         [targetId]
       );
@@ -238,9 +238,9 @@ export async function POST(request) {
     delete updateData.action;
     delete updateData.id;
     delete updateData.adminId;
-
     delete updateData.role;
     delete updateData.role_id;
+    delete updateData.designation;
 
     if (updateData.phone) {
       updateData.phone = updateData.phone.trim();
@@ -282,10 +282,11 @@ export async function POST(request) {
     }
 
     const fullRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.designation, d.avatar_url,
-              'developer' AS role, COALESCE(d.designation, 'Developer') AS role_name,
+      `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.created_at
        FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
       [targetId]
     );

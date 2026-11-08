@@ -10,7 +10,6 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
     phone: '',
     role_id: roles[0]?.id || '',
     password: '',
-    designation: '',
     isActive: true,
   });
   const [readOnly, setReadOnly] = useState(true);
@@ -59,7 +58,6 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
             phone: formData.phone.trim(),
             role_id: formData.role_id || null,
             password: formData.password.trim(),
-            designation: formData.designation.trim() || null,
             isActive: Boolean(formData.isActive),
           },
         }),
@@ -74,7 +72,6 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
           phone: '',
           role_id: availableRoles[0]?.id || '',
           password: '',
-          designation: '',
           isActive: true,
         });
         if (onSuccess) {
@@ -214,23 +211,6 @@ export default function AdminForm({ onSuccess, onCancel, apiEndpoint = '/api/mar
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Designation
-            </label>
-            <input
-              type="text"
-              name="developer_designation"
-              autoComplete="off"
-              readOnly={readOnly}
-              onFocus={() => setReadOnly(false)}
-              onPointerDown={() => setReadOnly(false)}
-              value={formData.designation}
-              onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-            />
           </div>
 
           <div>

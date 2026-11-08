@@ -84,7 +84,6 @@ CREATE TABLE IF NOT EXISTS developers (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50) UNIQUE NOT NULL,
-    designation VARCHAR(100) DEFAULT 'Software Engineer',
     password VARCHAR(255) NOT NULL,
     avatar_url TEXT,
     avatar_id VARCHAR(255),

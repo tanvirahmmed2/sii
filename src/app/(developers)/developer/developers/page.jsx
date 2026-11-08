@@ -24,7 +24,6 @@ export default function DevelopersPage() {
     name: '',
     phone: '',
     role_id: '',
-    designation: '',
     is_active: true,
     password: '',
   });
@@ -192,7 +191,6 @@ export default function DevelopersPage() {
       name: dev.name || '',
       phone: dev.phone || '',
       role_id: dev.role_id || (roles[0]?.id || ''),
-      designation: dev.designation || '',
       is_active: dev.is_active !== false,
       password: '',
     });
@@ -210,7 +208,6 @@ export default function DevelopersPage() {
         name: editFormData.name.trim(),
         phone: editFormData.phone.trim(),
         role_id: editFormData.role_id || null,
-        designation: editFormData.designation.trim(),
         is_active: editFormData.is_active,
       };
       if (editFormData.password && editFormData.password.trim()) {
@@ -236,7 +233,6 @@ export default function DevelopersPage() {
                   role_id: payload.role_id,
                   role_name: assignedRole?.name || d.role_name,
                   role_slug: assignedRole?.slug || d.role_slug,
-                  designation: payload.designation,
                   is_active: payload.is_active,
                 }
               : d
@@ -360,8 +356,7 @@ export default function DevelopersPage() {
       (d.name || '').toLowerCase().includes(term) ||
       (d.email || '').toLowerCase().includes(term) ||
       (d.phone || '').toLowerCase().includes(term) ||
-      (d.role_name || '').toLowerCase().includes(term) ||
-      (d.designation || '').toLowerCase().includes(term)
+      (d.role_name || '').toLowerCase().includes(term)
     );
   });
 
@@ -458,31 +453,19 @@ export default function DevelopersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Developer Role</label>
-                  <select
-                    value={editFormData.role_id}
-                    onChange={(e) => setEditFormData({ ...editFormData, role_id: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  >
-                    {roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={editFormData.designation}
-                    onChange={(e) => setEditFormData({ ...editFormData, designation: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Developer Role</label>
+                <select
+                  value={editFormData.role_id}
+                  onChange={(e) => setEditFormData({ ...editFormData, role_id: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                >
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -758,7 +741,6 @@ export default function DevelopersPage() {
                 <th className="pb-2">Developer</th>
                 <th className="pb-2">Phone Number</th>
                 <th className="pb-2">Role</th>
-                <th className="pb-2">Designation</th>
                 <th className="pb-2">Modules</th>
                 <th className="pb-2">Status</th>
                 <th className="pb-2">Verification</th>
@@ -769,13 +751,13 @@ export default function DevelopersPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center">
+                  <td colSpan={9} className="py-8 text-center">
                     <LoadingScreen fullScreen={false} size="sm" label="Loading developers..." />
                   </td>
                 </tr>
               ) : filteredDevelopers.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400 font-normal">No developer records found.</td>
+                  <td colSpan={9} className="py-8 text-center text-slate-400 font-normal">No developer records found.</td>
                 </tr>
               ) : (
                 filteredDevelopers.map((dev) => {
@@ -787,7 +769,7 @@ export default function DevelopersPage() {
 
                   return (
                     <tr key={dev.id} className="group">
-                      <td colSpan={10} className="p-0">
+                      <td colSpan={9} className="p-0">
                         <div className="flex items-center px-2 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                           <div className="w-10 font-mono text-slate-500 shrink-0">#{dev.id}</div>
                           <div className="flex-1 min-w-[180px] pr-3">
@@ -800,11 +782,6 @@ export default function DevelopersPage() {
                           <div className="w-36 min-w-[130px] pr-3 shrink-0">
                             <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300">
                               {dev.role_name || 'Software Engineer'}
-                            </span>
-                          </div>
-                          <div className="w-32 min-w-[120px] pr-3 shrink-0">
-                            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-                              {dev.designation || 'Software Engineer'}
                             </span>
                           </div>
                           <div className="w-28 min-w-[100px] pr-3 shrink-0">
@@ -902,9 +879,6 @@ export default function DevelopersPage() {
                                 <div className="font-semibold text-slate-900 dark:text-white">
                                   {dev.role_name || 'Standard Developer'}
                                 </div>
-                                <div className="text-slate-500 text-[11px]">
-                                  {dev.designation || 'Software Engineer'}
-                                </div>
                                 {dev.role_description && (
                                   <p className="text-[11px] text-slate-600 dark:text-slate-400 pt-1">
                                     {dev.role_description}
@@ -921,9 +895,6 @@ export default function DevelopersPage() {
                                 </div>
                                 <div className="font-mono text-slate-800 dark:text-slate-200 text-xs">
                                   Email: {dev.email}
-                                </div>
-                                <div className="text-[11px] text-slate-500 pt-1">
-                                  Designation: {dev.designation || 'Software Engineer'}
                                 </div>
                               </div>
 

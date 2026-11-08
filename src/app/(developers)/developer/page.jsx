@@ -520,7 +520,7 @@ export default function DeveloperOverviewPage() {
               {activeDev.name || 'Developer Console'}
             </h1>
             <p className="text-xs text-slate-500 font-normal">
-              {activeDev.designation || 'Software Engineer'} &bull; {SITE_NAME} Developer Operations
+              {activeDev.role_name || activeDev.roleName || activeDev.role || 'Developer'} &bull; {SITE_NAME} Developer Operations
             </p>
           </div>
 

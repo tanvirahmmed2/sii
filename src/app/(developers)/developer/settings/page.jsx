@@ -52,7 +52,6 @@ export default function DeveloperSettingsPage() {
     name: '',
     email: '',
     phone: '',
-    designation: '',
     bio: '',
     github_profile: '',
     linkedin_profile: '',
@@ -94,7 +93,6 @@ export default function DeveloperSettingsPage() {
           name: d.name || '',
           email: d.email || '',
           phone: d.phone || '',
-          designation: d.designation || '',
           bio: d.bio || '',
           github_profile: d.github_profile || '',
           linkedin_profile: d.linkedin_profile || '',
@@ -137,7 +135,6 @@ export default function DeveloperSettingsPage() {
           name: profile.name.trim(),
           email: profile.email.trim(),
           phone: profile.phone.trim(),
-          designation: profile.designation.trim(),
           bio: profile.bio.trim(),
           github_profile: profile.github_profile.trim(),
           linkedin_profile: profile.linkedin_profile.trim(),
@@ -320,28 +317,14 @@ export default function DeveloperSettingsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
-                <input
-                  type="text"
-                  value={profile.phone}
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  placeholder="+1 (555) 000-0000"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Designation</label>
-                <input
-                  type="text"
-                  value={profile.designation}
-                  onChange={(e) => setProfile({ ...profile, designation: e.target.value })}
-                  placeholder="Software Engineer"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
+              <input
+                type="text"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
+              />
             </div>
 
             <div className="space-y-1">
@@ -350,7 +333,6 @@ export default function DeveloperSettingsPage() {
                 type="url"
                 value={profile.avatar_url}
                 onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                placeholder="https://..."
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
               />
             </div>
@@ -362,7 +344,6 @@ export default function DeveloperSettingsPage() {
                   type="url"
                   value={profile.github_profile}
                   onChange={(e) => setProfile({ ...profile, github_profile: e.target.value })}
-                  placeholder="https://github.com/..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
@@ -373,7 +354,6 @@ export default function DeveloperSettingsPage() {
                   type="url"
                   value={profile.linkedin_profile}
                   onChange={(e) => setProfile({ ...profile, linkedin_profile: e.target.value })}
-                  placeholder="https://linkedin.com/in/..."
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
@@ -385,7 +365,6 @@ export default function DeveloperSettingsPage() {
                 rows={2}
                 value={profile.bio}
                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                placeholder="Brief professional summary..."
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
               />
             </div>
@@ -416,7 +395,6 @@ export default function DeveloperSettingsPage() {
                   required
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  placeholder="••••••••"
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                 />
               </div>
@@ -429,7 +407,6 @@ export default function DeveloperSettingsPage() {
                     required
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    placeholder="Min 6 characters"
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>
@@ -441,7 +418,6 @@ export default function DeveloperSettingsPage() {
                     required
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    placeholder="Repeat new password"
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
                   />
                 </div>

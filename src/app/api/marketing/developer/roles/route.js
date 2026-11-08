@@ -43,7 +43,7 @@ export async function GET(request) {
         WHERE m.is_active = TRUE
       `),
       queryDb(`
-        SELECT d.id, d.name, d.email, d.phone, d.designation, d.role_id, r.name AS role_name, d.is_active
+        SELECT d.id, d.name, d.email, d.phone, d.role_id, r.name AS role_name, d.is_active
         FROM developers d
         LEFT JOIN developer_roles r ON d.role_id = r.id
         ORDER BY d.name ASC

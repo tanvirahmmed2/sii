@@ -247,7 +247,7 @@ export default function PlatformOverviewPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {developer?.designation || 'Developer'}
+              {developer?.role_name || developer?.roleName || developer?.role || 'Developer'}
             </span>
             <span className="text-xs text-slate-500 font-normal">{SITE_NAME} Operations Overview</span>
           </div>

@@ -19,9 +19,10 @@ export async function GET(request) {
                 d.name AS assigned_developer_name,
                 d.email AS assigned_developer_email,
                 d.avatar_url AS assigned_developer_avatar,
-                d.designation AS assigned_developer_designation
+                COALESCE(r.name, 'Developer') AS assigned_developer_role_name
          FROM live_chats lc
          LEFT JOIN developers d ON lc.assigned_developer_id = d.id
+         LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE lc.id = $1 LIMIT 1`,
         [Number(chatId)]
       );
@@ -47,8 +48,9 @@ export async function GET(request) {
       );
 
       const devRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.designation, d.avatar_url, COALESCE(d.designation, 'Developer') as role_name 
+        `SELECT d.id, d.name, d.email, d.avatar_url, d.role_id, COALESCE(r.name, 'Developer') as role_name 
          FROM developers d 
+         LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.is_active = TRUE 
          ORDER BY d.name ASC`
       ).catch(() => ({ rows: [] }));
