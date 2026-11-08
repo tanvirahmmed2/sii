@@ -1,7 +1,14 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET, DEVELOPER_TOKEN } from '../database/secret.js';
+import { JWT_SECRET, DEVELOPER_TOKEN, SITE_NAME } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
+import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import {
+  checkAccountLockout,
+  recordFailedLogin,
+  recordSuccessfulLogin,
+  generateSecureOtp,
+} from '../security/shield.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_jwt_secret_key_2026';
 export const DEVELOPER_COOKIE_NAME = DEVELOPER_TOKEN;
@@ -121,7 +128,7 @@ export async function getDeveloperSession(request) {
     if (!decoded || !decoded.id) return null;
 
     const res = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.avatar_url, d.bio,
+      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.bio,
               d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
        FROM developers d
        WHERE d.id = $1 LIMIT 1`,
@@ -207,7 +214,6 @@ export async function getDeveloperSession(request) {
       email: dev.email,
       phone: dev.phone,
       roleId: dev.role_id,
-      avatarUrl: dev.avatar_url,
       bio: dev.bio,
       githubProfile: dev.github_profile,
       linkedinProfile: dev.linkedin_profile,
@@ -246,20 +252,20 @@ export async function isStaff(request) {
 }
 export const authenticateStaff = isStaff;
 
-export async function hasModulePermission(request, moduleSlug) {
+export async function hasModulePermission(request, moduleSlug, action = 'view') {
   try {
     const session = await getDeveloperSession(request);
     if (!session || !session.isActive) {
-      return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated' };
+      return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated', canEdit: false };
     }
 
     if (!moduleSlug || moduleSlug === 'profile') {
-      return { success: true, user: session, staff: session, developer: session };
+      return { success: true, user: session, staff: session, developer: session, canEdit: true };
     }
 
     const isOwner = Number(session.id) === 1 || String(session.email).toLowerCase() === 'tanvir004006@gmail.com';
     if (isOwner) {
-      return { success: true, user: session, staff: session, developer: session };
+      return { success: true, user: session, staff: session, developer: session, canEdit: true, isOwner: true };
     }
 
     const slugs = (Array.isArray(moduleSlug) ? moduleSlug : [moduleSlug])
@@ -267,32 +273,44 @@ export async function hasModulePermission(request, moduleSlug) {
       .filter(Boolean);
 
     if (slugs.length === 0) {
-      return { success: true, user: session, staff: session, developer: session };
+      return { success: true, user: session, staff: session, developer: session, canEdit: true };
     }
 
     const permRes = await queryDb(
-      `SELECT 1 FROM module_permissions mp
+      `SELECT mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+       FROM module_permissions mp
        JOIN modules m ON mp.module_id = m.id
-       WHERE mp.developer_id = $1 AND mp.can_view = TRUE AND LOWER(m.slug) = ANY($2::text[])
+       WHERE mp.developer_id = $1 AND LOWER(m.slug) = ANY($2::text[])
        LIMIT 1`,
       [session.id, slugs]
     ).catch(() => ({ rows: [] }));
 
     if (permRes.rows.length > 0) {
-      return { success: true, user: session, staff: session, developer: session };
+      const p = permRes.rows[0];
+      const hasAction = action === 'edit'
+        ? p.can_edit
+        : action === 'create'
+        ? p.can_create
+        : action === 'delete'
+        ? p.can_delete
+        : p.can_view;
+
+      if (hasAction) {
+        return { success: true, user: session, staff: session, developer: session, canEdit: Boolean(p.can_edit) };
+      }
     }
 
     const userPerms = (session.permissions || []).map((p) => String(p).toLowerCase().trim());
     const hasPerm = slugs.some((slug) => userPerms.includes(slug));
 
     if (hasPerm) {
-      return { success: true, user: session, staff: session, developer: session };
+      return { success: true, user: session, staff: session, developer: session, canEdit: true };
     }
 
-    return { success: false, user: session, staff: session, developer: session, message: 'Permission denied for this module' };
+    return { success: false, user: session, staff: session, developer: session, message: 'Permission denied for this module', canEdit: false };
   } catch (error) {
     console.error('Permission validation error:', error);
-    return { success: false, user: null, staff: null, developer: null, message: error.message };
+    return { success: false, user: null, staff: null, developer: null, message: error.message, canEdit: false };
   }
 }
 
@@ -310,11 +328,20 @@ export async function requireDeveloperPermission(request, moduleSlug) {
   return check;
 }
 
-export async function authenticateDeveloper(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown' } = {}) {
+export async function authenticateDeveloper(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
   const raw = String(identifier || '').trim();
   const cleanEmail = raw.toLowerCase();
   const digits = raw.replace(/\D/g, '');
   const cleanPassword = String(password || '');
+
+  const lockoutCheck = await checkAccountLockout({ table: 'developers', identifier: raw });
+  if (lockoutCheck.isLocked) {
+    const err = new Error(lockoutCheck.error);
+    err.status = 429;
+    err.locked = true;
+    err.remainingMinutes = lockoutCheck.remainingMinutes;
+    throw err;
+  }
 
   const devRes = await queryDb(
     `SELECT d.*
@@ -339,28 +366,129 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
          VALUES ($1, $2, $3, 'Failed', 'Account deactivated')`,
         [dev.id, ip, userAgent]
       );
-    } catch {}
+    } catch (_) {}
     const err = new Error('Your developer account has been deactivated.');
     err.deactivated = true;
+    err.status = 403;
     throw err;
   }
 
   const isMatch = await comparePassword(cleanPassword, dev.password);
   if (!isMatch) {
-    try {
+    const failInfo = await recordFailedLogin({
+      table: 'developers',
+      id: dev.id,
+      ip,
+      userAgent,
+      reason: 'Incorrect password',
+      maxFailedAttempts: 5,
+      lockoutMinutes: 15,
+    });
+
+    if (failInfo.isLockedNow) {
+      const err = new Error(failInfo.error);
+      err.status = 429;
+      err.locked = true;
+      throw err;
+    }
+
+    const message = failInfo.warning
+      ? `Invalid password. ${failInfo.warning}`
+      : 'Invalid email, phone number, or password.';
+    throw new Error(message);
+  }
+
+  if (dev.two_factor_enabled) {
+    if (!twoFactorCode) {
+      const secureOtp = generateSecureOtp(6);
       await queryDb(
-        `INSERT INTO developer_login_activities (developer_id, ip_address, user_agent, status, failure_reason)
-         VALUES ($1, $2, $3, 'Failed', 'Incorrect password')`,
-        [dev.id, ip, userAgent]
+        `UPDATE developers 
+         SET two_factor_code = $1, 
+             two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes',
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [secureOtp, dev.id]
       );
-    } catch {}
-    throw new Error('Invalid email or password.');
+
+      try {
+        const emailHtml = buildStyledEmail({
+          title: `${SITE_NAME} Security Verification`,
+          subtitle: 'Two-Factor Authentication Code',
+          recipientName: dev.name || 'Developer',
+          bodyParagraphs: [
+            'A login request was initiated for your administrator account.',
+            'Enter the 6-digit verification code below to authorize your session.'
+          ],
+          code: secureOtp,
+          codeLabel: 'Security Code',
+          footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
+        });
+
+        await sendEmail({
+          to: dev.email,
+          subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
+          html: emailHtml,
+          text: `Your ${SITE_NAME} two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
+        });
+      } catch (mailErr) {
+        console.warn('Notice sending developer 2FA code email:', mailErr.message);
+      }
+
+      const maskedEmail = dev.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
+        return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
+      });
+
+      const err = new Error(`Two-factor authentication code sent to your registered email (${maskedEmail}).`);
+      err.requires2FA = true;
+      err.twoFactorRequired = true;
+      err.email = dev.email;
+      err.status = 401;
+      throw err;
+    }
+
+    const isCodeValid =
+      dev.two_factor_code &&
+      dev.two_factor_expires &&
+      new Date(dev.two_factor_expires) > new Date() &&
+      String(dev.two_factor_code).trim() === String(twoFactorCode).trim();
+
+    if (!isCodeValid) {
+      const failInfo = await recordFailedLogin({
+        table: 'developers',
+        id: dev.id,
+        ip,
+        userAgent,
+        reason: 'Invalid 2FA code',
+        maxFailedAttempts: 5,
+        lockoutMinutes: 15,
+      });
+
+      if (failInfo.isLockedNow) {
+        const err = new Error(failInfo.error);
+        err.status = 429;
+        err.locked = true;
+        throw err;
+      }
+
+      const err = new Error('Invalid or expired two-factor authentication code.');
+      err.requires2FA = true;
+      err.twoFactorRequired = true;
+      err.twoFactorInvalid = true;
+      err.status = 401;
+      throw err;
+    }
+
+    await queryDb(
+      `UPDATE developers SET two_factor_code = NULL, two_factor_expires = NULL WHERE id = $1`,
+      [dev.id]
+    );
   }
 
   if (dev.email_verified === false) {
     const err = new Error('Your developer account has not been verified yet. Please check your email for the activation link.');
     err.unverified = true;
     err.email = dev.email;
+    err.status = 403;
     throw err;
   }
 
@@ -373,18 +501,14 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
     email: dev.email,
   });
 
+  await recordSuccessfulLogin({
+    table: 'developers',
+    id: dev.id,
+    ip,
+    userAgent,
+  });
+
   try {
-    await queryDb(
-      `UPDATE developers SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
-      [dev.id]
-    );
-
-    await queryDb(
-      `INSERT INTO developer_login_activities (developer_id, ip_address, user_agent, status)
-       VALUES ($1, $2, $3, 'Success')`,
-      [dev.id, ip, userAgent]
-    );
-
     await queryDb(
       `INSERT INTO developer_login_sessions (developer_id, token, ip_address, user_agent, expires_at, is_active)
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
@@ -392,7 +516,7 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
       [dev.id, token, ip, userAgent]
     );
   } catch (e) {
-    console.warn('Notice saving login activity:', e.message);
+    console.warn('Notice saving login session:', e.message);
   }
 
   const developerProfile = {
@@ -401,7 +525,6 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
     email: dev.email,
     phone: dev.phone,
     roleId: dev.role_id,
-    avatarUrl: dev.avatar_url,
   };
 
   return {

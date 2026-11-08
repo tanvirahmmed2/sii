@@ -40,7 +40,7 @@ export async function GET(request) {
     const auth = await getAuthenticatedUser(request);
     const [devsRes, modsRes, permsRes, rolePermsRes, rolesRes] = await Promise.all([
       queryDb(`
-        SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+        SELECT d.id, d.name, d.email, d.phone,
                d.role_id, r.name AS role_name, r.slug AS role_slug, r.description AS role_description,
                d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at, d.updated_at
         FROM developers d
@@ -217,7 +217,7 @@ export async function POST(request) {
       }
 
       const fullRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+        `SELECT d.id, d.name, d.email, d.phone,
                 d.role_id, r.name AS role_name, r.slug AS role_slug,
                 d.is_active, d.created_at
          FROM developers d
@@ -234,13 +234,20 @@ export async function POST(request) {
       });
     }
 
-    const updateData = { ...body };
-    delete updateData.action;
-    delete updateData.id;
-    delete updateData.adminId;
-    delete updateData.role;
-    delete updateData.role_id;
-    delete updateData.designation;
+    const rawData = body.data || body;
+    const targetRoleId = rawData.role_id !== undefined ? rawData.role_id : rawData.roleId;
+
+    const updateData = {};
+    const allowedFields = ['name', 'email', 'phone', 'bio', 'github_profile', 'linkedin_profile', 'is_active'];
+    for (const field of allowedFields) {
+      if (rawData[field] !== undefined) {
+        updateData[field] = rawData[field];
+      }
+    }
+
+    if (targetRoleId !== undefined) {
+      updateData.role_id = targetRoleId || null;
+    }
 
     if (updateData.phone) {
       updateData.phone = updateData.phone.trim();
@@ -256,10 +263,8 @@ export async function POST(request) {
       }
     }
 
-    if (updateData.password && updateData.password.trim()) {
-      updateData.password = await hashPassword(updateData.password.trim());
-    } else {
-      delete updateData.password;
+    if (rawData.password && rawData.password.trim()) {
+      updateData.password = await hashPassword(rawData.password.trim());
     }
 
     const keys = Object.keys(updateData);
@@ -282,7 +287,7 @@ export async function POST(request) {
     }
 
     const fullRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.created_at
        FROM developers d

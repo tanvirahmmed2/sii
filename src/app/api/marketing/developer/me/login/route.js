@@ -1,12 +1,51 @@
 import { NextResponse } from 'next/server';
 import { authenticateDeveloper } from 'src/lib/middleware/developer';
 import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
+import {
+  getClientIp,
+  getUserAgent,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+} from 'src/lib/security/shield';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
+    const userAgent = getUserAgent(request);
     const identifier = (body.identifier || body.email || body.phone || '').trim();
     const password = body.password;
+    const twoFactorCode = (body.twoFactorCode || body.code || '').trim();
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier,
+      action: 'dev_login',
+      maxAttempts: 5,
+      windowSeconds: 900,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: rateCheck.error,
+          rateLimited: true,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds || 900) } }
+      );
+    }
 
     if (!identifier || !password) {
       return NextResponse.json(
@@ -15,10 +54,7 @@ export async function POST(request) {
       );
     }
 
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || '127.0.0.1';
-    const userAgent = request.headers.get('user-agent') || 'Unknown';
-
-    const result = await authenticateDeveloper(identifier, password, { ip, userAgent });
+    const result = await authenticateDeveloper(identifier, password, { ip, userAgent, twoFactorCode });
 
     const response = NextResponse.json({
       success: true,
@@ -40,6 +76,31 @@ export async function POST(request) {
 
     return response;
   } catch (error) {
+    if (error.twoFactorRequired || error.requires2FA) {
+      return NextResponse.json(
+        {
+          success: false,
+          twoFactorRequired: true,
+          requires2FA: true,
+          email: error.email,
+          message: error.message || 'Two-factor authentication code required.',
+        },
+        { status: 401 }
+      );
+    }
+
+    if (error.locked) {
+      return NextResponse.json(
+        {
+          success: false,
+          locked: true,
+          remainingMinutes: error.remainingMinutes,
+          error: error.message,
+        },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -48,7 +109,7 @@ export async function POST(request) {
         email: error.email || undefined,
         deactivated: Boolean(error.deactivated),
       },
-      { status: error.unverified || error.deactivated ? 403 : 401 }
+      { status: error.unverified || error.deactivated ? 403 : error.status || 401 }
     );
   }
 }

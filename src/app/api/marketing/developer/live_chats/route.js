@@ -18,7 +18,6 @@ export async function GET(request) {
         `SELECT lc.*,
                 d.name AS assigned_developer_name,
                 d.email AS assigned_developer_email,
-                d.avatar_url AS assigned_developer_avatar,
                 COALESCE(r.name, 'Developer') AS assigned_developer_role_name
          FROM live_chats lc
          LEFT JOIN developers d ON lc.assigned_developer_id = d.id
@@ -48,7 +47,7 @@ export async function GET(request) {
       );
 
       const devRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.avatar_url, d.role_id, COALESCE(r.name, 'Developer') as role_name 
+        `SELECT d.id, d.name, d.email, d.role_id, COALESCE(r.name, 'Developer') as role_name 
          FROM developers d 
          LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.is_active = TRUE 
@@ -67,7 +66,6 @@ export async function GET(request) {
     const res = await queryDb(
       `SELECT lc.*,
               d.name AS assigned_developer_name,
-              d.avatar_url AS assigned_developer_avatar,
               (SELECT message FROM live_chat_messages lcm WHERE lcm.chat_id = lc.id ORDER BY lcm.created_at DESC LIMIT 1) AS last_message,
               (SELECT sender_type FROM live_chat_messages lcm WHERE lcm.chat_id = lc.id ORDER BY lcm.created_at DESC LIMIT 1) AS last_sender_type,
               (SELECT created_at FROM live_chat_messages lcm WHERE lcm.chat_id = lc.id ORDER BY lcm.created_at DESC LIMIT 1) AS last_message_at,

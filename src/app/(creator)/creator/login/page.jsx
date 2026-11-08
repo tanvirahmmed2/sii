@@ -84,9 +84,14 @@ function CreatorLoginForm() {
           return;
         }
 
-        if (data.requires2FA) {
+        if (data.requires2FA || data.twoFactorRequired) {
           setIs2FARequired(true);
-          setError('Two-factor authentication code required.');
+          setError(data.message || 'Two-factor authentication code required. A verification code has been sent to your email.');
+          return;
+        }
+
+        if (data.locked) {
+          setError(data.error || 'Account temporarily locked due to multiple failed login attempts.');
           return;
         }
 
@@ -266,18 +271,31 @@ function CreatorLoginForm() {
           </div>
 
           {is2FARequired && (
-            <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                2FA Verification Code
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={6}
-                value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest text-center focus:outline-none focus:border-slate-800"
-              />
+            <div className="space-y-2">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  2FA Verification Code *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest text-center focus:outline-none focus:border-slate-800"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIs2FARequired(false);
+                  setTwoFactorCode('');
+                  setError('');
+                }}
+                className="w-full py-1 text-[11px] text-slate-600 hover:text-slate-900 underline text-center cursor-pointer"
+              >
+                Cancel 2FA and re-enter credentials
+              </button>
             </div>
           )}
 

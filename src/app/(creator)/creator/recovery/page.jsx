@@ -22,6 +22,15 @@ function CreatorRecoveryForm() {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (urlToken && urlEmail) {
@@ -34,6 +43,8 @@ function CreatorRecoveryForm() {
 
   const handleRequestCode = async (e) => {
     e.preventDefault();
+    if (cooldown > 0) return;
+
     if (!identifier.trim()) {
       setError('Email or phone number is required.');
       return;
@@ -53,6 +64,7 @@ function CreatorRecoveryForm() {
       if (data.success) {
         setStep(2);
         setMsg(data.message || 'A 6-digit reset code has been sent to your email.');
+        setCooldown(60);
       } else {
         setError(data.error || 'No creator account found with this email or phone number.');
       }
@@ -108,6 +120,7 @@ function CreatorRecoveryForm() {
   };
 
   const handleResend = async () => {
+    if (cooldown > 0) return;
     setResending(true);
     setError('');
     try {
@@ -119,6 +132,7 @@ function CreatorRecoveryForm() {
       const data = await res.json();
       if (data.success) {
         setMsg(data.message || 'A new reset code has been sent to your email.');
+        setCooldown(60);
       } else {
         setError(data.error || 'Failed to resend code.');
       }
@@ -172,10 +186,10 @@ function CreatorRecoveryForm() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldown > 0}
             className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
           >
-            {loading ? 'Sending code...' : 'Send Recovery Code'}
+            {loading ? 'Sending code...' : cooldown > 0 ? `Please wait ${cooldown}s` : 'Send Recovery Code'}
           </button>
         </form>
       )}
@@ -199,11 +213,11 @@ function CreatorRecoveryForm() {
             <div className="flex justify-end mt-1">
               <button
                 type="button"
-                disabled={resending}
+                disabled={resending || cooldown > 0}
                 onClick={handleResend}
-                className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer disabled:opacity-50"
               >
-                {resending ? 'Sending...' : 'Resend code'}
+                {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
               </button>
             </div>
           </div>

@@ -24,7 +24,6 @@ export async function GET(request) {
         name: user.name,
         email: user.email,
         phone: user.phone || '',
-        avatarUrl: user.avatarUrl || null,
         bio: user.bio || '',
         githubProfile: user.githubProfile || '',
         linkedinProfile: user.linkedinProfile || '',
@@ -54,7 +53,7 @@ export async function PUT(request) {
     const data = body.data || body;
 
     const currentRes = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio,
               d.github_profile, d.linkedin_profile, d.password,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active
@@ -108,7 +107,6 @@ export async function PUT(request) {
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
-    const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
 
     let newPasswordHash = currentDev.password;
     if (data.newPassword && data.newPassword.trim()) {
@@ -140,10 +138,10 @@ export async function PUT(request) {
 
     const updateRes = await query(
       `UPDATE developers
-       SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, avatar_url = $7, password = $8, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9
-       RETURNING id, name, email, phone, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
+       SET name = $1, email = $2, phone = $3, bio = $4, github_profile = $5, linkedin_profile = $6, password = $7, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $8
+       RETURNING id, name, email, phone, bio, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
     );
 
     const updated = {
@@ -159,7 +157,6 @@ export async function PUT(request) {
         name: updated.name,
         email: updated.email,
         phone: updated.phone || '',
-        avatarUrl: updated.avatar_url || null,
         bio: updated.bio || '',
         githubProfile: updated.github_profile || '',
         linkedinProfile: updated.linkedin_profile || '',

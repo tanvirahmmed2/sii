@@ -76,7 +76,8 @@ CREATE TRIGGER update_developer_roles_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 3. DEVELOPERS TABLE (SaaS Company Engineers, Admins & Staff)
+-- 3. 
+TABLE (SaaS Company Engineers, Admins & Staff)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS developers (
     id BIGSERIAL PRIMARY KEY,
@@ -85,8 +86,6 @@ CREATE TABLE IF NOT EXISTS developers (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    avatar_url TEXT,
-    avatar_id VARCHAR(255),
     bio TEXT,
     github_profile VARCHAR(255),
     linkedin_profile VARCHAR(255),
@@ -96,6 +95,9 @@ CREATE TABLE IF NOT EXISTS developers (
     verification_token_expires TIMESTAMPTZ,
     two_factor_code VARCHAR(10),
     two_factor_expires TIMESTAMPTZ,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
+    failed_login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
     recovery_token VARCHAR(255),
     recovery_token_expires TIMESTAMPTZ,
     last_login_at TIMESTAMPTZ,
@@ -371,6 +373,9 @@ CREATE TABLE IF NOT EXISTS creators (
     recovery_token_expires TIMESTAMPTZ,
     two_factor_code VARCHAR(10),
     two_factor_expires TIMESTAMPTZ,
+    two_factor_enabled BOOLEAN DEFAULT FALSE,
+    failed_login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -406,6 +411,55 @@ DROP TRIGGER IF EXISTS update_creator_login_sessions_updated_at ON creator_login
 CREATE TRIGGER update_creator_login_sessions_updated_at
     BEFORE UPDATE ON creator_login_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS creator_login_activities (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT REFERENCES creators(id) ON DELETE CASCADE,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    status VARCHAR(50) DEFAULT 'Success',
+    failure_reason VARCHAR(255),
+    login_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_creator_login_activities_creator_id ON creator_login_activities(creator_id);
+CREATE INDEX IF NOT EXISTS idx_creator_login_activities_ip ON creator_login_activities(ip_address);
+
+CREATE TABLE IF NOT EXISTS security_rate_limits (
+    id BIGSERIAL PRIMARY KEY,
+    rate_key VARCHAR(255) NOT NULL UNIQUE,
+    hit_count INT DEFAULT 1,
+    window_start TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    blocked_until TIMESTAMPTZ DEFAULT NULL,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_security_rate_limits_key ON security_rate_limits(rate_key);
+
+CREATE TABLE IF NOT EXISTS security_attack_logs (
+    id BIGSERIAL PRIMARY KEY,
+    ip_address VARCHAR(100) NOT NULL,
+    user_agent TEXT,
+    endpoint VARCHAR(255),
+    attack_type VARCHAR(100) NOT NULL,
+    severity VARCHAR(50) DEFAULT 'MEDIUM',
+    payload_sample TEXT,
+    blocked_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_security_attack_logs_ip ON security_attack_logs(ip_address);
+CREATE INDEX IF NOT EXISTS idx_security_attack_logs_created ON security_attack_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS contact_update_verifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('developer', 'creator')),
+    user_id BIGINT NOT NULL,
+    new_email VARCHAR(255),
+    new_phone VARCHAR(50),
+    otp_code VARCHAR(10) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_contact_update_user ON contact_update_verifications(user_type, user_id);
 
 -- ----------------------------------------------------------------------------
 -- 12. SUBSCRIBERS TABLE (Marketing & Newsletter Subscribers)

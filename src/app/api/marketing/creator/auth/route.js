@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { generateRandomCode, generateToken as generateAlphanumericToken } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
 import { SITE_NAME, CREATOR_TOKEN, getBaseUrl } from 'src/lib/database/secret';
 import {
@@ -11,20 +10,85 @@ import {
   hashPassword,
 } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import {
+  getClientIp,
+  getUserAgent,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  enforceOtpCooldown,
+  generateSecureOtp,
+  sanitizeInput,
+} from 'src/lib/security/shield';
 
 export async function handleAuthAction(body, request) {
+  const attackCheck = await inspectMalwareAndAttacks(request, body);
+  if (attackCheck.isBlocked) {
+    return NextResponse.json(
+      { success: false, error: attackCheck.error },
+      { status: attackCheck.status || 403 }
+    );
+  }
+
+  const ip = getClientIp(request);
+  const userAgent = getUserAgent(request);
   const { action } = body;
 
   if (action === 'register') {
     const d = body.creatorData || body;
+
+    if (d.hp_website || d.company_fax || d.bot_trap) {
+      return NextResponse.json({
+        success: true,
+        message: 'Account registered successfully! A 6-digit verification code has been sent to your email.',
+        creator: { id: 0, name: sanitizeInput(d.name), email: sanitizeInput(d.email), emailVerified: false },
+      });
+    }
+
+    if (d.reg_timestamp && Date.now() - Number(d.reg_timestamp) < 800) {
+      return NextResponse.json(
+        { success: false, error: 'Registration submitted too quickly. Please try again.' },
+        { status: 429 }
+      );
+    }
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      action: 'creator_register',
+      maxAttempts: 3,
+      windowSeconds: 3600,
+      blockDurationSeconds: 3600,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
     if (!d.name || !d.email || !d.password || !d.phone) {
       return NextResponse.json({ success: false, error: 'Name, email, phone number, and password are required.' }, { status: 400 });
     }
 
-    const cleanEmail = String(d.email).trim().toLowerCase();
-    const cleanPhone = String(d.phone).trim();
-    if (cleanPhone.length < 5) {
+    const cleanName = sanitizeInput(d.name);
+    const cleanEmail = sanitizeInput(d.email).toLowerCase();
+    const cleanPhone = sanitizeInput(d.phone);
+
+    if (cleanName.length < 2 || cleanName.length > 100) {
+      return NextResponse.json({ success: false, error: 'Name must be between 2 and 100 characters.' }, { status: 400 });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return NextResponse.json({ success: false, error: 'Please enter a valid email address.' }, { status: 400 });
+    }
+
+    if (cleanPhone.length < 5 || cleanPhone.length > 30) {
       return NextResponse.json({ success: false, error: 'Please enter a valid phone number.' }, { status: 400 });
+    }
+
+    if (String(d.password).length < 6) {
+      return NextResponse.json({ success: false, error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
     const phoneDigits = cleanPhone.replace(/\D/g, '');
@@ -55,21 +119,20 @@ export async function handleAuthAction(body, request) {
     }
 
     const hashedPassword = await hashPassword(d.password);
-    const verificationCode = generateAlphanumericToken(6);
-    const phone = cleanPhone;
-    const country = (d.country || '').trim() || null;
-    const city = (d.city || '').trim() || null;
-    const address = (d.address || '').trim() || null;
+    const verificationCode = generateSecureOtp(6);
+    const country = sanitizeInput(d.country) || null;
+    const city = sanitizeInput(d.city) || null;
+    const address = sanitizeInput(d.address) || null;
 
     const res = await queryDb(
-      `INSERT INTO creators (name, email, password, phone, country, city, address, email_verified, verification_token, verification_token_expires, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE)
+      `INSERT INTO creators (name, email, password, phone, country, city, address, email_verified, verification_token, verification_token_expires, is_active, failed_login_attempts)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, $8, CURRENT_TIMESTAMP + INTERVAL '24 hours', TRUE, 0)
        RETURNING id, name, email, phone, email_verified, is_active, created_at`,
       [
-        d.name.trim(),
+        cleanName,
         cleanEmail,
         hashedPassword,
-        phone,
+        cleanPhone,
         country,
         city,
         address,
@@ -78,9 +141,6 @@ export async function handleAuthAction(body, request) {
     );
 
     const newCreator = res.rows[0];
-
-    console.log(`[CREATOR REGISTRATION] Account created: ${cleanEmail}. Verification Code: ${verificationCode}`);
-
     const baseUrl = getBaseUrl(request);
     const verifyUrl = `${baseUrl}/creator/verify?token=${verificationCode}&email=${encodeURIComponent(cleanEmail)}`;
 
@@ -119,8 +179,6 @@ export async function handleAuthAction(body, request) {
     });
   }
 
-
-
   if (action === 'verify') {
     const { token, code, email, identifier, phone } = body;
     const candidateCode = String(code || token || '').trim();
@@ -132,6 +190,23 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = raw.toLowerCase();
     const phoneDigits = raw.replace(/\D/g, '');
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_verify',
+      maxAttempts: 5,
+      windowSeconds: 600,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
     const res = await queryDb(
       `SELECT id, name, email, email_verified, verification_token, verification_token_expires 
        FROM creators 
@@ -171,23 +246,31 @@ export async function handleAuthAction(body, request) {
 
     await queryDb(
       `UPDATE creators 
-       SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL, updated_at = CURRENT_TIMESTAMP 
+       SET email_verified = TRUE, 
+           verification_token = NULL, 
+           verification_token_expires = NULL, 
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
       [creator.id]
     );
 
     const sessionToken = generateToken(
-      { id: Number(creator.id), email: cleanEmail, role: 'creator', type: 'creator' },
+      { id: Number(creator.id), email: creator.email, role: 'creator', type: 'creator' },
       '7d'
     );
-
-    const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
-    const userAgent = request?.headers?.get('user-agent') || 'Unknown';
 
     await queryDb(
       `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,
       [creator.id, sessionToken, ip, userAgent]
+    ).catch(() => {});
+
+    await queryDb(
+      `INSERT INTO creator_login_activities (creator_id, ip_address, user_agent, status)
+       VALUES ($1, $2, $3, 'Success')`,
+      [creator.id, ip, userAgent]
     ).catch(() => {});
 
     const resp = NextResponse.json({
@@ -215,6 +298,42 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = raw.toLowerCase();
     const phoneDigits = raw.replace(/\D/g, '');
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_resend_otp',
+      maxAttempts: 3,
+      windowSeconds: 600,
+      blockDurationSeconds: 1800,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
+    const cooldownCheck = await enforceOtpCooldown({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_resend',
+      minIntervalSeconds: 60,
+      maxPerHour: 5,
+    });
+
+    if (!cooldownCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: cooldownCheck.error,
+          waitSeconds: cooldownCheck.waitSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
     const res = await queryDb(
       `SELECT id, name, email, is_active, email_verified FROM creators 
        WHERE LOWER(email) = $1 
@@ -237,7 +356,7 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: true, message: 'This account is already verified! You can log in directly.', alreadyVerified: true });
     }
 
-    const newCode = generateAlphanumericToken(6);
+    const newCode = generateSecureOtp(6);
     await queryDb(
       `UPDATE creators 
        SET verification_token = $1, verification_token_expires = CURRENT_TIMESTAMP + INTERVAL '24 hours', updated_at = CURRENT_TIMESTAMP 
@@ -246,8 +365,6 @@ export async function handleAuthAction(body, request) {
     );
 
     const targetEmail = creator.email;
-    console.log(`[CREATOR RESEND] New verification code for ${targetEmail}: ${newCode}`);
-
     const baseUrl = getBaseUrl(request);
     const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(targetEmail)}`;
 
@@ -277,14 +394,34 @@ export async function handleAuthAction(body, request) {
     return NextResponse.json({
       success: true,
       message: 'A new 6-digit verification code has been sent to your email.',
+      cooldownSeconds: 60,
     });
   }
 
   if (action === 'login') {
     const identifier = (body.identifier || body.email || body.phone || '').trim();
     const { password, twoFactorCode } = body;
-    const ip = request?.headers?.get('x-forwarded-for')?.split(',')[0]?.trim() || request?.headers?.get('x-real-ip') || '127.0.0.1';
-    const userAgent = request?.headers?.get('user-agent') || 'Unknown';
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier,
+      action: 'creator_login',
+      maxAttempts: 5,
+      windowSeconds: 900,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: rateCheck.error,
+          rateLimited: true,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds || 900) } }
+      );
+    }
 
     try {
       const result = await authenticateCreator(identifier, password, { ip, userAgent, twoFactorCode });
@@ -302,13 +439,16 @@ export async function handleAuthAction(body, request) {
         {
           success: false,
           error: authErr.message || 'Authentication failed.',
-          twoFactorRequired: Boolean(authErr.twoFactorRequired),
+          twoFactorRequired: Boolean(authErr.twoFactorRequired || authErr.requires2FA),
+          requires2FA: Boolean(authErr.requires2FA || authErr.twoFactorRequired),
           twoFactorInvalid: Boolean(authErr.twoFactorInvalid),
           unverified: Boolean(authErr.unverified),
           deactivated: Boolean(authErr.deactivated),
+          locked: Boolean(authErr.locked),
+          remainingMinutes: authErr.remainingMinutes,
           email: authErr.email || undefined,
         },
-        { status: authErr.status || 401 }
+        { status: authErr.locked ? 429 : authErr.unverified || authErr.deactivated ? 403 : authErr.status || 401 }
       );
     }
   }
@@ -346,7 +486,43 @@ export async function handleAuthAction(body, request) {
 
     const cleanEmail = raw.toLowerCase();
     const phoneDigits = raw.replace(/\D/g, '');
-    const recoveryCode = generateAlphanumericToken(6);
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_recovery_request',
+      maxAttempts: 3,
+      windowSeconds: 600,
+      blockDurationSeconds: 1800,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
+    const cooldownCheck = await enforceOtpCooldown({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_recovery',
+      minIntervalSeconds: 60,
+      maxPerHour: 5,
+    });
+
+    if (!cooldownCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: cooldownCheck.error,
+          waitSeconds: cooldownCheck.waitSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    const recoveryCode = generateSecureOtp(6);
 
     const res = await queryDb(
       `UPDATE creators 
@@ -370,8 +546,6 @@ export async function handleAuthAction(body, request) {
     const targetEmail = creator.email;
     const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/creator/recovery?token=${recoveryCode}&email=${encodeURIComponent(targetEmail)}`;
-
-    console.log(`[CREATOR RECOVERY] Password reset code for ${targetEmail}: ${recoveryCode}`);
 
     try {
       await sendEmail({
@@ -404,6 +578,7 @@ export async function handleAuthAction(body, request) {
       success: true,
       message: `A 6-digit password reset code has been sent to your email (${maskedEmail}).`,
       email: targetEmail,
+      cooldownSeconds: 60,
     });
   }
 
@@ -416,12 +591,29 @@ export async function handleAuthAction(body, request) {
       return NextResponse.json({ success: false, error: 'Email or phone number, recovery code, and new password are required.' }, { status: 400 });
     }
 
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'creator_reset_pw',
+      maxAttempts: 5,
+      windowSeconds: 600,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
     if (String(newPassword).length < 6) {
       return NextResponse.json({ success: false, error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
-    const cleanEmail = raw.toLowerCase();
-    const phoneDigits = raw.replace(/\D/g, '');
     const res = await queryDb(
       `SELECT id, name, email, recovery_token, recovery_token_expires 
        FROM creators 
@@ -448,7 +640,12 @@ export async function handleAuthAction(body, request) {
     const hashedPassword = await hashPassword(newPassword);
     await queryDb(
       `UPDATE creators 
-       SET password = $1, recovery_token = NULL, recovery_token_expires = NULL, updated_at = CURRENT_TIMESTAMP 
+       SET password = $1, 
+           recovery_token = NULL, 
+           recovery_token_expires = NULL, 
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`,
       [hashedPassword, creator.id]
     );
@@ -470,17 +667,15 @@ export async function GET(request) {
     }
     return NextResponse.json({ success: true, creator: current });
   } catch (error) {
-    console.error('Auth GET API error:', error);
     return NextResponse.json({ success: false, creator: null, error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     return await handleAuthAction(body, request);
   } catch (error) {
-    console.error('Auth POST API error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

@@ -1,8 +1,15 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
-import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, extractBaseDomain } from '../database/secret.js';
+import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, SITE_NAME, extractBaseDomain } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
+import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import {
+  checkAccountLockout,
+  recordFailedLogin,
+  recordSuccessfulLogin,
+  generateSecureOtp,
+} from '../security/shield.js';
 import {
   resolveWebsiteFromRequest,
   resolveWebsite,
@@ -138,6 +145,7 @@ export async function getCreatorSession(request) {
       address: c.address || null,
       isActive: c.is_active,
       isVerified: c.is_verified || c.email_verified || false,
+      two_factor_enabled: Boolean(c.two_factor_enabled),
       createdAt: c.created_at,
       token,
     };
@@ -156,6 +164,15 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
   const cleanEmail = raw.toLowerCase();
   const digits = raw.replace(/\D/g, '');
 
+  const lockoutCheck = await checkAccountLockout({ table: 'creators', identifier: raw });
+  if (lockoutCheck.isLocked) {
+    const err = new Error(lockoutCheck.error);
+    err.status = 429;
+    err.locked = true;
+    err.remainingMinutes = lockoutCheck.remainingMinutes;
+    throw err;
+  }
+
   const res = await queryDb(
     `SELECT * FROM creators 
      WHERE LOWER(email) = $1 
@@ -172,6 +189,13 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
   const creator = res.rows[0];
 
   if (!creator.is_active) {
+    try {
+      await queryDb(
+        `INSERT INTO creator_login_activities (creator_id, ip_address, user_agent, status, failure_reason)
+         VALUES ($1, $2, $3, 'Failed', 'Account deactivated')`,
+        [creator.id, ip, userAgent]
+      );
+    } catch (_) {}
     const err = new Error('Your creator account has been deactivated.');
     err.deactivated = true;
     err.status = 403;
@@ -186,7 +210,113 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
 
   const isMatch = await comparePassword(password, creator.password);
   if (!isMatch) {
-    throw new Error('Incorrect email or password.');
+    const failInfo = await recordFailedLogin({
+      table: 'creators',
+      id: creator.id,
+      ip,
+      userAgent,
+      reason: 'Incorrect password',
+      maxFailedAttempts: 5,
+      lockoutMinutes: 15,
+    });
+
+    if (failInfo.isLockedNow) {
+      const err = new Error(failInfo.error);
+      err.status = 429;
+      err.locked = true;
+      throw err;
+    }
+
+    const message = failInfo.warning
+      ? `Incorrect password. ${failInfo.warning}`
+      : 'Incorrect email or password.';
+    throw new Error(message);
+  }
+
+  if (creator.two_factor_enabled) {
+    if (!twoFactorCode) {
+      const secureOtp = generateSecureOtp(6);
+      await queryDb(
+        `UPDATE creators 
+         SET two_factor_code = $1, 
+             two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes',
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [secureOtp, creator.id]
+      );
+
+      try {
+        const emailHtml = buildStyledEmail({
+          title: `${SITE_NAME} Security Verification`,
+          subtitle: 'Creator Two-Factor Authentication',
+          recipientName: creator.name || 'Creator',
+          bodyParagraphs: [
+            'A login request was initiated for your creator studio account.',
+            'Enter the 6-digit verification code below to authorize your session.'
+          ],
+          code: secureOtp,
+          codeLabel: 'Security Code',
+          footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
+        });
+
+        await sendEmail({
+          to: creator.email,
+          subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
+          html: emailHtml,
+          text: `Your ${SITE_NAME} creator two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
+        });
+      } catch (mailErr) {
+        console.warn('Notice sending creator 2FA code email:', mailErr.message);
+      }
+
+      const maskedEmail = creator.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
+        return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
+      });
+
+      const err = new Error(`Two-factor authentication code sent to your registered email (${maskedEmail}).`);
+      err.requires2FA = true;
+      err.twoFactorRequired = true;
+      err.email = creator.email;
+      err.status = 401;
+      throw err;
+    }
+
+    const isCodeValid =
+      creator.two_factor_code &&
+      creator.two_factor_expires &&
+      new Date(creator.two_factor_expires) > new Date() &&
+      String(creator.two_factor_code).trim() === String(twoFactorCode).trim();
+
+    if (!isCodeValid) {
+      const failInfo = await recordFailedLogin({
+        table: 'creators',
+        id: creator.id,
+        ip,
+        userAgent,
+        reason: 'Invalid 2FA code',
+        maxFailedAttempts: 5,
+        lockoutMinutes: 15,
+      });
+
+      if (failInfo.isLockedNow) {
+        const err = new Error(failInfo.error);
+        err.status = 429;
+        err.locked = true;
+        throw err;
+      }
+
+      const err = new Error('Invalid or expired two-factor authentication code.');
+      err.requires2FA = true;
+      err.twoFactorRequired = true;
+      err.twoFactorInvalid = true;
+      err.status = 401;
+      throw err;
+    }
+
+    await queryDb(
+      `UPDATE creators SET two_factor_code = NULL, two_factor_expires = NULL WHERE id = $1`,
+      [creator.id]
+    );
   }
 
   const isVerified = Boolean(creator.email_verified || creator.is_verified);
@@ -198,22 +328,6 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
     throw err;
   }
 
-  if (creator.two_factor_code && creator.two_factor_expires && new Date(creator.two_factor_expires) > new Date()) {
-    if (!twoFactorCode) {
-      const err = new Error('Two-factor authentication code required.');
-      err.twoFactorRequired = true;
-      err.status = 401;
-      throw err;
-    }
-    if (String(twoFactorCode).trim() !== String(creator.two_factor_code).trim()) {
-      const err = new Error('Invalid two-factor authentication code.');
-      err.twoFactorRequired = true;
-      err.twoFactorInvalid = true;
-      err.status = 401;
-      throw err;
-    }
-  }
-
   const token = generateToken({
     id: Number(creator.id),
     email: creator.email,
@@ -221,12 +335,14 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
     type: 'creator',
   });
 
-  try {
-    await queryDb(
-      `UPDATE creators SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1`,
-      [creator.id]
-    );
+  await recordSuccessfulLogin({
+    table: 'creators',
+    id: creator.id,
+    ip,
+    userAgent,
+  });
 
+  try {
     await queryDb(
       `INSERT INTO creator_login_sessions (creator_id, token, ip_address, user_agent, expires_at)
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '7 days')`,

@@ -7,6 +7,9 @@ import {
   setDeveloperSessionCookie,
 } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
+import { inspectMalwareAndAttacks, generateSecureOtp } from 'src/lib/security/shield';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { SITE_NAME } from 'src/lib/database/secret';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -21,10 +24,10 @@ export async function GET(request) {
     }
 
     const devRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.avatar_id,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio,
               d.github_profile, d.linkedin_profile,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
-              d.is_active, d.email_verified, d.last_login_at, d.created_at, d.updated_at
+              d.is_active, d.email_verified, COALESCE(d.two_factor_enabled, false) AS two_factor_enabled, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
        LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1
@@ -91,6 +94,7 @@ export async function GET(request) {
         role_name: developer.role_name || 'Developer',
         is_verified: Boolean(developer.email_verified),
         isVerified: Boolean(developer.email_verified),
+        two_factor_enabled: Boolean(developer.two_factor_enabled),
         permissions: authUser.permissions || [],
         rolePermissions,
         isAdmin: Boolean(authUser.isAdmin),
@@ -117,13 +121,21 @@ export async function PUT(request) {
     }
 
     const body = await request.json().catch(() => ({}));
+    const sec = await inspectMalwareAndAttacks(request, body);
+    if (sec.isBlocked || sec.allowed === false) {
+      return NextResponse.json(
+        { success: false, error: sec.error || 'Request blocked by security rules.' },
+        { status: sec.status || 403 }
+      );
+    }
+
     const data = body.data || body;
 
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.avatar_id,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio,
               d.github_profile, d.linkedin_profile, d.password,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
-              d.is_active, d.email_verified
+              d.is_active, d.email_verified, COALESCE(d.two_factor_enabled, false) AS two_factor_enabled
        FROM developers d
        LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`,
@@ -135,6 +147,8 @@ export async function PUT(request) {
     }
 
     const currentDev = currentRes.rows[0];
+    const currentEmail = String(currentDev.email || '').toLowerCase().trim();
+    const currentPhone = String(currentDev.phone || '').trim();
 
     let newName = currentDev.name;
     if (data.name !== undefined) {
@@ -144,10 +158,10 @@ export async function PUT(request) {
       }
     }
 
-    let newEmail = currentDev.email;
+    let newEmail = currentEmail;
     let emailChanged = false;
     if (data.email !== undefined) {
-      newEmail = data.email.trim().toLowerCase();
+      newEmail = String(data.email || '').trim().toLowerCase();
       if (!newEmail) {
         return NextResponse.json({ success: false, error: 'Email address cannot be empty.' }, { status: 400 });
       }
@@ -155,7 +169,7 @@ export async function PUT(request) {
         return NextResponse.json({ success: false, error: 'Please enter a valid email address.' }, { status: 400 });
       }
 
-      if (newEmail !== currentDev.email.toLowerCase()) {
+      if (newEmail !== currentEmail) {
         const emailCheck = await queryDb(
           'SELECT id FROM developers WHERE LOWER(email) = LOWER($1) AND id != $2 LIMIT 1',
           [newEmail, authUser.id]
@@ -166,15 +180,107 @@ export async function PUT(request) {
             { status: 409 }
           );
         }
-        emailChanged = true;
       }
     }
 
-    const newPhone = data.phone !== undefined ? data.phone.trim() : currentDev.phone;
+    let newPhone = currentPhone;
+    let phoneChanged = false;
+    if (data.phone !== undefined) {
+      newPhone = String(data.phone || '').trim();
+      if (!newPhone) {
+        return NextResponse.json({ success: false, error: 'Phone number cannot be empty.' }, { status: 400 });
+      }
+
+      if (newPhone !== currentPhone) {
+        const phoneCheck = await queryDb(
+          'SELECT id FROM developers WHERE phone = $1 AND id != $2 LIMIT 1',
+          [newPhone, authUser.id]
+        );
+        if (phoneCheck.rows.length > 0) {
+          return NextResponse.json(
+            { success: false, error: 'This phone number is already registered to another developer account.' },
+            { status: 409 }
+          );
+        }
+        phoneChanged = true;
+      }
+    }
+
+    const contactChanged = (data.email !== undefined && newEmail !== currentEmail) || phoneChanged;
+    if (contactChanged) {
+      const otpCode = String(data.otpCode || '').trim();
+      if (!otpCode) {
+        const generatedOtp = generateSecureOtp(6);
+        await queryDb('DELETE FROM contact_update_verifications WHERE user_type = $1 AND user_id = $2', ['developer', authUser.id]);
+        await queryDb(
+          `INSERT INTO contact_update_verifications (user_type, user_id, new_email, new_phone, otp_code, expires_at)
+           VALUES ('developer', $1, $2, $3, $4, CURRENT_TIMESTAMP + INTERVAL '10 minutes')`,
+          [authUser.id, newEmail, newPhone, generatedOtp]
+        );
+
+        try {
+          await sendEmail({
+            to: currentDev.email,
+            toName: currentDev.name,
+            subject: `Security Verification Code: ${generatedOtp} - ${SITE_NAME}`,
+            html: buildStyledEmail({
+              title: 'Verify Profile Contact Update',
+              subtitle: 'A request was made to update your developer account email or phone number.',
+              recipientName: currentDev.name,
+              code: generatedOtp,
+              codeLabel: 'Security Verification Code',
+              bodyParagraphs: [
+                `You requested to change your contact details on ${SITE_NAME}.`,
+                newEmail !== currentEmail ? `Requested Email: ${newEmail}` : null,
+                phoneChanged ? `Requested Phone: ${newPhone}` : null,
+                'Please enter this 6-digit verification code to confirm and apply your changes.',
+                'This code will expire in 10 minutes. If you did not initiate this change, please secure your account immediately.',
+              ].filter(Boolean),
+            }),
+          });
+        } catch (mailErr) {
+          console.error('Failed to dispatch developer OTP email:', mailErr);
+          return NextResponse.json(
+            { success: false, error: `Failed to dispatch security verification email: ${mailErr.message || 'Mail service error.'}` },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({
+          success: false,
+          otpRequired: true,
+          message: `A 6-digit verification code has been sent to your registered email (${currentDev.email}) to confirm the change of your contact details.`,
+        });
+      }
+
+      const verifyRes = await queryDb(
+        `SELECT id, new_email, new_phone FROM contact_update_verifications
+         WHERE user_type = 'developer' AND user_id = $1 AND otp_code = $2 AND expires_at > CURRENT_TIMESTAMP
+         ORDER BY id DESC LIMIT 1`,
+        [authUser.id, otpCode]
+      );
+
+      if (verifyRes.rows.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid or expired verification code. Please request a new code.' },
+          { status: 400 }
+        );
+      }
+
+      const verifiedRecord = verifyRes.rows[0];
+      newEmail = verifiedRecord.new_email || newEmail;
+      newPhone = verifiedRecord.new_phone || newPhone;
+      if (newEmail !== currentEmail) {
+        emailChanged = true;
+      }
+
+      await queryDb('DELETE FROM contact_update_verifications WHERE id = $1', [verifiedRecord.id]);
+    }
+
     const newBio = data.bio !== undefined ? data.bio.trim() : currentDev.bio;
     const newGithub = data.github_profile !== undefined ? data.github_profile.trim() : currentDev.github_profile;
     const newLinkedin = data.linkedin_profile !== undefined ? data.linkedin_profile.trim() : currentDev.linkedin_profile;
-    const newAvatarUrl = data.avatar_url !== undefined ? data.avatar_url.trim() : currentDev.avatar_url;
+    const newTwoFactor = data.two_factor_enabled !== undefined ? Boolean(data.two_factor_enabled) : Boolean(currentDev.two_factor_enabled);
 
     let newPasswordHash = currentDev.password;
     if (data.newPassword && data.newPassword.trim()) {
@@ -212,12 +318,12 @@ export async function PUT(request) {
            bio = $4,
            github_profile = $5,
            linkedin_profile = $6,
-           avatar_url = $7,
-           password = $8,
+           password = $7,
+           two_factor_enabled = $8,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $9
-       RETURNING id, name, email, phone, bio, avatar_url, avatar_id, github_profile, linkedin_profile, is_active, email_verified, last_login_at, created_at, updated_at`,
-      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newAvatarUrl, newPasswordHash, authUser.id]
+       RETURNING id, name, email, phone, bio, github_profile, linkedin_profile, is_active, email_verified, COALESCE(two_factor_enabled, false) AS two_factor_enabled, last_login_at, created_at, updated_at`,
+      [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, newTwoFactor, authUser.id]
     );
 
     const updatedDev = {
@@ -233,6 +339,7 @@ export async function PUT(request) {
         ...updatedDev,
         is_verified: Boolean(updatedDev.email_verified),
         isVerified: Boolean(updatedDev.email_verified),
+        two_factor_enabled: Boolean(updatedDev.two_factor_enabled),
         permissions: authUser.permissions || [],
         isAdmin: Boolean(authUser.isAdmin),
       },
@@ -241,7 +348,6 @@ export async function PUT(request) {
         name: updatedDev.name,
         email: updatedDev.email,
         phone: updatedDev.phone,
-        avatarUrl: updatedDev.avatar_url,
         bio: updatedDev.bio,
         githubProfile: updatedDev.github_profile,
         linkedinProfile: updatedDev.linkedin_profile,
@@ -251,6 +357,7 @@ export async function PUT(request) {
         isAdmin: Boolean(authUser.isAdmin),
         isActive: updatedDev.is_active !== false,
         isVerified: Boolean(updatedDev.email_verified),
+        two_factor_enabled: Boolean(updatedDev.two_factor_enabled),
       },
     });
 

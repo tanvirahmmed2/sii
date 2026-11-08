@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout';
@@ -8,6 +8,8 @@ import CreatorAuthLayout from 'src/component/marketing/creator/CreatorAuthLayout
 export default function CreatorRegisterPage() {
   const router = useRouter();
 
+  const [mountedTime] = useState(() => Date.now());
+  const [botTrap, setBotTrap] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +23,15 @@ export default function CreatorRegisterPage() {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -50,6 +61,8 @@ export default function CreatorRegisterPage() {
             email: email.trim().toLowerCase(),
             password,
             phone: phone.trim(),
+            bot_trap: botTrap,
+            reg_timestamp: mountedTime,
           },
         }),
       });
@@ -57,6 +70,7 @@ export default function CreatorRegisterPage() {
       if (data.success && data.creator) {
         setRegistered(true);
         setRegisteredEmail(email.trim().toLowerCase());
+        setCooldown(60);
       } else {
         setError(data.error || 'Registration failed. Please check your details.');
       }
@@ -68,7 +82,7 @@ export default function CreatorRegisterPage() {
   };
 
   const handleResend = async () => {
-    if (!registeredEmail) return;
+    if (!registeredEmail || cooldown > 0) return;
     setResending(true);
     setResendMsg('');
     setError('');
@@ -84,6 +98,7 @@ export default function CreatorRegisterPage() {
       const data = await res.json();
       if (data.success) {
         setResendMsg('Verification code resent. Check your inbox.');
+        setCooldown(60);
       } else {
         setError(data.error || 'Failed to resend code.');
       }
@@ -143,16 +158,26 @@ export default function CreatorRegisterPage() {
               </Link>
               <button
                 type="button"
-                disabled={resending}
+                disabled={resending || cooldown > 0}
                 onClick={handleResend}
-                className="px-3 py-2 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                className="px-3 py-2 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer disabled:opacity-50"
               >
-                {resending ? 'Sending...' : 'Resend Code'}
+                {resending ? 'Sending...' : cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend Code'}
               </button>
             </div>
           </div>
         ) : (
           <form onSubmit={handleRegister} autoComplete="off" className="space-y-3">
+            <input
+              type="text"
+              name="bot_trap"
+              tabIndex={-1}
+              aria-hidden="true"
+              value={botTrap}
+              onChange={(e) => setBotTrap(e.target.value)}
+              className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
+              style={{ display: 'none' }}
+            />
             <input
               type="text"
               name="decoy_username_prevent_autofill"

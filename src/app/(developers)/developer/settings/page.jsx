@@ -55,7 +55,6 @@ export default function DeveloperSettingsPage() {
     bio: '',
     github_profile: '',
     linkedin_profile: '',
-    avatar_url: '',
     role: '',
     role_name: '',
     is_active: true,
@@ -73,7 +72,10 @@ export default function DeveloperSettingsPage() {
   const [sessionsList, setSessionsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileOtpRequired, setProfileOtpRequired] = useState(false);
+  const [profileOtpCode, setProfileOtpCode] = useState('');
   const [savingSecurity, setSavingSecurity] = useState(false);
+  const [toggling2fa, setToggling2fa] = useState(false);
   const [revokingSessionId, setRevokingSessionId] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [feedbackType, setFeedbackType] = useState('success');
@@ -96,7 +98,6 @@ export default function DeveloperSettingsPage() {
           bio: d.bio || '',
           github_profile: d.github_profile || '',
           linkedin_profile: d.linkedin_profile || '',
-          avatar_url: d.avatar_url || '',
           role: d.role || '',
           role_name: d.role_name || d.role || '',
           is_active: d.is_active !== false,
@@ -131,15 +132,16 @@ export default function DeveloperSettingsPage() {
       const res = await fetch('/api/marketing/developer/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
-          name: profile.name.trim(),
-          email: profile.email.trim(),
-          phone: profile.phone.trim(),
-          bio: profile.bio.trim(),
-          github_profile: profile.github_profile.trim(),
-          linkedin_profile: profile.linkedin_profile.trim(),
-          avatar_url: profile.avatar_url.trim(),
-          two_factor_enabled: profile.two_factor_enabled,
+          name: (profile.name || '').trim(),
+          email: (profile.email || '').trim(),
+          phone: (profile.phone || '').trim(),
+          bio: (profile.bio || '').trim(),
+          github_profile: (profile.github_profile || '').trim(),
+          linkedin_profile: (profile.linkedin_profile || '').trim(),
+          two_factor_enabled: Boolean(profile.two_factor_enabled),
+          otpCode: profileOtpRequired ? (profileOtpCode || '').trim() : undefined,
         }),
       });
 
@@ -149,19 +151,72 @@ export default function DeveloperSettingsPage() {
       }
 
       const data = await res.json();
-      if (data.success) {
+      if (data.otpRequired) {
+        setProfileOtpRequired(true);
+        showNotification(data.message || 'Verification code sent to your email to confirm contact update.', 'info');
+      } else if (data.success) {
+        setProfileOtpRequired(false);
+        setProfileOtpCode('');
+        if (data.developer) {
+          const d = data.developer;
+          setProfile((prev) => ({
+            ...prev,
+            name: d.name || '',
+            email: d.email || '',
+            phone: d.phone || '',
+            bio: d.bio || '',
+            github_profile: d.github_profile || '',
+            linkedin_profile: d.linkedin_profile || '',
+            role: d.role || prev.role,
+            role_name: d.role_name || prev.role_name,
+            is_active: d.is_active !== false,
+            email_verified: Boolean(d.email_verified),
+            two_factor_enabled: Boolean(d.two_factor_enabled),
+          }));
+        }
         if (setUser && data.user) {
           setUser(data.user);
         } else if (refetchUser) {
           refetchUser();
         }
-
-        showNotification('Profile details updated successfully!');
+        await fetchProfile();
+        showNotification(data.message || 'Profile details updated successfully!');
       } else {
-        showNotification(data.error || 'Failed to update profile.', 'error');
+        showNotification(data.error || data.message || 'Failed to update profile.', 'error');
       }
     } catch (err) {
       showNotification(err.message || 'Network error updating profile.', 'error');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setSavingProfile(true);
+    try {
+      const res = await fetch('/api/marketing/developer/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: (profile.name || '').trim(),
+          email: (profile.email || '').trim(),
+          phone: (profile.phone || '').trim(),
+          bio: (profile.bio || '').trim(),
+          github_profile: (profile.github_profile || '').trim(),
+          linkedin_profile: (profile.linkedin_profile || '').trim(),
+          two_factor_enabled: Boolean(profile.two_factor_enabled),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.otpRequired) {
+        showNotification(data.message || 'A fresh verification code has been dispatched to your email.', 'info');
+      } else if (data.error) {
+        showNotification(data.error, 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Failed to resend verification code.', 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -217,6 +272,42 @@ export default function DeveloperSettingsPage() {
       showNotification(err.message || 'Network error updating password.', 'error');
     } finally {
       setSavingSecurity(false);
+    }
+  };
+
+  const handleToggle2FA = async () => {
+    try {
+      setToggling2fa(true);
+      const nextState = !profile.two_factor_enabled;
+      const res = await fetch('/api/marketing/developer/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          two_factor_enabled: nextState,
+        }),
+      });
+
+      if (res.status === 401) {
+        router.replace('/developer-auth/login');
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setProfile((prev) => ({ ...prev, two_factor_enabled: nextState }));
+        if (setUser && data.user) {
+          setUser(data.user);
+        } else if (refetchUser) {
+          refetchUser();
+        }
+        showNotification(nextState ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.');
+      } else {
+        showNotification(data.error || 'Failed to update two-factor settings.', 'error');
+      }
+    } catch (err) {
+      showNotification(err.message || 'Network error updating two-factor settings.', 'error');
+    } finally {
+      setToggling2fa(false);
     }
   };
 
@@ -315,33 +406,30 @@ export default function DeveloperSettingsPage() {
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
               />
+              <p className="text-[11px] text-slate-500 font-normal">
+                Updating your email address requires a 6-digit OTP verification code sent to your registered email.
+              </p>
             </div>
 
             <div className="space-y-1">
               <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Phone</label>
               <input
                 type="text"
+                required
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
               />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Avatar Image URL</label>
-              <input
-                type="url"
-                value={profile.avatar_url}
-                onChange={(e) => setProfile({ ...profile, avatar_url: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-              />
+              <p className="text-[11px] text-slate-500 font-normal">
+                Updating your phone number requires a 6-digit OTP verification code sent to your registered email.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">GitHub Profile URL</label>
                 <input
-                  type="url"
+                  type="text"
                   value={profile.github_profile}
                   onChange={(e) => setProfile({ ...profile, github_profile: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -351,7 +439,7 @@ export default function DeveloperSettingsPage() {
               <div className="space-y-1">
                 <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">LinkedIn Profile URL</label>
                 <input
-                  type="url"
+                  type="text"
                   value={profile.linkedin_profile}
                   onChange={(e) => setProfile({ ...profile, linkedin_profile: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -369,15 +457,62 @@ export default function DeveloperSettingsPage() {
               />
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
-              >
-                {savingProfile ? 'Saving...' : 'Save Profile'}
-              </button>
-            </div>
+            {profileOtpRequired ? (
+              <div className="p-3.5 rounded border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 text-xs space-y-2.5">
+                <p className="font-medium">Verification Code Sent</p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                  A 6-digit security verification code has been dispatched to your registered email ({profile.email}) to confirm updating your contact details.
+                </p>
+                <div className="space-y-1">
+                  <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Enter 6-Digit OTP Code *</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={profileOtpCode}
+                    onChange={(e) => setProfileOtpCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-center text-base tracking-widest font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-500"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={savingProfile || profileOtpCode.length < 6}
+                    className="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium disabled:opacity-50 cursor-pointer"
+                  >
+                    {savingProfile ? 'Verifying...' : 'Verify OTP & Save Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={savingProfile}
+                    className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
+                  >
+                    Resend Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOtpRequired(false);
+                      setProfileOtpCode('');
+                    }}
+                    className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
+                >
+                  {savingProfile ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            )}
           </form>
         </div>
 
@@ -433,6 +568,43 @@ export default function DeveloperSettingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-sm font-medium text-slate-900 dark:text-white">
+                  Two-Factor Authentication (2FA)
+                </h2>
+                <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                  Protect your developer console by requiring a one-time verification code sent to your registered email on login.
+                </p>
+              </div>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
+                profile.two_factor_enabled
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+              }`}>
+                {profile.two_factor_enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs text-slate-700 dark:text-slate-300">
+                Email verification code upon login
+              </span>
+              <button
+                type="button"
+                onClick={handleToggle2FA}
+                disabled={toggling2fa}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer transition-colors disabled:opacity-50 ${
+                  profile.two_factor_enabled
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/50'
+                    : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900'
+                }`}
+              >
+                {toggling2fa ? 'Updating...' : profile.two_factor_enabled ? 'Disable 2FA' : 'Enable 2FA'}
+              </button>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4">

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 export default function AdminRecoveryForm() {
-  const [step, setStep] = useState('request'); 
+  const [step, setStep] = useState('request');
   const [identifier, setIdentifier] = useState('');
   const [readOnly, setReadOnly] = useState(true);
   const [token, setToken] = useState('');
@@ -14,9 +14,20 @@ export default function AdminRecoveryForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleRequestToken = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (cooldown > 0) return;
+
     setLoading(true);
     setError('');
     setSuccessMessage('');
@@ -39,6 +50,7 @@ export default function AdminRecoveryForm() {
       if (res.ok && data.success) {
         setSuccessMessage(data.message || 'Recovery token has been sent to your registered email.');
         setStep('reset');
+        setCooldown(60);
       } else {
         setError(data.error || 'Failed to generate recovery token.');
       }
@@ -185,6 +197,28 @@ export default function AdminRecoveryForm() {
           >
             {loading ? 'Updating Password...' : 'Save New Password'}
           </button>
+
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={handleRequestToken}
+              disabled={loading || cooldown > 0}
+              className="text-xs text-slate-600 dark:text-slate-400 hover:underline disabled:opacity-50 cursor-pointer"
+            >
+              {cooldown > 0 ? `Resend token in ${cooldown}s` : 'Resend Recovery Token'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep('request');
+                setError('');
+              }}
+              className="text-xs text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+            >
+              Change Identifier
+            </button>
+          </div>
         </form>
       )}
 
@@ -198,6 +232,7 @@ export default function AdminRecoveryForm() {
             autoComplete="username"
             className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
           />
+
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
               Email or Phone Number *
@@ -221,10 +256,10 @@ export default function AdminRecoveryForm() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || cooldown > 0}
             className="w-full py-2.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
           >
-            {loading ? 'Sending Request...' : 'Send Recovery Token'}
+            {loading ? 'Sending Request...' : cooldown > 0 ? `Please wait ${cooldown}s` : 'Send Recovery Token'}
           </button>
         </form>
       )}

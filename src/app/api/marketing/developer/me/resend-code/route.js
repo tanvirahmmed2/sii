@@ -1,12 +1,29 @@
 import { NextResponse } from 'next/server';
-import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
+import { generateRandomHex } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
+import {
+  getClientIp,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  enforceOtpCooldown,
+  generateSecureOtp,
+} from 'src/lib/security/shield';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
     const raw = String(body.email || body.identifier || body.phone || '').trim();
 
     if (!raw) {
@@ -18,6 +35,41 @@ export async function POST(request) {
 
     const cleanEmail = raw.toLowerCase();
     const phoneDigits = raw.replace(/\D/g, '');
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'dev_resend_code',
+      maxAttempts: 3,
+      windowSeconds: 600,
+      blockDurationSeconds: 1800,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
+    const cooldownCheck = await enforceOtpCooldown({
+      ip,
+      identifier: cleanEmail,
+      action: 'dev_resend',
+      minIntervalSeconds: 60,
+      maxPerHour: 5,
+    });
+
+    if (!cooldownCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: cooldownCheck.error,
+          waitSeconds: cooldownCheck.waitSeconds,
+        },
+        { status: 429 }
+      );
+    }
 
     const adminRes = await queryDb(
       `SELECT id, name, email, is_active, email_verified 
@@ -54,7 +106,7 @@ export async function POST(request) {
     }
 
     const newToken = generateRandomHex(32);
-    const newCode = generateRandomCode(100000, 999999);
+    const newCode = generateSecureOtp(6);
 
     await queryDb(
       `UPDATE developers 
@@ -97,10 +149,11 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       message: 'A new verification activation link has been dispatched to your email.',
+      cooldownSeconds: 60,
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to resend verification link.' },
+      { success: false, error: error.message || 'Error processing request.' },
       { status: 500 }
     );
   }

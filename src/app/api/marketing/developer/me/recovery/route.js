@@ -2,12 +2,28 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword } from 'src/lib/middleware/developer';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
-import { generateToken } from 'src/lib/utils/random';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
+import {
+  getClientIp,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  enforceOtpCooldown,
+  generateSecureOtp,
+} from 'src/lib/security/shield';
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
     const { action = 'request_token', token, newPassword } = body;
     const raw = String(body.identifier || body.email || body.phone || '').trim();
 
@@ -22,6 +38,22 @@ export async function POST(request) {
     const phoneDigits = raw.replace(/\D/g, '');
 
     if (action === 'reset_password' || (token && newPassword)) {
+      const resetRate = await checkRateLimit({
+        ip,
+        identifier: cleanEmail,
+        action: 'dev_reset_pw',
+        maxAttempts: 5,
+        windowSeconds: 600,
+        blockDurationSeconds: 900,
+      });
+
+      if (!resetRate.isAllowed) {
+        return NextResponse.json(
+          { success: false, error: resetRate.error },
+          { status: 429 }
+        );
+      }
+
       if (!token || !newPassword) {
         return NextResponse.json(
           { success: false, error: 'Token and new password are required.' },
@@ -64,6 +96,8 @@ export async function POST(request) {
              verification_token_expires = NULL,
              two_factor_code = NULL,
              two_factor_expires = NULL,
+             failed_login_attempts = 0,
+             locked_until = NULL,
              email_verified = TRUE,
              is_active = TRUE,
              updated_at = CURRENT_TIMESTAMP
@@ -81,7 +115,40 @@ export async function POST(request) {
       });
     }
 
-    const generatedToken = generateToken(8);
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail,
+      action: 'dev_recovery_request',
+      maxAttempts: 3,
+      windowSeconds: 600,
+      blockDurationSeconds: 1800,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
+
+    const cooldownCheck = await enforceOtpCooldown({
+      ip,
+      identifier: cleanEmail,
+      action: 'dev_recovery',
+      minIntervalSeconds: 60,
+      maxPerHour: 5,
+    });
+
+    if (!cooldownCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: cooldownCheck.error,
+          waitSeconds: cooldownCheck.waitSeconds,
+        },
+        { status: 429 }
+      );
+    }
 
     const dbAdmin = await queryDb(
       `SELECT * FROM developers 
@@ -101,6 +168,7 @@ export async function POST(request) {
 
     const admin = dbAdmin.rows[0];
     const targetEmail = admin.email;
+    const generatedToken = generateSecureOtp(6);
 
     await queryDb(
       `UPDATE developers 
@@ -146,6 +214,7 @@ export async function POST(request) {
       success: true,
       message: `A security recovery token has been sent to your registered email (${maskedEmail}).`,
       email: targetEmail,
+      cooldownSeconds: 60,
     });
   } catch (error) {
     return NextResponse.json(

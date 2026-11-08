@@ -13,7 +13,7 @@ export async function GET(request) {
     }
 
     const devRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio,
               d.github_profile, d.linkedin_profile, d.is_active, d.last_login_at, d.created_at, d.updated_at
        FROM developers d
        WHERE d.id = $1
@@ -77,7 +77,7 @@ export async function PUT(request) {
     const data = body.data || body;
 
     const currentRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.avatar_url, d.github_profile, d.linkedin_profile, d.password,
+      `SELECT d.id, d.name, d.email, d.phone, d.bio, d.github_profile, d.linkedin_profile, d.password,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active
        FROM developers d
@@ -159,7 +159,7 @@ export async function PUT(request) {
            password = $7,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $8
-       RETURNING id, name, email, phone, bio, avatar_url, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
+       RETURNING id, name, email, phone, bio, github_profile, linkedin_profile, is_active, last_login_at, created_at, updated_at`,
       [newName, newEmail, newPhone, newBio, newGithub, newLinkedin, newPasswordHash, authUser.id]
     );
 
@@ -183,7 +183,6 @@ export async function PUT(request) {
         name: updatedDev.name,
         email: updatedDev.email,
         phone: updatedDev.phone,
-        avatarUrl: updatedDev.avatar_url,
         bio: updatedDev.bio,
         githubProfile: updatedDev.github_profile,
         linkedinProfile: updatedDev.linkedin_profile,

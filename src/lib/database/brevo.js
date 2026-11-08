@@ -1,4 +1,4 @@
-import { BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME } from './secret';
+import { BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME } from './secret.js';
 import { sendWebsiteEmail, getWebsiteBrevoConfig } from './websiteBrevo.js';
 
 export { sendWebsiteEmail, getWebsiteBrevoConfig };

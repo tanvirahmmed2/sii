@@ -24,13 +24,14 @@ export default function DeveloperProfilePage() {
     bio: '',
     github_profile: '',
     linkedin_profile: '',
-    avatar_url: '',
     changePassword: false,
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
   const [modalFeedback, setModalFeedback] = useState({ type: '', message: '' });
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
 
   const fetchProfile = async () => {
     try {
@@ -90,7 +91,6 @@ export default function DeveloperProfilePage() {
       bio: profile.bio || '',
       github_profile: profile.github_profile || '',
       linkedin_profile: profile.linkedin_profile || '',
-      avatar_url: profile.avatar_url || '',
       changePassword: false,
       currentPassword: '',
       newPassword: '',
@@ -103,6 +103,8 @@ export default function DeveloperProfilePage() {
   const handleCloseEdit = () => {
     setEditModalOpen(false);
     setModalFeedback({ type: '', message: '' });
+    setOtpRequired(false);
+    setOtpCode('');
   };
 
   const handleSaveProfile = async (e) => {
@@ -137,13 +139,13 @@ export default function DeveloperProfilePage() {
     setSaving(true);
     try {
       const payload = {
-        name: editForm.name.trim(),
-        email: editForm.email.trim(),
-        phone: editForm.phone.trim(),
-        bio: editForm.bio.trim(),
-        github_profile: editForm.github_profile.trim(),
-        linkedin_profile: editForm.linkedin_profile.trim(),
-        avatar_url: editForm.avatar_url.trim(),
+        name: (editForm.name || '').trim(),
+        email: (editForm.email || '').trim(),
+        phone: (editForm.phone || '').trim(),
+        bio: (editForm.bio || '').trim(),
+        github_profile: (editForm.github_profile || '').trim(),
+        linkedin_profile: (editForm.linkedin_profile || '').trim(),
+        otpCode: otpRequired ? (otpCode || '').trim() : undefined,
       };
 
       if (editForm.changePassword) {
@@ -154,11 +156,20 @@ export default function DeveloperProfilePage() {
       const res = await fetch('/api/marketing/developer/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (data.success && data.developer) {
+      if (data.otpRequired) {
+        setOtpRequired(true);
+        setModalFeedback({
+          type: 'info',
+          message: data.message || 'A 6-digit verification code has been dispatched to your email address to confirm contact updates.',
+        });
+      } else if (data.success && data.developer) {
+        setOtpRequired(false);
+        setOtpCode('');
         setProfile((prev) => ({
           ...prev,
           ...data.developer,
@@ -171,17 +182,17 @@ export default function DeveloperProfilePage() {
 
         setModalFeedback({
           type: 'success',
-          message: 'Profile updated successfully!',
+          message: data.message || 'Profile updated successfully!',
         });
 
         setTimeout(() => {
           handleCloseEdit();
           fetchProfile();
-        }, 800);
+        }, 900);
       } else {
         setModalFeedback({
           type: 'error',
-          message: data.error || 'Failed to update profile.',
+          message: data.error || data.message || 'Failed to update profile.',
         });
       }
     } catch (err) {
@@ -221,17 +232,9 @@ export default function DeveloperProfilePage() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.name}
-              className="w-14 h-14 rounded object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-            />
-          ) : (
-            <div className="w-14 h-14 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center text-sm font-medium border border-slate-200 dark:border-slate-700 shrink-0">
-              {profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'DV'}
-            </div>
-          )}
+          <div className="w-14 h-14 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center text-sm font-medium border border-slate-200 dark:border-slate-700 shrink-0">
+            {profile?.name ? profile.name.slice(0, 2).toUpperCase() : 'DV'}
+          </div>
 
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -461,6 +464,8 @@ export default function DeveloperProfilePage() {
                 className={`p-2.5 rounded text-xs font-normal ${
                   modalFeedback.type === 'error'
                     ? 'bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                    : modalFeedback.type === 'info'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300'
                     : 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
                 }`}
               >
@@ -503,21 +508,11 @@ export default function DeveloperProfilePage() {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Avatar Image URL</label>
-                <input
-                  type="url"
-                  value={editForm.avatar_url}
-                  onChange={(e) => setEditForm({ ...editForm, avatar_url: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
-                />
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">GitHub Profile URL</label>
                   <input
-                    type="url"
+                    type="text"
                     value={editForm.github_profile}
                     onChange={(e) => setEditForm({ ...editForm, github_profile: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -527,7 +522,7 @@ export default function DeveloperProfilePage() {
                 <div className="space-y-1">
                   <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">LinkedIn Profile URL</label>
                   <input
-                    type="url"
+                    type="text"
                     value={editForm.linkedin_profile}
                     onChange={(e) => setEditForm({ ...editForm, linkedin_profile: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -596,6 +591,42 @@ export default function DeveloperProfilePage() {
                 )}
               </div>
 
+              {otpRequired && (
+                <div className="p-3 rounded border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-indigo-900 dark:text-indigo-300">
+                      Security Verification Code Required
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpRequired(false);
+                        setOtpCode('');
+                      }}
+                      className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      Cancel OTP
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    A 6-digit verification code has been dispatched to your email address to confirm updating your contact details.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
+                      Enter 6-Digit OTP Code *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-center text-sm tracking-widest font-mono text-slate-900 dark:text-white focus:outline-none focus:border-slate-500"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
@@ -606,10 +637,10 @@ export default function DeveloperProfilePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || (otpRequired && otpCode.length < 6)}
                   className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 cursor-pointer"
                 >
-                  {saving ? 'Saving...' : 'Save Profile'}
+                  {saving ? 'Saving...' : otpRequired ? 'Verify OTP & Save Profile' : 'Save Profile'}
                 </button>
               </div>
             </form>

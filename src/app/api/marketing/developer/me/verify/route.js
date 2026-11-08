@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
+import {
+  getClientIp,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+} from 'src/lib/security/shield';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
+    const attackInspection = await inspectMalwareAndAttacks(request, {});
+    if (attackInspection.isBlocked) {
+      return NextResponse.redirect(
+        new URL('/developer-auth/verify?error=security_blocked', request.url)
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token')?.trim();
     const email = searchParams.get('email')?.trim().toLowerCase();
@@ -12,6 +24,22 @@ export async function GET(request) {
     if (!token) {
       return NextResponse.redirect(
         new URL('/developer-auth/verify?error=missing_token', request.url)
+      );
+    }
+
+    const ip = getClientIp(request);
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: email || token,
+      action: 'dev_verify_get',
+      maxAttempts: 10,
+      windowSeconds: 600,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.redirect(
+        new URL('/developer-auth/verify?error=rate_limited', request.url)
       );
     }
 
@@ -53,6 +81,8 @@ export async function GET(request) {
            verification_token_expires = NULL,
            two_factor_code = NULL,
            two_factor_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
            is_active = TRUE,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
@@ -63,7 +93,6 @@ export async function GET(request) {
       new URL('/developer-auth/login?verified=true', request.url)
     );
   } catch (error) {
-    console.error('Error in GET /api/marketing/developer/me/verify:', error);
     return NextResponse.redirect(
       new URL('/developer-auth/verify?error=server_error', request.url)
     );
@@ -72,7 +101,17 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
     const token = (body.token || body.code)?.toString().trim();
     const email = body.email?.trim().toLowerCase();
 
@@ -80,6 +119,22 @@ export async function POST(request) {
       return NextResponse.json(
         { success: false, error: 'Verification token or code is required.' },
         { status: 400 }
+      );
+    }
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: email || token,
+      action: 'dev_verify_post',
+      maxAttempts: 5,
+      windowSeconds: 600,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
       );
     }
 
@@ -138,6 +193,8 @@ export async function POST(request) {
            verification_token_expires = NULL,
            two_factor_code = NULL,
            two_factor_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
            is_active = TRUE,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = $1`,
@@ -150,9 +207,8 @@ export async function POST(request) {
       message: 'Developer account verified successfully! Redirecting to login...',
     });
   } catch (error) {
-    console.error('Error in POST /api/marketing/developer/me/verify:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Verification failed.' },
+      { success: false, error: error.message || 'Error verifying account.' },
       { status: 500 }
     );
   }

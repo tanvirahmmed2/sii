@@ -107,7 +107,7 @@ async function handleCreateAdmin(d, request) {
 export async function GET() {
   try {
     const devsRes = await queryDb(`
-      SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+      SELECT d.id, d.name, d.email, d.phone,
              d.role_id, r.name AS role_name,
              d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
       FROM developers d
@@ -277,7 +277,7 @@ export async function PUT(request) {
       }
 
       const fullRes = await queryDb(
-        `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+        `SELECT d.id, d.name, d.email, d.phone,
                 d.role_id, r.name AS role_name, r.slug AS role_slug,
                 d.is_active, d.created_at, d.updated_at
          FROM developers d
@@ -294,16 +294,17 @@ export async function PUT(request) {
       });
     }
 
-    const data = { ...(body.data || body) };
-    delete data.id;
-    delete data.adminId;
-    delete data.action;
-    delete data.role;
-    delete data.permissions;
-    delete data.designation;
+    const rawData = body.data || body;
+    const targetRoleId = rawData.role_id !== undefined ? rawData.role_id : rawData.roleId;
 
-    const targetRoleId = data.role_id !== undefined ? data.role_id : data.roleId;
-    delete data.roleId;
+    const data = {};
+    const allowedFields = ['name', 'email', 'phone', 'bio', 'github_profile', 'linkedin_profile', 'is_active'];
+    for (const field of allowedFields) {
+      if (rawData[field] !== undefined) {
+        data[field] = rawData[field];
+      }
+    }
+
     if (targetRoleId !== undefined) {
       data.role_id = targetRoleId || null;
     }
@@ -322,10 +323,8 @@ export async function PUT(request) {
       }
     }
 
-    if (data.password && data.password.trim()) {
-      data.password = await hashPassword(data.password.trim());
-    } else {
-      delete data.password;
+    if (rawData.password && rawData.password.trim()) {
+      data.password = await hashPassword(rawData.password.trim());
     }
 
     const keys = Object.keys(data);
@@ -342,7 +341,7 @@ export async function PUT(request) {
     );
 
     const fullRes = await queryDb(
-      `SELECT d.id, d.name, d.email, d.phone, d.avatar_url,
+      `SELECT d.id, d.name, d.email, d.phone,
               d.role_id, r.name AS role_name, r.slug AS role_slug,
               d.is_active, d.created_at, d.updated_at
        FROM developers d
