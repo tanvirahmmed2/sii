@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 
 function slugify(text) {
   return text
@@ -32,10 +32,10 @@ async function generateUniqueSlug(baseTitle, excludeId = null) {
 
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, 'policies');
+    const auth = await requireDeveloperPermission(request, ['policies', 'policy'], 'view');
     if (!auth.success) {
       return NextResponse.json(
-        { success: false, error: auth.message || 'Unauthorized' },
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
         { status: auth.status || 401 }
       );
     }
@@ -52,7 +52,7 @@ export async function GET(request) {
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Policy not found.' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, record: res.rows[0] });
+      return NextResponse.json({ success: true, record: res.rows[0], policy: res.rows[0] });
     }
 
     if (slug) {
@@ -63,14 +63,14 @@ export async function GET(request) {
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Policy not found.' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, record: res.rows[0] });
+      return NextResponse.json({ success: true, record: res.rows[0], policy: res.rows[0] });
     }
 
     const res = await queryDb(
       'SELECT *, is_active AS is_published FROM policies ORDER BY id ASC'
     ).catch(() => ({ rows: [] }));
 
-    return NextResponse.json({ success: true, table: 'policies', records: res.rows });
+    return NextResponse.json({ success: true, table: 'policies', records: res.rows, policies: res.rows });
   } catch (error) {
     console.error('Error fetching developer policies:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -79,10 +79,10 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'policies');
+    const authCheck = await requireDeveloperPermission(request, ['policies', 'policy'], 'create');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission policies required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission policies required.' },
         { status: authCheck.status || 403 }
       );
     }
@@ -109,7 +109,7 @@ export async function POST(request) {
     );
 
     return NextResponse.json(
-      { success: true, record: res.rows[0], message: 'Policy created successfully.' },
+      { success: true, record: res.rows[0], policy: res.rows[0], message: 'Policy created successfully.' },
       { status: 201 }
     );
   } catch (error) {
@@ -120,10 +120,10 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'policies');
+    const authCheck = await requireDeveloperPermission(request, ['policies', 'policy'], 'edit');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission policies required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission policies required.' },
         { status: authCheck.status || 403 }
       );
     }
@@ -159,7 +159,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: 'Policy item not found.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, record: res.rows[0], message: 'Policy updated successfully.' });
+    return NextResponse.json({ success: true, record: res.rows[0], policy: res.rows[0], message: 'Policy updated successfully.' });
   } catch (error) {
     console.error('Error updating policy:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -168,10 +168,10 @@ export async function PUT(request) {
 
 export async function PATCH(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'policies');
+    const authCheck = await requireDeveloperPermission(request, ['policies', 'policy'], 'edit');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission policies required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission policies required.' },
         { status: authCheck.status || 403 }
       );
     }
@@ -197,6 +197,7 @@ export async function PATCH(request) {
       return NextResponse.json({
         success: true,
         record: res.rows[0],
+        policy: res.rows[0],
         message: `Policy marked as ${activeState ? 'active' : 'inactive'}.`,
       });
     }
@@ -210,10 +211,10 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'policies');
+    const authCheck = await requireDeveloperPermission(request, ['policies', 'policy'], 'delete');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission policies required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission policies required.' },
         { status: authCheck.status || 403 }
       );
     }

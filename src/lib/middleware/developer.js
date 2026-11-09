@@ -196,11 +196,6 @@ export async function getDeveloperSession(request) {
       .map((r) => r.module_slug);
 
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
-    if (isOwner) {
-      const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
-      permissions = Array.from(new Set([...permissions, ...allMods.rows.map((r) => r.slug)]));
-    }
-
     const permissionsMap = {};
     for (const r of permRes.rows) {
       permissionsMap[r.module_slug] = {
@@ -209,6 +204,19 @@ export async function getDeveloperSession(request) {
         can_edit: Boolean(r.can_edit),
         can_delete: Boolean(r.can_delete),
       };
+    }
+
+    if (isOwner) {
+      const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
+      permissions = Array.from(new Set([...permissions, ...allMods.rows.map((r) => r.slug)]));
+      for (const m of allMods.rows) {
+        permissionsMap[m.slug] = {
+          can_view: true,
+          can_create: true,
+          can_edit: true,
+          can_delete: true,
+        };
+      }
     }
 
     return {
@@ -255,28 +263,92 @@ export async function isStaff(request) {
 }
 export const authenticateStaff = isStaff;
 
+function expandModuleAliases(slugs) {
+  const result = new Set();
+  for (const s of slugs) {
+    const clean = String(s || '').toLowerCase().trim();
+    if (!clean) continue;
+    result.add(clean);
+    if (clean === 'faqs' || clean === 'faq') {
+      result.add('faqs');
+      result.add('faq');
+    } else if (clean === 'policies' || clean === 'policy') {
+      result.add('policies');
+      result.add('policy');
+    } else if (clean === 'packages' || clean === 'package') {
+      result.add('packages');
+      result.add('package');
+    } else if (clean === 'blogs' || clean === 'blog') {
+      result.add('blogs');
+      result.add('blog');
+    }
+  }
+  return Array.from(result);
+}
+
 export async function hasModulePermission(request, moduleSlug, action = 'view') {
   try {
     const session = await getDeveloperSession(request);
     if (!session || !session.isActive) {
-      return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated', canEdit: false };
+      return { success: false, user: null, staff: null, developer: null, message: 'Unauthenticated', status: 401, canEdit: false, canCreate: false, canDelete: false, canView: false };
     }
 
     if (!moduleSlug || moduleSlug === 'profile') {
-      return { success: true, user: session, staff: session, developer: session, canEdit: true };
+      return { success: true, user: session, staff: session, developer: session, canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
     }
 
     const isOwner = Number(session.id) === 1 || String(session.email).toLowerCase() === 'tanvir004006@gmail.com';
     if (isOwner) {
-      return { success: true, user: session, staff: session, developer: session, canEdit: true, isOwner: true };
+      return { success: true, user: session, staff: session, developer: session, canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true, isOwner: true };
     }
 
-    const slugs = (Array.isArray(moduleSlug) ? moduleSlug : [moduleSlug])
+    const rawSlugs = (Array.isArray(moduleSlug) ? moduleSlug : [moduleSlug])
       .map((s) => String(s || '').toLowerCase().trim())
       .filter(Boolean);
 
-    if (slugs.length === 0) {
-      return { success: true, user: session, staff: session, developer: session, canEdit: true };
+    if (rawSlugs.length === 0) {
+      return { success: true, user: session, staff: session, developer: session, canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+    }
+
+    const slugs = expandModuleAliases(rawSlugs);
+
+    for (const slug of slugs) {
+      const p = session.permissionsMap?.[slug];
+      if (p) {
+        const allowed = action === 'edit' || action === 'update'
+          ? Boolean(p.can_edit)
+          : action === 'create'
+          ? Boolean(p.can_create)
+          : action === 'delete'
+          ? Boolean(p.can_delete)
+          : Boolean(p.can_view);
+
+        if (allowed) {
+          return {
+            success: true,
+            user: session,
+            staff: session,
+            developer: session,
+            canView: Boolean(p.can_view),
+            canCreate: Boolean(p.can_create),
+            canEdit: Boolean(p.can_edit),
+            canDelete: Boolean(p.can_delete),
+            canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+          };
+        }
+        return {
+          success: false,
+          user: session,
+          staff: session,
+          developer: session,
+          message: `Permission denied: ${action} privilege required for module.`,
+          status: 403,
+          canView: Boolean(p.can_view),
+          canCreate: Boolean(p.can_create),
+          canEdit: Boolean(p.can_edit),
+          canDelete: Boolean(p.can_delete),
+        };
+      }
     }
 
     const permRes = await queryDb(
@@ -290,41 +362,86 @@ export async function hasModulePermission(request, moduleSlug, action = 'view') 
 
     if (permRes.rows.length > 0) {
       const p = permRes.rows[0];
-      const hasAction = action === 'edit'
-        ? p.can_edit
+      const hasAction = action === 'edit' || action === 'update'
+        ? Boolean(p.can_edit)
         : action === 'create'
-        ? p.can_create
+        ? Boolean(p.can_create)
         : action === 'delete'
-        ? p.can_delete
-        : p.can_view;
+        ? Boolean(p.can_delete)
+        : Boolean(p.can_view);
 
       if (hasAction) {
-        return { success: true, user: session, staff: session, developer: session, canEdit: Boolean(p.can_edit) };
+        return {
+          success: true,
+          user: session,
+          staff: session,
+          developer: session,
+          canView: Boolean(p.can_view),
+          canCreate: Boolean(p.can_create),
+          canEdit: Boolean(p.can_edit),
+          canDelete: Boolean(p.can_delete),
+          canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+        };
+      }
+      return {
+        success: false,
+        user: session,
+        staff: session,
+        developer: session,
+        message: `Permission denied: ${action} privilege required for module.`,
+        status: 403,
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+      };
+    }
+
+    if (action === 'view') {
+      const userPerms = (session.permissions || []).map((p) => String(p).toLowerCase().trim());
+      const hasPerm = slugs.some((slug) => userPerms.includes(slug));
+      if (hasPerm) {
+        return {
+          success: true,
+          user: session,
+          staff: session,
+          developer: session,
+          canView: true,
+          canCreate: false,
+          canEdit: false,
+          canDelete: false,
+          canManage: false,
+        };
       }
     }
 
-    const userPerms = (session.permissions || []).map((p) => String(p).toLowerCase().trim());
-    const hasPerm = slugs.some((slug) => userPerms.includes(slug));
-
-    if (hasPerm) {
-      return { success: true, user: session, staff: session, developer: session, canEdit: true };
-    }
-
-    return { success: false, user: session, staff: session, developer: session, message: 'Permission denied for this module', canEdit: false };
+    return {
+      success: false,
+      user: session,
+      staff: session,
+      developer: session,
+      message: 'Permission denied for this module',
+      status: 403,
+      canView: false,
+      canCreate: false,
+      canEdit: false,
+      canDelete: false,
+      canManage: false,
+    };
   } catch (error) {
     console.error('Permission validation error:', error);
-    return { success: false, user: null, staff: null, developer: null, message: error.message, canEdit: false };
+    return { success: false, user: null, staff: null, developer: null, message: error.message, status: 500, canEdit: false, canCreate: false, canDelete: false, canView: false };
   }
 }
 
 export const hasDeveloperPermission = hasModulePermission;
 
-export async function requireDeveloperPermission(request, moduleSlug) {
-  const check = await hasModulePermission(request, moduleSlug);
+export async function requireDeveloperPermission(request, moduleSlug, action = 'view') {
+  const check = await hasModulePermission(request, moduleSlug, action);
   if (!check.success) {
     return {
       ...check,
-      status: check.message === 'Unauthenticated' ? 401 : 403,
+      status: check.status || (check.message === 'Unauthenticated' ? 401 : 403),
       error: check.message,
     };
   }

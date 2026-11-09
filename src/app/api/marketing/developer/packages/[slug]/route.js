@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
 
 async function generateUniqueSlug(name, excludeId = null) {
@@ -89,9 +89,12 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
 
 export async function GET(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'view');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { slug } = await params;
@@ -126,9 +129,12 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'edit');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Access denied' },
+        { status: auth.status || 403 }
+      );
     }
 
     const { slug } = await params;
@@ -330,9 +336,12 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'delete');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Access denied' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { slug } = await params;

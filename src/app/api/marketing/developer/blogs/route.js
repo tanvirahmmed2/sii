@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import cloudinary, { uploadToCloudinary, deleteFromCloudinary } from 'src/lib/database/cloudinary';
 
 function slugify(text) {
@@ -34,19 +34,6 @@ async function generateUniqueSlug(text, excludeId = null) {
     }
     candidate = `${baseSlug}-${counter++}`;
   }
-}
-
-function parseTags(tagsInput) {
-  if (Array.isArray(tagsInput)) {
-    return tagsInput.map((t) => String(t).trim()).filter(Boolean);
-  }
-  if (typeof tagsInput === 'string') {
-    return tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-  }
-  return [];
 }
 
 const BLOG_SELECT_FIELDS = `
@@ -205,9 +192,12 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
 
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'view');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -240,65 +230,52 @@ export async function GET(request) {
       SELECT ${BLOG_SELECT_FIELDS}
       FROM blogs b
       LEFT JOIN developers d ON b.developer_id = d.id
+      WHERE 1=1
     `;
-
-    const conditions = [];
     const params = [];
     let idx = 1;
 
     if (blogId) {
-      conditions.push(`b.id = $${idx++}`);
+      query += ` AND b.id = $${idx++}`;
       params.push(Number(blogId));
-    }
-    if (slug) {
-      conditions.push(`b.slug = $${idx++}`);
+    } else if (slug) {
+      query += ` AND b.slug = $${idx++}`;
       params.push(slug.trim());
     }
+
     if (status === 'published') {
-      conditions.push(`b.is_published = TRUE`);
+      query += ` AND b.is_published = TRUE`;
     } else if (status === 'draft') {
-      conditions.push(`b.is_published = FALSE`);
+      query += ` AND b.is_published = FALSE`;
     }
-    if (category && category.trim()) {
-      conditions.push(`LOWER(b.category) = $${idx++}`);
-      params.push(category.trim().toLowerCase());
+
+    if (category && category !== 'ALL') {
+      query += ` AND b.category = $${idx++}`;
+      params.push(category.trim());
     }
+
     if (search && search.trim()) {
-      conditions.push(`(
-        LOWER(b.title) LIKE $${idx} OR 
-        LOWER(COALESCE(b.excerpt, '')) LIKE $${idx} OR 
-        LOWER(COALESCE(b.category, '')) LIKE $${idx}
-      )`);
+      query += ` AND (LOWER(b.title) LIKE $${idx} OR LOWER(COALESCE(b.excerpt, '')) LIKE $${idx} OR LOWER(COALESCE(b.content, '')) LIKE $${idx})`;
       params.push(`%${search.trim().toLowerCase()}%`);
       idx++;
     }
 
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(' AND ')}`;
-    }
+    query += ` ORDER BY b.is_published DESC, b.published_at DESC NULLS LAST, b.id DESC`;
 
-    query += ` ORDER BY b.created_at DESC, b.id DESC`;
-
-    const res = await queryDb(query, params).catch(() => ({ rows: [] }));
+    const res = await queryDb(query, params);
 
     if (blogId || slug) {
-      const record = res.rows[0] || null;
-      if (!record) {
-        return NextResponse.json({ success: false, error: 'Blog not found.' }, { status: 404 });
+      if (res.rows.length === 0) {
+        return NextResponse.json({ success: false, error: 'Article not found.' }, { status: 404 });
       }
-      return NextResponse.json({ success: true, record, blog: record, ...record });
+      return NextResponse.json({ success: true, record: res.rows[0], blog: res.rows[0] });
     }
-
-    const catRes = await queryDb(
-      'SELECT DISTINCT category FROM blogs WHERE category IS NOT NULL AND category != \'\' ORDER BY category ASC'
-    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
-      table: 'blogs',
       records: res.rows,
       blogs: res.rows,
-      categories: catRes.rows.map((r) => r.category),
+      count: res.rows.length,
     });
   } catch (error) {
     console.error('Developer blogs GET error:', error);
@@ -308,16 +285,18 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'create');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     let title = '';
     let excerpt = '';
     let content = '';
     let category = '';
-    let tagsInput = [];
     let meta_title = '';
     let meta_description = '';
     let is_published = false;
@@ -393,7 +372,7 @@ export async function POST(request) {
 
     const slug = await generateUniqueSlug(title);
 
-    const developerId = auth.user?.id || auth.staff?.id || null;
+    const developerId = auth.user?.id || auth.staff?.id || auth.developer?.id || null;
     const finalPublishedAt = is_published ? (published_at || new Date().toISOString()) : null;
 
     const insertRes = await queryDb(
@@ -447,9 +426,12 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'edit');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     let id = null;
@@ -457,7 +439,6 @@ export async function PUT(request) {
     let excerpt = null;
     let content = null;
     let category = null;
-    let tagsInput = null;
     let meta_title = null;
     let meta_description = null;
     let is_published = null;
@@ -614,9 +595,12 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'delete');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);

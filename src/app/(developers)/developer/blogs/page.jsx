@@ -5,8 +5,38 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
+function getModulePermissions(user, moduleKey) {
+  if (!user) return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+  const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+  if (isOwner) return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+
+  const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+  for (const k of keys) {
+    const p = user.permissionsMap?.[k];
+    if (p) {
+      return {
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+        canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+      };
+    }
+  }
+
+  const perms = (user.permissions || []).map((x) => String(x).toLowerCase().trim());
+  const found = keys.some((k) => perms.includes(k.toLowerCase()));
+  if (found) {
+    return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+  }
+
+  return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
+
 export default function AdminBlogsPage() {
   const { user } = useContext(Context);
+  const { canView, canCreate, canEdit, canDelete } = getModulePermissions(user, ['blogs', 'blog']);
+
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,9 +45,6 @@ export default function AdminBlogsPage() {
   const [deletingId, setDeletingId] = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [actionError, setActionError] = useState('');
-
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canManage = permissions.includes('blogs') || ['admin', 'manager'].includes((user?.role || '').toLowerCase());
 
   const fetchBlogs = async () => {
     try {
@@ -43,6 +70,10 @@ export default function AdminBlogsPage() {
   }, []);
 
   const handleDelete = async (id, title) => {
+    if (!canDelete) {
+      setActionError('Access denied: Delete permission required for blogs.');
+      return;
+    }
     if (!confirm(`Are you sure you want to permanently delete "${title || 'this article'}"?`)) return;
     setDeletingId(id);
     setActionError('');
@@ -64,6 +95,10 @@ export default function AdminBlogsPage() {
   };
 
   const handleTogglePublish = async (blog) => {
+    if (!canEdit) {
+      setActionError('Access denied: Edit permission required for blogs.');
+      return;
+    }
     setTogglingId(blog.id);
     setActionError('');
     try {
@@ -99,13 +134,11 @@ export default function AdminBlogsPage() {
     if (selectedCategory !== 'ALL' && blog.category !== selectedCategory) return false;
 
     if (!searchTerm.trim()) return true;
-    const q = searchTerm.toLowerCase();
-    return (
-      blog.title?.toLowerCase().includes(q) ||
-      blog.excerpt?.toLowerCase().includes(q) ||
-      blog.category?.toLowerCase().includes(q) ||
-      blog.author_name?.toLowerCase().includes(q)
-    );
+    const term = searchTerm.toLowerCase();
+    const titleMatch = (blog.title || '').toLowerCase().includes(term);
+    const categoryMatch = (blog.category || '').toLowerCase().includes(term);
+    const authorMatch = (blog.author_name || '').toLowerCase().includes(term);
+    return titleMatch || categoryMatch || authorMatch;
   });
 
   return (
@@ -114,14 +147,19 @@ export default function AdminBlogsPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-base font-semibold text-slate-900">
-              Platform Blog Articles
+              Platform Blogs &amp; Articles
             </h1>
             <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
-              CMS Content
+              Content
             </span>
+            {!canCreate && !canEdit && !canDelete && (
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Publish educational articles, marketing insights, and product release guides.
+            Write company updates, tutorials, and guides published to the public /blogs catalog.
           </p>
         </div>
 
@@ -133,20 +171,25 @@ export default function AdminBlogsPage() {
           >
             Refresh
           </button>
-
-          {canManage && (
+          {canCreate && (
             <Link
               href="/developer/blogs/create"
-              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors self-start sm:self-auto"
             >
-              Create Article
+              Write Article
             </Link>
           )}
         </div>
       </div>
 
+      {!canCreate && !canEdit && !canDelete && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing blogs in read-only mode.
+        </div>
+      )}
+
       {actionError && (
-        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-normal flex items-center justify-between gap-2">
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded font-medium flex items-center justify-between">
           <span>{actionError}</span>
           <button
             type="button"
@@ -161,25 +204,29 @@ export default function AdminBlogsPage() {
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
-            <input
-              type="text"
-              placeholder="Search by title, category, or author..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Search Articles
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap self-end">
             {categories.length > 0 && (
               <select
                 value={selectedCategory}
@@ -309,7 +356,7 @@ export default function AdminBlogsPage() {
                       <td className="py-2.5 text-center">
                         <button
                           type="button"
-                          disabled={isBeingToggled || !canManage}
+                          disabled={isBeingToggled || !canEdit}
                           onClick={() => handleTogglePublish(blog)}
                           className={`text-[9px] font-medium px-1.5 py-0.5 rounded border transition-colors cursor-pointer disabled:opacity-50 ${
                             blog.is_published
@@ -342,10 +389,10 @@ export default function AdminBlogsPage() {
                             href={`/developer/blogs/${blog.id}`}
                             className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium"
                           >
-                            Edit
+                            {canEdit ? 'Edit' : 'View'}
                           </Link>
 
-                          {canManage && (
+                          {canDelete && (
                             <button
                               type="button"
                               disabled={deletingId === blog.id}

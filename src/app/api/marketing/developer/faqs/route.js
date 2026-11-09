@@ -1,26 +1,34 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 
 export async function GET(request) {
   try {
-    const auth = await hasModulePermission(request, 'faqs');
+    const auth = await requireDeveloperPermission(request, ['faqs', 'faq'], 'view');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (id) {
-      const res = await queryDb('SELECT id, question, answer, created_at, updated_at FROM faq WHERE id = $1 LIMIT 1', [Number(id)]);
+      const res = await queryDb(
+        'SELECT id, question, answer, created_at, updated_at FROM faq WHERE id = $1 LIMIT 1',
+        [Number(id)]
+      );
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'FAQ not found.' }, { status: 404 });
       }
       return NextResponse.json({ success: true, record: res.rows[0], faq: res.rows[0] });
     }
 
-    const res = await queryDb('SELECT id, question, answer, created_at, updated_at FROM faq ORDER BY id ASC').catch((err) => {
+    const res = await queryDb(
+      'SELECT id, question, answer, created_at, updated_at FROM faq ORDER BY id ASC'
+    ).catch((err) => {
       console.warn('FAQ list query error:', err.message);
       return { rows: [] };
     });
@@ -34,10 +42,10 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'faqs');
+    const authCheck = await requireDeveloperPermission(request, ['faqs', 'faq'], 'create');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission faqs required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission faqs required.' },
         { status: authCheck.status || 403 }
       );
     }
@@ -67,10 +75,10 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'faqs');
+    const authCheck = await requireDeveloperPermission(request, ['faqs', 'faq'], 'edit');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission faqs required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission faqs required.' },
         { status: authCheck.status || 403 }
       );
     }
@@ -105,10 +113,10 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const authCheck = await hasModulePermission(request, 'faqs');
+    const authCheck = await requireDeveloperPermission(request, ['faqs', 'faq'], 'delete');
     if (!authCheck.success) {
       return NextResponse.json(
-        { success: false, error: authCheck.message || 'Access denied: Permission faqs required.' },
+        { success: false, error: authCheck.error || authCheck.message || 'Access denied: Permission faqs required.' },
         { status: authCheck.status || 403 }
       );
     }

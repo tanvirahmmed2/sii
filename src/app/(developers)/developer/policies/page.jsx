@@ -5,6 +5,34 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
+function getModulePermissions(user, moduleKey) {
+  if (!user) return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+  const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+  if (isOwner) return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+
+  const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+  for (const k of keys) {
+    const p = user.permissionsMap?.[k];
+    if (p) {
+      return {
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+        canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+      };
+    }
+  }
+
+  const perms = (user.permissions || []).map((x) => String(x).toLowerCase().trim());
+  const found = keys.some((k) => perms.includes(k.toLowerCase()));
+  if (found) {
+    return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+  }
+
+  return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
+
 export default function DeveloperPoliciesPage() {
   const { user } = useContext(Context);
   const [policies, setPolicies] = useState([]);
@@ -24,8 +52,7 @@ export default function DeveloperPoliciesPage() {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const editorRef = useRef(null);
 
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canManage = permissions.includes('policies') || user?.role === 'admin';
+  const { canView, canCreate, canEdit, canDelete } = getModulePermissions(user, ['policies', 'policy']);
 
   const fetchPolicies = async () => {
     try {
@@ -65,6 +92,10 @@ export default function DeveloperPoliciesPage() {
   }, []);
 
   const openCreateInPage = () => {
+    if (!canCreate) {
+      alert('Access denied: Create permission required for policies.');
+      return;
+    }
     setEditingPolicy(null);
     setFormData({
       title: '',
@@ -79,6 +110,10 @@ export default function DeveloperPoliciesPage() {
   };
 
   const openEditInPage = (policy) => {
+    if (!canEdit) {
+      alert('Access denied: Edit permission required for policies.');
+      return;
+    }
     setEditingPolicy(policy);
     setFormData({
       title: policy.title || '',
@@ -104,6 +139,15 @@ export default function DeveloperPoliciesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (editingPolicy && !canEdit) {
+      setFeedback({ type: 'error', message: 'Access denied: Edit permission required.' });
+      return;
+    }
+    if (!editingPolicy && !canCreate) {
+      setFeedback({ type: 'error', message: 'Access denied: Create permission required.' });
+      return;
+    }
+
     if (!formData.title.trim() || !formData.description.trim()) {
       setFeedback({ type: 'error', message: 'Please provide both title and policy content.' });
       return;
@@ -147,6 +191,10 @@ export default function DeveloperPoliciesPage() {
   };
 
   const handleToggleStatus = async (policy) => {
+    if (!canEdit) {
+      alert('Access denied: Edit permission required.');
+      return;
+    }
     const nextState = !policy.is_published;
     try {
       const res = await fetch('/api/marketing/developer/policies', {
@@ -172,6 +220,11 @@ export default function DeveloperPoliciesPage() {
   };
 
   const handleDelete = async (id, title) => {
+    if (!canDelete) {
+      alert('Access denied: Delete permission required for policies.');
+      return;
+    }
+
     if (!confirm(`Are you sure you want to permanently delete "${title || 'this policy'}"?`)) return;
 
     setDeletingId(id);
@@ -228,6 +281,11 @@ export default function DeveloperPoliciesPage() {
             <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
               Governance
             </span>
+            {!canCreate && !canEdit && !canDelete && (
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Manage public legal standards, terms of service, privacy disclosures, and compliance guidelines.
@@ -243,7 +301,7 @@ export default function DeveloperPoliciesPage() {
             Refresh
           </button>
 
-          {canManage && (
+          {canCreate && (
             <button
               type="button"
               onClick={() => {
@@ -260,6 +318,12 @@ export default function DeveloperPoliciesPage() {
           )}
         </div>
       </div>
+
+      {!canCreate && !canEdit && !canDelete && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing policies in read-only mode.
+        </div>
+      )}
 
       {feedback.message && (
         <div
@@ -308,7 +372,6 @@ export default function DeveloperPoliciesPage() {
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. Terms of Service, Privacy Policy, Cookie Compliance"
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
@@ -327,7 +390,6 @@ export default function DeveloperPoliciesPage() {
                 required
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Write full terms, legal guidelines, or privacy clauses..."
                 className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800 leading-relaxed font-sans"
               />
             </div>
@@ -369,25 +431,29 @@ export default function DeveloperPoliciesPage() {
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
-            <input
-              type="text"
-              placeholder="Search policies by title or keywords..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Search Policies
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded self-end">
             {[
               { key: 'ALL', label: `All (${totalCount})` },
               { key: 'PUBLISHED', label: `Published (${publishedCount})` },
@@ -458,7 +524,7 @@ export default function DeveloperPoliciesPage() {
                       <td className="py-2.5">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            {canManage ? (
+                            {canEdit ? (
                               <button
                                 type="button"
                                 onClick={() => openEditInPage(policy)}
@@ -488,10 +554,10 @@ export default function DeveloperPoliciesPage() {
                       <td className="py-2.5 text-center">
                         <button
                           type="button"
-                          onClick={() => canManage && handleToggleStatus(policy)}
-                          disabled={!canManage}
+                          onClick={() => canEdit && handleToggleStatus(policy)}
+                          disabled={!canEdit}
                           className={`text-[9px] font-medium px-1.5 py-0.5 rounded border transition-colors ${
-                            canManage ? 'cursor-pointer' : 'cursor-default'
+                            canEdit ? 'cursor-pointer' : 'cursor-default'
                           } ${
                             policy.is_published !== false
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
@@ -519,24 +585,24 @@ export default function DeveloperPoliciesPage() {
                             </Link>
                           )}
 
-                          {canManage && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => openEditInPage(policy)}
-                                className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                disabled={deletingId === policy.id}
-                                onClick={() => handleDelete(policy.id, policy.title)}
-                                className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
-                              >
-                                Delete
-                              </button>
-                            </>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => openEditInPage(policy)}
+                              className="px-2 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              disabled={deletingId === policy.id}
+                              onClick={() => handleDelete(policy.id, policy.title)}
+                              className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
                           )}
                         </div>
                       </td>

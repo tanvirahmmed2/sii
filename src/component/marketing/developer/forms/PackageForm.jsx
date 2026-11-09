@@ -303,10 +303,9 @@ export default function PackageForm({
             <input
               type="text"
               required
-              placeholder="e.g. Starter Academy, Pro School, Enterprise"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
@@ -316,10 +315,9 @@ export default function PackageForm({
             </label>
             <input
               type="text"
-              placeholder="Brief summary for checkout cards"
               value={formData.short_description}
               onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
@@ -329,10 +327,9 @@ export default function PackageForm({
             </label>
             <input
               type="text"
-              placeholder="e.g. Ideal for coaching centers & madrasahs"
               value={formData.tagline}
               onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
         </div>
@@ -357,7 +354,6 @@ export default function PackageForm({
                 value={formData.discount_percentage}
                 onChange={(e) => setFormData({ ...formData, discount_percentage: e.target.value })}
                 className="w-20 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs font-mono font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"
-                placeholder="15"
               />
             </div>
           </div>
@@ -377,7 +373,6 @@ export default function PackageForm({
                 step="0.01"
                 min="0"
                 required
-                placeholder="29.00"
                 value={formData.monthly_price_usd}
                 onChange={(e) => setFormData({ ...formData, monthly_price_usd: e.target.value })}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -399,7 +394,6 @@ export default function PackageForm({
                 step="0.01"
                 min="0"
                 required
-                placeholder="290.00"
                 value={formData.yearly_price_usd}
                 onChange={(e) => setFormData({ ...formData, yearly_price_usd: e.target.value })}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -421,7 +415,6 @@ export default function PackageForm({
                 step="0.01"
                 min="0"
                 required
-                placeholder="3500.00"
                 value={formData.monthly_price_bdt}
                 onChange={(e) => setFormData({ ...formData, monthly_price_bdt: e.target.value })}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -443,7 +436,6 @@ export default function PackageForm({
                 step="0.01"
                 min="0"
                 required
-                placeholder="35000.00"
                 value={formData.yearly_price_bdt}
                 onChange={(e) => setFormData({ ...formData, yearly_price_bdt: e.target.value })}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -516,7 +508,6 @@ export default function PackageForm({
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. 5 GB, 25 GB"
                   value={formData.max_storage}
                   onChange={(e) => setFormData({ ...formData, max_storage: e.target.value })}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -543,14 +534,14 @@ export default function PackageForm({
                 type="checkbox"
                 checked={formData.is_available_student_panel}
                 onChange={(e) => setFormData({ ...formData, is_available_student_panel: e.target.checked })}
-                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+                className="mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
               />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white">
+              <div>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white block">
                   Student Portal Access
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Allows students and parents to view attendance, report cards, fees, and take CBT online exams.
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Grants student attendance, grades, and fee payment panel.
                 </span>
               </div>
             </label>
@@ -560,14 +551,14 @@ export default function PackageForm({
                 type="checkbox"
                 checked={formData.is_available_teacher_panel}
                 onChange={(e) => setFormData({ ...formData, is_available_teacher_panel: e.target.checked })}
-                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+                className="mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
               />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                  Teacher Faculty Panel
+              <div>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                  Teacher Portal Access
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Enables dedicated teacher portal for syllabus entry, marks submission, lesson plans, and homework.
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Grants teachers classroom attendance, assignments, and gradebooks.
                 </span>
               </div>
             </label>
@@ -577,14 +568,14 @@ export default function PackageForm({
                 type="checkbox"
                 checked={formData.is_available_custom_domain}
                 onChange={(e) => setFormData({ ...formData, is_available_custom_domain: e.target.checked })}
-                className="mt-0.5 rounded border-slate-300 cursor-pointer"
+                className="mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"
               />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                  Custom Domain (*.edu.bd)
+              <div>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white block">
+                  Custom Domain Mapping
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Permits mapping institutional domain (school.edu.bd / .com) with automatic SSL certificates.
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Enables institutions to attach their custom domain name.
                 </span>
               </div>
             </label>
@@ -592,38 +583,38 @@ export default function PackageForm({
         </div>
 
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-                Package Module Entitlements
+                Module Entitlements &amp; System Features
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Connect public frontend routes (package_home_modules) and staff control workstations (package_control_modules).
+                Assign public portal modules and staff workstation panels included in this package.
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 bg-slate-200 dark:bg-slate-700 p-0.5 rounded">
               <button
                 type="button"
                 onClick={() => setActiveModuleTab('control')}
-                className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
                   activeModuleTab === 'control'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
                 }`}
               >
-                Control Modules ({selectedControlIds.length}/{controlModules.length})
+                Control Panels ({selectedControlIds.length}/{controlModules.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveModuleTab('home')}
-                className={`px-3 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${
+                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
                   activeModuleTab === 'home'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
                 }`}
               >
-                Home Modules ({selectedHomeIds.length}/{homeModules.length})
+                Home Features ({selectedHomeIds.length}/{homeModules.length})
               </button>
             </div>
           </div>
@@ -644,13 +635,15 @@ export default function PackageForm({
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="text"
-                    placeholder="Search control modules..."
-                    value={controlSearch}
-                    onChange={(e) => setControlSearch(e.target.value)}
-                    className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-44"
-                  />
+                  <div>
+                    <label className="sr-only">Search control modules</label>
+                    <input
+                      type="text"
+                      value={controlSearch}
+                      onChange={(e) => setControlSearch(e.target.value)}
+                      className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-44"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -719,13 +712,15 @@ export default function PackageForm({
           {activeModuleTab === 'home' && (
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <input
-                  type="text"
-                  placeholder="Search home modules..."
-                  value={homeSearch}
-                  onChange={(e) => setHomeSearch(e.target.value)}
-                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-48"
-                />
+                <div>
+                  <label className="sr-only">Search home modules</label>
+                  <input
+                    type="text"
+                    value={homeSearch}
+                    onChange={(e) => setHomeSearch(e.target.value)}
+                    className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 w-48"
+                  />
+                </div>
 
                 <div className="flex items-center gap-1.5">
                   <button
@@ -798,10 +793,9 @@ export default function PackageForm({
             </label>
             <textarea
               rows={3}
-              placeholder="Highlight special inclusions, support SLAs, or institutional requirements..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 

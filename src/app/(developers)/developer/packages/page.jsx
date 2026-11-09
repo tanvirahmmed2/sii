@@ -7,10 +7,37 @@ import { Context } from 'src/component/helper/Context';
 import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
+function getModulePermissions(user, moduleKey) {
+  if (!user) return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+  const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+  if (isOwner) return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+
+  const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+  for (const k of keys) {
+    const p = user.permissionsMap?.[k];
+    if (p) {
+      return {
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+        canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+      };
+    }
+  }
+
+  const perms = (user.permissions || []).map((x) => String(x).toLowerCase().trim());
+  const found = keys.some((k) => perms.includes(k.toLowerCase()));
+  if (found) {
+    return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+  }
+
+  return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
+
 export default function AdminPackagesPage() {
   const { user } = useContext(Context) || {};
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const isAdminUser = Boolean(permissions.includes('packages'));
+  const { canView, canCreate, canEdit, canDelete } = getModulePermissions(user, ['packages', 'package']);
   const router = useRouter();
 
   const [packages, setPackages] = useState([]);
@@ -44,8 +71,8 @@ export default function AdminPackagesPage() {
   }, []);
 
   const handleToggleStatus = async (pkg) => {
-    if (!isAdminUser) {
-      showFeedback('Access Denied: packages permission required to toggle package status.');
+    if (!canEdit) {
+      showFeedback('Access Denied: Edit permission required to toggle package status.');
       return;
     }
     setTogglingId(pkg.id);
@@ -72,8 +99,8 @@ export default function AdminPackagesPage() {
   };
 
   const handleDelete = async (id, name) => {
-    if (!isAdminUser) {
-      showFeedback('Access Denied: packages permission required to delete packages.');
+    if (!canDelete) {
+      showFeedback('Access Denied: Delete permission required for packages.');
       return;
     }
     if (!confirm(`Are you sure you want to delete package "${name || `#${id}`}"? This action cannot be undone.`)) {
@@ -113,10 +140,10 @@ export default function AdminPackagesPage() {
           pkg.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pkg.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           pkg.tagline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (Array.isArray(pkg.tenant_modules) &&
-            pkg.tenant_modules.some((m) => (m.name || m).toLowerCase().includes(searchTerm.toLowerCase()))) ||
-          (Array.isArray(pkg.allowed_modules) &&
-            pkg.allowed_modules.some((m) => m.toLowerCase().includes(searchTerm.toLowerCase())));
+          (Array.isArray(pkg.home_modules) &&
+            pkg.home_modules.some((m) => (m.name || m.slug || '').toLowerCase().includes(searchTerm.toLowerCase()))) ||
+          (Array.isArray(pkg.control_modules) &&
+            pkg.control_modules.some((m) => (m.name || m.slug || '').toLowerCase().includes(searchTerm.toLowerCase())));
 
         const matchesStatus =
           statusFilter === 'ALL' ||
@@ -131,86 +158,54 @@ export default function AdminPackagesPage() {
         return matchesSearch && matchesStatus && matchesVisibility;
       })
       .sort((a, b) => {
-        const getMonthlyPrice = (item) =>
-          Number(
-            item.monthly_price_usd !== undefined
-              ? item.monthly_price_usd
-              : item.monthly_price !== undefined
-              ? item.monthly_price
-              : 0
-          ) || 0;
-
-        if (sortOrder === 'PRICE_DESC') {
-          const diff = getMonthlyPrice(b) - getMonthlyPrice(a);
-          return diff !== 0 ? diff : (Number(b.id) || 0) - (Number(a.id) || 0);
+        if (sortOrder === 'PRICE_ASC') {
+          return Number(a.monthly_price_usd ?? a.monthly_price ?? 0) - Number(b.monthly_price_usd ?? b.monthly_price ?? 0);
         }
-        if (sortOrder === 'NEWEST') {
-          return (Number(b.id) || 0) - (Number(a.id) || 0);
+        if (sortOrder === 'PRICE_DESC') {
+          return Number(b.monthly_price_usd ?? b.monthly_price ?? 0) - Number(a.monthly_price_usd ?? a.monthly_price ?? 0);
         }
         if (sortOrder === 'NAME_ASC') {
           return (a.name || '').localeCompare(b.name || '');
         }
-
-        const diff = getMonthlyPrice(a) - getMonthlyPrice(b);
-        return diff !== 0 ? diff : (Number(a.id) || 0) - (Number(b.id) || 0);
+        if (sortOrder === 'NEWEST') {
+          return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        }
+        return 0;
       });
-  }, [packages, searchTerm, statusFilter, sortOrder]);
+  }, [packages, searchTerm, statusFilter, visibilityFilter, sortOrder]);
 
-  const totalPackages = packages.length;
   const activePackages = packages.filter((p) => p.is_active !== false).length;
-  const avgMonthlyUsd =
-    packages.length > 0
-      ? (
-          packages.reduce(
-            (acc, p) =>
-              acc +
-              Number(
-                p.monthly_price_usd !== undefined
-                  ? p.monthly_price_usd
-                  : p.monthly_price !== undefined
-                  ? p.monthly_price
-                  : 0
-              ),
-            0
-          ) / packages.length
-        ).toFixed(2)
-      : '0.00';
-
-  const avgMonthlyBdt =
-    packages.length > 0
-      ? (
-          packages.reduce(
-            (acc, p) => acc + Number(p.monthly_price_bdt !== undefined ? p.monthly_price_bdt : 0),
-            0
-          ) / packages.length
-        ).toFixed(0)
-      : '0';
+  const avgMonthlyUsd = packages.length
+    ? (
+        packages.reduce((acc, curr) => acc + Number(curr.monthly_price_usd ?? curr.monthly_price ?? 0), 0) /
+        packages.length
+      ).toFixed(2)
+    : '0.00';
+  const avgMonthlyBdt = packages.length
+    ? (
+        packages.reduce((acc, curr) => acc + Number(curr.monthly_price_bdt ?? 0), 0) / packages.length
+      ).toFixed(2)
+    : '0.00';
 
   return (
     <div className="w-full space-y-4">
-      {feedback && (
-        <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-2.5 rounded shadow-lg border border-slate-700 text-xs font-medium">
-          {feedback}
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2">
             <h1 className="text-base font-semibold text-slate-900 dark:text-white">
-              Platform Packages &amp; Plans
+              Subscription Packages &amp; Pricing
             </h1>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
-              Billing Tiers
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+              Billing
             </span>
-            {!isAdminUser && (
-              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+            {!canCreate && !canEdit && !canDelete && (
+              <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
                 Read-Only
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Create, update, and govern multi-tenant SaaS subscription packages, dual-currency pricing (BDT &amp; USD), institutional quotas, and linked tenant modules.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure platform subscription tiers, multi-currency pricing models, and module allocations.
           </p>
         </div>
 
@@ -218,42 +213,53 @@ export default function AdminPackagesPage() {
           <button
             type="button"
             onClick={fetchPackages}
-            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+            className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors cursor-pointer"
           >
             Refresh
           </button>
-          {isAdminUser ? (
+
+          {canCreate && (
             <button
               type="button"
-              onClick={() => setShowCreateForm((prev) => !prev)}
-              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium cursor-pointer transition-colors"
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer"
             >
-              {showCreateForm ? 'Close Form' : 'Create Package'}
+              {showCreateForm ? 'Close Form' : 'New Package'}
             </button>
-          ) : (
-            <div className="px-3 py-1.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium">
-              Admin Role Required
-            </div>
           )}
         </div>
       </div>
 
-      {showCreateForm && (
-        <PackageForm
-          onSuccess={(newPkg) => {
-            setShowCreateForm(false);
-            showFeedback(`Package "${newPkg?.name}" created successfully!`);
-            fetchPackages();
-          }}
-          onCancel={() => setShowCreateForm(false)}
-        />
+      {!canCreate && !canEdit && !canDelete && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing subscription packages in read-only mode.
+        </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {feedback && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded font-medium">
+          {feedback}
+        </div>
+      )}
+
+      {showCreateForm && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+          <PackageForm
+            onSuccess={(newPkg) => {
+              setShowCreateForm(false);
+              fetchPackages();
+              showFeedback(`Package "${newPkg?.name || 'New'}" successfully created.`);
+            }}
+            onCancel={() => setShowCreateForm(false)}
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
           <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Plans</div>
-          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{totalPackages}</div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Configured subscription tiers</p>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{packages.length}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Configured tiers</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
@@ -278,16 +284,18 @@ export default function AdminPackagesPage() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="flex-1 max-w-md">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Search Packages
+            </label>
             <input
               type="text"
-              placeholder="Search packages by name, tagline, or module..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end">
             <select
               value={visibilityFilter}
               onChange={(e) => setVisibilityFilter(e.target.value)}
@@ -377,13 +385,19 @@ export default function AdminPackagesPage() {
 
                       <td className="py-2.5">
                         <div className="flex items-center gap-2">
-                          <Link
-                            href={`/developer/packages/${pkg.slug}`}
-                            className="font-medium text-slate-900 dark:text-white hover:underline block truncate"
-                            title="Open Plan Workspace"
-                          >
-                            {pkg.name}
-                          </Link>
+                          {canEdit ? (
+                            <Link
+                              href={`/developer/packages/${pkg.slug}`}
+                              className="font-medium text-slate-900 dark:text-white hover:underline block truncate"
+                              title="Open Plan Workspace"
+                            >
+                              {pkg.name}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-slate-900 dark:text-white block truncate">
+                              {pkg.name}
+                            </span>
+                          )}
                           {pkg.is_public === false ? (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200">
                               Custom Plan
@@ -487,16 +501,16 @@ export default function AdminPackagesPage() {
                       <td className="py-2.5">
                         <button
                           type="button"
-                          disabled={togglingId === pkg.id || !isAdminUser}
+                          disabled={togglingId === pkg.id || !canEdit}
                           onClick={() => handleToggleStatus(pkg)}
                           className={`inline-flex items-center px-1.5 py-0.2 rounded border text-[9px] font-medium transition-colors ${
-                            !isAdminUser ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
+                            !canEdit ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'
                           } ${
                             isRowActive
                               ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200'
                           }`}
-                          title={isAdminUser ? 'Click to toggle status' : 'packages permission required to toggle status'}
+                          title={canEdit ? 'Click to toggle status' : 'Edit permission required to toggle status'}
                         >
                           {togglingId === pkg.id ? 'Updating...' : isRowActive ? 'Active' : 'Disabled'}
                         </button>
@@ -507,27 +521,27 @@ export default function AdminPackagesPage() {
                       </td>
 
                       <td className="py-2.5 text-right whitespace-nowrap">
-                        {isAdminUser ? (
-                          <div className="inline-flex items-center gap-1.5">
+                        <div className="inline-flex items-center gap-1.5">
+                          {canEdit && (
                             <Link
                               href={`/developer/packages/${pkg.slug}`}
                               className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors"
                             >
                               Edit
                             </Link>
+                          )}
 
+                          {canDelete && (
                             <button
                               type="button"
                               disabled={deletingId === pkg.id}
                               onClick={() => handleDelete(pkg.id, pkg.name)}
-                              className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer"
+                              className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
                             >
                               Delete
                             </button>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-slate-400 italic">View Only</span>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

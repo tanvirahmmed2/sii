@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import { uploadToCloudinary, deleteFromCloudinary } from 'src/lib/database/cloudinary';
 
 function slugify(text) {
@@ -34,19 +34,6 @@ async function generateUniqueSlug(text, excludeId = null) {
     }
     candidate = `${baseSlug}-${counter++}`;
   }
-}
-
-function parseTags(tagsInput) {
-  if (Array.isArray(tagsInput)) {
-    return tagsInput.map((t) => String(t).trim()).filter(Boolean);
-  }
-  if (typeof tagsInput === 'string') {
-    return tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-  }
-  return [];
 }
 
 const BLOG_SELECT_FIELDS = `
@@ -205,9 +192,12 @@ async function syncBlogImages(blogId, existingImages = null, newFiles = []) {
 
 export async function GET(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'view');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { slug } = await params;
@@ -227,9 +217,12 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'edit');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { slug } = await params;
@@ -250,7 +243,6 @@ export async function PUT(request, { params }) {
     let excerpt = null;
     let content = null;
     let category = null;
-    let tagsInput = null;
     let meta_title = null;
     let meta_description = null;
     let is_published = null;
@@ -393,9 +385,12 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await hasModulePermission(request, 'blogs');
+    const auth = await requireDeveloperPermission(request, ['blogs', 'blog'], 'delete');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 401 });
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
     }
 
     const { slug } = await params;

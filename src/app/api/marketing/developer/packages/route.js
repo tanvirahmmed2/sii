@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { hasModulePermission } from 'src/lib/middleware/developer';
+import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
 
 async function generateUniqueSlug(name, excludeId = null) {
@@ -89,6 +89,14 @@ async function fetchPackageById(id) {
 
 export async function GET(request) {
   try {
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'view');
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Unauthorized' },
+        { status: auth.status || 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -188,10 +196,10 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'create');
     if (!auth.success) {
       return NextResponse.json(
-        { success: false, error: auth.message },
+        { success: false, error: auth.error || auth.message || 'Access denied' },
         { status: auth.status || 403 }
       );
     }
@@ -331,10 +339,10 @@ export async function POST(request) {
 
 export async function PUT(request) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'edit');
     if (!auth.success) {
       return NextResponse.json(
-        { success: false, error: auth.message },
+        { success: false, error: auth.error || auth.message || 'Access denied' },
         { status: auth.status || 403 }
       );
     }
@@ -541,10 +549,10 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'delete');
     if (!auth.success) {
       return NextResponse.json(
-        { success: false, error: auth.message },
+        { success: false, error: auth.error || auth.message || 'Access denied' },
         { status: auth.status || 403 }
       );
     }
@@ -573,10 +581,10 @@ export async function DELETE(request) {
 
 export async function PATCH(request) {
   try {
-    const auth = await hasModulePermission(request, 'packages');
+    const auth = await requireDeveloperPermission(request, ['packages', 'package'], 'edit');
     if (!auth.success) {
       return NextResponse.json(
-        { success: false, error: auth.message },
+        { success: false, error: auth.error || auth.message || 'Access denied' },
         { status: auth.status || 403 }
       );
     }

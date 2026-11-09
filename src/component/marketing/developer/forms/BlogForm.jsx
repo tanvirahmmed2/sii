@@ -102,80 +102,62 @@ export default function BlogForm({
     }));
   };
 
-  const handleFilesSelect = (e) => {
+  const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    const newPending = files.map((file, idx) => ({
-      id: `pending-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+    const newItems = files.map((file, idx) => ({
+      id: `pending_${Date.now()}_${idx}`,
       file,
       preview: URL.createObjectURL(file),
-      is_primary: gallery.length === 0 && idx === 0,
+      caption: '',
+      is_primary: gallery.length === 0 && pendingFiles.length === 0 && idx === 0,
     }));
 
-    setPendingFiles((prev) => [...prev, ...newPending]);
+    setPendingFiles((prev) => [...prev, ...newItems]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleRemovePendingFile = (id) => {
+  const handleRemovePending = (id) => {
     setPendingFiles((prev) => {
-      const item = prev.find((p) => p.id === id);
-      if (item?.preview) URL.revokeObjectURL(item.preview);
-      const remaining = prev.filter((p) => p.id !== id);
-
-      if (item?.is_primary) {
-        if (gallery.length > 0) {
-          setGallery((g) => g.map((img, i) => ({ ...img, is_primary: i === 0 })));
-        } else if (remaining.length > 0) {
-          remaining[0].is_primary = true;
-        }
-      }
-      return remaining;
+      const match = prev.find((p) => p.id === id);
+      if (match?.preview) URL.revokeObjectURL(match.preview);
+      return prev.filter((p) => p.id !== id);
     });
   };
 
-  const handleRemoveGalleryImage = (index) => {
-    setGallery((prev) => {
-      const item = prev[index];
-      const remaining = prev.filter((_, i) => i !== index);
-
-      if (item?.is_primary) {
-        if (remaining.length > 0) {
-          remaining[0].is_primary = true;
-        } else if (pendingFiles.length > 0) {
-          setPendingFiles((p) => p.map((f, i) => ({ ...f, is_primary: i === 0 })));
-        }
-      }
-      return remaining;
-    });
+  const handleRemoveGalleryImage = async (imgIdOrUrl) => {
+    setGallery((prev) => prev.filter((img) => (img.id ? img.id !== imgIdOrUrl : img.image !== imgIdOrUrl)));
   };
 
-  const handleSetPrimary = (targetId, isPending = false) => {
-    if (isPending) {
+  const handleSetPrimary = (targetId, isFromPending = false) => {
+    if (isFromPending) {
+      setGallery((prev) => prev.map((img) => ({ ...img, is_primary: false })));
       setPendingFiles((prev) =>
-        prev.map((f) => ({ ...f, is_primary: f.id === targetId }))
+        prev.map((item) => ({ ...item, is_primary: item.id === targetId }))
       );
-      setGallery((prev) => prev.map((g) => ({ ...g, is_primary: false })));
     } else {
+      setPendingFiles((prev) => prev.map((item) => ({ ...item, is_primary: false })));
       setGallery((prev) =>
-        prev.map((g, idx) => ({
-          ...g,
-          is_primary: (g.id !== undefined && g.id !== null ? g.id : idx) === targetId,
+        prev.map((img) => ({
+          ...img,
+          is_primary: img.id ? img.id === targetId : img.image === targetId,
         }))
       );
-      setPendingFiles((prev) => prev.map((f) => ({ ...f, is_primary: false })));
     }
   };
 
   const handleAddCustomUrl = () => {
-    const url = customImageUrl.trim();
-    if (!url) return;
+    if (!customImageUrl || !customImageUrl.trim().startsWith('http')) {
+      setError('Please enter a valid HTTP/HTTPS image URL.');
+      return;
+    }
     const isFirst = gallery.length === 0 && pendingFiles.length === 0;
     setGallery((prev) => [
       ...prev,
       {
         id: null,
-        image: url,
+        image: customImageUrl.trim(),
         image_id: null,
         caption: '',
         is_primary: isFirst,
@@ -183,20 +165,16 @@ export default function BlogForm({
       },
     ]);
     setCustomImageUrl('');
-    setSuccessMsg('Added image from URL.');
+    setError('');
   };
 
-  const loadCloudinaryLibrary = async () => {
+  const handleOpenCloudinaryLibrary = async () => {
     setShowCloudinaryLibrary(true);
     setLoadingAssets(true);
-    setError('');
-
     try {
       const res = await axios.get(`${apiEndpoint}?cloudinary_assets=true`);
-      if (res.data?.success && res.data?.assets) {
+      if (res.data?.success && Array.isArray(res.data.assets)) {
         setCloudinaryAssets(res.data.assets);
-      } else {
-        setError(res.data?.error || 'Failed to load Cloudinary library.');
       }
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Error fetching Cloudinary assets.');
@@ -298,27 +276,25 @@ export default function BlogForm({
         }
         if (onSuccess) onSuccess(saved);
       } else {
-        setError(res.data?.error || 'Failed to save blog article.');
+        setError(res.data?.error || 'Failed to save article.');
       }
     } catch (err) {
-      console.error('Save blog error:', err);
-      setError(err.response?.data?.error || err.message || 'Error saving article.');
+      console.error('Save article error:', err);
+      setError(err.response?.data?.error || err.message || 'Error occurred while saving article.');
     } finally {
       setLoading(false);
     }
   };
 
-  const totalImagesCount = gallery.length + pendingFiles.length;
-
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {error && (
-        <div className="p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded font-medium flex items-center justify-between">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => setError('')}
-            className="text-rose-500 hover:text-rose-800 font-medium cursor-pointer"
+            className="text-rose-500 hover:text-rose-800 text-sm font-semibold cursor-pointer"
           >
             ✕
           </button>
@@ -326,12 +302,12 @@ export default function BlogForm({
       )}
 
       {successMsg && (
-        <div className="p-3 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center justify-between gap-2">
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded font-medium flex items-center justify-between">
           <span>{successMsg}</span>
           <button
             type="button"
             onClick={() => setSuccessMsg('')}
-            className="text-emerald-500 hover:text-emerald-800 font-medium cursor-pointer"
+            className="text-emerald-500 hover:text-emerald-800 text-sm font-semibold cursor-pointer"
           >
             ✕
           </button>
@@ -348,7 +324,6 @@ export default function BlogForm({
               <input
                 type="text"
                 required
-                placeholder="e.g. The Future of Online Learning in 2026"
                 value={formData.title}
                 onChange={handleTitleChange}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -362,7 +337,6 @@ export default function BlogForm({
               <input
                 type="text"
                 list="category-suggestions"
-                placeholder="e.g. Engineering, Education, Guides..."
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -385,7 +359,6 @@ export default function BlogForm({
               </div>
               <textarea
                 rows={3}
-                placeholder="A concise, high-level summary displayed at the top of the article."
                 value={formData.excerpt}
                 onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -399,7 +372,6 @@ export default function BlogForm({
               <textarea
                 rows={16}
                 required
-                placeholder="Write full article content here."
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 className="w-full font-mono bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800 leading-relaxed"
@@ -420,163 +392,138 @@ export default function BlogForm({
                       Live Published
                     </span>
                   ) : (
-                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
-                      Draft (Private)
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-200">
+                      Draft Article
                     </span>
                   )}
                 </span>
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      is_published: !prev.is_published,
-                    }))
-                  }
-                  className="px-2 py-1 rounded text-xs font-medium border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  onClick={() => setFormData((prev) => ({ ...prev, is_published: !prev.is_published }))}
+                  className="px-2.5 py-1 rounded border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium cursor-pointer"
                 >
                   {formData.is_published ? 'Set as Draft' : 'Mark Published'}
                 </button>
               </div>
 
-              {formData.is_published && (
-                <div>
-                  <label className="block text-[11px] font-normal text-slate-500 mb-1">
-                    Published Timestamp
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.published_at}
-                    onChange={(e) => setFormData({ ...formData, published_at: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 mb-1">
+                  Publication Schedule
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.published_at}
+                  onChange={(e) => setFormData({ ...formData, published_at: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 font-mono"
+                />
+              </div>
             </div>
 
             <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-slate-900">
-                  Article Images ({totalImagesCount})
-                </h3>
-
+                <div>
+                  <h3 className="text-xs font-semibold text-slate-900">
+                    Featured Media &amp; Gallery
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Select a primary cover image for article cards
+                  </p>
+                </div>
                 <button
                   type="button"
-                  onClick={loadCloudinaryLibrary}
-                  className="text-xs text-slate-700 hover:text-slate-900 font-medium cursor-pointer underline"
+                  onClick={handleOpenCloudinaryLibrary}
+                  className="text-xs text-slate-600 hover:text-slate-900 font-medium underline cursor-pointer"
                 >
-                  Cloudinary Library
+                  Cloudinary
                 </button>
               </div>
 
-              {totalImagesCount > 0 ? (
-                <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                  {gallery.map((img, idx) => {
-                    const imgKey = img.id ? `img-${img.id}` : `url-${idx}`;
-                    const targetId = img.id !== undefined && img.id !== null ? img.id : idx;
-                    return (
-                      <div
-                        key={imgKey}
-                        className={`group relative aspect-video rounded overflow-hidden border ${
-                          img.is_primary
-                            ? 'border-emerald-600'
-                            : 'border-slate-200 bg-slate-100'
-                        }`}
-                      >
-                        <img
-                          src={img.image}
-                          alt={img.caption || `Image ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-
-                        {img.is_primary && (
-                          <div className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-emerald-700 text-white text-[9px] font-medium">
-                            Cover
-                          </div>
-                        )}
-
-                        <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
-                          {!img.is_primary && (
-                            <button
-                              type="button"
-                              onClick={() => handleSetPrimary(targetId, false)}
-                              className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-medium hover:bg-emerald-700 cursor-pointer"
-                            >
-                              Cover
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveGalleryImage(idx)}
-                            className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 text-[10px] font-medium hover:bg-rose-700 hover:text-white cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {pendingFiles.map((item) => (
+              {(gallery.length > 0 || pendingFiles.length > 0) && (
+                <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-1 border border-slate-100 rounded">
+                  {gallery.map((img, idx) => (
                     <div
-                      key={item.id}
-                      className={`group relative aspect-video rounded overflow-hidden border ${
-                        item.is_primary
-                          ? 'border-emerald-600'
-                          : 'border-slate-300 bg-slate-50'
+                      key={img.id || idx}
+                      className={`relative group rounded border overflow-hidden aspect-video bg-slate-100 ${
+                        img.is_primary ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200'
                       }`}
                     >
                       <img
-                        src={item.preview}
-                        alt="Pending Upload"
+                        src={img.image}
+                        alt="Gallery upload"
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute top-1 left-1 px-1.5 py-0.2 rounded bg-slate-800 text-white text-[9px] font-medium">
-                        Pending
-                      </div>
-
-                      {item.is_primary && (
-                        <div className="absolute top-1 right-1 px-1.5 py-0.2 rounded bg-emerald-700 text-white text-[9px] font-medium">
-                          Cover
-                        </div>
-                      )}
-
-                      <div className="absolute inset-0 bg-slate-900/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
-                        {!item.is_primary && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
+                        {!img.is_primary && (
                           <button
                             type="button"
-                            onClick={() => handleSetPrimary(item.id, true)}
-                            className="px-1.5 py-0.5 rounded bg-slate-800 text-white text-[10px] font-medium hover:bg-emerald-700 cursor-pointer"
+                            onClick={() => handleSetPrimary(img.id || img.image, false)}
+                            className="px-2 py-0.5 rounded bg-white text-slate-900 text-[10px] font-medium hover:bg-slate-100 cursor-pointer"
                           >
-                            Cover
+                            Set Cover
                           </button>
                         )}
                         <button
                           type="button"
-                          onClick={() => handleRemovePendingFile(item.id)}
-                          className="px-1.5 py-0.5 rounded bg-slate-800 text-rose-300 text-[10px] font-medium hover:bg-rose-700 hover:text-white cursor-pointer"
+                          onClick={() => handleRemoveGalleryImage(img.id || img.image)}
+                          className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-medium hover:bg-rose-700 cursor-pointer"
                         >
                           Remove
                         </button>
                       </div>
+                      {img.is_primary && (
+                        <span className="absolute top-1 left-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-900 text-white">
+                          Cover
+                        </span>
+                      )}
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="py-6 px-3 text-center border border-dashed border-slate-200 rounded bg-slate-50">
-                  <p className="text-xs text-slate-500">No images attached yet.</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Upload one or multiple images below.</p>
+
+                  {pendingFiles.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`relative group rounded border overflow-hidden aspect-video bg-slate-100 ${
+                        item.is_primary ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200'
+                      }`}
+                    >
+                      <img
+                        src={item.preview}
+                        alt="New upload"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 p-1">
+                        {!item.is_primary && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetPrimary(item.id, true)}
+                            className="px-2 py-0.5 rounded bg-white text-slate-900 text-[10px] font-medium hover:bg-slate-100 cursor-pointer"
+                          >
+                            Set Cover
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePending(item.id)}
+                          className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px] font-medium hover:bg-rose-700 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <span className="absolute bottom-1 right-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-500 text-white">
+                        Pending
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
 
               <div className="space-y-2">
                 <input
                   type="file"
-                  ref={fileInputRef}
                   multiple
-                  accept="image/*"
-                  onChange={handleFilesSelect}
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
                   className="hidden"
                   id="blog-gallery-upload"
                 />
@@ -591,19 +538,21 @@ export default function BlogForm({
                 </label>
 
                 <div className="flex items-center gap-1.5 pt-1">
-                  <input
-                    type="url"
-                    placeholder="Or paste image URL (https://...)"
-                    value={customImageUrl}
-                    onChange={(e) => setCustomImageUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomUrl();
-                      }
-                    }}
-                    className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
+                  <div className="flex-1">
+                    <label className="sr-only">Image URL</label>
+                    <input
+                      type="url"
+                      value={customImageUrl}
+                      onChange={(e) => setCustomImageUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomUrl();
+                        }
+                      }}
+                      className="w-full bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={handleAddCustomUrl}
@@ -626,7 +575,6 @@ export default function BlogForm({
                 </label>
                 <input
                   type="text"
-                  placeholder={formData.title || 'Page title for search engines'}
                   value={formData.meta_title}
                   onChange={(e) => setFormData({ ...formData, meta_title: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -639,7 +587,6 @@ export default function BlogForm({
                 </label>
                 <textarea
                   rows={2}
-                  placeholder={formData.excerpt || 'Brief description snippet...'}
                   value={formData.meta_description}
                   onChange={(e) => setFormData({ ...formData, meta_description: e.target.value })}
                   className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"

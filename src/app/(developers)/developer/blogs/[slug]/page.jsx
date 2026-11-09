@@ -1,15 +1,46 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useContext } from 'react';
 import { useRouter } from 'next/navigation';
+import { Context } from 'src/component/helper/Context';
 import BlogForm from 'src/component/marketing/developer/forms/BlogForm';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+
+function getModulePermissions(user, moduleKey) {
+  if (!user) return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+  const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+  if (isOwner) return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+
+  const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+  for (const k of keys) {
+    const p = user.permissionsMap?.[k];
+    if (p) {
+      return {
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+        canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+      };
+    }
+  }
+
+  const perms = (user.permissions || []).map((x) => String(x).toLowerCase().trim());
+  const found = keys.some((k) => perms.includes(k.toLowerCase()));
+  if (found) {
+    return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+  }
+
+  return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
 
 export default function BlogDetailPage({ params }) {
   const resolvedParams = use(params);
   const slug = resolvedParams.slug;
   const router = useRouter();
+  const { user } = useContext(Context) || {};
+  const { canEdit, canDelete } = getModulePermissions(user, ['blogs', 'blog']);
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +93,11 @@ export default function BlogDetailPage({ params }) {
   }, [slug]);
 
   const handleDelete = async () => {
+    if (!canDelete) {
+      alert('Access denied: Delete permission required for blogs.');
+      return;
+    }
+
     if (!window.confirm(`Are you sure you want to permanently delete "${blog?.title}"?`)) {
       return;
     }
@@ -152,14 +188,16 @@ export default function BlogDetailPage({ params }) {
             </a>
           )}
 
-          <button
-            type="button"
-            disabled={deleting}
-            onClick={handleDelete}
-            className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Delete
-          </button>
+          {canDelete && (
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={handleDelete}
+              className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
 

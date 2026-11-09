@@ -4,6 +4,34 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { Context } from 'src/component/helper/Context';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
+function getModulePermissions(user, moduleKey) {
+  if (!user) return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+  const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+  if (isOwner) return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+
+  const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+  for (const k of keys) {
+    const p = user.permissionsMap?.[k];
+    if (p) {
+      return {
+        canView: Boolean(p.can_view),
+        canCreate: Boolean(p.can_create),
+        canEdit: Boolean(p.can_edit),
+        canDelete: Boolean(p.can_delete),
+        canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+      };
+    }
+  }
+
+  const perms = (user.permissions || []).map((x) => String(x).toLowerCase().trim());
+  const found = keys.some((k) => perms.includes(k.toLowerCase()));
+  if (found) {
+    return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+  }
+
+  return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
+
 export default function DeveloperFaqsPage() {
   const { user } = useContext(Context);
   const [faqs, setFaqs] = useState([]);
@@ -18,11 +46,7 @@ export default function DeveloperFaqsPage() {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
   const formRef = useRef(null);
 
-  const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canManage =
-    permissions.includes('faqs') ||
-    user?.role === 'admin' ||
-    user?.role === 'manager';
+  const { canView, canCreate, canEdit, canDelete } = getModulePermissions(user, ['faqs', 'faq']);
 
   const fetchFaqs = async () => {
     try {
@@ -62,8 +86,8 @@ export default function DeveloperFaqsPage() {
   }, []);
 
   const openCreateForm = () => {
-    if (!canManage) {
-      alert('Access denied: faqs permission required.');
+    if (!canCreate) {
+      alert('Access denied: Create permission required for FAQs.');
       return;
     }
     setEditingFaq(null);
@@ -76,8 +100,8 @@ export default function DeveloperFaqsPage() {
   };
 
   const openEditForm = (faq) => {
-    if (!canManage) {
-      alert('Access denied: faqs permission required.');
+    if (!canEdit) {
+      alert('Access denied: Edit permission required for FAQs.');
       return;
     }
     setEditingFaq(faq);
@@ -98,8 +122,12 @@ export default function DeveloperFaqsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!canManage) {
-      setFeedback({ type: 'error', message: 'Access denied: faqs permission required to manage FAQs.' });
+    if (editingFaq && !canEdit) {
+      setFeedback({ type: 'error', message: 'Access denied: Edit permission required.' });
+      return;
+    }
+    if (!editingFaq && !canCreate) {
+      setFeedback({ type: 'error', message: 'Access denied: Create permission required.' });
       return;
     }
 
@@ -136,8 +164,8 @@ export default function DeveloperFaqsPage() {
   };
 
   const handleDelete = async (id, question) => {
-    if (!canManage) {
-      alert('Access denied: faqs permission required.');
+    if (!canDelete) {
+      alert('Access denied: Delete permission required for FAQs.');
       return;
     }
 
@@ -184,7 +212,7 @@ export default function DeveloperFaqsPage() {
             <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 text-slate-700 border-slate-200">
               Support
             </span>
-            {!canManage && (
+            {!canCreate && !canEdit && !canDelete && (
               <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
                 Read-Only
               </span>
@@ -203,7 +231,7 @@ export default function DeveloperFaqsPage() {
           >
             Refresh
           </button>
-          {canManage && (
+          {canCreate && (
             <button
               type="button"
               onClick={showForm && !editingFaq ? closeForm : openCreateForm}
@@ -215,9 +243,9 @@ export default function DeveloperFaqsPage() {
         </div>
       </div>
 
-      {!canManage && (
+      {!canCreate && !canEdit && !canDelete && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
-          You are currently viewing FAQs in read-only mode. Only administrators and managers can make changes.
+          You are currently viewing FAQs in read-only mode.
         </div>
       )}
 
@@ -261,7 +289,6 @@ export default function DeveloperFaqsPage() {
                 required
                 value={formData.question}
                 onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                placeholder="e.g. How do I point my custom domain to the platform?"
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
@@ -275,7 +302,6 @@ export default function DeveloperFaqsPage() {
                 required
                 value={formData.answer}
                 onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-                placeholder="Detailed explanation answering the question..."
                 className="w-full bg-white border border-slate-300 rounded p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
             </div>
@@ -303,25 +329,29 @@ export default function DeveloperFaqsPage() {
       <div className="bg-white border border-slate-200 rounded p-4 space-y-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
-            <input
-              type="text"
-              placeholder="Search FAQs by question or answer keywords..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+              Search FAQs
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="text-xs text-slate-500 font-medium shrink-0">
+          <div className="text-xs text-slate-500 font-medium shrink-0 self-end">
             Showing <span className="font-semibold text-slate-800">{filteredFaqs.length}</span> of {faqs.length} FAQs
           </div>
         </div>
@@ -367,7 +397,7 @@ export default function DeveloperFaqsPage() {
 
                       <td className="py-2.5">
                         <div className="space-y-0.5">
-                          {canManage ? (
+                          {canEdit ? (
                             <button
                               type="button"
                               onClick={() => openEditForm(faq)}
@@ -396,8 +426,8 @@ export default function DeveloperFaqsPage() {
                       </td>
 
                       <td className="py-2.5 text-right">
-                        {canManage && (
-                          <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {canEdit && (
                             <button
                               type="button"
                               onClick={() => openEditForm(faq)}
@@ -405,6 +435,8 @@ export default function DeveloperFaqsPage() {
                             >
                               Edit
                             </button>
+                          )}
+                          {canDelete && (
                             <button
                               type="button"
                               disabled={deletingId === faq.id}
@@ -413,8 +445,8 @@ export default function DeveloperFaqsPage() {
                             >
                               Delete
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
