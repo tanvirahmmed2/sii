@@ -98,7 +98,16 @@ export async function GET(request) {
                 s.status AS subscription_status,
                 s.billing_cycle AS subscription_billing_cycle,
                 s.current_period_end AS subscription_period_end,
-                (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+                (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
+                COALESCE(
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+                  w.slug
+                ) AS subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+                (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+                (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
+                (SELECT json_agg(wd.*) FROM website_domains wd WHERE wd.website_id = w.id) AS domains
          FROM websites w
          LEFT JOIN subscriptions s ON w.subscription_id = s.id
          LEFT JOIN packages p ON s.package_id = p.id
@@ -106,9 +115,15 @@ export async function GET(request) {
            AND (
              ($2 = true AND w.id = $3::bigint) OR
              LOWER(w.slug) = LOWER($4) OR
-             LOWER(w.subdomain) = LOWER($4) OR
-             LOWER(w.custom_domain) = LOWER($4) OR
-             LOWER(w.subdomain) LIKE LOWER($5)
+             EXISTS (
+               SELECT 1 FROM website_domains wd 
+               WHERE wd.website_id = w.id 
+                 AND (
+                   LOWER(wd.domain) = LOWER($4) 
+                   OR LOWER(COALESCE(wd.domain_name, '')) = LOWER($4)
+                   OR LOWER(wd.domain) LIKE LOWER($5)
+                 )
+             )
            )
          LIMIT 1`,
         [creatorId, isNum, isNum ? Number(cleanIdent) : -1, cleanIdent, `${cleanIdent}.%`]
@@ -136,7 +151,15 @@ export async function GET(request) {
               s.status AS subscription_status,
               s.billing_cycle AS subscription_billing_cycle,
               s.current_period_end AS subscription_period_end,
-              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
+              COALESCE(
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+                w.slug
+              ) AS subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+              (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+              (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information
        FROM websites w
        LEFT JOIN subscriptions s ON w.subscription_id = s.id
        LEFT JOIN packages p ON s.package_id = p.id
@@ -348,9 +371,6 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          subscription_id,
          name,
          slug,
-         subdomain,
-         custom_domain,
-         custom_domain_verified,
          institution_type,
          eiin_number,
          status,
@@ -370,14 +390,13 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
          maintenance_message,
          subscription_expires_at
        ) VALUES (
-         $1, $2, $3, $4, $5, NULL, FALSE, $6, $7, 'active', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 15, $19, $20, $21
+         $1, $2, $3, $4, $5, $6, 'active', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 15, $18, $19, $20
        ) RETURNING *`,
       [
         creatorId,
         chosenSub.id,
         name,
         slug,
-        cleanSubdomain,
         institutionType,
         eiinNumber || null,
         themeName,
@@ -400,6 +419,61 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     const newWebsite = res.rows[0];
 
     await queryDb(
+      `INSERT INTO website_domains (
+         website_id, domain_type, domain, domain_name, is_primary, is_verified,
+         dns_record_type, dns_record_value
+       ) VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', 'domains.hiesci.com')`,
+      [newWebsite.id, cleanSubdomain]
+    );
+
+    const customDomainInput = (body.customDomain || body.custom_domain || '').trim().toLowerCase();
+    if (customDomainInput) {
+      const dnsRecords = JSON.stringify([
+        { type: 'CNAME', host: '@', value: 'domains.hiesci.com' },
+        { type: 'CNAME', host: 'www', value: 'domains.hiesci.com' }
+      ]);
+      await queryDb(
+        `INSERT INTO website_domains (
+           website_id, domain_type, domain, domain_name, is_primary, is_verified,
+           dns_record_type, dns_record_value, dns_records
+         ) VALUES ($1, 'custom_domain', $2, $2, FALSE, FALSE, 'CNAME', 'domains.hiesci.com', $3::jsonb)`,
+        [newWebsite.id, customDomainInput, dnsRecords]
+      ).catch((e) => console.warn('Custom domain insert warning:', e.message));
+    }
+
+    const creatorNid = (body.creatorNid || body.creator_nid || '').trim();
+    const creatorNidUrl = (body.creatorNidUrl || body.creator_nid_url || '').trim();
+    const eiinCertificate = (body.eiinCertificate || body.eiin_certificate || '').trim();
+    const eiinCertificateUrl = (body.eiinCertificateUrl || body.eiin_certificate_url || '').trim();
+    const verificationAddress = (body.verificationAddress || body.verification_address || address || '').trim();
+    const otherDetails = typeof body.otherDetails === 'object' && body.otherDetails !== null
+      ? JSON.stringify(body.otherDetails)
+      : (typeof body.other_details === 'object' && body.other_details !== null ? JSON.stringify(body.other_details) : '{}');
+
+    await queryDb(
+      `INSERT INTO website_information (
+         website_id, creator_nid, creator_nid_url, eiin_certificate, eiin_certificate_url, address, other_details, verification_status
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'pending')
+       ON CONFLICT (website_id) DO UPDATE SET
+         creator_nid = EXCLUDED.creator_nid,
+         creator_nid_url = EXCLUDED.creator_nid_url,
+         eiin_certificate = EXCLUDED.eiin_certificate,
+         eiin_certificate_url = EXCLUDED.eiin_certificate_url,
+         address = EXCLUDED.address,
+         other_details = EXCLUDED.other_details,
+         updated_at = CURRENT_TIMESTAMP`,
+      [
+        newWebsite.id,
+        creatorNid || null,
+        creatorNidUrl || null,
+        eiinCertificate || null,
+        eiinCertificateUrl || null,
+        verificationAddress || null,
+        otherDetails
+      ]
+    ).catch((e) => console.warn('website_information insert warning:', e.message));
+
+    await queryDb(
       `UPDATE subscriptions 
        SET website_id = $1, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2 AND website_id IS NULL`,
@@ -420,11 +494,14 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       message: `Website "${newWebsite.name}" has been created successfully!`,
       website: {
         ...newWebsite,
+        subdomain: cleanSubdomain,
+        custom_domain: customDomainInput || null,
         is_published: true,
       },
       baseDomain,
       fullDomain: fullSubdomain,
       subdomain: cleanSubdomain,
+      customDomain: customDomainInput || null,
     });
   }
 
@@ -610,35 +687,72 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
         if (!valRes.available) {
           return NextResponse.json({ success: false, error: valRes.error }, { status: 400 });
         }
-        updates.push(`subdomain = $${idx++}`);
-        values.push(valRes.domain);
         updates.push(`slug = $${idx++}`);
         values.push(valRes.domain);
+        await queryDb(
+          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+           VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', 'domains.hiesci.com')
+           ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
+          [id, valRes.domain]
+        ).catch(() => {});
       }
     }
 
     if (body.custom_domain !== undefined || body.customDomain !== undefined) {
       const rawCustom = (body.custom_domain !== undefined ? body.custom_domain : body.customDomain);
       if (!rawCustom || String(rawCustom).trim() === '') {
-        updates.push(`custom_domain = NULL`);
-        updates.push(`custom_domain_verified = FALSE`);
+        await queryDb(`DELETE FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain'`, [id]).catch(() => {});
       } else {
         const valRes = await checkCustomDomainAvailability(String(rawCustom).trim(), id, request);
         if (!valRes.available) {
           return NextResponse.json({ success: false, error: valRes.error }, { status: 400 });
         }
-        updates.push(`custom_domain = $${idx++}`);
-        values.push(valRes.customDomain);
-        if (body.custom_domain_verified !== undefined) {
-          updates.push(`custom_domain_verified = $${idx++}`);
-          values.push(Boolean(body.custom_domain_verified));
-        }
+        await queryDb(
+          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+           VALUES ($1, 'custom_domain', $2, $2, FALSE, FALSE, 'CNAME', 'domains.hiesci.com')
+           ON CONFLICT (domain) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+          [id, valRes.customDomain]
+        ).catch(() => {});
       }
     }
 
-    if (body.custom_domain_verified !== undefined && body.custom_domain === undefined && body.customDomain === undefined) {
-      updates.push(`custom_domain_verified = $${idx++}`);
-      values.push(Boolean(body.custom_domain_verified));
+    if (
+      body.creator_nid !== undefined || body.creatorNid !== undefined ||
+      body.creator_nid_url !== undefined || body.creatorNidUrl !== undefined ||
+      body.eiin_certificate !== undefined || body.eiinCertificate !== undefined ||
+      body.eiin_certificate_url !== undefined || body.eiinCertificateUrl !== undefined ||
+      body.verification_address !== undefined || body.verificationAddress !== undefined ||
+      body.other_details !== undefined || body.otherDetails !== undefined
+    ) {
+      const cNid = body.creator_nid !== undefined ? body.creator_nid : body.creatorNid;
+      const cNidUrl = body.creator_nid_url !== undefined ? body.creator_nid_url : body.creatorNidUrl;
+      const eCert = body.eiin_certificate !== undefined ? body.eiin_certificate : body.eiinCertificate;
+      const eCertUrl = body.eiin_certificate_url !== undefined ? body.eiin_certificate_url : body.eiinCertificateUrl;
+      const vAddr = body.verification_address !== undefined ? body.verification_address : body.verificationAddress;
+      const oDetails = body.other_details !== undefined ? body.other_details : body.otherDetails;
+
+      await queryDb(
+        `INSERT INTO website_information (
+           website_id, creator_nid, creator_nid_url, eiin_certificate, eiin_certificate_url, address, other_details
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+         ON CONFLICT (website_id) DO UPDATE SET
+           creator_nid = COALESCE(EXCLUDED.creator_nid, website_information.creator_nid),
+           creator_nid_url = COALESCE(EXCLUDED.creator_nid_url, website_information.creator_nid_url),
+           eiin_certificate = COALESCE(EXCLUDED.eiin_certificate, website_information.eiin_certificate),
+           eiin_certificate_url = COALESCE(EXCLUDED.eiin_certificate_url, website_information.eiin_certificate_url),
+           address = COALESCE(EXCLUDED.address, website_information.address),
+           other_details = COALESCE(EXCLUDED.other_details, website_information.other_details),
+           updated_at = CURRENT_TIMESTAMP`,
+        [
+          id,
+          cNid || null,
+          cNidUrl || null,
+          eCert || null,
+          eCertUrl || null,
+          vAddr || null,
+          typeof oDetails === 'object' && oDetails !== null ? JSON.stringify(oDetails) : '{}'
+        ]
+      ).catch(() => {});
     }
 
     if (body.theme_config !== undefined) {

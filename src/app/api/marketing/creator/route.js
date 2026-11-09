@@ -130,7 +130,14 @@ export async function GET(request) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT w.id, w.name, w.slug, w.subdomain, w.custom_domain, w.status,
+        `SELECT w.id, w.name, w.slug,
+                COALESCE(
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+                  w.slug
+                ) AS subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+                w.status,
                 (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
                 w.is_maintenance_mode, w.logo, w.theme, w.primary_color, w.secondary_color,
                 w.subscription_id,

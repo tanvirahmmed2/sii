@@ -35,6 +35,39 @@ function SubscriptionContent() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState('');
   const [settingsErr, setSettingsErr] = useState('');
+  const [renewingSubId, setRenewingSubId] = useState(null);
+  const [renewMsg, setRenewMsg] = useState('');
+  const [renewErr, setRenewErr] = useState('');
+
+  const handleRenew = async (sub) => {
+    setRenewingSubId(sub.id);
+    setRenewMsg('');
+    setRenewErr('');
+    try {
+      const res = await fetch('/api/marketing/creator/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'renew',
+          creatorId: Number(creatorId),
+          subscriptionId: Number(sub.id),
+          packageId: Number(sub.package_id),
+          billingCycle: sub.billing_interval || sub.billing_cycle || 'monthly',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRenewMsg(data.message || `Renewed package "${sub.package_name}" successfully.`);
+        if (refetch) await refetch();
+      } else {
+        setRenewErr(data.error || 'Failed to renew package.');
+      }
+    } catch {
+      setRenewErr('Network error while renewing subscription.');
+    } finally {
+      setRenewingSubId(null);
+    }
+  };
 
   useEffect(() => {
     if (targetWebsiteId && websites.length > 0) {
@@ -179,6 +212,17 @@ function SubscriptionContent() {
           </span>
         </div>
 
+        {renewMsg && (
+          <div className="p-3 rounded border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs font-medium">
+            {renewMsg}
+          </div>
+        )}
+        {renewErr && (
+          <div className="p-3 rounded border bg-rose-50 border-rose-200 text-rose-800 text-xs font-medium">
+            {renewErr}
+          </div>
+        )}
+
         {displaySubscriptions.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded p-6 text-center space-y-2">
             <h3 className="text-sm font-semibold text-slate-900">No Purchased Subscriptions Found</h3>
@@ -236,6 +280,17 @@ function SubscriptionContent() {
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        disabled={renewingSubId === sub.id}
+                        onClick={() => handleRenew(sub)}
+                        className="px-2.5 py-1 rounded border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-medium text-xs transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {renewingSubId === sub.id ? 'Renewing...' : 'Renew Package'}
+                      </button>
                       {sub.payment_id && (
                         <Link
                           href={`/creator/${creatorId}/payments/${sub.payment_id}`}

@@ -255,6 +255,34 @@ export async function POST(request) {
       ? JSON.stringify(data.features)
       : (typeof data.features === 'object' && data.features !== null ? JSON.stringify(data.features) : '[]');
 
+    let homeModuleIds = [];
+    if (Array.isArray(data.home_module_ids)) {
+      homeModuleIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+    } else if (Array.isArray(data.home_modules)) {
+      homeModuleIds = data.home_modules
+        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
+
+    let controlModuleIds = [];
+    if (Array.isArray(data.control_module_ids)) {
+      controlModuleIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+    } else if (Array.isArray(data.control_modules)) {
+      controlModuleIds = data.control_modules
+        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
+
+    if (homeModuleIds.length === 0 || controlModuleIds.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Package must have at least one home module and one control module attached.',
+        },
+        { status: 400 }
+      );
+    }
+
     const res = await queryDb(
       `INSERT INTO packages (
         name, slug, short_description, tagline, description,
@@ -287,15 +315,6 @@ export async function POST(request) {
 
     const newPackage = res.rows[0];
 
-    let homeModuleIds = [];
-    if (Array.isArray(data.home_module_ids)) {
-      homeModuleIds = data.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.home_modules)) {
-      homeModuleIds = data.home_modules
-        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
-        .filter((n) => !isNaN(n) && n > 0);
-    }
-
     for (const hId of homeModuleIds) {
       await queryDb(
         `INSERT INTO package_home_modules (package_id, home_module_id)
@@ -303,15 +322,6 @@ export async function POST(request) {
          ON CONFLICT (package_id, home_module_id) DO NOTHING`,
         [newPackage.id, hId]
       ).catch((e) => console.warn('Error linking package_home_module:', e.message));
-    }
-
-    let controlModuleIds = [];
-    if (Array.isArray(data.control_module_ids)) {
-      controlModuleIds = data.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
-    } else if (Array.isArray(data.control_modules)) {
-      controlModuleIds = data.control_modules
-        .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
-        .filter((n) => !isNaN(n) && n > 0);
     }
 
     for (const cId of controlModuleIds) {
@@ -501,6 +511,13 @@ export async function PUT(request) {
           .filter((n) => !isNaN(n) && n > 0);
       }
 
+      if (homeIds.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Package must have at least one home module attached.' },
+          { status: 400 }
+        );
+      }
+
       await queryDb('DELETE FROM package_home_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
       for (const hId of homeIds) {
         await queryDb(
@@ -520,6 +537,13 @@ export async function PUT(request) {
         controlIds = data.control_modules
           .map((m) => (typeof m === 'object' && m !== null ? Number(m.id) : Number(m)))
           .filter((n) => !isNaN(n) && n > 0);
+      }
+
+      if (controlIds.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Package must have at least one control module attached.' },
+          { status: 400 }
+        );
       }
 
       await queryDb('DELETE FROM package_control_modules WHERE package_id = $1', [Number(id)]).catch(() => {});

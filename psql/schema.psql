@@ -518,9 +518,6 @@ CREATE TABLE IF NOT EXISTS websites (
     subscription_id BIGINT,
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
-    subdomain VARCHAR(100) UNIQUE NOT NULL,
-    custom_domain VARCHAR(255) UNIQUE,
-    custom_domain_verified BOOLEAN DEFAULT FALSE,
     institution_type VARCHAR(100) DEFAULT 'School',
     eiin_number VARCHAR(100),
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'suspended', 'expired', 'archived')),
@@ -547,6 +544,57 @@ CREATE TABLE IF NOT EXISTS websites (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE websites DROP COLUMN IF EXISTS subdomain CASCADE;
+ALTER TABLE websites DROP COLUMN IF EXISTS custom_domain CASCADE;
+ALTER TABLE websites DROP COLUMN IF EXISTS custom_domain_verified CASCADE;
+
+CREATE TABLE IF NOT EXISTS website_domains (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    domain_type VARCHAR(50) DEFAULT 'subdomain' CHECK (domain_type IN ('subdomain', 'custom_domain', 'custom')),
+    domain VARCHAR(255) NOT NULL,
+    domain_name VARCHAR(255),
+    is_primary BOOLEAN DEFAULT FALSE,
+    is_verified BOOLEAN DEFAULT FALSE,
+    verification_token VARCHAR(255),
+    dns_record_type VARCHAR(10) DEFAULT 'CNAME',
+    dns_record_value VARCHAR(255) DEFAULT 'domains.hiesci.com',
+    dns_records JSONB DEFAULT '[]'::jsonb,
+    ssl_status VARCHAR(50) DEFAULT 'pending',
+    verified_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_domains_website ON website_domains(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_domains_domain ON website_domains(domain);
+
+DROP TRIGGER IF EXISTS update_website_domains_updated_at ON website_domains;
+CREATE TRIGGER update_website_domains_updated_at
+    BEFORE UPDATE ON website_domains
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS website_information (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT UNIQUE NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    creator_nid VARCHAR(100),
+    creator_nid_url TEXT,
+    eiin_certificate VARCHAR(100),
+    eiin_certificate_url TEXT,
+    address TEXT,
+    other_details JSONB DEFAULT '{}'::jsonb,
+    verification_status VARCHAR(50) DEFAULT 'pending' CHECK (verification_status IN ('pending', 'approved', 'rejected')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_information_website ON website_information(website_id);
+
+DROP TRIGGER IF EXISTS update_website_information_updated_at ON website_information;
+CREATE TRIGGER update_website_information_updated_at
+    BEFORE UPDATE ON website_information
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_websites_updated_at ON websites;
 CREATE TRIGGER update_websites_updated_at
@@ -613,12 +661,21 @@ CREATE TRIGGER update_payments_updated_at
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS wishlists (
     id BIGSERIAL PRIMARY KEY,
-    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    creator_id BIGINT UNIQUE NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
     package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(creator_id, package_id)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'wishlists_creator_id_key' AND table_name = 'wishlists'
+    ) THEN
+        ALTER TABLE wishlists DROP CONSTRAINT IF EXISTS wishlists_creator_id_package_id_key;
+        ALTER TABLE wishlists ADD CONSTRAINT wishlists_creator_id_key UNIQUE (creator_id);
+    END IF;
+END $$;
 
 CREATE OR REPLACE VIEW wishlist AS SELECT * FROM wishlists;
 
@@ -1008,8 +1065,10 @@ CREATE TABLE IF NOT EXISTS chat_images (
 -- Core Platform Indexes
 CREATE INDEX IF NOT EXISTS idx_websites_creator ON websites(creator_id);
 CREATE INDEX IF NOT EXISTS idx_websites_subscription ON websites(subscription_id);
-CREATE INDEX IF NOT EXISTS idx_websites_subdomain ON websites(subdomain);
-CREATE INDEX IF NOT EXISTS idx_websites_custom_domain ON websites(custom_domain);
+CREATE INDEX IF NOT EXISTS idx_websites_slug ON websites(slug);
+CREATE INDEX IF NOT EXISTS idx_website_domains_site ON website_domains(website_id);
+CREATE INDEX IF NOT EXISTS idx_website_domains_name ON website_domains(domain);
+CREATE INDEX IF NOT EXISTS idx_website_information_site ON website_information(website_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_creator ON purchases(creator_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_website ON purchases(website_id);
 CREATE INDEX IF NOT EXISTS idx_payments_purchase ON payments(purchase_id);

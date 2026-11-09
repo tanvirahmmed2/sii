@@ -6,6 +6,14 @@ async function fetchFullWebsite(websiteId) {
   const res = await queryDb(
     `SELECT w.*,
             (CASE WHEN w.status = 'active' AND NOT w.is_maintenance_mode THEN true ELSE false END) AS is_published,
+            COALESCE(
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+              w.slug
+            ) AS subdomain,
+            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+            (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
             c.id AS creator_id,
             c.name AS creator_name,
             c.email AS creator_email,
@@ -292,12 +300,32 @@ export async function PUT(request, { params }) {
     }
 
     if (websiteData.subdomain) {
-      websiteData.subdomain = String(websiteData.subdomain).toLowerCase().trim().replace(/[^a-z0-9-]+/g, '');
+      const cleanSub = String(websiteData.subdomain).toLowerCase().trim().replace(/[^a-z0-9-]+/g, '');
+      await queryDb(
+        `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+         VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', 'domains.hiesci.com')
+         ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
+        [websiteId, cleanSub]
+      ).catch(() => {});
+    }
+
+    if (websiteData.custom_domain !== undefined) {
+      const rawCustom = String(websiteData.custom_domain || '').trim().toLowerCase();
+      if (!rawCustom) {
+        await queryDb(`DELETE FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain'`, [websiteId]).catch(() => {});
+      } else {
+        await queryDb(
+          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+           VALUES ($1, 'custom_domain', $2, $2, FALSE, FALSE, 'CNAME', 'domains.hiesci.com')
+           ON CONFLICT (domain) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+          [websiteId, rawCustom]
+        ).catch(() => {});
+      }
     }
 
     const allowedWebsiteKeys = [
-      'creator_id', 'subscription_id', 'name', 'slug', 'subdomain',
-      'custom_domain', 'custom_domain_verified', 'institution_type', 'eiin_number',
+      'creator_id', 'subscription_id', 'name', 'slug',
+      'institution_type', 'eiin_number',
       'status', 'theme', 'primary_color', 'secondary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
       'contact_email', 'contact_phone', 'address', 'subscription_expires_at',
       'storage_used_mb', 'is_maintenance_mode'

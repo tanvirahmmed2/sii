@@ -12,7 +12,11 @@ async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam)
   if (!cId || !websiteId) return null;
 
   const res = await queryDb(
-    `SELECT id, creator_id, name, slug, subdomain, custom_domain, custom_domain_verified, primary_color, contact_email 
+    `SELECT id, creator_id, name, slug, 
+            COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.is_primary = TRUE LIMIT 1), slug) AS subdomain,
+            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+            primary_color, contact_email 
      FROM websites 
      WHERE id = $1 AND creator_id = $2 LIMIT 1`,
     [websiteId, cId]

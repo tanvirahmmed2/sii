@@ -105,20 +105,19 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
 
   try {
     let queryText = `
-      SELECT id, name, subdomain, custom_domain 
-      FROM websites 
+      SELECT wd.id, wd.website_id, wd.domain, wd.domain_name
+      FROM website_domains wd
       WHERE (
-        LOWER(subdomain) = LOWER($1) 
-        OR LOWER(subdomain) = LOWER($2) 
-        OR LOWER(custom_domain) = LOWER($1) 
-        OR LOWER(custom_domain) = LOWER($2) 
-        OR LOWER(slug) = LOWER($1)
+        LOWER(wd.domain) = LOWER($1) 
+        OR LOWER(wd.domain) = LOWER($2) 
+        OR LOWER(COALESCE(wd.domain_name, '')) = LOWER($1)
+        OR LOWER(COALESCE(wd.domain_name, '')) = LOWER($2)
       )
     `;
     const params = [clean, fullDomain];
 
     if (websiteIdToExclude && !isNaN(Number(websiteIdToExclude))) {
-      queryText += ' AND id != $3';
+      queryText += ' AND wd.website_id != $3';
       params.push(Number(websiteIdToExclude));
     }
 
@@ -133,6 +132,24 @@ export async function checkDomainAvailability(rawInput, websiteIdToExclude = nul
         baseDomain,
         fullDomain,
         error: `Domain "${fullDomain}" is already in use. Please try another name.`,
+        code: 'TAKEN',
+      };
+    }
+
+    const slugCheck = await queryDb(
+      websiteIdToExclude && !isNaN(Number(websiteIdToExclude))
+        ? 'SELECT id FROM websites WHERE LOWER(slug) = LOWER($1) AND id != $2 LIMIT 1'
+        : 'SELECT id FROM websites WHERE LOWER(slug) = LOWER($1) LIMIT 1',
+      websiteIdToExclude && !isNaN(Number(websiteIdToExclude)) ? [clean, Number(websiteIdToExclude)] : [clean]
+    );
+
+    if (slugCheck.rows.length > 0) {
+      return {
+        available: false,
+        domain: clean,
+        baseDomain,
+        fullDomain,
+        error: `Domain "${fullDomain}" is already reserved. Please try another name.`,
         code: 'TAKEN',
       };
     }
@@ -211,11 +228,15 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
   }
 
   try {
-    let queryText = 'SELECT id, name, custom_domain FROM websites WHERE LOWER(custom_domain) = LOWER($1)';
+    let queryText = `
+      SELECT wd.id, wd.website_id, wd.domain 
+      FROM website_domains wd 
+      WHERE LOWER(wd.domain) = LOWER($1) OR LOWER(COALESCE(wd.domain_name, '')) = LOWER($1)
+    `;
     const params = [clean];
 
     if (websiteIdToExclude && !isNaN(Number(websiteIdToExclude))) {
-      queryText += ' AND id != $2';
+      queryText += ' AND wd.website_id != $2';
       params.push(Number(websiteIdToExclude));
     }
 
@@ -240,7 +261,10 @@ export async function checkCustomDomainAvailability(rawInput, websiteIdToExclude
       dnsInstructions: {
         type: 'CNAME',
         host: '@',
-        value: cleanBase || 'cname.educraft.io',
+        value: 'domains.hiesci.com',
+        cnameTarget: 'domains.hiesci.com',
+        ipAddress: '76.76.21.21',
+        instructions: 'Add a CNAME record with host "@" pointing to "domains.hiesci.com"',
       },
     };
   } catch (error) {

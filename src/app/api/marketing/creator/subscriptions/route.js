@@ -59,7 +59,7 @@ export async function GET(request) {
                   'id', w.id,
                   'name', w.name,
                   'slug', w.slug,
-                  'subdomain', w.subdomain,
+                  'subdomain', COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug),
                   'status', w.status,
                   'institution_type', w.institution_type,
                   'created_at', w.created_at
@@ -190,6 +190,116 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       purchase,
       payment: payRes.rows[0],
       wishlistCleared: true,
+    });
+  }
+
+  if (action === 'renew' || action === 'renew_subscription') {
+    const subId = Number(body.subscriptionId || body.id);
+    const packageId = Number(body.packageId || 0);
+
+    let queryText = 'SELECT s.*, p.name AS package_name, p.slug AS package_slug, p.monthly_price_usd, p.yearly_price_usd, p.monthly_price_bdt, p.yearly_price_bdt, p.monthly_price, p.yearly_price, COALESCE(p.max_websites, 1) AS max_websites FROM subscriptions s JOIN packages p ON s.package_id = p.id WHERE s.creator_id = $1';
+    const params = [creatorId];
+
+    if (subId) {
+      queryText += ' AND s.id = $2 LIMIT 1';
+      params.push(subId);
+    } else if (packageId) {
+      queryText += ' AND s.package_id = $2 ORDER BY s.id DESC LIMIT 1';
+      params.push(packageId);
+    } else {
+      return NextResponse.json({ success: false, error: 'Subscription ID or Package ID is required for renewal.' }, { status: 400 });
+    }
+
+    const subRes = await queryDb(queryText, params);
+    const sub = subRes.rows[0];
+    if (!sub) {
+      return NextResponse.json({ success: false, error: 'Subscription record not found.' }, { status: 404 });
+    }
+
+    const isYearly = String(body.billingCycle || sub.billing_cycle || '').toLowerCase() === 'yearly';
+    const billingCycle = isYearly ? 'yearly' : 'monthly';
+    const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
+    const baseAmount = isYearly
+      ? Number(sub.yearly_price_usd || sub.yearly_price || 0)
+      : Number(sub.monthly_price_usd || sub.monthly_price || 0);
+
+    const now = new Date();
+    const currentEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
+    const isExpired = !currentEnd || currentEnd <= now;
+
+    let updateRes;
+    if (isExpired) {
+      updateRes = await queryDb(
+        `UPDATE subscriptions
+         SET status = 'active',
+             billing_cycle = $1,
+             current_period_start = CURRENT_TIMESTAMP,
+             current_period_end = CURRENT_TIMESTAMP + ${durationInterval},
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND creator_id = $3
+         RETURNING *`,
+        [billingCycle, sub.id, creatorId]
+      );
+    } else {
+      updateRes = await queryDb(
+        `UPDATE subscriptions
+         SET status = 'active',
+             billing_cycle = $1,
+             current_period_end = current_period_end + ${durationInterval},
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND creator_id = $3
+         RETURNING *`,
+        [billingCycle, sub.id, creatorId]
+      );
+    }
+
+    const updatedSub = updateRes.rows[0];
+
+    const purchaseCode = generateToken(12);
+    const puRes = await queryDb(
+      `INSERT INTO purchases (
+         creator_id, package_id, website_id, purchase_code, billing_cycle,
+         base_amount, total_amount, status, period_start, period_end, notes
+       ) VALUES (
+         $1, $2, $3, $4, $5,
+         $6, $6, 'completed', $7, $8, $9
+       ) RETURNING *`,
+      [
+        creatorId,
+        sub.package_id,
+        sub.website_id,
+        purchaseCode,
+        billingCycle,
+        baseAmount,
+        updatedSub.current_period_start,
+        updatedSub.current_period_end,
+        `Renewal of ${sub.package_name}`
+      ]
+    );
+
+    const transactionId = generateToken(12);
+    const payRes = await queryDb(
+      `INSERT INTO payments (
+         purchase_id, creator_id, transaction_id, amount, currency,
+         payment_method, status, payment_date
+       ) VALUES ($1, $2, $3, $4, 'USD', $5, 'successful', CURRENT_TIMESTAMP)
+       RETURNING *`,
+      [puRes.rows[0].id, creatorId, transactionId, baseAmount, body.paymentMethod || 'renewal']
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: isExpired
+        ? `Subscription renewed successfully! Period starts from now until ${new Date(updatedSub.current_period_end).toLocaleDateString()}.`
+        : `Subscription extended successfully! Extended to ${new Date(updatedSub.current_period_end).toLocaleDateString()}.`,
+      subscription: {
+        ...updatedSub,
+        package_name: sub.package_name,
+        package_slug: sub.package_slug,
+        max_websites: sub.max_websites || 1,
+      },
+      purchase: puRes.rows[0],
+      payment: payRes.rows[0],
     });
   }
 

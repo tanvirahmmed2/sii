@@ -171,6 +171,16 @@ export default function PackageForm({
       return;
     }
 
+    if (selectedHomeIds.length === 0) {
+      setError('You must attach at least one home module to the package.');
+      return;
+    }
+
+    if (selectedControlIds.length === 0) {
+      setError('You must attach at least one control module to the package.');
+      return;
+    }
+
     setLoading(true);
 
     const monthlyUsd = Math.max(0, parseFloat(formData.monthly_price_usd) || 0);
