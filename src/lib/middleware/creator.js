@@ -4,11 +4,14 @@ import { cookies } from 'next/headers';
 import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, SITE_NAME, extractBaseDomain } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendSms, maskPhoneNumber } from '../database/smsSender.js';
 import {
   checkAccountLockout,
   recordFailedLogin,
   recordSuccessfulLogin,
   generateSecureOtp,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
 } from '../security/shield.js';
 import {
   resolveWebsiteFromRequest,
@@ -155,7 +158,7 @@ export async function getCreatorSession(request) {
   }
 }
 
-export async function authenticateCreator(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
+export async function authenticateCreator(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode, channel = 'email' } = {}) {
   const raw = String(identifier || '').trim();
   if (!raw) {
     throw new Error('Email or phone number is required.');
@@ -235,6 +238,27 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
 
   if (creator.two_factor_enabled) {
     if (!twoFactorCode) {
+      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+
+      const rateCheck = await checkOtpDispatchRateLimit({
+        identifier: creator.email,
+        phone: creator.phone,
+        email: creator.email,
+        ip,
+      });
+
+      if (!rateCheck.isAllowed) {
+        const err = new Error(rateCheck.error);
+        err.status = 429;
+        err.rateLimited = true;
+        err.remainingMinutes = rateCheck.remainingMinutes;
+        err.requires2FA = true;
+        err.twoFactorRequired = true;
+        err.email = creator.email;
+        err.phone = creator.phone;
+        throw err;
+      }
+
       const secureOtp = generateSecureOtp(6);
       await queryDb(
         `UPDATE creators 
@@ -245,38 +269,81 @@ export async function authenticateCreator(identifier, password, { ip = '127.0.0.
         [secureOtp, creator.id]
       );
 
-      try {
-        const emailHtml = buildStyledEmail({
-          title: `${SITE_NAME} Security Verification`,
-          subtitle: 'Creator Two-Factor Authentication',
-          recipientName: creator.name || 'Creator',
-          bodyParagraphs: [
-            'A login request was initiated for your creator studio account.',
-            'Enter the 6-digit verification code below to authorize your session.'
-          ],
-          code: secureOtp,
-          codeLabel: 'Security Code',
-          footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
-        });
-
-        await sendEmail({
-          to: creator.email,
-          subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
-          html: emailHtml,
-          text: `Your ${SITE_NAME} creator two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
-        });
-      } catch (mailErr) {
-        console.warn('Notice sending creator 2FA code email:', mailErr.message);
-      }
-
       const maskedEmail = creator.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
         return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
       });
+      const maskedPhone = maskPhoneNumber(creator.phone);
 
-      const err = new Error(`Two-factor authentication code sent to your registered email (${maskedEmail}).`);
+      if (selectedChannel === 'sms') {
+        try {
+          await sendSms({
+            to: creator.phone,
+            message: `Your ${SITE_NAME} Creator 2FA verification code is: ${secureOtp}. Valid for 10 minutes.`,
+            purpose: '2fa',
+            userId: creator.id,
+            userType: 'creator',
+            ip,
+          });
+          await recordOtpDispatch({
+            identifier: creator.phone,
+            phone: creator.phone,
+            email: creator.email,
+            channel: 'sms',
+            purpose: '2fa',
+            ip,
+          });
+        } catch (smsErr) {
+          console.error('Creator 2FA SMS error:', smsErr.message);
+          const err = new Error(`Failed to dispatch SMS: ${smsErr.message || 'SMS delivery failed.'}`);
+          err.dispatchFailed = true;
+          err.status = 500;
+          throw err;
+        }
+      } else {
+        try {
+          const emailHtml = buildStyledEmail({
+            title: `${SITE_NAME} Security Verification`,
+            subtitle: 'Creator Two-Factor Authentication',
+            recipientName: creator.name || 'Creator',
+            bodyParagraphs: [
+              'A login request was initiated for your creator studio account.',
+              'Enter the 6-digit verification code below to authorize your session.'
+            ],
+            code: secureOtp,
+            codeLabel: 'Security Code',
+            footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
+          });
+
+          await sendEmail({
+            to: creator.email,
+            subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
+            html: emailHtml,
+            text: `Your ${SITE_NAME} creator two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
+          });
+          await recordOtpDispatch({
+            identifier: creator.email,
+            phone: creator.phone,
+            email: creator.email,
+            channel: 'email',
+            purpose: '2fa',
+            ip,
+          });
+        } catch (mailErr) {
+          console.error('Creator 2FA email error:', mailErr.message);
+          const err = new Error(`Failed to send verification email: ${mailErr.message || 'Email delivery failed.'}`);
+          err.dispatchFailed = true;
+          err.status = 500;
+          throw err;
+        }
+      }
+
+      const dest = selectedChannel === 'sms' ? 'registered mobile phone' : 'registered email address';
+      const err = new Error(`Two-factor verification code sent via ${selectedChannel === 'sms' ? 'SMS' : 'email'} to your ${dest}.`);
       err.requires2FA = true;
       err.twoFactorRequired = true;
-      err.email = creator.email;
+      err.channel = selectedChannel;
+      err.hasPhone = Boolean(creator.phone);
+      err.hasEmail = Boolean(creator.email);
       err.status = 401;
       throw err;
     }

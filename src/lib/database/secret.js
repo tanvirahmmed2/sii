@@ -20,6 +20,10 @@ export const BREVO_SENDER_EMAIL = cleanEnv(process.env.BREVO_SENDER_EMAIL);
 export const BREVO_SENDER_NAME = cleanEnv(process.env.BREVO_SENDER_NAME);
 export const BREVO_API_KEY = cleanEnv(process.env.BREVO_API_KEY);
 
+export const BULKSMSBD_API_KEY = cleanEnv(process.env.BULKSMSBD_API_KEY);
+export const BULKSMSBD_SENDER_ID = cleanEnv(process.env.BULKSMSBD_SENDER_ID) || '8809617614488';
+export const BULKSMSBD_URL = cleanEnv(process.env.BULKSMSBD_URL) || 'http://bulksmsbd.net/api/smsapi';
+
 export const SCHOOL_NAME = "website.name";
 export const LOGO_URL = '/icon.png';
 export const META_TITLE = "Sky International Institute - Academic Excellence & Growth";

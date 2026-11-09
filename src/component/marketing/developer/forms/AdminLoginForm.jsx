@@ -16,11 +16,13 @@ export default function AdminLoginForm() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
-  const [twoFactorEmail, setTwoFactorEmail] = useState('');
+  const [twoFactorChannel, setTwoFactorChannel] = useState('email');
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
   const [readOnly, setReadOnly] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [channelSwitching, setChannelSwitching] = useState(false);
   const [error, setError] = useState('');
   const [verifiedSuccess, setVerifiedSuccess] = useState(initialVerified);
   const [unverifiedInfo, setUnverifiedInfo] = useState(null);
@@ -35,17 +37,27 @@ export default function AdminLoginForm() {
     }
   }, [initialVerified]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleLogin = async (e, customChannel = null) => {
+    if (e && e.preventDefault) e.preventDefault();
     setLoading(true);
     setError('');
     setUnverifiedInfo(null);
     setResendNotice('');
 
     try {
+      const activeChannel = customChannel || twoFactorChannel;
       const payload = {
         identifier: identifier.trim(),
         password,
+        channel: activeChannel,
       };
 
       if (twoFactorRequired) {
@@ -68,8 +80,18 @@ export default function AdminLoginForm() {
         router.refresh();
       } else if (data.twoFactorRequired || data.requires2FA) {
         setTwoFactorRequired(true);
-        setTwoFactorEmail(data.email || '');
-        setError('');
+        if (data.channel) {
+          setTwoFactorChannel(data.channel);
+        }
+        if (data.rateLimited) {
+          setError(data.message || data.error || 'Verification limit reached.');
+        } else {
+          setCooldown(60);
+          setError('');
+          if (data.message) {
+            setResendNotice(data.message);
+          }
+        }
       } else {
         if (data.unverified) {
           setUnverifiedInfo({
@@ -84,7 +106,17 @@ export default function AdminLoginForm() {
       setError('Network or server error occurred. Please try again.');
     } finally {
       setLoading(false);
+      setChannelSwitching(false);
     }
+  };
+
+  const handleSelectChannel = async (targetChannel) => {
+    if (cooldown > 0 && targetChannel === twoFactorChannel) return;
+    setChannelSwitching(true);
+    setTwoFactorCode('');
+    setError('');
+    setResendNotice('');
+    await handleLogin(null, targetChannel);
   };
 
   const handleResendLink = async () => {
@@ -117,6 +149,7 @@ export default function AdminLoginForm() {
     setTwoFactorRequired(false);
     setTwoFactorCode('');
     setError('');
+    setResendNotice('');
   };
 
   return (
@@ -175,12 +208,22 @@ export default function AdminLoginForm() {
         </div>
       )}
 
+      {resendNotice && twoFactorRequired && !error && (
+        <div className="p-3 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-normal">
+          {resendNotice}
+        </div>
+      )}
+
       {twoFactorRequired ? (
         <form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
           <div className="p-3 rounded border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 text-xs space-y-1">
-            <p className="font-medium">Two-Factor Code Sent</p>
+            <p className="font-medium">
+              {twoFactorChannel === 'sms' ? 'SMS Code Dispatched' : 'Email Code Dispatched'}
+            </p>
             <p>
-              Please enter the 6-digit verification code sent to your registered email address {twoFactorEmail ? `(${twoFactorEmail})` : ''}.
+              {twoFactorChannel === 'sms'
+                ? 'Please enter the 6-digit verification code sent via SMS to your registered mobile phone.'
+                : 'Please enter the 6-digit verification code sent to your registered email address.'}
             </p>
           </div>
 
@@ -208,6 +251,37 @@ export default function AdminLoginForm() {
             >
               {loading ? 'Verifying...' : 'Verify & Continue'}
             </button>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              {twoFactorChannel === 'email' ? (
+                <button
+                  type="button"
+                  disabled={cooldown > 0 || channelSwitching || loading}
+                  onClick={() => handleSelectChannel('sms')}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Send to phone
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={cooldown > 0 || channelSwitching || loading}
+                  onClick={() => handleSelectChannel('email')}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Send to email
+                </button>
+              )}
+
+              <button
+                type="button"
+                disabled={cooldown > 0 || channelSwitching || loading}
+                onClick={() => handleSelectChannel(twoFactorChannel)}
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+              >
+                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+              </button>
+            </div>
 
             <button
               type="button"

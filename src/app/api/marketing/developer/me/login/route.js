@@ -25,6 +25,7 @@ export async function POST(request) {
     const identifier = (body.identifier || body.email || body.phone || '').trim();
     const password = body.password;
     const twoFactorCode = (body.twoFactorCode || body.code || '').trim();
+    const channel = (body.channel || 'email').trim().toLowerCase();
 
     const rateCheck = await checkRateLimit({
       ip,
@@ -54,7 +55,7 @@ export async function POST(request) {
       );
     }
 
-    const result = await authenticateDeveloper(identifier, password, { ip, userAgent, twoFactorCode });
+    const result = await authenticateDeveloper(identifier, password, { ip, userAgent, twoFactorCode, channel });
 
     const response = NextResponse.json({
       success: true,
@@ -76,16 +77,31 @@ export async function POST(request) {
 
     return response;
   } catch (error) {
+    if (error.dispatchFailed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          dispatchFailed: true,
+        },
+        { status: 500 }
+      );
+    }
+
     if (error.twoFactorRequired || error.requires2FA) {
       return NextResponse.json(
         {
           success: false,
           twoFactorRequired: true,
           requires2FA: true,
-          email: error.email,
-          message: error.message || 'Two-factor authentication code required.',
+          channel: error.channel || 'email',
+          hasPhone: Boolean(error.hasPhone),
+          hasEmail: Boolean(error.hasEmail),
+          rateLimited: Boolean(error.rateLimited),
+          remainingMinutes: error.remainingMinutes,
+          message: error.message || 'Two-factor verification code required.',
         },
-        { status: 401 }
+        { status: error.rateLimited ? 429 : 401 }
       );
     }
 

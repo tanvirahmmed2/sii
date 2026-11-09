@@ -336,15 +336,17 @@ export async function recordSuccessfulLogin({ table, id, ip = '127.0.0.1', userA
   } catch (_) {}
 }
 
-export async function enforceOtpCooldown({ ip, identifier, action = 'otp_request', minIntervalSeconds = 60, maxPerHour = 5 }) {
+export async function checkOtpDispatchRateLimit({ identifier = '', phone = '', email = '', ip = '127.0.0.1' }) {
   const cleanId = String(identifier || '').toLowerCase().trim();
-  const now = Date.now();
-  const cooldownKey = `cooldown:${ip}:${cleanId}:${action}`;
-  const hourlyKey = `hourly:${cleanId}:${action}`;
+  const cleanEmail = String(email || '').toLowerCase().trim() || (cleanId.includes('@') ? cleanId : '');
+  const rawPhone = String(phone || '').trim() || (!cleanId.includes('@') ? cleanId : '');
+  const phoneDigits = rawPhone.replace(/\D/g, '');
 
-  const cooldown = memoryStore.get(cooldownKey);
-  if (cooldown && cooldown.expiresAt > now) {
-    const waitSeconds = Math.ceil((cooldown.expiresAt - now) / 1000);
+  const now = Date.now();
+  const rapidKey = `rapid_otp:${ip}:${cleanId || cleanEmail || phoneDigits}`;
+  const rapidRecord = memoryStore.get(rapidKey);
+  if (rapidRecord && rapidRecord.expiresAt > now) {
+    const waitSeconds = Math.ceil((rapidRecord.expiresAt - now) / 1000);
     return {
       isAllowed: false,
       allowed: false,
@@ -353,23 +355,58 @@ export async function enforceOtpCooldown({ ip, identifier, action = 'otp_request
     };
   }
 
-  let hourly = memoryStore.get(hourlyKey);
-  if (!hourly || hourly.windowEnd < now) {
-    hourly = { count: 1, windowEnd: now + 3600000 };
-    memoryStore.set(hourlyKey, hourly);
-  } else {
-    hourly.count += 1;
-    if (hourly.count > maxPerHour) {
-      const waitMinutes = Math.ceil((hourly.windowEnd - now) / 60000);
+  try {
+    const res = await queryDb(
+      `SELECT COUNT(*) AS total_count, MIN(created_at) AS oldest_in_window
+       FROM otp_dispatch_logs
+       WHERE created_at >= CURRENT_TIMESTAMP - INTERVAL '1 hour'
+         AND (
+           LOWER(identifier) = $1
+           OR ($2 <> '' AND LOWER(email) = $2)
+           OR ($3 <> '' AND phone = $3)
+           OR (LENGTH($4) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(phone, ''), '\\D', '', 'g'), 10) = RIGHT($4, 10))
+         )`,
+      [cleanId, cleanEmail, rawPhone, phoneDigits]
+    );
+
+    const count = parseInt(res.rows[0]?.total_count || '0', 10);
+    if (count >= 3) {
+      const oldest = res.rows[0]?.oldest_in_window ? new Date(res.rows[0].oldest_in_window) : new Date();
+      const resetTime = oldest.getTime() + 3600000;
+      const remainingMs = Math.max(0, resetTime - now);
+      const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
       return {
         isAllowed: false,
         allowed: false,
-        waitMinutes,
-        error: `Maximum verification code requests reached. Please wait ${waitMinutes} minutes or contact support.`,
+        count,
+        remainingMinutes,
+        error: `You have reached the limit of 3 verification codes per hour (across Email & SMS). Please try again in ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}.`,
       };
     }
+  } catch (err) {
+    console.error('OTP rate check database error:', err.message);
   }
 
-  memoryStore.set(cooldownKey, { expiresAt: now + minIntervalSeconds * 1000 });
   return { isAllowed: true, allowed: true };
 }
+
+export async function recordOtpDispatch({ identifier = '', phone = '', email = '', channel = 'email', purpose = 'otp', ip = '127.0.0.1' }) {
+  const cleanId = String(identifier || '').toLowerCase().trim();
+  const cleanEmail = String(email || '').toLowerCase().trim() || (cleanId.includes('@') ? cleanId : '');
+  const rawPhone = String(phone || '').trim() || (!cleanId.includes('@') ? cleanId : '');
+
+  const rapidKey = `rapid_otp:${ip}:${cleanId || cleanEmail || rawPhone}`;
+  memoryStore.set(rapidKey, { expiresAt: Date.now() + 45000 });
+
+  try {
+    await queryDb(
+      `INSERT INTO otp_dispatch_logs (identifier, phone, email, channel, purpose, ip_address)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [cleanId || cleanEmail || rawPhone, rawPhone, cleanEmail, channel, purpose, ip]
+    );
+  } catch (err) {
+    console.error('Failed to log OTP dispatch:', err.message);
+  }
+}
+
+export const enforceOtpCooldown = checkOtpDispatchRateLimit;

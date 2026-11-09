@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword } from 'src/lib/middleware/developer';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendSms } from 'src/lib/database/smsSender';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import {
   getClientIp,
   inspectMalwareAndAttacks,
   checkRateLimit,
-  enforceOtpCooldown,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
   generateSecureOtp,
 } from 'src/lib/security/shield';
 
@@ -119,7 +121,7 @@ export async function POST(request) {
       ip,
       identifier: cleanEmail,
       action: 'dev_recovery_request',
-      maxAttempts: 3,
+      maxAttempts: 5,
       windowSeconds: 600,
       blockDurationSeconds: 1800,
     });
@@ -131,20 +133,20 @@ export async function POST(request) {
       );
     }
 
-    const cooldownCheck = await enforceOtpCooldown({
-      ip,
+    const otpRate = await checkOtpDispatchRateLimit({
       identifier: cleanEmail,
-      action: 'dev_recovery',
-      minIntervalSeconds: 60,
-      maxPerHour: 5,
+      phone: phoneDigits,
+      email: cleanEmail,
+      ip,
     });
 
-    if (!cooldownCheck.isAllowed) {
+    if (!otpRate.isAllowed) {
       return NextResponse.json(
         {
           success: false,
-          error: cooldownCheck.error,
-          waitSeconds: cooldownCheck.waitSeconds,
+          error: otpRate.error,
+          waitSeconds: otpRate.waitSeconds,
+          remainingMinutes: otpRate.remainingMinutes,
         },
         { status: 429 }
       );
@@ -168,6 +170,8 @@ export async function POST(request) {
 
     const admin = dbAdmin.rows[0];
     const targetEmail = admin.email;
+    const targetPhone = admin.phone;
+    const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
     const generatedToken = generateSecureOtp(6);
 
     await queryDb(
@@ -179,6 +183,47 @@ export async function POST(request) {
 
     const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/developer-auth/recovery?token=${generatedToken}&email=${encodeURIComponent(targetEmail)}`;
+
+    if (channel === 'sms') {
+      if (!targetPhone) {
+        return NextResponse.json(
+          { success: false, error: 'No phone number is registered for this developer account.' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        await sendSms({
+          to: targetPhone,
+          message: `Your ${SITE_NAME} Developer password recovery token is: ${generatedToken}. Valid for 60 minutes.`,
+          purpose: 'recovery',
+          userId: admin.id,
+          userType: 'developer',
+          ip,
+        });
+
+        await recordOtpDispatch({
+          identifier: targetPhone,
+          phone: targetPhone,
+          email: targetEmail,
+          channel: 'sms',
+          purpose: 'recovery',
+          ip,
+        });
+      } catch (smsErr) {
+        return NextResponse.json(
+          { success: false, error: `Failed to dispatch SMS: ${smsErr.message}` },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'A security recovery token has been sent via SMS to your registered mobile phone.',
+        channel: 'sms',
+        cooldownSeconds: 60,
+      });
+    }
 
     try {
       const emailHtml = buildStyledEmail({
@@ -202,18 +247,26 @@ export async function POST(request) {
         html: emailHtml,
         text: `Your security recovery token is: ${generatedToken}.\nReset link: ${resetUrl}\nValid for 60 minutes.`,
       });
-    } catch (mailErr) {
-      console.warn('Brevo email notice:', mailErr.message);
-    }
 
-    const maskedEmail = targetEmail.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
-      return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
-    });
+      await recordOtpDispatch({
+        identifier: targetEmail,
+        phone: targetPhone,
+        email: targetEmail,
+        channel: 'email',
+        purpose: 'recovery',
+        ip,
+      });
+    } catch (mailErr) {
+      return NextResponse.json(
+        { success: false, error: `Failed to send recovery email: ${mailErr.message || 'Email delivery failed'}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: `A security recovery token has been sent to your registered email (${maskedEmail}).`,
-      email: targetEmail,
+      message: 'A security recovery token has been sent to your registered email address.',
+      channel: 'email',
       cooldownSeconds: 60,
     });
   } catch (error) {

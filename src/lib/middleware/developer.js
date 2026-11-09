@@ -3,11 +3,14 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET, DEVELOPER_TOKEN, SITE_NAME } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
 import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendSms, maskPhoneNumber } from '../database/smsSender.js';
 import {
   checkAccountLockout,
   recordFailedLogin,
   recordSuccessfulLogin,
   generateSecureOtp,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
 } from '../security/shield.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_jwt_secret_key_2026';
@@ -328,7 +331,7 @@ export async function requireDeveloperPermission(request, moduleSlug) {
   return check;
 }
 
-export async function authenticateDeveloper(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode } = {}) {
+export async function authenticateDeveloper(identifier, password, { ip = '127.0.0.1', userAgent = 'Unknown', twoFactorCode, channel = 'email' } = {}) {
   const raw = String(identifier || '').trim();
   const cleanEmail = raw.toLowerCase();
   const digits = raw.replace(/\D/g, '');
@@ -400,6 +403,27 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
 
   if (dev.two_factor_enabled) {
     if (!twoFactorCode) {
+      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+
+      const rateCheck = await checkOtpDispatchRateLimit({
+        identifier: dev.email,
+        phone: dev.phone,
+        email: dev.email,
+        ip
+      });
+
+      if (!rateCheck.isAllowed) {
+        const err = new Error(rateCheck.error);
+        err.status = 429;
+        err.rateLimited = true;
+        err.remainingMinutes = rateCheck.remainingMinutes;
+        err.requires2FA = true;
+        err.twoFactorRequired = true;
+        err.email = dev.email;
+        err.phone = dev.phone;
+        throw err;
+      }
+
       const secureOtp = generateSecureOtp(6);
       await queryDb(
         `UPDATE developers 
@@ -410,38 +434,81 @@ export async function authenticateDeveloper(identifier, password, { ip = '127.0.
         [secureOtp, dev.id]
       );
 
-      try {
-        const emailHtml = buildStyledEmail({
-          title: `${SITE_NAME} Security Verification`,
-          subtitle: 'Two-Factor Authentication Code',
-          recipientName: dev.name || 'Developer',
-          bodyParagraphs: [
-            'A login request was initiated for your administrator account.',
-            'Enter the 6-digit verification code below to authorize your session.'
-          ],
-          code: secureOtp,
-          codeLabel: 'Security Code',
-          footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
-        });
-
-        await sendEmail({
-          to: dev.email,
-          subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
-          html: emailHtml,
-          text: `Your ${SITE_NAME} two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
-        });
-      } catch (mailErr) {
-        console.warn('Notice sending developer 2FA code email:', mailErr.message);
-      }
-
       const maskedEmail = dev.email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
         return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
       });
+      const maskedPhone = maskPhoneNumber(dev.phone);
 
-      const err = new Error(`Two-factor authentication code sent to your registered email (${maskedEmail}).`);
+      if (selectedChannel === 'sms') {
+        try {
+          await sendSms({
+            to: dev.phone,
+            message: `Your ${SITE_NAME} Developer 2FA verification code is: ${secureOtp}. Valid for 10 minutes.`,
+            purpose: '2fa',
+            userId: dev.id,
+            userType: 'developer',
+            ip
+          });
+          await recordOtpDispatch({
+            identifier: dev.phone,
+            phone: dev.phone,
+            email: dev.email,
+            channel: 'sms',
+            purpose: '2fa',
+            ip
+          });
+        } catch (smsErr) {
+          console.error('Developer 2FA SMS error:', smsErr.message);
+          const err = new Error(`Failed to dispatch SMS: ${smsErr.message || 'SMS delivery failed.'}`);
+          err.dispatchFailed = true;
+          err.status = 500;
+          throw err;
+        }
+      } else {
+        try {
+          const emailHtml = buildStyledEmail({
+            title: `${SITE_NAME} Security Verification`,
+            subtitle: 'Two-Factor Authentication Code',
+            recipientName: dev.name || 'Developer',
+            bodyParagraphs: [
+              'A login request was initiated for your administrator account.',
+              'Enter the 6-digit verification code below to authorize your session.'
+            ],
+            code: secureOtp,
+            codeLabel: 'Security Code',
+            footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
+          });
+
+          await sendEmail({
+            to: dev.email,
+            subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
+            html: emailHtml,
+            text: `Your ${SITE_NAME} two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
+          });
+          await recordOtpDispatch({
+            identifier: dev.email,
+            phone: dev.phone,
+            email: dev.email,
+            channel: 'email',
+            purpose: '2fa',
+            ip
+          });
+        } catch (mailErr) {
+          console.error('Developer 2FA email error:', mailErr.message);
+          const err = new Error(`Failed to send verification email: ${mailErr.message || 'Email delivery failed.'}`);
+          err.dispatchFailed = true;
+          err.status = 500;
+          throw err;
+        }
+      }
+
+      const dest = selectedChannel === 'sms' ? 'registered mobile phone' : 'registered email address';
+      const err = new Error(`Two-factor verification code sent via ${selectedChannel === 'sms' ? 'SMS' : 'email'} to your ${dest}.`);
       err.requires2FA = true;
       err.twoFactorRequired = true;
-      err.email = dev.email;
+      err.channel = selectedChannel;
+      err.hasPhone = Boolean(dev.phone);
+      err.hasEmail = Boolean(dev.email);
       err.status = 401;
       throw err;
     }

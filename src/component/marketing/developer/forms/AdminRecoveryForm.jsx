@@ -7,6 +7,7 @@ import { SITE_NAME } from 'src/lib/database/secret';
 export default function AdminRecoveryForm() {
   const [step, setStep] = useState('request');
   const [identifier, setIdentifier] = useState('');
+  const [channel, setChannel] = useState('email');
   const [readOnly, setReadOnly] = useState(true);
   const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -24,9 +25,10 @@ export default function AdminRecoveryForm() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  const handleRequestToken = async (e) => {
+  const handleRequestToken = async (e, customChannel = null) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (cooldown > 0) return;
+    const activeChannel = customChannel || channel;
+    if (cooldown > 0 && activeChannel === channel) return;
 
     setLoading(true);
     setError('');
@@ -42,13 +44,18 @@ export default function AdminRecoveryForm() {
       const res = await fetch('/api/marketing/developer/me/recovery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'request_token', identifier: identifier.trim() }),
+        body: JSON.stringify({
+          action: 'request_token',
+          identifier: identifier.trim(),
+          channel: activeChannel,
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setSuccessMessage(data.message || 'Recovery token has been sent to your registered email.');
+        setChannel(activeChannel);
+        setSuccessMessage(data.message || 'Recovery token has been sent.');
         setStep('reset');
         setCooldown(60);
       } else {
@@ -198,23 +205,47 @@ export default function AdminRecoveryForm() {
             {loading ? 'Updating Password...' : 'Save New Password'}
           </button>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between text-xs pt-1">
+            {channel === 'email' ? (
+              <button
+                type="button"
+                onClick={() => handleRequestToken(null, 'sms')}
+                disabled={loading || cooldown > 0}
+                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Send to phone
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleRequestToken(null, 'email')}
+                disabled={loading || cooldown > 0}
+                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Send to email
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={handleRequestToken}
+              onClick={() => handleRequestToken(null, channel)}
               disabled={loading || cooldown > 0}
-              className="text-xs text-slate-600 dark:text-slate-400 hover:underline disabled:opacity-50 cursor-pointer"
+              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer"
             >
-              {cooldown > 0 ? `Resend token in ${cooldown}s` : 'Resend Recovery Token'}
+              {cooldown > 0 ? `Resend token (${cooldown}s)` : 'Resend token'}
             </button>
+          </div>
 
+          <div className="text-center pt-1">
             <button
               type="button"
               onClick={() => {
                 setStep('request');
+                setChannel('email');
                 setError('');
+                setSuccessMessage('');
               }}
-              className="text-xs text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+              className="text-xs text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
             >
               Change Identifier
             </button>
@@ -223,7 +254,7 @@ export default function AdminRecoveryForm() {
       )}
 
       {step === 'request' && (
-        <form onSubmit={handleRequestToken} autoComplete="off" className="space-y-4">
+        <form onSubmit={(e) => handleRequestToken(e, 'email')} autoComplete="off" className="space-y-4">
           <input
             type="text"
             name="decoy_username_prevent_autofill"
@@ -249,9 +280,6 @@ export default function AdminRecoveryForm() {
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
             />
-            <p className="text-[11px] text-slate-400 mt-1">
-              Enter your registered email address or phone number. A security recovery token will be sent to your registered email address.
-            </p>
           </div>
 
           <button

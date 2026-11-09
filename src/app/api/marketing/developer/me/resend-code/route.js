@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server';
 import { generateRandomHex } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendSms } from 'src/lib/database/smsSender';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import {
   getClientIp,
   inspectMalwareAndAttacks,
   checkRateLimit,
-  enforceOtpCooldown,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
   generateSecureOtp,
 } from 'src/lib/security/shield';
 
@@ -25,6 +27,7 @@ export async function POST(request) {
 
     const ip = getClientIp(request);
     const raw = String(body.email || body.identifier || body.phone || '').trim();
+    const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
 
     if (!raw) {
       return NextResponse.json(
@@ -40,7 +43,7 @@ export async function POST(request) {
       ip,
       identifier: cleanEmail,
       action: 'dev_resend_code',
-      maxAttempts: 3,
+      maxAttempts: 5,
       windowSeconds: 600,
       blockDurationSeconds: 1800,
     });
@@ -52,27 +55,27 @@ export async function POST(request) {
       );
     }
 
-    const cooldownCheck = await enforceOtpCooldown({
-      ip,
+    const otpRate = await checkOtpDispatchRateLimit({
       identifier: cleanEmail,
-      action: 'dev_resend',
-      minIntervalSeconds: 60,
-      maxPerHour: 5,
+      phone: phoneDigits,
+      email: cleanEmail,
+      ip,
     });
 
-    if (!cooldownCheck.isAllowed) {
+    if (!otpRate.isAllowed) {
       return NextResponse.json(
         {
           success: false,
-          error: cooldownCheck.error,
-          waitSeconds: cooldownCheck.waitSeconds,
+          error: otpRate.error,
+          waitSeconds: otpRate.waitSeconds,
+          remainingMinutes: otpRate.remainingMinutes,
         },
         { status: 429 }
       );
     }
 
     const adminRes = await queryDb(
-      `SELECT id, name, email, is_active, email_verified 
+      `SELECT id, name, email, phone, is_active, email_verified 
        FROM developers 
        WHERE LOWER(email) = $1 
           OR phone = $2 
@@ -120,7 +123,48 @@ export async function POST(request) {
     );
 
     const baseUrl = getBaseUrl(request);
-    const verifyUrl = `${baseUrl}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(cleanEmail)}`;
+    const verifyUrl = `${baseUrl}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(admin.email)}`;
+
+    if (channel === 'sms') {
+      if (!admin.phone) {
+        return NextResponse.json(
+          { success: false, error: 'No mobile phone number found for this account.' },
+          { status: 400 }
+        );
+      }
+
+      try {
+        await sendSms({
+          to: admin.phone,
+          message: `Your ${SITE_NAME} Developer verification code is: ${newCode}. Enter this code or visit ${verifyUrl}`,
+          purpose: 'verification',
+          userId: admin.id,
+          userType: 'developer',
+          ip,
+        });
+
+        await recordOtpDispatch({
+          identifier: admin.phone,
+          phone: admin.phone,
+          email: admin.email,
+          channel: 'sms',
+          purpose: 'verification',
+          ip,
+        });
+      } catch (smsErr) {
+        return NextResponse.json(
+          { success: false, error: `Failed to dispatch SMS: ${smsErr.message}` },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'A new verification code has been dispatched via SMS to your registered mobile phone.',
+        channel: 'sms',
+        cooldownSeconds: 60,
+      });
+    }
 
     try {
       const emailHtml = buildStyledEmail({
@@ -129,26 +173,41 @@ export async function POST(request) {
         recipientName: admin.name || 'Developer',
         bodyParagraphs: [
           'You requested a new verification link for your platform administrator account.',
-          'Click the link below to verify your email and activate your account.'
+          'Click the link below or enter code ' + newCode + ' to activate your account.'
         ],
+        code: newCode,
+        codeLabel: 'Verification Code',
         actionText: 'Verify & Activate Account',
         actionUrl: verifyUrl,
-        footerNote: 'This link will expire in 24 hours. Do not share it with anyone.'
+        footerNote: 'This link and code will expire in 24 hours. Do not share it with anyone.'
       });
 
       await sendEmail({
-        to: cleanEmail,
+        to: admin.email,
         subject: `Developer Verification Link - ${SITE_NAME}`,
         html: emailHtml,
-        text: `Hello ${admin.name},\n\nYour new developer verification link is:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+        text: `Hello ${admin.name},\n\nYour new developer verification link is:\n${verifyUrl}\nCode: ${newCode}\n\nExpires in 24 hours.`,
+      });
+
+      await recordOtpDispatch({
+        identifier: admin.email,
+        phone: admin.phone,
+        email: admin.email,
+        channel: 'email',
+        purpose: 'verification',
+        ip,
       });
     } catch (mailErr) {
-      console.warn('Brevo email sending notice during resend:', mailErr.message);
+      return NextResponse.json(
+        { success: false, error: `Failed to send verification email: ${mailErr.message || 'Email delivery failed'}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
       message: 'A new verification activation link has been dispatched to your email.',
+      channel: 'email',
       cooldownSeconds: 60,
     });
   } catch (error) {

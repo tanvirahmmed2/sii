@@ -82,7 +82,7 @@ export async function GET(request) {
   }
 }
 
-async function handlePaymentsAction(body, sessionCreator, request) {
+export async function handlePaymentsAction(body, sessionCreator, request) {
   const action = body.action || 'pay_invoice';
   const creatorId = Number(body.creatorId || sessionCreator?.id);
 

@@ -10,11 +10,14 @@ import {
   hashPassword,
 } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendSms } from 'src/lib/database/smsSender';
 import {
   getClientIp,
   getUserAgent,
   inspectMalwareAndAttacks,
   checkRateLimit,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
   enforceOtpCooldown,
   generateSecureOtp,
   sanitizeInput,
@@ -163,8 +166,26 @@ export async function handleAuthAction(body, request) {
         }),
         text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\n\nOr verify directly at:\n${verifyUrl}\n\nExpires in 24 hours.`,
       });
+
+      await recordOtpDispatch({
+        identifier: cleanEmail,
+        phone: cleanPhone,
+        email: cleanEmail,
+        channel: 'email',
+        purpose: 'registration',
+        ip,
+      });
     } catch (mailErr) {
-      console.warn('Notice sending creator verification email via Brevo:', mailErr.message);
+      return NextResponse.json({
+        success: false,
+        error: `Account created, but failed to send verification email: ${mailErr.message || 'Email delivery failed'}. Please click Resend code.`,
+        creator: {
+          id: newCreator.id,
+          name: newCreator.name,
+          email: newCreator.email,
+          emailVerified: false,
+        },
+      }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -292,6 +313,7 @@ export async function handleAuthAction(body, request) {
 
   if (action === 'resend_verification') {
     const raw = String(body.email || body.identifier || body.phone || '').trim();
+    const channel = String(body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
     if (!raw) {
       return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
     }
@@ -303,7 +325,7 @@ export async function handleAuthAction(body, request) {
       ip,
       identifier: cleanEmail,
       action: 'creator_resend_otp',
-      maxAttempts: 3,
+      maxAttempts: 5,
       windowSeconds: 600,
       blockDurationSeconds: 1800,
     });
@@ -315,27 +337,27 @@ export async function handleAuthAction(body, request) {
       );
     }
 
-    const cooldownCheck = await enforceOtpCooldown({
-      ip,
+    const otpRate = await checkOtpDispatchRateLimit({
       identifier: cleanEmail,
-      action: 'creator_resend',
-      minIntervalSeconds: 60,
-      maxPerHour: 5,
+      phone: phoneDigits,
+      email: cleanEmail,
+      ip,
     });
 
-    if (!cooldownCheck.isAllowed) {
+    if (!otpRate.isAllowed) {
       return NextResponse.json(
         {
           success: false,
-          error: cooldownCheck.error,
-          waitSeconds: cooldownCheck.waitSeconds,
+          error: otpRate.error,
+          waitSeconds: otpRate.waitSeconds,
+          remainingMinutes: otpRate.remainingMinutes,
         },
         { status: 429 }
       );
     }
 
     const res = await queryDb(
-      `SELECT id, name, email, is_active, email_verified FROM creators 
+      `SELECT id, name, email, phone, is_active, email_verified FROM creators 
        WHERE LOWER(email) = $1 
           OR phone = $2 
           OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
@@ -365,8 +387,44 @@ export async function handleAuthAction(body, request) {
     );
 
     const targetEmail = creator.email;
+    const targetPhone = creator.phone;
     const baseUrl = getBaseUrl(request);
     const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(targetEmail)}`;
+
+    if (channel === 'sms') {
+      if (!targetPhone) {
+        return NextResponse.json({ success: false, error: 'No phone number registered on this account.' }, { status: 400 });
+      }
+
+      try {
+        await sendSms({
+          to: targetPhone,
+          message: `Your ${SITE_NAME} Creator verification code is: ${newCode}. Enter code or visit ${verifyUrl}`,
+          purpose: 'verification',
+          userId: creator.id,
+          userType: 'creator',
+          ip,
+        });
+
+        await recordOtpDispatch({
+          identifier: targetPhone,
+          phone: targetPhone,
+          email: targetEmail,
+          channel: 'sms',
+          purpose: 'verification',
+          ip,
+        });
+      } catch (smsErr) {
+        return NextResponse.json({ success: false, error: `Failed to send SMS: ${smsErr.message}` }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'A new 6-digit verification code has been dispatched via SMS to your registered mobile phone.',
+        channel: 'sms',
+        cooldownSeconds: 60,
+      });
+    }
 
     try {
       await sendEmail({
@@ -387,13 +445,26 @@ export async function handleAuthAction(body, request) {
         }),
         text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\n\nOr verify at:\n${verifyUrl}\n\nExpires in 24 hours.`,
       });
+
+      await recordOtpDispatch({
+        identifier: targetEmail,
+        phone: targetPhone,
+        email: targetEmail,
+        channel: 'email',
+        purpose: 'verification',
+        ip,
+      });
     } catch (mailErr) {
-      console.warn('Notice resending creator verification email:', mailErr.message);
+      return NextResponse.json(
+        { success: false, error: `Failed to send verification email: ${mailErr.message || 'Email delivery failed'}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
       message: 'A new 6-digit verification code has been sent to your email.',
+      channel: 'email',
       cooldownSeconds: 60,
     });
   }
@@ -401,6 +472,7 @@ export async function handleAuthAction(body, request) {
   if (action === 'login') {
     const identifier = (body.identifier || body.email || body.phone || '').trim();
     const { password, twoFactorCode } = body;
+    const channel = (body.channel || 'email').trim().toLowerCase();
 
     const rateCheck = await checkRateLimit({
       ip,
@@ -424,7 +496,7 @@ export async function handleAuthAction(body, request) {
     }
 
     try {
-      const result = await authenticateCreator(identifier, password, { ip, userAgent, twoFactorCode });
+      const result = await authenticateCreator(identifier, password, { ip, userAgent, twoFactorCode, channel });
       const response = NextResponse.json({
         success: true,
         creator: result.creator,
@@ -435,6 +507,17 @@ export async function handleAuthAction(body, request) {
       await setCreatorSessionCookie(response, result.token);
       return response;
     } catch (authErr) {
+      if (authErr.dispatchFailed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: authErr.message,
+            dispatchFailed: true,
+          },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,
@@ -445,10 +528,13 @@ export async function handleAuthAction(body, request) {
           unverified: Boolean(authErr.unverified),
           deactivated: Boolean(authErr.deactivated),
           locked: Boolean(authErr.locked),
+          rateLimited: Boolean(authErr.rateLimited),
           remainingMinutes: authErr.remainingMinutes,
-          email: authErr.email || undefined,
+          hasPhone: Boolean(authErr.hasPhone),
+          hasEmail: Boolean(authErr.hasEmail),
+          channel: authErr.channel || channel,
         },
-        { status: authErr.locked ? 429 : authErr.unverified || authErr.deactivated ? 403 : authErr.status || 401 }
+        { status: authErr.locked || authErr.rateLimited ? 429 : authErr.unverified || authErr.deactivated ? 403 : authErr.status || 401 }
       );
     }
   }
@@ -480,6 +566,7 @@ export async function handleAuthAction(body, request) {
 
   if (action === 'recover') {
     const raw = String(body.identifier || body.email || body.phone || '').trim();
+    const channel = String(body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
     if (!raw) {
       return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
     }
@@ -491,7 +578,7 @@ export async function handleAuthAction(body, request) {
       ip,
       identifier: cleanEmail,
       action: 'creator_recovery_request',
-      maxAttempts: 3,
+      maxAttempts: 5,
       windowSeconds: 600,
       blockDurationSeconds: 1800,
     });
@@ -503,20 +590,20 @@ export async function handleAuthAction(body, request) {
       );
     }
 
-    const cooldownCheck = await enforceOtpCooldown({
-      ip,
+    const otpRate = await checkOtpDispatchRateLimit({
       identifier: cleanEmail,
-      action: 'creator_recovery',
-      minIntervalSeconds: 60,
-      maxPerHour: 5,
+      phone: phoneDigits,
+      email: cleanEmail,
+      ip,
     });
 
-    if (!cooldownCheck.isAllowed) {
+    if (!otpRate.isAllowed) {
       return NextResponse.json(
         {
           success: false,
-          error: cooldownCheck.error,
-          waitSeconds: cooldownCheck.waitSeconds,
+          error: otpRate.error,
+          waitSeconds: otpRate.waitSeconds,
+          remainingMinutes: otpRate.remainingMinutes,
         },
         { status: 429 }
       );
@@ -544,8 +631,44 @@ export async function handleAuthAction(body, request) {
 
     const creator = res.rows[0];
     const targetEmail = creator.email;
+    const targetPhone = creator.phone;
     const baseUrl = getBaseUrl(request);
     const resetUrl = `${baseUrl}/creator/recovery?token=${recoveryCode}&email=${encodeURIComponent(targetEmail)}`;
+
+    if (channel === 'sms') {
+      if (!targetPhone) {
+        return NextResponse.json({ success: false, error: 'No phone number registered for this creator account.' }, { status: 400 });
+      }
+
+      try {
+        await sendSms({
+          to: targetPhone,
+          message: `Your ${SITE_NAME} Creator password reset code is: ${recoveryCode}. Valid for 1 hour.`,
+          purpose: 'recovery',
+          userId: creator.id,
+          userType: 'creator',
+          ip,
+        });
+
+        await recordOtpDispatch({
+          identifier: targetPhone,
+          phone: targetPhone,
+          email: targetEmail,
+          channel: 'sms',
+          purpose: 'recovery',
+          ip,
+        });
+      } catch (smsErr) {
+        return NextResponse.json({ success: false, error: `Failed to dispatch SMS: ${smsErr.message}` }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'A 6-digit password reset code has been sent via SMS to your registered mobile phone.',
+        channel: 'sms',
+        cooldownSeconds: 60,
+      });
+    }
 
     try {
       await sendEmail({
@@ -566,18 +689,26 @@ export async function handleAuthAction(body, request) {
         }),
         text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nOr reset directly at:\n${resetUrl}\n\nExpires in 1 hour.`,
       });
-    } catch (mailErr) {
-      console.warn('Notice sending creator reset email:', mailErr.message);
-    }
 
-    const maskedEmail = targetEmail.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) => {
-      return first + '*'.repeat(Math.max(middle.length, 3)) + domain;
-    });
+      await recordOtpDispatch({
+        identifier: targetEmail,
+        phone: targetPhone,
+        email: targetEmail,
+        channel: 'email',
+        purpose: 'recovery',
+        ip,
+      });
+    } catch (mailErr) {
+      return NextResponse.json(
+        { success: false, error: `Failed to send password reset email: ${mailErr.message || 'Email delivery failed'}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: `A 6-digit password reset code has been sent to your email (${maskedEmail}).`,
-      email: targetEmail,
+      message: 'A 6-digit password reset code has been sent to your registered email address.',
+      channel: 'email',
       cooldownSeconds: 60,
     });
   }

@@ -13,6 +13,7 @@ function CreatorRecoveryForm() {
 
   const [step, setStep] = useState(urlToken ? 2 : 1);
   const [identifier, setIdentifier] = useState(urlEmail);
+  const [channel, setChannel] = useState('email');
   const [code, setCode] = useState(urlToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,9 +42,10 @@ function CreatorRecoveryForm() {
     }
   }, [urlToken, urlEmail]);
 
-  const handleRequestCode = async (e) => {
-    e.preventDefault();
-    if (cooldown > 0) return;
+  const handleRequestCode = async (e, customChannel = null) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const activeChannel = customChannel || channel;
+    if (cooldown > 0 && activeChannel === channel) return;
 
     if (!identifier.trim()) {
       setError('Email or phone number is required.');
@@ -58,15 +60,20 @@ function CreatorRecoveryForm() {
       const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'recover', identifier: identifier.trim() }),
+        body: JSON.stringify({
+          action: 'recover',
+          identifier: identifier.trim(),
+          channel: activeChannel,
+        }),
       });
       const data = await res.json();
       if (data.success) {
+        setChannel(activeChannel);
         setStep(2);
-        setMsg(data.message || 'A 6-digit reset code has been sent to your email.');
+        setMsg(data.message || 'A 6-digit reset code has been sent.');
         setCooldown(60);
       } else {
-        setError(data.error || 'No creator account found with this email or phone number.');
+        setError(data.error || 'Failed to send recovery code.');
       }
     } catch (_) {
       setError('Server error while requesting recovery code.');
@@ -119,19 +126,24 @@ function CreatorRecoveryForm() {
     }
   };
 
-  const handleResend = async () => {
-    if (cooldown > 0) return;
+  const handleResend = async (targetChannel = channel) => {
+    if (cooldown > 0 && targetChannel === channel) return;
     setResending(true);
     setError('');
     try {
       const res = await fetch('/api/marketing/creator/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'recover', identifier: identifier.trim() }),
+        body: JSON.stringify({
+          action: 'recover',
+          identifier: identifier.trim(),
+          channel: targetChannel,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        setMsg(data.message || 'A new reset code has been sent to your email.');
+        setChannel(targetChannel);
+        setMsg(data.message || 'A new reset code has been sent.');
         setCooldown(60);
       } else {
         setError(data.error || 'Failed to resend code.');
@@ -165,7 +177,7 @@ function CreatorRecoveryForm() {
       )}
 
       {step === 1 && (
-        <form onSubmit={handleRequestCode} autoComplete="off" className="space-y-3">
+        <form onSubmit={(e) => handleRequestCode(e, 'email')} autoComplete="off" className="space-y-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-700 mb-1">
               Email or Phone Number *
@@ -179,9 +191,6 @@ function CreatorRecoveryForm() {
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
             />
-            <p className="text-[10px] text-slate-400 mt-1">
-              We will look up your account and send a 6-digit recovery code to your registered email address.
-            </p>
           </div>
 
           <button
@@ -210,16 +219,6 @@ function CreatorRecoveryForm() {
               onChange={(e) => setCode(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono tracking-widest text-center focus:outline-none focus:border-slate-800"
             />
-            <div className="flex justify-end mt-1">
-              <button
-                type="button"
-                disabled={resending || cooldown > 0}
-                onClick={handleResend}
-                className="text-[11px] text-slate-500 hover:text-slate-800 underline cursor-pointer disabled:opacity-50"
-              >
-                {resending ? 'Sending...' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
-              </button>
-            </div>
           </div>
 
           <div>
@@ -270,6 +269,52 @@ function CreatorRecoveryForm() {
           >
             {loading ? 'Resetting...' : 'Reset Password'}
           </button>
+
+          <div className="flex items-center justify-between text-xs pt-1">
+            {channel === 'email' ? (
+              <button
+                type="button"
+                onClick={() => handleRequestCode(null, 'sms')}
+                disabled={resending || loading || cooldown > 0}
+                className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Send to phone
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleRequestCode(null, 'email')}
+                disabled={resending || loading || cooldown > 0}
+                className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+              >
+                Send to email
+              </button>
+            )}
+
+            <button
+              type="button"
+              disabled={resending || cooldown > 0}
+              onClick={() => handleResend(channel)}
+              className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 cursor-pointer"
+            >
+              {resending ? 'Sending...' : cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+            </button>
+          </div>
+
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setStep(1);
+                setChannel('email');
+                setError('');
+                setMsg('');
+              }}
+              className="text-[11px] text-slate-500 hover:underline cursor-pointer"
+            >
+              Change Identifier
+            </button>
+          </div>
         </form>
       )}
 
@@ -299,7 +344,7 @@ export default function CreatorRecoveryPage() {
   return (
     <CreatorAuthLayout
       headline="Account Recovery"
-      description="Reset your creator credentials securely via email verification code."
+      description="Reset your creator credentials securely via email or SMS verification code."
     >
       <Suspense fallback={<LoadingScreen fullScreen={false} size="sm" label="Loading recovery..." />}>
         <CreatorRecoveryForm />

@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword, comparePassword, generateToken, setCreatorSessionCookie } from 'src/lib/middleware/creator';
-import { inspectMalwareAndAttacks, generateSecureOtp } from 'src/lib/security/shield';
+import {
+  inspectMalwareAndAttacks,
+  generateSecureOtp,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
+  getClientIp,
+} from 'src/lib/security/shield';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
 
@@ -130,6 +136,21 @@ export async function handleProfileAction(body, sessionCreator) {
     if (contactChanged) {
       const otpCode = String(body.otpCode || '').trim();
       if (!otpCode) {
+        const ip = getClientIp(request);
+        const rateCheck = await checkOtpDispatchRateLimit({
+          identifier: currentCreator.email,
+          phone: currentCreator.phone,
+          email: currentCreator.email,
+          ip,
+        });
+
+        if (!rateCheck.isAllowed) {
+          return NextResponse.json(
+            { success: false, error: rateCheck.error, rateLimited: true, remainingMinutes: rateCheck.remainingMinutes },
+            { status: 429 }
+          );
+        }
+
         const generatedOtp = generateSecureOtp(6);
         await queryDb('DELETE FROM contact_update_verifications WHERE user_type = $1 AND user_id = $2', ['creator', creatorId]);
         await queryDb(
@@ -157,6 +178,15 @@ export async function handleProfileAction(body, sessionCreator) {
                 'This code will expire in 10 minutes. If you did not initiate this change, please change your password immediately.',
               ].filter(Boolean),
             }),
+          });
+
+          await recordOtpDispatch({
+            identifier: currentCreator.email,
+            phone: currentCreator.phone,
+            email: currentCreator.email,
+            channel: 'email',
+            purpose: 'contact_update',
+            ip,
           });
         } catch (mailErr) {
           console.error('Failed to dispatch contact update OTP email:', mailErr);

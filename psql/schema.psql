@@ -449,6 +449,40 @@ CREATE TABLE IF NOT EXISTS security_attack_logs (
 CREATE INDEX IF NOT EXISTS idx_security_attack_logs_ip ON security_attack_logs(ip_address);
 CREATE INDEX IF NOT EXISTS idx_security_attack_logs_created ON security_attack_logs(created_at);
 
+CREATE TABLE IF NOT EXISTS sms_logs (
+    id BIGSERIAL PRIMARY KEY,
+    recipient VARCHAR(50) NOT NULL,
+    user_type VARCHAR(50) DEFAULT 'system',
+    user_id BIGINT,
+    purpose VARCHAR(50) NOT NULL,
+    channel VARCHAR(20) DEFAULT 'sms',
+    provider VARCHAR(50) DEFAULT 'bulksmsbd',
+    sender_id VARCHAR(50),
+    message TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    response_code VARCHAR(50),
+    response_body JSONB,
+    ip_address VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_recipient ON sms_logs(recipient);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS otp_dispatch_logs (
+    id BIGSERIAL PRIMARY KEY,
+    identifier VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    channel VARCHAR(20) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    ip_address VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_otp_logs_ident_created ON otp_dispatch_logs(identifier, created_at);
+CREATE INDEX IF NOT EXISTS idx_otp_logs_email_created ON otp_dispatch_logs(email, created_at);
+CREATE INDEX IF NOT EXISTS idx_otp_logs_phone_created ON otp_dispatch_logs(phone, created_at);
+CREATE INDEX IF NOT EXISTS idx_otp_logs_ip_created ON otp_dispatch_logs(ip_address, created_at);
+
 CREATE TABLE IF NOT EXISTS contact_update_verifications (
     id BIGSERIAL PRIMARY KEY,
     user_type VARCHAR(20) NOT NULL CHECK (user_type IN ('developer', 'creator')),

@@ -7,7 +7,13 @@ import {
   setDeveloperSessionCookie,
 } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
-import { inspectMalwareAndAttacks, generateSecureOtp } from 'src/lib/security/shield';
+import {
+  inspectMalwareAndAttacks,
+  generateSecureOtp,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
+  getClientIp,
+} from 'src/lib/security/shield';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { SITE_NAME } from 'src/lib/database/secret';
 
@@ -210,6 +216,21 @@ export async function PUT(request) {
     if (contactChanged) {
       const otpCode = String(data.otpCode || '').trim();
       if (!otpCode) {
+        const ip = getClientIp(request);
+        const rateCheck = await checkOtpDispatchRateLimit({
+          identifier: currentDev.email,
+          phone: currentDev.phone,
+          email: currentDev.email,
+          ip,
+        });
+
+        if (!rateCheck.isAllowed) {
+          return NextResponse.json(
+            { success: false, error: rateCheck.error, rateLimited: true, remainingMinutes: rateCheck.remainingMinutes },
+            { status: 429 }
+          );
+        }
+
         const generatedOtp = generateSecureOtp(6);
         await queryDb('DELETE FROM contact_update_verifications WHERE user_type = $1 AND user_id = $2', ['developer', authUser.id]);
         await queryDb(
@@ -237,6 +258,15 @@ export async function PUT(request) {
                 'This code will expire in 10 minutes. If you did not initiate this change, please secure your account immediately.',
               ].filter(Boolean),
             }),
+          });
+
+          await recordOtpDispatch({
+            identifier: currentDev.email,
+            phone: currentDev.phone,
+            email: currentDev.email,
+            channel: 'email',
+            purpose: 'contact_update',
+            ip,
           });
         } catch (mailErr) {
           console.error('Failed to dispatch developer OTP email:', mailErr);

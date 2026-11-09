@@ -12,9 +12,10 @@ export default function AdminVerifyForm() {
   const initialToken = searchParams.get('token') || '';
   const errorParam = searchParams.get('error') || '';
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(initialEmail);
   const [readOnly, setReadOnly] = useState(true);
   const [code, setCode] = useState('');
+  const [channel, setChannel] = useState('email');
   const [autoVerifying, setAutoVerifying] = useState(Boolean(initialToken));
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -35,10 +36,11 @@ export default function AdminVerifyForm() {
   }, [errorParam]);
 
   useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
   }, [resendCooldown]);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function AdminVerifyForm() {
       const res = await fetch('/api/marketing/developer/me/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: code || initialToken }),
+        body: JSON.stringify({ email: identifier, token: code || initialToken }),
       });
 
       const data = await res.json();
@@ -104,9 +106,9 @@ export default function AdminVerifyForm() {
     }
   };
 
-  const handleResend = async () => {
-    if (!email) {
-      setError('Please enter your developer email address to resend the activation link.');
+  const handleResend = async (targetChannel = channel) => {
+    if (!identifier.trim()) {
+      setError('Please enter your developer email or phone number to resend the code.');
       return;
     }
     setResending(true);
@@ -117,19 +119,24 @@ export default function AdminVerifyForm() {
       const res = await fetch('/api/marketing/developer/me/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email: identifier.trim(),
+          identifier: identifier.trim(),
+          channel: targetChannel,
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setSuccess('A new verification activation link was sent to your email.');
+        setChannel(targetChannel);
+        setSuccess(data.message || `A new verification code was sent via ${targetChannel === 'sms' ? 'SMS' : 'email'}.`);
         setResendCooldown(60);
       } else {
-        setError(data.error || 'Failed to resend verification link.');
+        setError(data.error || 'Failed to resend verification code.');
       }
     } catch (err) {
-      setError('Network error resending verification link.');
+      setError('Network error resending verification code.');
     } finally {
       setResending(false);
     }
@@ -180,25 +187,25 @@ export default function AdminVerifyForm() {
         />
         <div className="space-y-1">
           <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-            Developer Email
+            Email or Phone Number *
           </label>
           <input
-            type="email"
-            name="dev_verify_email"
+            type="text"
+            name="dev_verify_identifier"
             autoComplete="off"
             required
             readOnly={readOnly}
             onFocus={() => setReadOnly(false)}
             onPointerDown={() => setReadOnly(false)}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>
 
         <div className="space-y-1">
           <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">
-            Verification Code or Token
+            Verification Code *
           </label>
           <input
             type="text"
@@ -223,20 +230,42 @@ export default function AdminVerifyForm() {
         </button>
       </form>
 
-      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-2">
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+        {channel === 'email' ? (
+          <button
+            type="button"
+            onClick={() => handleResend('sms')}
+            disabled={resending || resendCooldown > 0}
+            className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+          >
+            Send to phone
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handleResend('email')}
+            disabled={resending || resendCooldown > 0}
+            className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+          >
+            Send to email
+          </button>
+        )}
+
         <button
           type="button"
           disabled={resending || resendCooldown > 0}
-          onClick={handleResend}
+          onClick={() => handleResend(channel)}
           className="text-xs font-normal text-slate-700 dark:text-slate-300 hover:underline disabled:opacity-50 cursor-pointer"
         >
           {resending
-            ? 'Sending link...'
+            ? 'Sending code...'
             : resendCooldown > 0
-            ? `Resend available in ${resendCooldown}s`
-            : 'Resend Verification Link'}
+            ? `Resend code (${resendCooldown}s)`
+            : 'Resend code'}
         </button>
+      </div>
 
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-center">
         <Link
           href="/developer-auth/login"
           className="text-xs font-normal text-slate-500 dark:text-slate-400 hover:underline"

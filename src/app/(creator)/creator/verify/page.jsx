@@ -14,6 +14,7 @@ function CreatorVerifyContent() {
 
   const [emailInput, setEmailInput] = useState(emailParam);
   const [codeInput, setCodeInput] = useState(tokenParam);
+  const [channel, setChannel] = useState('email');
   const [loading, setLoading] = useState(false);
   const [verifyingAuto, setVerifyingAuto] = useState(Boolean(tokenParam && emailParam));
   const [success, setSuccess] = useState(false);
@@ -22,6 +23,15 @@ function CreatorVerifyContent() {
   const [error, setError] = useState('');
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   useEffect(() => {
     if (!tokenParam || !emailParam) return;
@@ -70,7 +80,7 @@ function CreatorVerifyContent() {
   const handleManualVerify = async (e) => {
     e.preventDefault();
     if (!emailInput || !codeInput) {
-      setError('Please provide both your email address and 6-digit code.');
+      setError('Please provide both your identifier and 6-digit code.');
       return;
     }
 
@@ -103,10 +113,11 @@ function CreatorVerifyContent() {
     }
   };
 
-  const handleResend = async () => {
-    const targetEmail = emailInput || emailParam;
-    if (!targetEmail) {
-      setError('Please enter your email address to receive a new code.');
+  const handleResend = async (targetChannel = channel) => {
+    if (cooldown > 0 && targetChannel === channel && resendMsg) return;
+    const targetIdentifier = emailInput || emailParam;
+    if (!targetIdentifier) {
+      setError('Please enter your email address or phone number to receive a new code.');
       return;
     }
 
@@ -120,12 +131,15 @@ function CreatorVerifyContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'resend_verification',
-          email: targetEmail.trim().toLowerCase(),
+          email: targetIdentifier.trim().toLowerCase(),
+          channel: targetChannel,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        setResendMsg(data.message || 'A new 6-digit code has been sent to your email.');
+        setChannel(targetChannel);
+        setResendMsg(data.message || `A new 6-digit code has been sent via ${targetChannel === 'sms' ? 'SMS' : 'email'}.`);
+        setCooldown(60);
       } else {
         setError(data.error || 'Failed to resend verification code.');
       }
@@ -140,7 +154,7 @@ function CreatorVerifyContent() {
     <CreatorAuthLayout
       badge="Account Activation"
       headline="Activate Your Creator Account"
-      description="Verify your email address to unlock instantaneous website publishing, custom domain connection, and creator store management."
+      description="Verify your account to unlock instantaneous website publishing, custom domain connection, and creator studio management."
       features={[
         'Instant activation of cloud hosting and domain engine',
         'Protected against automated registrations',
@@ -168,7 +182,7 @@ function CreatorVerifyContent() {
             <div className="text-xs uppercase tracking-wider text-secondary font-medium">Validating Token</div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Verifying Your Account</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Validating security token for <span className="font-medium text-slate-700 dark:text-slate-200">{emailParam}</span>...
+              Validating security token...
             </p>
           </div>
         )}
@@ -209,10 +223,10 @@ function CreatorVerifyContent() {
           <div className="space-y-4">
             <div className="space-y-1">
               <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Verify Email Address
+                Account Verification
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Enter your registered email and the 6-digit confirmation code.
+                Enter your registered email or phone and the 6-digit confirmation code.
               </p>
             </div>
 
@@ -231,10 +245,10 @@ function CreatorVerifyContent() {
             <form onSubmit={handleManualVerify} className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Email Address
+                  Email or Phone Number *
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
@@ -244,7 +258,7 @@ function CreatorVerifyContent() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  6-Digit Verification Code
+                  6-Digit Verification Code *
                 </label>
                 <input
                   type="text"
@@ -266,18 +280,40 @@ function CreatorVerifyContent() {
             </form>
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              {channel === 'email' ? (
+                <button
+                  type="button"
+                  onClick={() => handleResend('sms')}
+                  disabled={resending || cooldown > 0}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Send to phone
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleResend('email')}
+                  disabled={resending || cooldown > 0}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
+                >
+                  Send to email
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={handleResend}
-                disabled={resending}
+                onClick={() => handleResend(channel)}
+                disabled={resending || cooldown > 0}
                 className="text-secondary hover:underline cursor-pointer disabled:opacity-70"
               >
-                {resending ? 'Resending...' : 'Resend 6-Digit Code'}
+                {resending ? 'Resending...' : cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
               </button>
+            </div>
 
+            <div className="text-center pt-1">
               <Link
                 href="/creator/login"
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 Back to Login
               </Link>

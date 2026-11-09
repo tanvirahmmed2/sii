@@ -147,14 +147,14 @@ export default function CreatorRegisterPage() {
         {registered ? (
           <div className="space-y-3 pt-1">
             <p className="text-slate-600">
-              Account created. A 6-digit confirmation code was sent to <strong className="text-slate-900">{registeredEmail}</strong>.
+              Account created. A 6-digit confirmation code was sent to your registered email address.
             </p>
             <div className="flex gap-2">
               <Link
-                href={`/creator/verify?email=${encodeURIComponent(registeredEmail)}`}
+                href="/creator/verify"
                 className="flex-1 text-center py-2 px-3 rounded bg-slate-900 text-white font-medium"
               >
-                Verify Email
+                Verify Account
               </Link>
               <button
                 type="button"
@@ -191,7 +191,7 @@ export default function CreatorRegisterPage() {
               name="decoy_password_prevent_autofill"
               tabIndex={-1}
               aria-hidden="true"
-              autoComplete="new-password"
+              autoComplete="current-password"
               className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
             />
             <div>
