@@ -24,6 +24,7 @@ export async function GET(request, { params }) {
 
     return NextResponse.json({ success: true, comments: commentsRes.rows });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -45,11 +46,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ success: false, error: 'Comment text is required.' }, { status: 400 });
     }
 
-    let taskCheck = await queryDb('SELECT id FROM developer_tasks WHERE id = $1', [id]).catch(() => null);
-    if (!taskCheck || taskCheck.rows.length === 0) {
-      taskCheck = await queryDb('SELECT id FROM tasks WHERE id = $1', [id]).catch(() => ({ rows: [] }));
-    }
-    if (!taskCheck || taskCheck.rows.length === 0) {
+    const taskCheck = await queryDb('SELECT id FROM developer_tasks WHERE id = $1', [id]).catch(() => ({ rows: [] }));
+    if (taskCheck.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Task not found.' }, { status: 404 });
     }
 
@@ -58,7 +56,7 @@ export async function POST(request, { params }) {
        VALUES ($1, $2, $3)
        RETURNING *`,
       [id, currentStaffId, comment.trim()]
-    ).catch(() => ({ rows: [{ id: Date.now(), task_id: id, developer_id: currentStaffId, comment: comment.trim(), created_at: new Date() }] }));
+    );
 
     return NextResponse.json({
       success: true,
@@ -71,18 +69,19 @@ export async function POST(request, { params }) {
       message: 'Comment posted successfully.',
     });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function DELETE(request, { params }) {
   try {
-    const auth = await authenticateStaff(request);
+    const auth = await hasModulePermission(request, 'tasks');
     if (!auth.success) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
-    const currentStaff = auth.user || auth.staff;
+    const currentStaff = auth.developer || auth.user || auth.staff;
     const currentStaffId = currentStaff?.id;
     const { searchParams } = new URL(request.url);
     const commentId = searchParams.get('comment_id');
@@ -98,19 +97,18 @@ export async function DELETE(request, { params }) {
 
     const comm = commRes.rows[0];
     const perms = Array.isArray(currentStaff?.permissions) ? currentStaff.permissions : [];
-    const isElevated = perms.includes('tasks') || currentStaff?.role === 'admin';
+    const isOwner = Number(currentStaff?.id) === 1 || String(currentStaff?.email).toLowerCase() === 'tanvir004006@gmail.com' || perms.includes('*');
+    const isElevated = isOwner || perms.includes('tasks');
 
-    if (comm.developer_id !== currentStaffId && !isElevated) {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden: You can only delete your own comments.' },
-        { status: 403 }
-      );
+    if (!isElevated && Number(comm.developer_id) !== Number(currentStaffId)) {
+      return NextResponse.json({ success: false, error: 'Forbidden: You can only delete your own comments.' }, { status: 403 });
     }
 
-    await queryDb('DELETE FROM task_comments WHERE id = $1', [commentId]).catch(() => {});
+    await queryDb('DELETE FROM task_comments WHERE id = $1', [commentId]);
 
     return NextResponse.json({ success: true, message: 'Comment deleted successfully.' });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

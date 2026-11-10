@@ -159,3 +159,5 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PATCH = PUT;

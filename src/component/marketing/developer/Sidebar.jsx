@@ -11,6 +11,7 @@ export const ADMIN_NAV_SECTIONS = [
       { href: '/developer/overview', label: 'Platform Overview' },
       { href: '/developer/tasks', label: 'Tasks & Sprints' },
       { href: '/developer/notices', label: 'Company Notices' },
+      { href: '/developer/notice-board', label: 'Notice Board' },
       { href: '/developer/chats', label: 'Internal Chat' },
     ],
   },
@@ -78,7 +79,9 @@ export const ADMIN_NAV_SECTIONS = [
     links: [
       { href: '/developer/developers', label: 'Developers Team' },
       { href: '/developer/roles', label: 'Roles & Permissions' },
-      { href: '/developer/payroll', label: 'Payroll & Salaries' },
+      { href: '/developer/payroll', label: 'Payrolls', exact: true },
+      { href: '/developer/payroll/assign', label: 'Assign to Developer' },
+      { href: '/developer/payroll/payments', label: 'Payroll Payments' },
       { href: '/developer/my-salaries', label: 'My Salaries' },
     ],
   },
@@ -144,6 +147,9 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
     'lead': ['leads', 'lead'],
     'subscribers': ['subscribers', 'subscriber'],
     'subscriber': ['subscribers', 'subscriber'],
+    'payroll': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
+    'payrolls': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
+    'my-salaries': ['my-salaries', 'my_salaries', 'payroll'],
     'websites': ['websites', 'website'],
     'website': ['websites', 'website'],
     'creators': ['creators', 'creator'],
@@ -152,11 +158,15 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
     'lead': ['leads', 'lead'],
     'subscribers': ['subscribers', 'subscriber'],
     'subscriber': ['subscribers', 'subscriber'],
+    'payroll': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
+    'payrolls': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
+    'my-salaries': ['my-salaries', 'my_salaries', 'payroll'],
+    'notice-board': ['notice-board', 'notices', 'notice'],
   };
 
   const isLinkAllowed = (link) => {
     if (isSuperAdmin) return true;
-    if (link.href === '/developer' || link.href === '/developer/profile') return true;
+    if (link.href === '/developer' || link.href === '/developer/profile' || link.href === '/developer/notice-board') return true;
     const rawPath = link.href.split('?')[0];
     const segments = rawPath.split('/').filter(Boolean);
     const moduleName = (segments[1] || '').toLowerCase().trim();

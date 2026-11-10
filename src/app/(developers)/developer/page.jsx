@@ -29,6 +29,13 @@ const ALL_MODULES = [
     desc: 'Internal announcements, memos, and operational notifications.',
   },
   {
+    slug: 'notice-board',
+    label: 'Notice Board',
+    path: '/developer/notice-board',
+    category: 'Workspace',
+    desc: 'Developer bulletin board displaying engineering announcements and role updates.',
+  },
+  {
     slug: 'chats',
     label: 'Internal Chat',
     path: '/developer/chats',
@@ -49,13 +56,6 @@ const ALL_MODULES = [
     path: '/developer/creators',
     category: 'Audience',
     desc: 'Registered workspace creators, tenant managers, and institution leads.',
-  },
-  {
-    slug: 'users',
-    label: 'End-Users',
-    path: '/developer/users',
-    category: 'Audience',
-    desc: 'Platform user directory across students, teachers, and staff.',
   },
   {
     slug: 'leads',
@@ -233,10 +233,24 @@ const ALL_MODULES = [
   },
   {
     slug: 'payroll',
-    label: 'Payroll & Salaries',
+    label: 'Payrolls',
     path: '/developer/payroll',
     category: 'Team',
     desc: 'Staff compensation, payroll generation, and salary disbursement.',
+  },
+  {
+    slug: 'developer-payrolls',
+    label: 'Assign to Developer',
+    path: '/developer/payroll/assign',
+    category: 'Team',
+    desc: 'Allocate salaries, bonuses, and deductions to individual developers.',
+  },
+  {
+    slug: 'payroll-payments',
+    label: 'Payroll Payments',
+    path: '/developer/payroll/payments',
+    category: 'Team',
+    desc: 'Record and track salary disbursement transactions and payment proofs.',
   },
   {
     slug: 'my-salaries',

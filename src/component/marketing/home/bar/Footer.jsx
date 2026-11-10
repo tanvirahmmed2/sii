@@ -18,7 +18,7 @@ const Footer = () => {
   const isDark = theme === 'dark';
 
   return (
-    <footer className="w-full bg-slate-900 dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
+    <footer className="w-full bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
       <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
           <div className="lg:col-span-7 space-y-2">
@@ -196,9 +196,8 @@ const Footer = () => {
               <button
                 type="button"
                 onClick={() => (typeof setTheme === 'function' ? setTheme('light') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
-                  !isDark ? 'bg-white text-slate-900 font-semibold' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${!isDark ? 'bg-white text-slate-900 font-semibold' : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Light Mode"
               >
                 Light
@@ -206,9 +205,8 @@ const Footer = () => {
               <button
                 type="button"
                 onClick={() => (typeof setTheme === 'function' ? setTheme('dark') : typeof toggleTheme === 'function' ? toggleTheme() : null)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
-                  isDark ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${isDark ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Dark Mode"
               >
                 Dark

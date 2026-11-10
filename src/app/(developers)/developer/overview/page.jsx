@@ -17,6 +17,8 @@ export default function PlatformOverviewPage() {
     leads: 0,
     subscribers: 0,
     subscriptions: 0,
+    tasks: 0,
+    notices: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -27,62 +29,15 @@ export default function PlatformOverviewPage() {
       try {
         setLoading(true);
 
-        const devPromise = fetch('/api/marketing/developer/me')
-          .then((r) => r.json())
-          .catch(() => ({ success: false }));
+        const res = await fetch('/api/marketing/developer/overview');
+        const data = await res.json();
 
-        const statsPromises = Promise.allSettled([
-          fetch('/api/marketing/developer/devs').then((r) => r.json()),
-          fetch('/api/marketing/developer/packages').then((r) => r.json()),
-          fetch('/api/marketing/developer/websites').then((r) => r.json()),
-          fetch('/api/marketing/developer/blogs').then((r) => r.json()),
-          fetch('/api/marketing/developer/support').then((r) => r.json()),
-          fetch('/api/marketing/developer/payments').then((r) => r.json()),
-          fetch('/api/marketing/developer/leads').then((r) => r.json()),
-          fetch('/api/marketing/developer/subscribers').then((r) => r.json()),
-          fetch('/api/marketing/developer/subscriptions').then((r) => r.json()),
-        ]);
-
-        const [devRes, statsRes] = await Promise.all([devPromise, statsPromises]);
-
-        if (isMounted && devRes.success && (devRes.developer || devRes.user)) {
-          setDeveloper(devRes.developer || devRes.user);
-        }
-
-        const [devs, pkgs, webs, blogs, supp, pay, leads, subs, subscr] = statsRes;
-
-        const payments = pay.status === 'fulfilled' && pay.value?.records ? pay.value.records : [];
-        const completedPayments = payments.filter((p) =>
-          ['successful', 'completed'].includes(String(p.status || '').toLowerCase())
-        );
-
-        let revUsd = 0;
-        let revBdt = 0;
-        completedPayments.forEach((p) => {
-          const curr = String(p.currency || (p.gateway === 'bkash' ? 'BDT' : 'USD')).toUpperCase();
-          const amount = Number(p.amount || 0);
-          if (curr === 'BDT') revBdt += amount;
-          else revUsd += amount;
-        });
-
-        if (isMounted) {
-          setCounts({
-            developers: devs.status === 'fulfilled' && devs.value?.records ? devs.value.records.length : 0,
-            packages: pkgs.status === 'fulfilled' && pkgs.value?.records ? pkgs.value.records.length : 0,
-            websites: webs.status === 'fulfilled' && webs.value?.records ? webs.value.records.length : 0,
-            blogs: blogs.status === 'fulfilled' && blogs.value?.records ? blogs.value.records.length : 0,
-            support: supp.status === 'fulfilled' && supp.value?.records
-              ? supp.value.records.filter((s) => String(s.status || '').toLowerCase() === 'open').length
-              : 0,
-            revenueUsd: revUsd,
-            revenueBdt: revBdt,
-            leads: leads.status === 'fulfilled' && leads.value?.records ? leads.value.records.length : 0,
-            subscribers: subs.status === 'fulfilled' && subs.value?.records ? subs.value.records.length : 0,
-            subscriptions: subscr.status === 'fulfilled' && subscr.value?.records ? subscr.value.records.length : 0,
-          });
+        if (isMounted && data.success) {
+          if (data.developer) setDeveloper(data.developer);
+          if (data.counts) setCounts(data.counts);
         }
       } catch (err) {
-        console.error('Error loading platform overview:', err);
+        console.error(err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -134,10 +89,16 @@ export default function PlatformOverviewPage() {
       href: '/developer/subscriptions',
     },
     {
-      title: 'Blog Articles',
-      value: counts.blogs,
-      sub: 'Published Articles',
-      href: '/developer/blogs',
+      title: 'Open Tasks',
+      value: counts.tasks,
+      sub: 'Sprint Backlog',
+      href: '/developer/tasks',
+    },
+    {
+      title: 'Company Notices',
+      value: counts.notices,
+      sub: 'Internal Bulletins',
+      href: '/developer/notices',
     },
     {
       title: 'Open Support',
@@ -169,6 +130,7 @@ export default function PlatformOverviewPage() {
     {
       category: 'Workspace & Operations',
       items: [
+        { label: 'Developer Console', path: '/developer', desc: 'Central workspace hub and module directories' },
         { label: 'Tasks & Sprints', path: '/developer/tasks', desc: 'Platform task tracking and sprint tickets' },
         { label: 'Company Notices', path: '/developer/notices', desc: 'Internal memos, alerts, and operational bulletins' },
         { label: 'Internal Chat', path: '/developer/chats', desc: 'Real-time internal developer messaging' },
@@ -177,9 +139,8 @@ export default function PlatformOverviewPage() {
     {
       category: 'Websites & Audience',
       items: [
-        { label: 'Hosted Websites', path: '/developer/websites', desc: 'Provisioned subdomains and portfolios' },
+        { label: 'Hosted Websites', path: '/developer/websites', desc: 'Provisioned subdomains and institutional portals' },
         { label: 'Creators Directory', path: '/developer/creators', desc: 'Registered workspace managers and school leads' },
-        { label: 'End-Users Directory', path: '/developer/users', desc: 'Students, staff, teachers, and visitors directory' },
         { label: 'Inbound Leads', path: '/developer/leads', desc: 'Inbound customer prospects and quote inquiries' },
         { label: 'Subscribers', path: '/developer/subscribers', desc: 'Newsletter audience email distribution' },
       ],
@@ -226,6 +187,7 @@ export default function PlatformOverviewPage() {
       category: 'Team & Governance',
       items: [
         { label: 'Developers Team', path: '/developer/developers', desc: 'Engineering team directory and direct module permissions' },
+        { label: 'Roles & Permissions', path: '/developer/roles', desc: 'Access rights, permissions, and role groups' },
         { label: 'Staff Payroll', path: '/developer/payroll', desc: 'Payroll disbursement and generation' },
         { label: 'My Salaries', path: '/developer/my-salaries', desc: 'Personal compensation history' },
       ],

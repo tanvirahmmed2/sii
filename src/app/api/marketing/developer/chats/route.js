@@ -62,10 +62,10 @@ export async function GET(request) {
       success: true,
       currentDeveloperId: currentDevId,
       chats: chatsRes.rows,
-      availableDevelopers: devsRes.rows,
+      availableDevelopers: devsRes.rows.map((d) => ({ ...d, role: d.role_name })),
     });
   } catch (error) {
-    console.error('Chats GET error:', error);
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -77,7 +77,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
     }
 
-    const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
+    const currentDev = auth.developer || auth.user || auth.staff;
+    const currentDevId = currentDev?.id;
     const body = await request.json();
     const { type = 'DIRECT', title, recipient_developer_id, participant_developer_ids = [] } = body;
 
@@ -150,7 +151,7 @@ export async function POST(request) {
       await queryDb(
         `INSERT INTO chat_messages (chat_id, sender_developer_id, message, is_system)
          VALUES ($1, $2, $3, TRUE)`,
-        [newChatId, currentDevId, `${auth.staff.name} created the group "${title.trim()}".`]
+        [newChatId, currentDevId, `${currentDev?.name || 'Developer'} created the group "${title.trim()}".`]
       );
 
       return NextResponse.json({
@@ -162,7 +163,12 @@ export async function POST(request) {
 
     return NextResponse.json({ success: false, error: 'Invalid chat type.' }, { status: 400 });
   } catch (error) {
-    console.error('Chat POST error:', error);
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
+}
+
+export const PATCH = PUT;
+export async function PUT(request) {
+  return NextResponse.json({ success: false, error: 'Method not allowed' }, { status: 405 });
 }

@@ -634,8 +634,7 @@ export default function RolesPage() {
       </div>
 
       {showRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xl max-w-md w-full p-5 space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs w-full p-5 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -732,13 +731,11 @@ export default function RolesPage() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
       )}
 
       {activePermsRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs w-full flex flex-col">
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -894,13 +891,11 @@ export default function RolesPage() {
                 {permsLoading ? 'Saving...' : 'Save Permissions'}
               </button>
             </div>
-          </div>
         </div>
       )}
 
       {activeDevsRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 shadow-xs w-full flex flex-col">
             <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -1047,7 +1042,6 @@ export default function RolesPage() {
                 </button>
               </div>
             </div>
-          </div>
         </div>
       )}
     </div>

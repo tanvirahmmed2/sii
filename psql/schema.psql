@@ -1057,6 +1057,51 @@ CREATE TABLE IF NOT EXISTS chat_images (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS developer_tasks (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    priority VARCHAR(50) DEFAULT 'medium',
+    status VARCHAR(50) DEFAULT 'todo',
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    assigned_to_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    due_date TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS task_comments (
+    id BIGSERIAL PRIMARY KEY,
+    task_id BIGINT NOT NULL REFERENCES developer_tasks(id) ON DELETE CASCADE,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notices (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    priority VARCHAR(50) DEFAULT 'NORMAL',
+    category VARCHAR(100) DEFAULT 'GENERAL',
+    is_pinned BOOLEAN DEFAULT FALSE,
+    target_role VARCHAR(100) DEFAULT 'ALL',
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE VIEW tasks AS 
+SELECT id, title, description, priority, status, 
+       developer_id, 
+       COALESCE(assigned_to_developer_id, developer_id) AS assigned_to_developer_id,
+       created_by_developer_id, due_date, completed_at, created_at, updated_at
+FROM developer_tasks;
+
 
 -- ============================================================================
 -- SECTION 2: CORE PLATFORM PERFORMANCE INDEXES
@@ -1176,3 +1221,59 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
 
+
+CREATE TABLE IF NOT EXISTS payrolls (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    pay_period_start DATE NOT NULL,
+    pay_period_end DATE NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    notes TEXT,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS developer_payrolls (
+    id BIGSERIAL PRIMARY KEY,
+    payroll_id BIGINT NOT NULL REFERENCES payrolls(id) ON DELETE CASCADE,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    base_salary NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    bonus NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    deductions NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    net_salary NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'UNPAID',
+    payment_method VARCHAR(50) DEFAULT 'BANK_TRANSFER',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (payroll_id, developer_id)
+);
+
+CREATE TABLE IF NOT EXISTS payroll_payments (
+    id BIGSERIAL PRIMARY KEY,
+    developer_payroll_id BIGINT NOT NULL REFERENCES developer_payrolls(id) ON DELETE CASCADE,
+    payroll_id BIGINT NOT NULL REFERENCES payrolls(id) ON DELETE CASCADE,
+    developer_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'BANK_TRANSFER',
+    transaction_reference VARCHAR(255),
+    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL DEFAULT 'COMPLETED',
+    processed_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    receipt_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_payrolls_period ON payrolls(pay_period_start, pay_period_end);
+CREATE INDEX IF NOT EXISTS idx_payrolls_status ON payrolls(status);
+CREATE INDEX IF NOT EXISTS idx_payrolls_created_by ON payrolls(created_by_developer_id);
+CREATE INDEX IF NOT EXISTS idx_dev_payrolls_payroll ON developer_payrolls(payroll_id);
+CREATE INDEX IF NOT EXISTS idx_dev_payrolls_developer ON developer_payrolls(developer_id);
+CREATE INDEX IF NOT EXISTS idx_dev_payrolls_status ON developer_payrolls(payment_status);
+CREATE INDEX IF NOT EXISTS idx_payroll_payments_dp ON payroll_payments(developer_payroll_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_payments_payroll ON payroll_payments(payroll_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_payments_developer ON payroll_payments(developer_id);
