@@ -70,7 +70,9 @@ export async function POST(request) {
     );
     const paymentRowId = payInsert.rows[0].id;
 
-    const callbackBase = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/central-payment`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+    const callbackBase = `${appUrl}/api/webhooks/central-payment`;
+    const cancelUrl = `${appUrl}/creator/${creatorId}/payments?status=cancelled`;
     let session;
 
     if (gatewayCode === "surjopay") {
@@ -83,7 +85,7 @@ export async function POST(request) {
         customerAddress: creator.address || "Bangladesh",
         customerCity: creator.city || "Dhaka",
         returnUrl: `${callbackBase}?gateway=surjopay&tier=TIER_1`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=cancelled`,
+        cancelUrl,
         meta: { tier: "TIER_1", websiteId: websiteId || 0, internalTxId: paymentRowId, purpose: "package_purchase" },
       });
     } else if (gatewayCode === "paypal") {
@@ -93,7 +95,7 @@ export async function POST(request) {
         orderId: purchaseCode,
         description: `${pkg.name} (${billingCycle}) SaaS Subscription`,
         returnUrl: `${callbackBase}?gateway=paypal&tier=TIER_1`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=cancelled`,
+        cancelUrl,
         meta: { tier: "TIER_1", websiteId: websiteId || 0, internalTxId: paymentRowId },
       });
     } else if (gatewayCode === "paddle" || gatewayCode === "stripe_connect") {
@@ -105,6 +107,7 @@ export async function POST(request) {
         customerEmail: creator.email,
         customerName: creator.name,
         returnUrl: `${callbackBase}?gateway=paddle&tier=TIER_1&order_id=${purchaseCode}&paymentId=${paymentRowId}`,
+        cancelUrl,
         meta: { tier: "TIER_1", websiteId: websiteId || 0, internalTxId: paymentRowId, purpose: "package_purchase" },
       });
     } else {

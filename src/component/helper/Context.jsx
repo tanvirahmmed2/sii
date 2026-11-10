@@ -107,6 +107,7 @@ export const ContextProvider = ({ children }) => {
   const [theme, setThemeState] = useState('light');
 
   const [user, setUser] = useState(null);
+  const [creator, setCreator] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
 
@@ -160,35 +161,45 @@ export const ContextProvider = ({ children }) => {
   const fetchCurrentUser = useCallback(async () => {
     if (isTenantScope(pathname)) {
       setUser(null);
+      setCreator(null);
       setLoading(false);
       return;
     }
 
     try {
-      const devRes = await fetch('/api/marketing/developer/me').catch(() => null);
+      const [devRes, creatorRes] = await Promise.all([
+        fetch('/api/marketing/developer/me').catch(() => null),
+        fetch('/api/marketing/creator/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'me' }),
+        }).catch(() => null),
+      ]);
+
       if (devRes && devRes.ok) {
-        const devData = await devRes.json();
-        if (devData.success && devData.user) {
+        const devData = await devRes.json().catch(() => null);
+        if (devData && devData.success && devData.user) {
           setUser(devData.user);
-          setLoading(false);
-          return;
+        } else {
+          setUser(null);
         }
+      } else {
+        setUser(null);
       }
 
-      const creatorRes = await fetch('/api/marketing/creator/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'me' }),
-      }).catch(() => null);
       if (creatorRes && creatorRes.ok) {
-        const creatorData = await creatorRes.json();
-        if (creatorData.success && creatorData.creator) {
-          setUser(creatorData.creator);
-          setLoading(false);
-          return;
+        const creatorData = await creatorRes.json().catch(() => null);
+        if (creatorData && creatorData.success && creatorData.creator) {
+          setCreator(creatorData.creator);
+        } else {
+          setCreator(null);
         }
+      } else {
+        setCreator(null);
       }
-    } catch (err) {
+    } catch (_) {
+      setUser(null);
+      setCreator(null);
     } finally {
       setLoading(false);
     }
@@ -206,12 +217,14 @@ export const ContextProvider = ({ children }) => {
         setSidebar,
         user,
         setUser,
-        creator: user,
+        creator,
+        setCreator,
         loading,
         setLoading,
         reviews,
         setReviews,
         fetchCurrentUser,
+        refetchUser: fetchCurrentUser,
         theme,
         setTheme,
         toggleTheme,

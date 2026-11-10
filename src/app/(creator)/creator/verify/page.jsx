@@ -176,7 +176,7 @@ function CreatorVerifyContent() {
         href: '/creator/login',
       }}
     >
-      <div className="w-full p-5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4">
+      <div className="w-full p-4 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-xs">
         {verifyingAuto && (
           <div className="text-center space-y-2 py-6">
             <div className="text-xs uppercase tracking-wider text-secondary font-medium">Validating Token</div>
@@ -191,10 +191,10 @@ function CreatorVerifyContent() {
           <div className="space-y-4 py-2">
             <div className="space-y-1">
               <span className="text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-medium">Verified</span>
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {alreadyVerified ? 'Account Already Verified' : 'Account Confirmed'}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Your creator account is fully verified and active. You can now access your Creator Studio.
               </p>
             </div>
@@ -203,14 +203,14 @@ function CreatorVerifyContent() {
               {creatorId ? (
                 <Link
                   href={`/creator/${creatorId}`}
-                  className="w-full block py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium text-center transition-colors"
+                  className="w-full block py-2.5 rounded-lg bg-secondary hover:bg-secondary-dark text-white text-xs sm:text-sm font-medium text-center transition-colors shadow-2xs"
                 >
                   Enter Creator Studio
                 </Link>
               ) : (
                 <Link
                   href="/creator/login"
-                  className="w-full block py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium text-center transition-colors"
+                  className="w-full block py-2.5 rounded-lg bg-secondary hover:bg-secondary-dark text-white text-xs sm:text-sm font-medium text-center transition-colors shadow-2xs"
                 >
                   Proceed to Login
                 </Link>
@@ -222,29 +222,29 @@ function CreatorVerifyContent() {
         {!verifyingAuto && !success && (
           <div className="space-y-4">
             <div className="space-y-1">
-              <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Account Verification
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                 Enter your registered email or phone and the 6-digit confirmation code.
               </p>
             </div>
 
             {resendMsg && (
-              <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs">
+              <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs">
                 {resendMsg}
               </div>
             )}
 
             {error && (
-              <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs">
+              <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleManualVerify} className="space-y-3">
+            <form onSubmit={handleManualVerify} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Email or Phone Number *
                 </label>
                 <input
@@ -252,12 +252,12 @@ function CreatorVerifyContent() {
                   required
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-secondary transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   6-Digit Verification Code *
                 </label>
                 <input
@@ -266,20 +266,20 @@ function CreatorVerifyContent() {
                   maxLength={6}
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, ''))}
-                  className="w-full text-center tracking-[8px] font-mono text-xl font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
+                  className="w-full text-center tracking-[8px] font-mono text-xl font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-secondary transition-colors"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2 rounded bg-secondary hover:bg-secondary-dark text-white text-xs font-medium cursor-pointer disabled:opacity-70 transition-colors"
+                className="w-full py-2.5 rounded-lg bg-secondary hover:bg-secondary-dark text-white text-xs sm:text-sm font-medium cursor-pointer disabled:opacity-70 transition-colors shadow-2xs mt-1"
               >
                 {loading ? 'Verifying Code...' : 'Verify Account'}
               </button>
             </form>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
               {channel === 'email' ? (
                 <button
                   type="button"
@@ -302,11 +302,11 @@ function CreatorVerifyContent() {
 
               <button
                 type="button"
-                onClick={() => handleResend(channel)}
                 disabled={resending || cooldown > 0}
-                className="text-secondary hover:underline cursor-pointer disabled:opacity-70"
+                onClick={() => handleResend(channel)}
+                className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white disabled:opacity-50 cursor-pointer"
               >
-                {resending ? 'Resending...' : cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+                {cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend Code'}
               </button>
             </div>
 

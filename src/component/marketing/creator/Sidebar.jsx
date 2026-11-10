@@ -1,7 +1,9 @@
 'use client';
 
+import { useContext } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { Context } from 'src/component/helper/Context';
 
 export const CREATOR_NAV_SECTIONS = [
   {
@@ -41,9 +43,10 @@ export default function CreatorSidebar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const creatorId = creator?.id || 1;
+  const { setCreator, fetchCurrentUser } = useContext(Context) || {};
+  const creatorId = creator?.id;
 
-  const basePath = `/creator/${creatorId}`;
+  const basePath = creatorId ? `/creator/${creatorId}` : '/creator/login';
   const daysRemaining = stats?.daysRemaining ?? (activeSubscription?.current_period_end ? 30 : 0);
   const maxWebsites = stats?.maxWebsites ?? activeSubscription?.max_websites ?? activeSubscription?.max_portfolios ?? 1;
   const websitesCount = websites.length;
@@ -64,6 +67,12 @@ export default function CreatorSidebar({
         body: JSON.stringify({ action: 'logout' }),
       });
     } catch (_) {}
+    if (typeof setCreator === 'function') {
+      setCreator(null);
+    }
+    if (typeof fetchCurrentUser === 'function') {
+      fetchCurrentUser();
+    }
     router.push('/creator/login');
   };
 

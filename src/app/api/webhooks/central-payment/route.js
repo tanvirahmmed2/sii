@@ -52,6 +52,8 @@ async function handleCallback(request) {
 
     await client.query(`SELECT pg_advisory_xact_lock($1)`, [internalTxId || 999999]);
 
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+
     if (tier === "TIER_1") {
       const payRes = await client.query(
         `SELECT p.*, pur.website_id, pur.package_id, pur.billing_cycle, pur.period_start, pur.period_end
@@ -65,14 +67,14 @@ async function handleCallback(request) {
 
       if (payRow.status === "successful") {
         await client.query("COMMIT");
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=already_paid`);
+        return NextResponse.redirect(`${appUrl}/creator/${payRow.creator_id}/payments/${payRow.id}?status=already_paid`);
       }
 
       if (!verified.isSuccess) {
         await client.query(`UPDATE payments SET status = 'failed', gateway_response = $1 WHERE id = $2`, [JSON.stringify(verified.raw), payRow.id]);
         await client.query(`UPDATE purchases SET status = 'failed' WHERE id = $1`, [payRow.purchase_id]);
         await client.query("COMMIT");
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=failed`);
+        return NextResponse.redirect(`${appUrl}/creator/${payRow.creator_id}/payments/${payRow.id}?status=failed`);
       }
 
       const netAmt = Number(( Number(payRow.amount) - Number(verified.gatewayFee || 0) ).toFixed(2));
@@ -112,10 +114,26 @@ async function handleCallback(request) {
           websiteId: payRow.website_id,
           triggerReason: "subscription_renewal_deduction",
         });
+      } else {
+        await client.query(
+          `INSERT INTO subscriptions (
+             creator_id, package_id, purchase_id, status,
+             billing_cycle, current_period_start, current_period_end
+           ) VALUES ($1, $2, $3, 'active', $4, $5, $6)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            payRow.creator_id,
+            payRow.package_id,
+            payRow.purchase_id,
+            payRow.billing_cycle,
+            payRow.period_start,
+            payRow.period_end,
+          ]
+        );
       }
 
       await client.query("COMMIT");
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?status=success&purchase=${payRow.purchase_id}`);
+      return NextResponse.redirect(`${appUrl}/creator/${payRow.creator_id}/payments/${payRow.id}?status=success&purchase=${payRow.purchase_id}`);
     }
 
     const txRes = await client.query(

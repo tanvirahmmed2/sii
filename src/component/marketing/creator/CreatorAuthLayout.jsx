@@ -15,7 +15,7 @@ export default function CreatorAuthLayout({
   children,
 }) {
   return (
-    <div className="min-h-screen w-full bg-slate-50 text-slate-900 lg:flex lg:flex-row text-xs">
+    <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex flex-col lg:flex-row text-xs">
       <div className="hidden lg:flex lg:w-5/12 bg-slate-900 text-white p-8 lg:p-12 flex-col justify-between shrink-0">
         <div className="flex items-center justify-between">
           <Link
@@ -26,7 +26,7 @@ export default function CreatorAuthLayout({
           </Link>
           <Link
             href="/"
-            className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded border border-slate-700"
+            className="text-xs text-slate-400 hover:text-white transition-colors px-2.5 py-1 rounded-full border border-slate-700 hover:border-slate-500"
           >
             Home
           </Link>
@@ -55,8 +55,22 @@ export default function CreatorAuthLayout({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center px-4 py-8 sm:px-6 lg:p-10 bg-slate-50">
-        <div className="max-w-sm w-full mx-auto">
+      <div className="flex-1 flex flex-col justify-center items-center px-4 py-8 sm:px-6 lg:p-10 bg-slate-50 w-full min-h-screen lg:min-h-0">
+        <div className="w-full max-w-sm sm:max-w-md mx-auto my-auto flex flex-col justify-center">
+          <div className="lg:hidden w-full mb-3 flex items-center justify-between px-1 shrink-0">
+            <Link
+              href="/"
+              className="text-sm sm:text-base font-bold tracking-tight text-slate-900 hover:text-secondary transition-colors"
+            >
+              {SITE_NAME}
+            </Link>
+            <Link
+              href="/"
+              className="text-[11px] font-medium text-slate-600 hover:text-slate-900 px-3 py-1 rounded-full border border-slate-200 bg-white shadow-2xs hover:bg-slate-100 transition-colors"
+            >
+              Home
+            </Link>
+          </div>
           {children}
         </div>
       </div>

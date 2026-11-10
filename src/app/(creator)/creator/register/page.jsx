@@ -114,22 +114,22 @@ export default function CreatorRegisterPage() {
       headline="Register Creator Account"
       description="Create your educational institution websites, drag-and-drop studio, and subdomain."
     >
-      <div className="w-full bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800">
+      <div className="w-full bg-white border border-slate-200 rounded-xl p-4 sm:p-6 space-y-4 text-xs text-slate-800 shadow-xs">
         <div>
-          <h1 className="text-base font-semibold text-slate-900">Create Account</h1>
-          <p className="text-slate-500 text-xs mt-0.5">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Create Account</h1>
+          <p className="text-slate-500 text-xs mt-1 leading-relaxed">
             Register to deploy and manage educational websites.
           </p>
         </div>
 
         {error && (
-          <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium text-xs space-y-1">
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-medium text-xs space-y-1.5">
             <div>{error}</div>
             {(error.toLowerCase().includes('already exists') || error.toLowerCase().includes('log in')) && (
               <div className="pt-0.5">
                 <Link
                   href="/creator/login"
-                  className="font-semibold text-rose-900 underline hover:text-rose-950 text-[11px]"
+                  className="font-semibold text-rose-900 underline hover:text-rose-950 text-xs"
                 >
                   Go to Login page &rarr;
                 </Link>
@@ -139,20 +139,20 @@ export default function CreatorRegisterPage() {
         )}
 
         {resendMsg && (
-          <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium text-xs">
             {resendMsg}
           </div>
         )}
 
         {registered ? (
           <div className="space-y-3 pt-1">
-            <p className="text-slate-600">
+            <p className="text-slate-600 text-xs leading-relaxed">
               Account created. A 6-digit confirmation code was sent to your registered email address.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
               <Link
                 href="/creator/verify"
-                className="flex-1 text-center py-2 px-3 rounded bg-slate-900 text-white font-medium"
+                className="flex-1 text-center py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm transition-colors"
               >
                 Verify Account
               </Link>
@@ -160,14 +160,14 @@ export default function CreatorRegisterPage() {
                 type="button"
                 disabled={resending || cooldown > 0}
                 onClick={handleResend}
-                className="px-3 py-2 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer disabled:opacity-50"
+                className="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-xs sm:text-sm cursor-pointer disabled:opacity-50 transition-colors"
               >
                 {resending ? 'Sending...' : cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend Code'}
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleRegister} autoComplete="off" className="space-y-3">
+          <form onSubmit={handleRegister} autoComplete="off" className="space-y-3.5">
             <input
               type="text"
               name="bot_trap"
@@ -195,7 +195,7 @@ export default function CreatorRegisterPage() {
               className="sr-only opacity-0 absolute -z-50 pointer-events-none h-0 w-0"
             />
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Full Name *
               </label>
               <input
@@ -208,12 +208,12 @@ export default function CreatorRegisterPage() {
                 onPointerDown={() => setReadOnly(false)}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-slate-800 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Email Address *
               </label>
               <input
@@ -226,12 +226,12 @@ export default function CreatorRegisterPage() {
                 onPointerDown={() => setReadOnly(false)}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-slate-800 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Password *
               </label>
               <div className="relative flex items-center">
@@ -246,12 +246,12 @@ export default function CreatorRegisterPage() {
                   onPointerDown={() => setReadOnly(false)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-slate-800 pr-14 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-2 text-[10px] text-slate-400 hover:text-slate-700 cursor-pointer font-mono"
+                  className="absolute right-2 px-1.5 py-1 text-[11px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer font-mono"
                 >
                   {showPassword ? 'HIDE' : 'SHOW'}
                 </button>
@@ -259,7 +259,7 @@ export default function CreatorRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 mb-1">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Phone Number *
               </label>
               <input
@@ -272,23 +272,23 @@ export default function CreatorRegisterPage() {
                 onPointerDown={() => setReadOnly(false)}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs sm:text-sm text-slate-900 font-mono focus:outline-none focus:border-slate-800 transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm cursor-pointer disabled:opacity-50 transition-colors shadow-2xs mt-1"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
         )}
 
-        <div className="pt-2 border-t border-slate-100 text-center text-slate-500 text-[11px]">
+        <div className="pt-3 border-t border-slate-100 text-center text-slate-500 text-xs">
           Already have an account?{' '}
-          <Link href="/creator/login" className="font-semibold text-slate-800 hover:underline">
+          <Link href="/creator/login" className="font-semibold text-slate-900 hover:underline">
             Login
           </Link>
         </div>

@@ -19,7 +19,7 @@ export function useCreator() {
 export default function CreatorLayout({ children, params }) {
   const router = useRouter();
   const routeParams = useParams();
-  const creatorId = routeParams?.id || (params && typeof params.then !== 'function' ? params.id : '1');
+  const creatorId = routeParams?.id || (params && typeof params.then !== 'function' ? params.id : null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [data, setData] = useState({
@@ -37,22 +37,15 @@ export default function CreatorLayout({ children, params }) {
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-
-  const [newSiteName, setNewSiteName] = useState('');
-  const [newSiteSubdomain, setNewSiteSubdomain] = useState('');
-  const [newSiteCustomDomain, setNewSiteCustomDomain] = useState('');
-  const [creatingSite, setCreatingSite] = useState(false);
-  const [createError, setCreateError] = useState('');
-  const [createSuccess, setCreateSuccess] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/marketing/creator?creatorId=${creatorId}`);
+      const url = creatorId ? `/api/marketing/creator?creatorId=${creatorId}` : '/api/marketing/creator';
+      const res = await fetch(url);
       if (res.status === 401) {
-        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : `/creator/${creatorId}`;
+        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : (creatorId ? `/creator/${creatorId}` : '/creator/login');
         router.replace(`/creator/login?redirect=${encodeURIComponent(redirectPath)}`);
         return;
       }
@@ -66,16 +59,14 @@ export default function CreatorLayout({ children, params }) {
 
       if (json.creator) {
         const loggedInId = Number(json.creator.id);
-        if (Number(creatorId) !== loggedInId || json.redirectUrl) {
+        if ((creatorId && Number(creatorId) !== loggedInId) || json.redirectUrl) {
           router.replace(json.redirectUrl || `/creator/${loggedInId}`);
         }
         setData(json);
       } else {
-        const redirectPath = typeof window !== 'undefined' ? window.location.pathname : `/creator/${creatorId}`;
-        router.replace(`/creator/login?redirect=${encodeURIComponent(redirectPath)}`);
+        router.replace('/creator/login');
       }
     } catch (err) {
-      console.error('Error fetching creator data:', err);
       setLoadError('Network connection issue. Please check your internet connection.');
     } finally {
       setLoading(false);
@@ -85,46 +76,6 @@ export default function CreatorLayout({ children, params }) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleCreateWebsite = async (e) => {
-    e.preventDefault();
-    setCreatingSite(true);
-    setCreateError('');
-    setCreateSuccess('');
-
-    try {
-      const res = await fetch('/api/marketing/creator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_website',
-          creatorId: Number(creatorId),
-          name: newSiteName,
-          subdomain: newSiteSubdomain,
-          customDomain: newSiteCustomDomain || null,
-        }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setCreateSuccess(`Website "${json.website.name}" created successfully.`);
-        setNewSiteName('');
-        setNewSiteSubdomain('');
-        setNewSiteCustomDomain('');
-        await fetchData();
-        setTimeout(() => {
-          setCreateModalOpen(false);
-          setCreateSuccess('');
-        }, 1000);
-      } else {
-        setCreateError(json.error || 'Failed to create website.');
-      }
-    } catch (err) {
-      setCreateError('Network error while creating website.');
-    } finally {
-      setCreatingSite(false);
-    }
-  };
 
   if (loadError) {
     return (
@@ -142,7 +93,7 @@ export default function CreatorLayout({ children, params }) {
             </button>
             <button
               type="button"
-              onClick={() => router.replace(`/creator/login?redirect=/creator/${creatorId}`)}
+              onClick={() => router.replace(creatorId ? `/creator/login?redirect=/creator/${creatorId}` : '/creator/login')}
               className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Login
@@ -157,12 +108,14 @@ export default function CreatorLayout({ children, params }) {
     return <LoadingScreen fullScreen={true} label="Loading workspace..." />;
   }
 
+  const effectiveCreatorId = creatorId || data.creator?.id;
+
   const contextValue = {
     ...data,
-    creatorId,
+    creatorId: effectiveCreatorId,
     refetch: fetchData,
     openCreateWebsiteModal: () => {
-      router.push(`/creator/${creatorId}/workspace?setup=true`);
+      router.push(`/creator/${effectiveCreatorId}/workspace?setup=true`);
     },
   };
 
@@ -185,7 +138,7 @@ export default function CreatorLayout({ children, params }) {
             activeSubscription={data.activeSubscription}
             onToggleSidebar={() => setSidebarOpen((p) => !p)}
             onOpenCreateWebsite={() => {
-              router.push(`/creator/${creatorId}/workspace?setup=true`);
+              router.push(`/creator/${effectiveCreatorId}/workspace?setup=true`);
             }}
           />
 
@@ -193,111 +146,6 @@ export default function CreatorLayout({ children, params }) {
             {children}
           </main>
         </div>
-
-        {createModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
-            <div className="max-w-md w-full bg-white border border-slate-200 p-5 rounded space-y-4 text-xs text-slate-800">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="text-sm font-semibold text-slate-900">New Website</h3>
-                <button
-                  type="button"
-                  onClick={() => setCreateModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-700 font-medium"
-                >
-                  Close
-                </button>
-              </div>
-
-              {createError && (
-                <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-                  {createError}
-                </div>
-              )}
-
-              {createSuccess && (
-                <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
-                  {createSuccess}
-                </div>
-              )}
-
-              <form onSubmit={handleCreateWebsite} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Website Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="My Portfolio"
-                    value={newSiteName}
-                    onChange={(e) => {
-                      setNewSiteName(e.target.value);
-                      if (!newSiteSubdomain) {
-                        setNewSiteSubdomain(
-                          e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-')
-                        );
-                      }
-                    }}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Subdomain *
-                  </label>
-                  <div className="flex items-center rounded border border-slate-300 overflow-hidden focus-within:border-slate-800">
-                    <input
-                      type="text"
-                      required
-                      placeholder="my-portfolio"
-                      value={newSiteSubdomain}
-                      onChange={(e) =>
-                        setNewSiteSubdomain(
-                          e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                        )
-                      }
-                      className="flex-1 bg-transparent px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none"
-                    />
-                    <span className="px-2 py-1.5 text-[11px] text-slate-500 bg-slate-50 border-l border-slate-200 font-mono">
-                      .platform.com
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Custom Domain (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="www.mybrand.com"
-                    value={newSiteCustomDomain}
-                    onChange={(e) => setNewSiteCustomDomain(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setCreateModalOpen(false)}
-                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creatingSite}
-                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                  >
-                    {creatingSite ? 'Provisioning...' : 'Create Website'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </CreatorContext.Provider>
   );

@@ -59,8 +59,11 @@ export default function HomeNavbar() {
               <Link
                 href={`/creator/${creator.id}`}
                 className="inline-flex items-center justify-center gap-1.5 px-4.5 py-2 rounded-full bg-secondary hover:bg-secondary-dark text-white font-bold text-xs sm:text-sm shadow-md shadow-secondary/25 hover:shadow-secondary/35 transition-all duration-200"
+                title="Creator Panel"
+                aria-label="Creator Panel"
               >
                 <BiGridAlt className="text-sm" />
+                <span>Creator Studio</span>
               </Link>
             ) : (
               <>

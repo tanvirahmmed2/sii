@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Context } from 'src/component/helper/Context';
 
 export default function CreatorNavbar({
   creator,
@@ -12,10 +13,11 @@ export default function CreatorNavbar({
   onOpenCreateWebsite,
 }) {
   const router = useRouter();
+  const { setCreator, fetchCurrentUser } = useContext(Context) || {};
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [websiteDropdownOpen, setWebsiteDropdownOpen] = useState(false);
 
-  const creatorId = creator?.id || 1;
+  const creatorId = creator?.id;
   const primaryWebsite = websites[0] || null;
   const hasActiveSub = Boolean(activeSubscription && (activeSubscription.status === 'active' || activeSubscription.status === 'ACTIVE'));
 
@@ -27,6 +29,12 @@ export default function CreatorNavbar({
         body: JSON.stringify({ action: 'logout' }),
       });
     } catch (_) {}
+    if (typeof setCreator === 'function') {
+      setCreator(null);
+    }
+    if (typeof fetchCurrentUser === 'function') {
+      fetchCurrentUser();
+    }
     router.push('/creator/login');
   };
 
