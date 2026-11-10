@@ -13,7 +13,8 @@ export default function CreatorDetailsPage({ params }) {
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const isAuthorized = permissions.includes('creators');
+  const isOwner = Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || permissions.includes('*');
+  const isAuthorized = isOwner || permissions.includes('creators') || permissions.includes('creator');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,7 +23,7 @@ export default function CreatorDetailsPage({ params }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedText, setCopiedText] = useState(null);
 
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPasswordPanel, setShowPasswordPanel] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswordText, setShowPasswordText] = useState(false);
@@ -30,7 +31,7 @@ export default function CreatorDetailsPage({ params }) {
   const [passwordMsg, setPasswordMsg] = useState('');
   const [passwordErr, setPasswordErr] = useState('');
 
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -183,7 +184,7 @@ export default function CreatorDetailsPage({ params }) {
         setNewPassword('');
         setConfirmPassword('');
         setTimeout(() => {
-          setShowPasswordModal(false);
+          setShowPasswordPanel(false);
           setPasswordMsg('');
         }, 2000);
       } else {
@@ -221,7 +222,7 @@ export default function CreatorDetailsPage({ params }) {
           },
         }));
         setTimeout(() => {
-          setShowEditModal(false);
+          setShowEditPanel(false);
           setEditMsg('');
         }, 1500);
       } else {
@@ -345,11 +346,10 @@ export default function CreatorDetailsPage({ params }) {
               </span>
 
               <span
-                className={`px-2.5 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                  creator.is_active
+                className={`px-2.5 py-0.5 rounded text-[10px] font-medium uppercase border ${creator.is_active
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-rose-50 text-rose-700 border-rose-200'
-                }`}
+                  }`}
               >
                 {creator.is_active ? 'Active' : 'Suspended'}
               </span>
@@ -399,10 +399,10 @@ export default function CreatorDetailsPage({ params }) {
                   Member since{' '}
                   {creator.created_at
                     ? new Date(creator.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
                     : '—'}
                 </span>
               </div>
@@ -412,7 +412,7 @@ export default function CreatorDetailsPage({ params }) {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowPasswordModal(true)}
+              onClick={() => setShowPasswordPanel(true)}
               className="px-3.5 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
             >
               Change Password
@@ -420,7 +420,7 @@ export default function CreatorDetailsPage({ params }) {
 
             <button
               type="button"
-              onClick={() => setShowEditModal(true)}
+              onClick={() => setShowEditPanel(true)}
               className="px-3.5 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
             >
               Edit Details
@@ -430,11 +430,10 @@ export default function CreatorDetailsPage({ params }) {
               type="button"
               onClick={handleToggleActive}
               disabled={actionLoading}
-              className={`px-4 py-2 rounded text-xs font-medium transition-all cursor-pointer ${
-                creator.is_active
+              className={`px-4 py-2 rounded text-xs font-medium transition-all cursor-pointer ${creator.is_active
                   ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              } disabled:opacity-50`}
+                } disabled:opacity-50`}
             >
               {actionLoading ? 'Updating...' : creator.is_active ? 'Suspend Account' : 'Activate Account'}
             </button>
@@ -442,228 +441,224 @@ export default function CreatorDetailsPage({ params }) {
         </div>
       </div>
 
-      {showPasswordModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded border border-slate-200 max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-900">Change Creator Password</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setPasswordErr('');
-                  setPasswordMsg('');
-                }}
-                className="text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                Close
-              </button>
+      {showPasswordPanel && (
+        <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Change Creator Password</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setShowPasswordPanel(false);
+                setPasswordErr('');
+                setPasswordMsg('');
+              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+
+          {passwordMsg && (
+            <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+              {passwordMsg}
             </div>
+          )}
+          {passwordErr && (
+            <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium">
+              {passwordErr}
+            </div>
+          )}
 
-            {passwordMsg && (
-              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-                {passwordMsg}
-              </div>
-            )}
-            {passwordErr && (
-              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
-                {passwordErr}
-              </div>
-            )}
-
-            <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  New Password *
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswordText ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 pr-12"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordText(!showPasswordText)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 hover:text-slate-800 cursor-pointer font-mono"
-                  >
-                    {showPasswordText ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Confirm New Password *
-                </label>
+          <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                New Password *
+              </label>
+              <div className="relative">
                 <input
                   type={showPasswordText ? 'text' : 'password'}
                   required
                   minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800 pr-12"
                 />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowPasswordModal(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
+                  onClick={() => setShowPasswordText(!showPasswordText)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer font-mono"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                >
-                  {passwordLoading ? 'Updating...' : 'Save Password'}
+                  {showPasswordText ? 'Hide' : 'Show'}
                 </button>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Confirm New Password *
+              </label>
+              <input
+                type={showPasswordText ? 'text' : 'password'}
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowPasswordPanel(false)}
+                className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={passwordLoading}
+                className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+              >
+                {passwordLoading ? 'Updating...' : 'Save Password'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {showEditModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-900">Edit Creator Information</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditErr('');
-                  setEditMsg('');
-                }}
-                className="text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
-              >
-                Close
-              </button>
+      {showEditPanel && (
+        <div className="bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Edit Creator Information</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setShowEditPanel(false);
+                setEditErr('');
+                setEditMsg('');
+              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+
+          {editMsg && (
+            <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+              {editMsg}
             </div>
+          )}
+          {editErr && (
+            <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-medium">
+              {editErr}
+            </div>
+          )}
 
-            {editMsg && (
-              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-                {editMsg}
-              </div>
-            )}
-            {editErr && (
-              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
-                {editErr}
-              </div>
-            )}
-
-            <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Phone Number *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Country</label>
-                  <input
-                    type="text"
-                    value={editForm.country}
-                    onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">City</label>
-                  <input
-                    type="text"
-                    value={editForm.city}
-                    onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-              </div>
-
+          <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">Address</label>
-                <textarea
-                  rows={2}
-                  value={editForm.address}
-                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
                 />
               </div>
-
-              <div className="flex items-center gap-6 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editForm.is_active}
-                    onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
-                    className="rounded border-slate-300 text-slate-900 focus:ring-0"
-                  />
-                  <span className="text-[11px] text-slate-700">Account Active</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editForm.is_verified}
-                    onChange={(e) => setEditForm({ ...editForm, is_verified: e.target.checked })}
-                    className="rounded border-slate-300 text-slate-900 focus:ring-0"
-                  />
-                  <span className="text-[11px] text-slate-700">Email Verified</span>
-                </label>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-slate-800"
+                />
               </div>
+            </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-3.5 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                >
-                  {editLoading ? 'Saving...' : 'Save Changes'}
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-slate-800"
+                />
               </div>
-            </form>
-          </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">Country</label>
+                <input
+                  type="text"
+                  value={editForm.country}
+                  onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">City</label>
+                <input
+                  type="text"
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">Address</label>
+              <textarea
+                rows={2}
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+            </div>
+
+            <div className="flex items-center gap-6 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_active}
+                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-0"
+                />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">Account Active</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_verified}
+                  onChange={(e) => setEditForm({ ...editForm, is_verified: e.target.checked })}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-0"
+                />
+                <span className="text-[11px] text-slate-700 dark:text-slate-300">Email Verified</span>
+              </label>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowEditPanel(false)}
+                className="px-3.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={editLoading}
+                className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+              >
+                {editLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -802,586 +797,587 @@ export default function CreatorDetailsPage({ params }) {
         </button>
       </div>
 
-      {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-medium text-slate-900 border-b border-slate-100 pb-3">
-              Identity &amp; Contact Details
-            </h3>
+{
+  activeTab === 'overview' && (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
+        <h3 className="text-sm font-medium text-slate-900 border-b border-slate-100 pb-3">
+          Identity &amp; Contact Details
+        </h3>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Account ID:</span>
-                <span className="font-mono font-medium text-slate-800">#{creator.id}</span>
-              </div>
+        <div className="space-y-3 text-xs">
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Account ID:</span>
+            <span className="font-mono font-medium text-slate-800">#{creator.id}</span>
+          </div>
 
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Full Name:</span>
-                <span className="font-normal text-slate-800">{creator.name}</span>
-              </div>
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Full Name:</span>
+            <span className="font-normal text-slate-800">{creator.name}</span>
+          </div>
 
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Email Address:</span>
-                <div className="flex items-center gap-1.5 font-mono text-slate-800">
-                  <span>{creator.email}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(creator.email, 'email')}
-                    className="text-slate-400 hover:text-slate-700 underline text-[10px] cursor-pointer"
-                  >
-                    {copiedText === 'email' ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Phone Number:</span>
-                <div className="flex items-center gap-1.5 font-mono text-slate-800">
-                  <span>{creator.phone || 'Not provided'}</span>
-                  {creator.phone && (
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(creator.phone, 'phone')}
-                      className="text-slate-400 hover:text-slate-700 underline text-[10px] cursor-pointer"
-                    >
-                      {copiedText === 'phone' ? 'Copied' : 'Copy'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Country:</span>
-                <span className="text-slate-800">{creator.country || 'Not specified'}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">City:</span>
-                <span className="text-slate-800">{creator.city || 'Not specified'}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Address:</span>
-                <span className="text-slate-800 text-right max-w-xs truncate">{creator.address || 'Not specified'}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Registered Date:</span>
-                <span className="font-mono text-slate-700">
-                  {creator.created_at ? new Date(creator.created_at).toLocaleString() : '—'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5">
-                <span className="text-slate-500">Last Profile Update:</span>
-                <span className="font-mono text-slate-700">
-                  {creator.updated_at ? new Date(creator.updated_at).toLocaleString() : '—'}
-                </span>
-              </div>
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Email Address:</span>
+            <div className="flex items-center gap-1.5 font-mono text-slate-800">
+              <span>{creator.email}</span>
+              <button
+                type="button"
+                onClick={() => handleCopy(creator.email, 'email')}
+                className="text-slate-400 hover:text-slate-700 underline text-[10px] cursor-pointer"
+              >
+                {copiedText === 'email' ? 'Copied' : 'Copy'}
+              </button>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-medium text-slate-900 border-b border-slate-100 pb-3">
-              Security &amp; Access Status
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Account Status:</span>
-                <span
-                  className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${
-                    creator.is_active
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-rose-50 text-rose-700 border border-rose-200'
-                  }`}
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Phone Number:</span>
+            <div className="flex items-center gap-1.5 font-mono text-slate-800">
+              <span>{creator.phone || 'Not provided'}</span>
+              {creator.phone && (
+                <button
+                  type="button"
+                  onClick={() => handleCopy(creator.phone, 'phone')}
+                  className="text-slate-400 hover:text-slate-700 underline text-[10px] cursor-pointer"
                 >
-                  {creator.is_active ? 'Active Access' : 'Access Suspended'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Email Verification:</span>
-                <span
-                  className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${
-                    creator.is_verified
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  {creator.is_verified ? 'Verified Email' : 'Unverified'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Two-Factor Authentication:</span>
-                <span
-                  className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${
-                    creator.two_factor_enabled
-                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                      : 'bg-slate-100 text-slate-600 border border-slate-200'
-                  }`}
-                >
-                  {creator.two_factor_enabled ? '2FA Enabled' : 'Disabled'}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">Last Login Timestamp:</span>
-                <span className="font-mono text-slate-700">
-                  {creator.last_login_at ? new Date(creator.last_login_at).toLocaleString() : 'Never logged in'}
-                </span>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-slate-500">Direct Actions:</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordModal(true)}
-                    className="px-3 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer"
-                  >
-                    Change Password
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(true)}
-                    className="px-3 py-1 rounded border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-medium cursor-pointer"
-                  >
-                    Edit Info
-                  </button>
-                </div>
-              </div>
+                  {copiedText === 'phone' ? 'Copied' : 'Copy'}
+                </button>
+              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {activeTab === 'purchases' && (
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-slate-900 text-sm">Purchase Orders</h3>
-              <p className="text-xs text-slate-500">Order invoices and package purchase transactions.</p>
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-              {purchases.length} purchase(s)
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Country:</span>
+            <span className="text-slate-800">{creator.country || 'Not specified'}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">City:</span>
+            <span className="text-slate-800">{creator.city || 'Not specified'}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Address:</span>
+            <span className="text-slate-800 text-right max-w-xs truncate">{creator.address || 'Not specified'}</span>
+          </div>
+
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Registered Date:</span>
+            <span className="font-mono text-slate-700">
+              {creator.created_at ? new Date(creator.created_at).toLocaleString() : '—'}
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Purchase ID</th>
-                  <th className="py-3 px-4">Order Code</th>
-                  <th className="py-3 px-4">Package</th>
-                  <th className="py-3 px-4">Total Amount</th>
-                  <th className="py-3 px-4">Billing Cycle</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Coverage Period</th>
-                  <th className="py-3 px-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {purchases.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
-                      No purchase order records found for this creator.
-                    </td>
-                  </tr>
-                ) : (
-                  purchases.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        #{p.id}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-700">
-                        {p.purchase_code || '—'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-900">{p.package_name || 'Custom Plan'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-900">
-                        ${Number(p.total_amount || 0).toFixed(2)}
-                      </td>
-                      <td className="py-3.5 px-4 capitalize text-slate-600">
-                        {p.billing_cycle || 'monthly'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            p.status === 'completed' || p.status === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                        {p.period_start ? new Date(p.period_start).toLocaleDateString() : '—'}
-                        {' → '}
-                        {p.period_end ? new Date(p.period_end).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="flex justify-between items-center py-1.5">
+            <span className="text-slate-500">Last Profile Update:</span>
+            <span className="font-mono text-slate-700">
+              {creator.updated_at ? new Date(creator.updated_at).toLocaleString() : '—'}
+            </span>
           </div>
         </div>
-      )}
+      </div>
 
-      {activeTab === 'subscriptions' && (
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-slate-900 text-sm">Subscription Records</h3>
-              <p className="text-xs text-slate-500">Package subscription intervals and lifecycle status.</p>
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-              {subscriptions.length} subscription(s)
+      <div className="bg-white border border-slate-200 rounded p-6 shadow-xs space-y-4">
+        <h3 className="text-sm font-medium text-slate-900 border-b border-slate-100 pb-3">
+          Security &amp; Access Status
+        </h3>
+
+        <div className="space-y-3 text-xs">
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Account Status:</span>
+            <span
+              className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${creator.is_active
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}
+            >
+              {creator.is_active ? 'Active Access' : 'Access Suspended'}
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Sub ID</th>
-                  <th className="py-3 px-4">Package</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Billing Period</th>
-                  <th className="py-3 px-4">Price / Interval</th>
-                  <th className="py-3 px-4">Auto Renew</th>
-                  <th className="py-3 px-4">Activated Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {subscriptions.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      No subscription records found for this creator.
-                    </td>
-                  </tr>
-                ) : (
-                  subscriptions.map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        #{s.id}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-900">{s.package_name || 'Standard Package'}</div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            s.status === 'active' || s.status === 'ACTIVE' || s.status === 'completed'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {s.status}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-700">
-                        {s.current_period_start ? new Date(s.current_period_start).toLocaleDateString() : '—'}
-                        {' → '}
-                        {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString() : '—'}
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono font-normal text-slate-800">
-                        ${((s.price_in_cents || 0) / 100).toFixed(2)} / {s.billing_interval || s.billing_cycle || 'mo'}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            !s.cancel_at_period_end
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border-rose-200'
-                          }`}
-                        >
-                          {!s.cancel_at_period_end ? 'Active Renew' : 'Canceling'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'payments' && (
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-slate-900 text-sm">Payment Transactions</h3>
-              <p className="text-xs text-slate-500">History of payments processed for this creator account.</p>
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-              {payments.length} payment(s)
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Email Verification:</span>
+            <span
+              className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${creator.is_verified
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+            >
+              {creator.is_verified ? 'Verified Email' : 'Unverified'}
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Transaction ID</th>
-                  <th className="py-3 px-4">Package</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Method</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Transaction Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {payments.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
-                      No payment transactions recorded for this creator.
-                    </td>
-                  </tr>
-                ) : (
-                  payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        {p.transaction_id || `#${p.id}`}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span className="font-normal text-slate-800">
-                          {p.package_name || (p.purchase_code ? `Order ${p.purchase_code}` : `Purchase #${p.purchase_id || p.id}`)}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-900">
-                        ${((p.amount_in_cents || (p.amount ? p.amount * 100 : 0)) / 100).toFixed(2)}{' '}
-                        <span className="text-[10px] text-slate-400">{p.currency || 'USD'}</span>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-100 text-slate-700 border border-slate-200">
-                          {p.payment_method || 'CARD'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            p.status === 'completed' || p.status === 'COMPLETED' || p.status === 'successful'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          {p.status}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {p.payment_date || p.created_at ? new Date(p.payment_date || p.created_at).toLocaleString() : '—'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'support' && (
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-slate-900 text-sm">Creator Support Inquiries</h3>
-              <p className="text-xs text-slate-500">Tickets and support inquiries submitted by this creator.</p>
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-              {displayTickets.length} ticket(s)
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Two-Factor Authentication:</span>
+            <span
+              className={`px-2 py-0.5 rounded font-medium uppercase text-[10px] ${creator.two_factor_enabled
+                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
+                }`}
+            >
+              {creator.two_factor_enabled ? '2FA Enabled' : 'Disabled'}
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Ticket ID</th>
-                  <th className="py-3 px-4">Subject</th>
-                  <th className="py-3 px-4">Priority</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Submitted Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {displayTickets.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400">
-                      No support tickets submitted by this creator.
-                    </td>
-                  </tr>
-                ) : (
-                  displayTickets.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
-                        {t.ticket_number || `#${t.id}`}
-                      </td>
-
-                      <td className="py-3.5 px-4 font-normal text-slate-900 max-w-xs truncate">
-                        {t.subject}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            t.priority === 'urgent'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : t.priority === 'high'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {t.priority || 'Normal'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            t.status === 'open'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : t.status === 'resolved'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {t.status || 'open'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'websites' && (
-        <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-slate-900 text-sm">Hosted Websites</h3>
-              <p className="text-xs text-slate-500">Website deployments managed by this creator.</p>
-            </div>
-            <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
-              {websites.length} website(s)
+          <div className="flex justify-between items-center py-1.5 border-b border-slate-50">
+            <span className="text-slate-500">Last Login Timestamp:</span>
+            <span className="font-mono text-slate-700">
+              {creator.last_login_at ? new Date(creator.last_login_at).toLocaleString() : 'Never logged in'}
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Website Name</th>
-                  <th className="py-3 px-4">Subdomain / Domain</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Storage Used</th>
-                  <th className="py-3 px-4">Published</th>
-                  <th className="py-3 px-4">Created Date</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {websites.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      No websites have been created by this creator yet.
-                    </td>
-                  </tr>
-                ) : (
-                  websites.map((w) => (
-                    <tr key={w.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="font-medium text-slate-900">{w.name}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">ID: #{w.id}</div>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono">
-                        <div className="text-slate-800 font-normal">{w.subdomain}</div>
-                        {w.custom_domain && (
-                          <div className="text-[11px] text-slate-500">
-                            {w.custom_domain}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            w.status === 'active' || w.status === 'ACTIVE'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          {w.status || 'ACTIVE'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-700">
-                        {w.storage_used_mb || 0} MB
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${
-                            w.is_published
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}
-                        >
-                          {w.is_published ? 'Published' : 'Draft'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
-                        {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <Link
-                          href={`/developer/websites/${w.id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-normal transition-colors"
-                        >
-                          <span>Manage Site</span>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-slate-500">Direct Actions:</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPasswordPanel(true)}
+                className="px-3 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium cursor-pointer"
+              >
+                Change Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditPanel(true)}
+                className="px-3 py-1 rounded border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-medium cursor-pointer"
+              >
+                Edit Info
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+{
+  activeTab === 'purchases' && (
+    <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-slate-900 text-sm">Purchase Orders</h3>
+          <p className="text-xs text-slate-500">Order invoices and package purchase transactions.</p>
+        </div>
+        <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+          {purchases.length} purchase(s)
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-4">Purchase ID</th>
+              <th className="py-3 px-4">Order Code</th>
+              <th className="py-3 px-4">Package</th>
+              <th className="py-3 px-4">Total Amount</th>
+              <th className="py-3 px-4">Billing Cycle</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Coverage Period</th>
+              <th className="py-3 px-4">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {purchases.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-12 text-center text-slate-400">
+                  No purchase order records found for this creator.
+                </td>
+              </tr>
+            ) : (
+              purchases.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                    #{p.id}
+                  </td>
+                  <td className="py-3.5 px-4 font-mono text-slate-700">
+                    {p.purchase_code || '—'}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <div className="font-medium text-slate-900">{p.package_name || 'Custom Plan'}</div>
+                  </td>
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-900">
+                    ${Number(p.total_amount || 0).toFixed(2)}
+                  </td>
+                  <td className="py-3.5 px-4 capitalize text-slate-600">
+                    {p.billing_cycle || 'monthly'}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${p.status === 'completed' || p.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-600">
+                    {p.period_start ? new Date(p.period_start).toLocaleDateString() : '—'}
+                    {' → '}
+                    {p.period_end ? new Date(p.period_end).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+{
+  activeTab === 'subscriptions' && (
+    <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-slate-900 text-sm">Subscription Records</h3>
+          <p className="text-xs text-slate-500">Package subscription intervals and lifecycle status.</p>
+        </div>
+        <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+          {subscriptions.length} subscription(s)
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-4">Sub ID</th>
+              <th className="py-3 px-4">Package</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Billing Period</th>
+              <th className="py-3 px-4">Price / Interval</th>
+              <th className="py-3 px-4">Auto Renew</th>
+              <th className="py-3 px-4">Activated Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {subscriptions.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-slate-400">
+                  No subscription records found for this creator.
+                </td>
+              </tr>
+            ) : (
+              subscriptions.map((s) => (
+                <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                    #{s.id}
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <div className="font-medium text-slate-900">{s.package_name || 'Standard Package'}</div>
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${s.status === 'active' || s.status === 'ACTIVE' || s.status === 'completed'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                    >
+                      {s.status}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-[11px] text-slate-700">
+                    {s.current_period_start ? new Date(s.current_period_start).toLocaleDateString() : '—'}
+                    {' → '}
+                    {s.current_period_end ? new Date(s.current_period_end).toLocaleDateString() : '—'}
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono font-normal text-slate-800">
+                    ${((s.price_in_cents || 0) / 100).toFixed(2)} / {s.billing_interval || s.billing_cycle || 'mo'}
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${!s.cancel_at_period_end
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}
+                    >
+                      {!s.cancel_at_period_end ? 'Active Renew' : 'Canceling'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    {s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+{
+  activeTab === 'payments' && (
+    <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-slate-900 text-sm">Payment Transactions</h3>
+          <p className="text-xs text-slate-500">History of payments processed for this creator account.</p>
+        </div>
+        <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+          {payments.length} payment(s)
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-4">Transaction ID</th>
+              <th className="py-3 px-4">Package</th>
+              <th className="py-3 px-4">Amount</th>
+              <th className="py-3 px-4">Method</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Transaction Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {payments.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-12 text-center text-slate-400">
+                  No payment transactions recorded for this creator.
+                </td>
+              </tr>
+            ) : (
+              payments.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                    {p.transaction_id || `#${p.id}`}
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span className="font-normal text-slate-800">
+                      {p.package_name || (p.purchase_code ? `Order ${p.purchase_code}` : `Purchase #${p.purchase_id || p.id}`)}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-900">
+                    ${((p.amount_in_cents || (p.amount ? p.amount * 100 : 0)) / 100).toFixed(2)}{' '}
+                    <span className="text-[10px] text-slate-400">{p.currency || 'USD'}</span>
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-100 text-slate-700 border border-slate-200">
+                      {p.payment_method || 'CARD'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${p.status === 'completed' || p.status === 'COMPLETED' || p.status === 'successful'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                    >
+                      {p.status}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    {p.payment_date || p.created_at ? new Date(p.payment_date || p.created_at).toLocaleString() : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+{
+  activeTab === 'support' && (
+    <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-slate-900 text-sm">Creator Support Inquiries</h3>
+          <p className="text-xs text-slate-500">Tickets and support inquiries submitted by this creator.</p>
+        </div>
+        <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+          {displayTickets.length} ticket(s)
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-4">Ticket ID</th>
+              <th className="py-3 px-4">Subject</th>
+              <th className="py-3 px-4">Priority</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Submitted Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {displayTickets.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-slate-400">
+                  No support tickets submitted by this creator.
+                </td>
+              </tr>
+            ) : (
+              displayTickets.map((t) => (
+                <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
+                    {t.ticket_number || `#${t.id}`}
+                  </td>
+
+                  <td className="py-3.5 px-4 font-normal text-slate-900 max-w-xs truncate">
+                    {t.subject}
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${t.priority === 'urgent'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : t.priority === 'high'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                    >
+                      {t.priority || 'Normal'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${t.status === 'open'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : t.status === 'resolved'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                    >
+                      {t.status || 'open'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    {t.created_at ? new Date(t.created_at).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+{
+  activeTab === 'websites' && (
+    <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-xs">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-slate-900 text-sm">Hosted Websites</h3>
+          <p className="text-xs text-slate-500">Website deployments managed by this creator.</p>
+        </div>
+        <span className="text-xs font-medium px-2.5 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200">
+          {websites.length} website(s)
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-slate-50 text-slate-600 font-medium uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <tr>
+              <th className="py-3 px-4">Website Name</th>
+              <th className="py-3 px-4">Subdomain / Domain</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Storage Used</th>
+              <th className="py-3 px-4">Published</th>
+              <th className="py-3 px-4">Created Date</th>
+              <th className="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {websites.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-slate-400">
+                  No websites have been created by this creator yet.
+                </td>
+              </tr>
+            ) : (
+              websites.map((w) => (
+                <tr key={w.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4">
+                    <div className="font-medium text-slate-900">{w.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">ID: #{w.id}</div>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono">
+                    <div className="text-slate-800 font-normal">{w.subdomain}</div>
+                    {w.custom_domain && (
+                      <div className="text-[11px] text-slate-500">
+                        {w.custom_domain}
+                      </div>
+                    )}
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${w.status === 'active' || w.status === 'ACTIVE'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                        }`}
+                    >
+                      {w.status || 'ACTIVE'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-slate-700">
+                    {w.storage_used_mb || 0} MB
+                  </td>
+
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase border ${w.is_published
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                    >
+                      {w.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </td>
+
+                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                    {w.created_at ? new Date(w.created_at).toLocaleDateString() : '—'}
+                  </td>
+
+                  <td className="py-3.5 px-4 text-right">
+                    <Link
+                      href={`/developer/websites/${w.id}`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-normal transition-colors"
+                    >
+                      <span>Manage Site</span>
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+    </div >
   );
 }

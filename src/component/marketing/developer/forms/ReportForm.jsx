@@ -84,10 +84,9 @@ export default function ReportForm({ onSuccess, onCancel }) {
             <input
               type="text"
               required
-              placeholder="e.g. Legal Compliance / User Name"
               value={formData.reporter_name}
               onChange={(e) => setFormData({ ...formData, reporter_name: e.target.value })}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
           </div>
 
@@ -96,10 +95,9 @@ export default function ReportForm({ onSuccess, onCancel }) {
             <input
               type="email"
               required
-              placeholder="reporter@domain.com"
               value={formData.reporter_email}
               onChange={(e) => setFormData({ ...formData, reporter_email: e.target.value })}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
           </div>
         </div>
@@ -109,10 +107,9 @@ export default function ReportForm({ onSuccess, onCancel }) {
           <input
             type="text"
             required
-            placeholder="e.g. Copyright notice regarding tenant asset"
             value={formData.subject}
             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
           />
         </div>
 
@@ -166,10 +163,9 @@ export default function ReportForm({ onSuccess, onCancel }) {
           <textarea
             rows={3}
             required
-            placeholder="Detailed description of the issue or incident..."
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800 resize-none"
           />
         </div>
 

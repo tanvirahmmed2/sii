@@ -5,7 +5,7 @@ import { hasModulePermission } from 'src/lib/middleware/developer';
 const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'whatsapp'];
 const ALLOWED_STATUSES = ['OPEN', 'RESOLVED', 'SPAM'];
 
-const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats'];
+const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'meta'];
 
 export async function GET(request) {
   try {
@@ -119,6 +119,8 @@ export async function PATCH(request) {
   }
 }
 
+export const PUT = PATCH;
+
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, META_PERMISSIONS);
@@ -193,4 +195,3 @@ export async function POST(request) {
     return NextResponse.json({ success: false, error: 'Failed to create conversation' }, { status: 500 });
   }
 }
-

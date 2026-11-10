@@ -15,7 +15,8 @@ export default function AdminCreatorsPage() {
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const isAuthorized = permissions.includes('creators');
+  const isOwner = Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || permissions.includes('*');
+  const isAuthorized = isOwner || permissions.includes('creators') || permissions.includes('creator');
 
   const fetchCreators = async (isRefresh = false) => {
     try {
@@ -196,10 +197,10 @@ export default function AdminCreatorsPage() {
           <div className="w-full sm:w-80">
             <input
               type="text"
+              aria-label="Search creator by name, email, package or ID"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search creator by name, email, package or ID..."
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800 font-normal"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800 font-normal"
             />
           </div>
 

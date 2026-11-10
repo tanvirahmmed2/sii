@@ -1160,3 +1160,19 @@ CREATE INDEX IF NOT EXISTS idx_meta_messages_conv ON meta_messages(conversation_
 CREATE INDEX IF NOT EXISTS idx_meta_messages_platform ON meta_messages(platform);
 CREATE INDEX IF NOT EXISTS idx_meta_messages_created ON meta_messages(created_at ASC);
 
+CREATE TABLE IF NOT EXISTS leads (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    company VARCHAR(255),
+    source VARCHAR(100) DEFAULT 'WEBSITE',
+    status VARCHAR(50) DEFAULT 'NEW',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+

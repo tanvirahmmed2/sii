@@ -17,8 +17,13 @@ export default function MetaMessenger({
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const isOwner = Number(user?.id) === 1;
-  const hasPlatformPerm = isOwner || permissions.includes(`${platform}-messages`) || permissions.includes('chats');
+  const isOwner = Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || permissions.includes('*');
+  const hasPlatformPerm = isOwner ||
+    permissions.includes(`${platform}-messages`) ||
+    permissions.includes(`${platform}_messages`) ||
+    permissions.includes(platform) ||
+    permissions.includes('meta') ||
+    permissions.includes('chats');
   const canManage = Boolean(isOwner || hasPlatformPerm || permissions.includes('support'));
   const canDelete = Boolean(isOwner || hasPlatformPerm);
 
@@ -133,13 +138,14 @@ export default function MetaMessenger({
         body: JSON.stringify({
           conversationId: selectedConv.id,
           message: text,
+          messageText: text,
         }),
       });
       const data = await res.json();
       if (data.success && data.record) {
         setInputText('');
         setMessages((prev) => [...prev, data.record]);
-        if (data.apiNotice) setApiNotice(data.apiNotice);
+        if (data.apiNotice || data.warning) setApiNotice(data.apiNotice || data.warning);
         fetchConversations(true);
       } else {
         alert(data.error || 'Failed to send message');
@@ -196,7 +202,7 @@ export default function MetaMessenger({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-8 text-center max-w-md mx-auto my-12">
         <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
         <p className="text-xs text-slate-600 dark:text-slate-400">
-          Your account role (<span className="font-medium capitalize">{role}</span>) does not have permission to manage {title}.
+          Your account role (<span className="font-medium capitalize">{user?.role || 'developer'}</span>) does not have permission to manage {title}.
         </p>
       </div>
     );
@@ -329,7 +335,7 @@ export default function MetaMessenger({
               </div>
             ) : (
               messages.map((m) => {
-                const isOutbound = m.sender_type === 'page';
+                const isOutbound = ['STAFF', 'SYSTEM', 'staff', 'system', 'page'].includes(m.sender_type);
                 return (
                   <div
                     key={m.id}
@@ -359,7 +365,7 @@ export default function MetaMessenger({
                         </span>
                         {isOutbound && (
                           <span className="text-[9px] uppercase font-mono">
-                            {m.status === 'read' ? 'Read' : 'Sent'}
+                            {m.delivery_status || m.status || 'SENT'}
                           </span>
                         )}
                       </div>
@@ -377,18 +383,18 @@ export default function MetaMessenger({
           >
             <input
               type="text"
-              placeholder={`Reply to ${selectedConv.recipient_name || 'customer'}...`}
+              aria-label={`Reply to ${selectedConv.recipient_name || 'customer'}`}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={sending}
-              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
             <button
               type="submit"
               disabled={!inputText.trim() || sending}
               className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
             >
-              Send
+              {sending ? 'Sending...' : 'Send'}
             </button>
           </form>
         </div>

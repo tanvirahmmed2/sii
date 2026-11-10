@@ -191,6 +191,7 @@ export async function POST(request) {
       success: true,
       record: msgRes.rows[0],
       message: msgRes.rows[0],
+      messageRecord: msgRes.rows[0],
     });
   } catch (error) {
     console.error('Error in developer live_chats POST:', error);
@@ -207,7 +208,7 @@ export async function PUT(request) {
 
     const body = await request.json();
     const data = body.data || body;
-    const id = Number(data.id || body.id);
+    const id = Number(data.id || data.chatId || body.id || body.chatId);
     if (!id) return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
 
     const status = data.status ? String(data.status).toUpperCase() : null;
@@ -284,3 +285,5 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PATCH = PUT;

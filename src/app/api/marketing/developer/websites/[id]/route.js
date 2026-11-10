@@ -5,20 +5,20 @@ import { hasModulePermission } from 'src/lib/middleware/developer';
 async function fetchFullWebsite(websiteId) {
   const res = await queryDb(
     `SELECT w.*,
-            (CASE WHEN w.status = 'active' AND NOT w.is_maintenance_mode THEN true ELSE false END) AS is_published,
+            (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) THEN true ELSE false END) AS is_published,
             COALESCE(
               (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
               (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
               w.slug
             ) AS subdomain,
-            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
-            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain,
+            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain_verified,
             (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
             c.id AS creator_id,
             c.name AS creator_name,
             c.email AS creator_email,
             c.phone AS creator_phone,
-            w.institution_name AS creator_institution,
+            w.name AS creator_institution,
             c.country AS creator_country,
             c.city AS creator_city,
             c.address AS creator_address,
@@ -84,16 +84,19 @@ export async function GET(request, { params }) {
 
     const creatorId = Number(website.creator_id);
 
-    const [modulesRes, allTenantModsRes, packagesRes, purchasesRes, creatorsRes, subscriptionsRes] = await Promise.all([
+    const [
+      controlModulesRes,
+      homeModulesRes,
+      allControlModsRes,
+      allHomeModsRes,
+      packagesRes,
+      purchasesRes,
+      creatorsRes,
+      subscriptionsRes,
+      domainsRes
+    ] = await Promise.all([
       queryDb(
-        `SELECT cm.id AS website_module_id,
-                cm.id,
-                cm.name AS module_name,
-                cm.slug AS module_slug,
-                cm.description AS module_description,
-                cm.icon AS module_icon,
-                cm.is_active,
-                TRUE AS is_enabled
+        `SELECT cm.id, cm.name, cm.slug, cm.path, cm.category, cm.description, cm.icon, cm.is_active, TRUE AS is_enabled
          FROM website_control_modules cm
          JOIN package_control_modules pcm ON pcm.control_module_id = cm.id
          JOIN subscriptions s ON s.package_id = pcm.package_id
@@ -104,7 +107,22 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, name, slug, description, icon, is_active FROM website_control_modules WHERE is_active = TRUE ORDER BY id ASC`
+        `SELECT hm.id, hm.name, hm.slug, hm.path, hm.category, hm.description, hm.icon, hm.is_active, TRUE AS is_enabled
+         FROM website_home_modules hm
+         JOIN package_home_modules phm ON phm.home_module_id = hm.id
+         JOIN subscriptions s ON s.package_id = phm.package_id
+         JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
+         WHERE w.id = $1 AND hm.is_active = TRUE
+         ORDER BY hm.id ASC`,
+        [websiteId]
+      ).catch(() => ({ rows: [] })),
+
+      queryDb(
+        `SELECT id, name, slug, path, category, description, icon, is_active FROM website_control_modules WHERE is_active = TRUE ORDER BY category ASC, id ASC`
+      ).catch(() => ({ rows: [] })),
+
+      queryDb(
+        `SELECT id, name, slug, path, category, description, icon, is_active FROM website_home_modules WHERE is_active = TRUE ORDER BY category ASC, id ASC`
       ).catch(() => ({ rows: [] })),
 
       queryDb(
@@ -136,7 +154,7 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, name, email, institution, phone, is_active FROM creators ORDER BY id DESC LIMIT 100`
+        `SELECT id, name, email, phone, is_active, city, country FROM creators ORDER BY id DESC LIMIT 100`
       ).catch(() => ({ rows: [] })),
 
       queryDb(
@@ -151,6 +169,11 @@ export async function GET(request, { params }) {
          ORDER BY s.id DESC`,
         [creatorId || 0, websiteId, website.subscription_id || 0]
       ).catch(() => ({ rows: [] })),
+
+      queryDb(
+        `SELECT * FROM website_domains WHERE website_id = $1 ORDER BY is_primary DESC, id ASC`,
+        [websiteId]
+      ).catch(() => ({ rows: [] }))
     ]);
 
     let daysRemaining = null;
@@ -166,6 +189,8 @@ export async function GET(request, { params }) {
         days_remaining: daysRemaining,
         is_expired: daysRemaining !== null && daysRemaining < 0,
       },
+      website_information: website.website_information || null,
+      domains: domainsRes.rows,
       creator: {
         id: website.creator_id,
         name: website.creator_name,
@@ -179,7 +204,7 @@ export async function GET(request, { params }) {
         email_verified: website.creator_email_verified,
         created_at: website.creator_created_at,
       },
-      package: {
+      package: website.package_id ? {
         id: website.package_id,
         name: website.package_name,
         slug: website.package_slug,
@@ -196,7 +221,7 @@ export async function GET(request, { params }) {
         max_websites: website.max_websites,
         features: website.package_features,
         is_active: website.package_is_active,
-      },
+      } : null,
       subscription: website.subscription_id ? {
         id: website.subscription_id,
         status: website.subscription_status,
@@ -205,15 +230,17 @@ export async function GET(request, { params }) {
         current_period_end: website.subscription_period_end,
         cancel_at_period_end: website.subscription_cancel_at_period_end,
       } : null,
-      enabled_modules: modulesRes.rows,
-      all_tenant_modules: allTenantModsRes.rows,
+      control_modules: controlModulesRes.rows,
+      home_modules: homeModulesRes.rows,
+      all_control_modules: allControlModsRes.rows,
+      all_home_modules: allHomeModsRes.rows,
       available_packages: packagesRes.rows,
       purchases: purchasesRes.rows,
       creators: creatorsRes.rows,
       creator_subscriptions: subscriptionsRes.rows,
     });
   } catch (error) {
-    console.error('Website [id] GET error:', error);
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -244,7 +271,7 @@ export async function PUT(request, { params }) {
 
     if (creatorPayload && targetCreatorId) {
       const allowedCreatorKeys = [
-        'name', 'phone', 'institution', 'country', 'city', 'address', 'is_active', 'email_verified'
+        'name', 'phone', 'country', 'city', 'address', 'is_active', 'email_verified'
       ];
       const creatorKeys = Object.keys(creatorPayload).filter((k) => allowedCreatorKeys.includes(k));
       if (creatorKeys.length > 0) {
@@ -259,12 +286,46 @@ export async function PUT(request, { params }) {
       }
     }
 
+    if (rawData.website_information) {
+      const wi = rawData.website_information;
+      const validStatuses = ['pending', 'approved', 'rejected'];
+      const vStatus = validStatuses.includes(String(wi.verification_status).toLowerCase())
+        ? String(wi.verification_status).toLowerCase()
+        : 'pending';
+
+      await queryDb(
+        `INSERT INTO website_information (
+          website_id, creator_nid, creator_nid_url, eiin_certificate, eiin_certificate_url, address, other_details, verification_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (website_id) DO UPDATE SET
+          creator_nid = COALESCE(EXCLUDED.creator_nid, website_information.creator_nid),
+          creator_nid_url = COALESCE(EXCLUDED.creator_nid_url, website_information.creator_nid_url),
+          eiin_certificate = COALESCE(EXCLUDED.eiin_certificate, website_information.eiin_certificate),
+          eiin_certificate_url = COALESCE(EXCLUDED.eiin_certificate_url, website_information.eiin_certificate_url),
+          address = COALESCE(EXCLUDED.address, website_information.address),
+          other_details = COALESCE(EXCLUDED.other_details, website_information.other_details),
+          verification_status = EXCLUDED.verification_status,
+          updated_at = CURRENT_TIMESTAMP`,
+        [
+          websiteId,
+          wi.creator_nid || null,
+          wi.creator_nid_url || null,
+          wi.eiin_certificate || null,
+          wi.eiin_certificate_url || null,
+          wi.address || null,
+          typeof wi.other_details === 'object' && wi.other_details !== null ? JSON.stringify(wi.other_details) : '{}',
+          vStatus
+        ]
+      ).catch((e) => console.error(e));
+    }
+
     const websiteData = { ...rawData };
     delete websiteData.creator_data;
     delete websiteData.creator;
+    delete websiteData.website_information;
     delete websiteData.toggle_module_id;
     delete websiteData.module_ids;
-    delete websiteData.package_id; 
+    delete websiteData.package_id;
 
     if (websiteData.subscription_id !== undefined) {
       const targetSubId = websiteData.subscription_id ? Number(websiteData.subscription_id) : null;
@@ -301,34 +362,44 @@ export async function PUT(request, { params }) {
 
     if (websiteData.subdomain) {
       const cleanSub = String(websiteData.subdomain).toLowerCase().trim().replace(/[^a-z0-9-]+/g, '');
-      await queryDb(
-        `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
-         VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', 'domains.hiesci.com')
-         ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
-        [websiteId, cleanSub]
-      ).catch(() => {});
+      if (cleanSub) {
+        await queryDb(
+          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+           VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', 'domains.hiesci.com')
+           ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
+          [websiteId, cleanSub]
+        ).catch((e) => console.error(e));
+      }
     }
 
     if (websiteData.custom_domain !== undefined) {
       const rawCustom = String(websiteData.custom_domain || '').trim().toLowerCase();
+      const isVerified = Boolean(rawData.custom_domain_verified);
       if (!rawCustom) {
-        await queryDb(`DELETE FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain'`, [websiteId]).catch(() => {});
+        await queryDb(`DELETE FROM website_domains WHERE website_id = $1 AND domain_type IN ('custom_domain', 'custom')`, [websiteId]).catch(() => {});
       } else {
         await queryDb(
-          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
-           VALUES ($1, 'custom_domain', $2, $2, FALSE, FALSE, 'CNAME', 'domains.hiesci.com')
-           ON CONFLICT (domain) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-          [websiteId, rawCustom]
-        ).catch(() => {});
+          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value, verified_at)
+           VALUES ($1, 'custom_domain', $2, $2, FALSE, $3, 'CNAME', 'domains.hiesci.com', (CASE WHEN $3 THEN CURRENT_TIMESTAMP ELSE NULL END))
+           ON CONFLICT (domain) DO UPDATE SET is_verified = $3, verified_at = (CASE WHEN $3 THEN CURRENT_TIMESTAMP ELSE NULL END), updated_at = CURRENT_TIMESTAMP`,
+          [websiteId, rawCustom, isVerified]
+        ).catch((e) => console.error(e));
       }
+    } else if (rawData.custom_domain_verified !== undefined) {
+      const isVerified = Boolean(rawData.custom_domain_verified);
+      await queryDb(
+        `UPDATE website_domains SET is_verified = $1, verified_at = (CASE WHEN $1 THEN CURRENT_TIMESTAMP ELSE NULL END), updated_at = CURRENT_TIMESTAMP WHERE website_id = $2 AND domain_type IN ('custom_domain', 'custom')`,
+        [isVerified, websiteId]
+      ).catch((e) => console.error(e));
     }
 
     const allowedWebsiteKeys = [
       'creator_id', 'subscription_id', 'name', 'slug',
-      'institution_type', 'eiin_number',
+      'institution_type', 'eiin_number', 'currency',
       'status', 'theme', 'primary_color', 'secondary_color', 'logo', 'logo_id', 'favicon', 'favicon_id',
       'contact_email', 'contact_phone', 'address', 'subscription_expires_at',
-      'storage_used_mb', 'is_maintenance_mode'
+      'storage_used_mb', 'is_maintenance_mode', 'maintenance_message',
+      'facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'linkedin_url'
     ];
 
     const keys = Object.keys(websiteData).filter((k) => allowedWebsiteKeys.includes(k));
@@ -347,15 +418,17 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json({
       success: true,
-      message: 'Website data and creator updated successfully.',
+      message: 'Website data and status updated successfully.',
       record: refreshed,
       website: refreshed,
     });
   } catch (error) {
-    console.error('Website [id] PUT error:', error);
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
+
+export const PATCH = PUT;
 
 export async function DELETE(request, { params }) {
   try {
@@ -374,7 +447,7 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json({ success: true, message: 'Website deleted successfully.' });
   } catch (error) {
-    console.error('Website [id] DELETE error:', error);
+    console.error(error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

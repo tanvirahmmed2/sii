@@ -10,7 +10,7 @@ export default function SupportDetailsPage() {
   const router = useRouter();
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canDelete = permissions.includes('support') || user?.role === 'admin' || user?.role === 'manager';
+  const canDelete = permissions.includes('support') || permissions.includes('supports') || permissions.includes('*') || Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || user?.role === 'admin' || user?.role === 'manager';
 
   const [tickets, setTickets] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -205,10 +205,9 @@ export default function SupportDetailsPage() {
         <div className="w-full sm:w-80">
           <input
             type="text"
-            placeholder="Search visitor, developer, message..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
           />
         </div>
 

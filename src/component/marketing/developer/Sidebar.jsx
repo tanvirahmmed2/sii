@@ -19,7 +19,6 @@ export const ADMIN_NAV_SECTIONS = [
     links: [
       { href: '/developer/websites', label: 'Websites' },
       { href: '/developer/creators', label: 'Creators' },
-      { href: '/developer/users', label: 'End-Users' },
       { href: '/developer/leads', label: 'Leads' },
       { href: '/developer/subscribers', label: 'Subscribers' },
     ],
@@ -111,13 +110,60 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
   const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
   const allowedModules = userPerms.map((m) => String(m).toLowerCase().trim());
 
+  const ALIAS_MAP = {
+    'support': ['support', 'supports'],
+    'supports': ['support', 'supports'],
+    'live-chats': ['live-chats', 'live_chats', 'live-chat', 'live_chat'],
+    'live_chats': ['live-chats', 'live_chats', 'live-chat', 'live_chat'],
+    'contacts': ['contacts', 'contact'],
+    'contact': ['contacts', 'contact'],
+    'reports': ['reports', 'report'],
+    'report': ['reports', 'report'],
+    'reviews': ['reviews', 'review'],
+    'review': ['reviews', 'review'],
+    'faqs': ['faqs', 'faq'],
+    'faq': ['faqs', 'faq'],
+    'policies': ['policies', 'policy'],
+    'policy': ['policies', 'policy'],
+    'packages': ['packages', 'package'],
+    'package': ['packages', 'package'],
+    'blogs': ['blogs', 'blog'],
+    'blog': ['blogs', 'blog'],
+    'facebook-messages': ['facebook-messages', 'facebook_messages', 'facebook', 'meta'],
+    'facebook_messages': ['facebook-messages', 'facebook_messages', 'facebook', 'meta'],
+    'instagram-messages': ['instagram-messages', 'instagram_messages', 'instagram', 'meta'],
+    'instagram_messages': ['instagram-messages', 'instagram_messages', 'instagram', 'meta'],
+    'whatsapp-messages': ['whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
+    'whatsapp_messages': ['whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
+    'meta': ['facebook-messages', 'facebook_messages', 'facebook', 'instagram-messages', 'instagram_messages', 'instagram', 'whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
+    'websites': ['websites', 'website'],
+    'website': ['websites', 'website'],
+    'creators': ['creators', 'creator'],
+    'creator': ['creators', 'creator'],
+    'leads': ['leads', 'lead'],
+    'lead': ['leads', 'lead'],
+    'subscribers': ['subscribers', 'subscriber'],
+    'subscriber': ['subscribers', 'subscriber'],
+    'websites': ['websites', 'website'],
+    'website': ['websites', 'website'],
+    'creators': ['creators', 'creator'],
+    'creator': ['creators', 'creator'],
+    'leads': ['leads', 'lead'],
+    'lead': ['leads', 'lead'],
+    'subscribers': ['subscribers', 'subscriber'],
+    'subscriber': ['subscribers', 'subscriber'],
+  };
+
   const isLinkAllowed = (link) => {
     if (isSuperAdmin) return true;
     if (link.href === '/developer' || link.href === '/developer/profile') return true;
     const rawPath = link.href.split('?')[0];
     const segments = rawPath.split('/').filter(Boolean);
     const moduleName = (segments[1] || '').toLowerCase().trim();
-    return allowedModules.includes(moduleName);
+    if (allowedModules.includes(moduleName)) return true;
+    const aliases = ALIAS_MAP[moduleName];
+    if (aliases && aliases.some((a) => allowedModules.includes(a))) return true;
+    return false;
   };
 
   const handleLogout = async () => {

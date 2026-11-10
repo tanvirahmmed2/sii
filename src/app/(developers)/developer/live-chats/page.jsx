@@ -301,11 +301,10 @@ export default function AdminLiveChatsPage() {
           >
             <input
               type="text"
-              placeholder={`Reply to ${activeChat.visitor_name}...`}
               value={replyMessage}
               onChange={(e) => setReplyMessage(e.target.value)}
               disabled={sendingReply}
-              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
             <button
               type="submit"

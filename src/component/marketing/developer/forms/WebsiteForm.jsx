@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 export default function WebsiteForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
-    creator_id: 101,
+    creator_id: 1,
     name: '',
     subdomain: '',
     custom_domain: '',
@@ -41,7 +41,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
       const data = await res.json();
       if (data.success) {
         setFormData({
-          creator_id: 101,
+          creator_id: 1,
           name: '',
           subdomain: '',
           custom_domain: '',
@@ -93,7 +93,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <input
               type="number"
               required
-              placeholder="e.g. 101"
+              aria-label="Creator ID"
               value={formData.creator_id}
               onChange={(e) => setFormData({ ...formData, creator_id: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -105,7 +105,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <input
               type="text"
               required
-              placeholder="e.g. Acme Portfolio"
+              aria-label="Website Name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -116,7 +116,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Subdomain</label>
             <input
               type="text"
-              placeholder="e.g. acme"
+              aria-label="Subdomain"
               value={formData.subdomain}
               onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -129,7 +129,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Custom Domain</label>
             <input
               type="text"
-              placeholder="e.g. acme.com"
+              aria-label="Custom Domain"
               value={formData.custom_domain}
               onChange={(e) => setFormData({ ...formData, custom_domain: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -139,6 +139,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
           <div className="space-y-1">
             <label className="block text-xs font-normal text-slate-700 dark:text-slate-300">Status</label>
             <select
+              aria-label="Status"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -154,6 +155,7 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <input
               type="number"
               min={0}
+              aria-label="Storage Quota in Megabytes"
               value={formData.storage_used_mb}
               onChange={(e) => setFormData({ ...formData, storage_used_mb: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 focus:bg-white dark:focus:bg-slate-800"
@@ -167,12 +169,14 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <div className="flex items-center gap-2">
               <input
                 type="color"
+                aria-label="Primary Color Picker"
                 value={formData.primary_color || '#1e40af'}
                 onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
                 className="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0.5"
               />
               <input
                 type="text"
+                aria-label="Primary Color Hex Code"
                 value={formData.primary_color}
                 onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
@@ -185,12 +189,14 @@ export default function WebsiteForm({ onSuccess, onCancel }) {
             <div className="flex items-center gap-2">
               <input
                 type="color"
+                aria-label="Secondary Color Picker"
                 value={formData.secondary_color || '#0ea5e9'}
                 onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
                 className="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0.5"
               />
               <input
                 type="text"
+                aria-label="Secondary Color Hex Code"
                 value={formData.secondary_color}
                 onChange={(e) => setFormData({ ...formData, secondary_color: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"

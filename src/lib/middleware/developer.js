@@ -281,6 +281,76 @@ function expandModuleAliases(slugs) {
     } else if (clean === 'blogs' || clean === 'blog') {
       result.add('blogs');
       result.add('blog');
+    } else if (clean === 'support' || clean === 'supports') {
+      result.add('support');
+      result.add('supports');
+    } else if (clean === 'live-chats' || clean === 'live_chats' || clean === 'live-chat' || clean === 'live_chat') {
+      result.add('live-chats');
+      result.add('live_chats');
+      result.add('live-chat');
+      result.add('live_chat');
+    } else if (clean === 'contacts' || clean === 'contact') {
+      result.add('contacts');
+      result.add('contact');
+    } else if (clean === 'reports' || clean === 'report') {
+      result.add('reports');
+      result.add('report');
+    } else if (clean === 'reviews' || clean === 'review') {
+      result.add('reviews');
+      result.add('review');
+    } else if (clean === 'chats' || clean === 'chat') {
+      result.add('chats');
+      result.add('chat');
+    } else if (clean === 'facebook-messages' || clean === 'facebook_messages' || clean === 'facebook') {
+      result.add('facebook-messages');
+      result.add('facebook_messages');
+      result.add('facebook');
+      result.add('meta');
+    } else if (clean === 'instagram-messages' || clean === 'instagram_messages' || clean === 'instagram') {
+      result.add('instagram-messages');
+      result.add('instagram_messages');
+      result.add('instagram');
+      result.add('meta');
+    } else if (clean === 'whatsapp-messages' || clean === 'whatsapp_messages' || clean === 'whatsapp') {
+      result.add('whatsapp-messages');
+      result.add('whatsapp_messages');
+      result.add('whatsapp');
+      result.add('meta');
+    } else if (clean === 'meta') {
+      result.add('facebook-messages');
+      result.add('facebook_messages');
+      result.add('facebook');
+      result.add('instagram-messages');
+      result.add('instagram_messages');
+      result.add('instagram');
+      result.add('whatsapp-messages');
+      result.add('whatsapp_messages');
+      result.add('whatsapp');
+      result.add('meta');
+    } else if (clean === 'websites' || clean === 'website') {
+      result.add('websites');
+      result.add('website');
+    } else if (clean === 'creators' || clean === 'creator') {
+      result.add('creators');
+      result.add('creator');
+    } else if (clean === 'leads' || clean === 'lead') {
+      result.add('leads');
+      result.add('lead');
+    } else if (clean === 'subscribers' || clean === 'subscriber') {
+      result.add('subscribers');
+      result.add('subscriber');
+    } else if (clean === 'websites' || clean === 'website') {
+      result.add('websites');
+      result.add('website');
+    } else if (clean === 'creators' || clean === 'creator') {
+      result.add('creators');
+      result.add('creator');
+    } else if (clean === 'leads' || clean === 'lead') {
+      result.add('leads');
+      result.add('lead');
+    } else if (clean === 'subscribers' || clean === 'subscriber') {
+      result.add('subscribers');
+      result.add('subscriber');
     }
   }
   return Array.from(result);

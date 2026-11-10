@@ -81,7 +81,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
             <input
               type="text"
               required
-              placeholder="e.g. Thomas Wayne"
+              aria-label="Prospect Name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -93,7 +93,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
             <input
               type="email"
               required
-              placeholder="thomas@waynecorp.com"
+              aria-label="Email Address"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -106,7 +106,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
             <input
               type="text"
-              placeholder="+1 (555) 000-0000"
+              aria-label="Phone Number"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -117,7 +117,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Company / Organization</label>
             <input
               type="text"
-              placeholder="Wayne Enterprises"
+              aria-label="Company or Organization"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -127,6 +127,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Inbound Channel / Source</label>
             <select
+              aria-label="Inbound Channel or Source"
               value={formData.source}
               onChange={(e) => setFormData({ ...formData, source: e.target.value })}
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
@@ -144,7 +145,7 @@ export default function LeadForm({ onSuccess, onCancel, apiEndpoint = '/api/mark
           <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Lead Notes &amp; Project Requirements</label>
           <textarea
             rows={3}
-            placeholder="Key discussion points, expected package scale, deployment schedule..."
+            aria-label="Lead Notes and Requirements"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"

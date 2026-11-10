@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { getMetaConfigStatus } from 'src/lib/meta/graph';
 
-const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'settings'];
+const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'settings', 'meta'];
 
 export async function GET(request) {
   try {

@@ -34,7 +34,7 @@ export async function GET(request) {
              c.email AS creator_email,
              NULL::text AS creator_avatar,
              w.name AS website_name,
-             w.subdomain AS website_subdomain,
+             (SELECT domain FROM website_domains wd WHERE wd.website_id = w.id LIMIT 1) AS website_subdomain,
              COALESCE(p.name, r.institution_name, 'SaaS Client') AS package_name,
              p.slug AS package_slug
       FROM reviews r
@@ -153,6 +153,8 @@ export async function PUT(request) {
     );
   }
 }
+
+export const PATCH = PUT;
 
 export async function DELETE(request) {
   try {

@@ -14,8 +14,8 @@ export default function SingleSupportTicketPage() {
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canDelete = permissions.includes('support') || user?.role === 'admin' || user?.role === 'manager';
-  const canReply = permissions.includes('support') || user?.role === 'admin' || user?.role === 'developer' || user?.role === 'manager';
+  const canDelete = permissions.includes('support') || permissions.includes('supports') || permissions.includes('*') || Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || user?.role === 'admin' || user?.role === 'manager';
+  const canReply = permissions.includes('support') || permissions.includes('supports') || permissions.includes('*') || Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || user?.role === 'admin' || user?.role === 'developer' || user?.role === 'manager';
 
   const [ticket, setTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -557,14 +557,9 @@ export default function SingleSupportTicketPage() {
               disabled={sendingReply || !canReply}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder={
-                canReply
-                  ? 'Reply to creator or paste screenshot... Press Enter to send, Shift+Enter for a new line.'
-                  : 'You do not have permission to reply.'
-              }
               value={replyMessage}
               onChange={(e) => setReplyMessage(e.target.value)}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800 resize-none"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800 resize-none"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -618,42 +613,34 @@ export default function SingleSupportTicketPage() {
       </div>
 
       {previewModalImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"
-          onClick={() => setPreviewModalImage(null)}
-        >
-          <div
-            className="relative max-w-4xl w-full bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl p-3 space-y-2 border border-slate-200 dark:border-slate-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-2 px-1 border-b border-slate-100 dark:border-slate-800">
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">Ticket Attachment Preview</span>
-              <div className="flex items-center gap-3">
-                <a
-                  href={previewModalImage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium inline-flex items-center gap-1"
-                >
-                  <span>Open Full Size</span>
-                  <span>↗</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setPreviewModalImage(null)}
-                  className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center font-bold text-sm cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
+        <div className="bg-white dark:bg-slate-900 rounded-lg p-3 space-y-2 border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-2 px-1 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-100">Attachment Preview</span>
+            <div className="flex items-center gap-3">
+              <a
+                href={previewModalImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium inline-flex items-center gap-1"
+              >
+                <span>Open in New Tab</span>
+                <span>↗</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewModalImage(null)}
+                className="w-7 h-7 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
-            <div className="flex items-center justify-center p-2 max-h-[78vh] overflow-auto">
-              <img
-                src={previewModalImage}
-                alt="Enlarged attachment"
-                className="max-h-[74vh] max-w-full object-contain rounded-lg shadow-sm"
-              />
-            </div>
+          </div>
+          <div className="flex items-center justify-center p-2 max-h-[500px] overflow-auto bg-slate-50 dark:bg-slate-950/50 rounded">
+            <img
+              src={previewModalImage}
+              alt="Enlarged attachment"
+              className="max-h-[460px] max-w-full object-contain rounded"
+            />
           </div>
         </div>
       )}

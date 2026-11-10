@@ -3,7 +3,7 @@ import { pool } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { sendPlatformMessage } from 'src/lib/meta/graph';
 
-const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats'];
+const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'meta'];
 
 export async function GET(request) {
   try {
@@ -48,18 +48,19 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { conversationId, messageText } = body;
+    const { conversationId } = body;
+    const messageInput = body.messageText !== undefined ? body.messageText : body.message;
 
     const convId = parseInt(conversationId, 10);
     if (isNaN(convId) || convId <= 0) {
       return NextResponse.json({ success: false, error: 'Valid integer conversationId is required' }, { status: 400 });
     }
 
-    if (!messageText || typeof messageText !== 'string') {
+    if (!messageInput || typeof messageInput !== 'string') {
       return NextResponse.json({ success: false, error: 'messageText is required' }, { status: 400 });
     }
 
-    const cleanText = messageText.replace(/[\0]/g, '').trim();
+    const cleanText = messageInput.replace(/[\0]/g, '').trim();
     if (!cleanText) {
       return NextResponse.json({ success: false, error: 'messageText cannot be empty' }, { status: 400 });
     }
@@ -136,6 +137,7 @@ export async function POST(request) {
       success: true,
       record: savedMessage,
       warning: apiWarning,
+      apiNotice: apiWarning,
     });
   } catch (error) {
     console.error('Failed to send Meta message:', error.message);

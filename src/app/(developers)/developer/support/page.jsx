@@ -14,7 +14,7 @@ export default function SupportChatPage() {
 
   const { user } = useContext(Context);
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canReply = permissions.includes('support') || user?.role === 'admin' || user?.role === 'developer' || user?.role === 'manager';
+  const canReply = permissions.includes('support') || permissions.includes('supports') || permissions.includes('*') || Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || user?.role === 'admin' || user?.role === 'developer' || user?.role === 'manager';
 
   const [tickets, setTickets] = useState([]);
   const [activeTicketId, setActiveTicketId] = useState(null);
@@ -307,11 +307,10 @@ export default function SupportChatPage() {
           >
             <input
               type="text"
-              placeholder={`Reply to ${activeTicket.requester_name || activeTicket.creator_name || 'creator'}...`}
               value={replyMessage}
               onChange={(e) => setReplyMessage(e.target.value)}
               disabled={sendingReply || !canReply}
-              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
             <button
               type="submit"

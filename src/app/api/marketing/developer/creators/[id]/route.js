@@ -75,13 +75,20 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, creator_id, name, slug, subdomain, custom_domain, theme, primary_color, secondary_color,
-                status, storage_used_mb,
-                (CASE WHEN status = 'active' AND NOT is_maintenance_mode THEN true ELSE false END) AS is_published,
-                created_at, updated_at
-         FROM websites
-         WHERE creator_id = $1
-         ORDER BY id DESC`,
+        `SELECT w.id, w.creator_id, w.name, w.slug,
+                COALESCE(
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+                  w.slug
+                ) AS subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+                w.theme, w.primary_color, w.secondary_color,
+                w.status, w.storage_used_mb,
+                (CASE WHEN w.status = 'active' AND NOT w.is_maintenance_mode THEN true ELSE false END) AS is_published,
+                w.created_at, w.updated_at
+         FROM websites w
+         WHERE w.creator_id = $1
+         ORDER BY w.id DESC`,
         [creatorId]
       ).catch(() => ({ rows: [] })),
 
@@ -294,3 +301,5 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PATCH = PUT;

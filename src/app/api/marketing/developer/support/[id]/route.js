@@ -190,3 +190,6 @@ export async function DELETE(request, context) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PATCH = PUT;
+export { POST } from './messages/route';

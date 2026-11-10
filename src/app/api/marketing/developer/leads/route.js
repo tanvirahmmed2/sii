@@ -61,6 +61,8 @@ export async function PUT(request) {
   }
 }
 
+export const PATCH = PUT;
+
 export async function DELETE(request) {
   try {
     const auth = await hasModulePermission(request, 'leads');

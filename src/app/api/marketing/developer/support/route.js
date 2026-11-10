@@ -65,6 +65,7 @@ export async function GET(request) {
       FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       ${whereSql}
       ORDER BY s.updated_at DESC
     `, queryParams).catch(() => ({ rows: [] }));
@@ -135,6 +136,8 @@ export async function PUT(request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PATCH = PUT;
 
 export async function DELETE(request) {
   try {

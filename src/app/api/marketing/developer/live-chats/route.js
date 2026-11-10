@@ -1,1 +1,1 @@
-export { GET, POST, PUT, DELETE } from '../live_chats/route.js';
+export { GET, POST, PUT, DELETE, PATCH } from '../live_chats/route.js';

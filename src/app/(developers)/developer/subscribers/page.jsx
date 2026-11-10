@@ -12,8 +12,9 @@ export default function AdminSubscribersPage() {
   const [deletingId, setDeletingId] = useState(null);
 
   const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
-  const canView = permissions.includes('subscribers');
-  const canDelete = permissions.includes('subscribers');
+  const isOwner = Number(user?.id) === 1 || String(user?.email).toLowerCase() === 'tanvir004006@gmail.com' || permissions.includes('*');
+  const canView = isOwner || permissions.includes('subscribers') || permissions.includes('subscriber');
+  const canDelete = isOwner || permissions.includes('subscribers') || permissions.includes('subscriber');
 
   const fetchSubs = async () => {
     try {
@@ -137,10 +138,10 @@ export default function AdminSubscribersPage() {
           <div className="w-full sm:w-72">
             <input
               type="text"
-              placeholder="Search by email or acquisition channel..."
+              aria-label="Search by email or acquisition channel"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"
             />
           </div>
           <div className="text-xs text-slate-500 font-medium">

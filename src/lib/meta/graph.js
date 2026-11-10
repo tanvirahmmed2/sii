@@ -10,6 +10,7 @@ import {
   META_WABA_ID,
   META_WEBHOOK_VERIFY_TOKEN,
 } from 'src/lib/database/secret';
+import { queryDb } from 'src/lib/database/db';
 
 export function verifyMetaWebhookSignature(rawBody, signature, secret = META_APP_SECRET) {
   if (!secret) return true; 
@@ -187,8 +188,6 @@ export async function sendPlatformMessage({ platform, recipientId, message, acce
 
   return data;
 }
-
-import { queryDb } from 'src/lib/database/db';
 
 export function getMetaConfigStatus() {
   const hasFbToken = Boolean(META_PAGE_ACCESS_TOKEN || META_ACCESS_TOKEN);

@@ -112,10 +112,10 @@ export default function AdminLeadsPage() {
           <div className="w-full sm:w-72">
             <input
               type="text"
-              placeholder="Search leads by name, email, or company..."
+              aria-label="Search leads by name, email, or company"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"
             />
           </div>
           <div className="text-xs text-slate-500 font-medium">
