@@ -162,3 +162,104 @@ export async function checkInstitutionEmailAvailability(websiteId, email, option
 
   return { available: true };
 }
+
+export async function checkInstitutionPhoneAvailability(websiteId, phone, options = {}) {
+  if (!phone || typeof phone !== 'string') {
+    return { available: false, message: 'Valid phone number is required.' };
+  }
+
+  const cleanPhone = phone.trim();
+  if (!cleanPhone) {
+    return { available: false, message: 'Valid phone number is required.' };
+  }
+
+  const wId = parseInt(websiteId, 10);
+  const { excludeRole = null, excludeId = null } = options;
+  const exId = excludeId ? parseInt(excludeId, 10) : null;
+
+  if (excludeRole !== 'staff') {
+    const res = await queryDb(
+      `SELECT id, name FROM website_staffs
+       WHERE website_id = $1 AND TRIM(number) = $2 LIMIT 1`,
+      [wId, cleanPhone]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'staff',
+        message: 'This phone number is already registered to a staff member in this institution.'
+      };
+    }
+  } else if (exId) {
+    const res = await queryDb(
+      `SELECT id FROM website_staffs
+       WHERE website_id = $1 AND TRIM(number) = $2 AND id != $3 LIMIT 1`,
+      [wId, cleanPhone, exId]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'staff',
+        message: 'This phone number is already registered to another staff member in this institution.'
+      };
+    }
+  }
+
+  if (excludeRole !== 'teacher') {
+    const res = await queryDb(
+      `SELECT id, name FROM website_teachers
+       WHERE website_id = $1 AND TRIM(number) = $2 LIMIT 1`,
+      [wId, cleanPhone]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'teacher',
+        message: 'This phone number is already registered to a faculty / teacher in this institution.'
+      };
+    }
+  } else if (exId) {
+    const res = await queryDb(
+      `SELECT id FROM website_teachers
+       WHERE website_id = $1 AND TRIM(number) = $2 AND id != $3 LIMIT 1`,
+      [wId, cleanPhone, exId]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'teacher',
+        message: 'This phone number is already registered to another teacher in this institution.'
+      };
+    }
+  }
+
+  if (excludeRole !== 'officer') {
+    const res = await queryDb(
+      `SELECT id, name FROM website_officers
+       WHERE website_id = $1 AND TRIM(phone) = $2 LIMIT 1`,
+      [wId, cleanPhone]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'officer',
+        message: 'This phone number is already registered to an administrative officer in this institution.'
+      };
+    }
+  } else if (exId) {
+    const res = await queryDb(
+      `SELECT id FROM website_officers
+       WHERE website_id = $1 AND TRIM(phone) = $2 AND id != $3 LIMIT 1`,
+      [wId, cleanPhone, exId]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'officer',
+        message: 'This phone number is already registered to another officer in this institution.'
+      };
+    }
+  }
+
+  return { available: true };
+}

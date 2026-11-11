@@ -6,7 +6,7 @@ import { getStaffSession, hasStaffModulePermission, hashPassword } from 'src/lib
 import { revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
-import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 const VALID_DEPARTMENTS = [
@@ -397,6 +397,11 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
 
+    const phoneAvail = await checkInstitutionPhoneAvailability(website.id, trimmedPhone);
+    if (!phoneAvail.available) {
+      return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+    }
+
     let finalSalary = Number(salary) || 0.00;
     let selectedPayroll = null;
     const targetPayrollId = payroll_id || body.payrollId || null;
@@ -653,6 +658,16 @@ export async function PUT(request, context) {
       });
       if (!emailAvail.available) {
         return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
+      }
+    }
+
+    if (phone && phone.trim()) {
+      const phoneAvail = await checkInstitutionPhoneAvailability(website.id, phone.trim(), {
+        excludeRole: 'officer',
+        excludeId: id,
+      });
+      if (!phoneAvail.available) {
+        return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
       }
     }
 

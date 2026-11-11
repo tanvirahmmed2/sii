@@ -169,8 +169,18 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, email),
+    UNIQUE(website_id, number),
     UNIQUE(website_id, username)
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_website_staffs_web_number'
+    ) THEN
+        ALTER TABLE website_staffs ADD CONSTRAINT uq_website_staffs_web_number UNIQUE (website_id, number);
+    END IF;
+END $$;
 
 DROP TRIGGER IF EXISTS update_website_staffs_updated_at ON website_staffs;
 CREATE TRIGGER update_website_staffs_updated_at
@@ -232,6 +242,11 @@ BEGIN
     ) THEN
         ALTER TABLE website_modules_permissions ADD COLUMN website_module_id BIGINT REFERENCES website_control_modules(id) ON DELETE CASCADE;
         UPDATE website_modules_permissions SET website_module_id = control_module_id WHERE website_module_id IS NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_website_modules_permissions_staff_ctrl'
+    ) THEN
+        ALTER TABLE website_modules_permissions ADD CONSTRAINT uq_website_modules_permissions_staff_ctrl UNIQUE (staff_id, control_module_id);
     END IF;
 END $$;
 
@@ -913,8 +928,19 @@ CREATE TABLE IF NOT EXISTS website_teachers (
     verification_token_expires TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, email)
+    UNIQUE(website_id, email),
+    UNIQUE(website_id, number)
 );
+
+ALTER TABLE website_teachers ALTER COLUMN password SET NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_website_teachers_web_number'
+    ) THEN
+        ALTER TABLE website_teachers ADD CONSTRAINT uq_website_teachers_web_number UNIQUE (website_id, number);
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_website_teachers_dept ON website_teachers(department_id);
 CREATE INDEX IF NOT EXISTS idx_website_teachers_web ON website_teachers(website_id);
@@ -1066,8 +1092,18 @@ CREATE TABLE IF NOT EXISTS website_officers (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, email),
+    UNIQUE(website_id, phone),
     UNIQUE(website_id, username)
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'uq_website_officers_web_phone'
+    ) THEN
+        ALTER TABLE website_officers ADD CONSTRAINT uq_website_officers_web_phone UNIQUE (website_id, phone);
+    END IF;
+END $$;
 
 DROP TRIGGER IF EXISTS update_website_officers_updated_at ON website_officers;
 CREATE TRIGGER update_website_officers_updated_at

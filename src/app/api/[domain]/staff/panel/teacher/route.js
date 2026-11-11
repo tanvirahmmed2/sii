@@ -5,7 +5,7 @@ import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 import { hashPassword } from 'src/lib/middleware/staff.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
-import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 export function buildTeacherVerificationUrl(website, token, request) {
@@ -273,26 +273,35 @@ export async function POST(request, context) {
       qualifications = [],
     } = body;
 
-    if (!name || !name.trim()) {
+    const cleanName = (name || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanNumber = (number || body.phone || '').trim();
+
+    if (!cleanName) {
       return NextResponse.json({ success: false, error: 'Teacher full name is required.' }, { status: 400 });
     }
-    if (!email || !email.trim()) {
+    if (!cleanEmail) {
       return NextResponse.json({ success: false, error: 'Teacher email address is required.' }, { status: 400 });
     }
-    if (!number || !number.trim()) {
+    if (!cleanNumber) {
       return NextResponse.json({ success: false, error: 'Teacher contact number is required.' }, { status: 400 });
     }
     if (!department_id) {
       return NextResponse.json({ success: false, error: 'Department is required. Every teacher must belong to an academic department.' }, { status: 400 });
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
-    const trimmedNumber = number.trim();
-
-    const emailAvail = await checkInstitutionEmailAvailability(website.id, trimmedEmail);
+    const emailAvail = await checkInstitutionEmailAvailability(website.id, cleanEmail);
     if (!emailAvail.available) {
       return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
     }
+
+    const phoneAvail = await checkInstitutionPhoneAvailability(website.id, cleanNumber);
+    if (!phoneAvail.available) {
+      return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+    }
+
+    const trimmedEmail = cleanEmail;
+    const trimmedNumber = cleanNumber;
 
     const deptRes = await queryDb(
       `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2 LIMIT 1`,
@@ -536,18 +545,45 @@ export async function PUT(request, context) {
 
     const currentTeacher = checkRes.rows[0];
 
-    if (email) {
-      const emailAvail = await checkInstitutionEmailAvailability(website.id, email.trim(), {
+    const cleanName = name !== undefined ? name.trim() : undefined;
+    const cleanEmail = email !== undefined ? email.trim().toLowerCase() : undefined;
+    const cleanNumber = number !== undefined || body.phone !== undefined ? (number || body.phone || '').trim() : undefined;
+
+    if (cleanName !== undefined && !cleanName) {
+      return NextResponse.json({ success: false, error: 'Teacher name cannot be empty.' }, { status: 400 });
+    }
+    if (cleanEmail !== undefined && !cleanEmail) {
+      return NextResponse.json({ success: false, error: 'Teacher email address cannot be empty.' }, { status: 400 });
+    }
+    if (cleanNumber !== undefined && !cleanNumber) {
+      return NextResponse.json({ success: false, error: 'Teacher contact number cannot be empty.' }, { status: 400 });
+    }
+
+    if (cleanEmail) {
+      const emailAvail = await checkInstitutionEmailAvailability(website.id, cleanEmail, {
         excludeRole: 'teacher',
-        excludeId: id
+        excludeId: id,
       });
       if (!emailAvail.available) {
         return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
       }
     }
 
+    if (cleanNumber) {
+      const phoneAvail = await checkInstitutionPhoneAvailability(website.id, cleanNumber, {
+        excludeRole: 'teacher',
+        excludeId: id,
+      });
+      if (!phoneAvail.available) {
+        return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+      }
+    }
+
     let passwordHash = currentTeacher.password;
     if (password && password.trim()) {
+      if (password.trim().length < 6) {
+        return NextResponse.json({ success: false, error: 'Password must be at least 6 characters.' }, { status: 400 });
+      }
       passwordHash = await hashPassword(password.trim());
     }
 
@@ -645,9 +681,9 @@ export async function PUT(request, context) {
        WHERE id = $19 AND website_id = $20
        RETURNING *`,
       [
-        name?.trim() || null,
-        email?.trim().toLowerCase() || null,
-        number?.trim() || null,
+        cleanName || null,
+        cleanEmail || null,
+        cleanNumber || null,
         emergency_contact !== undefined ? (emergency_contact?.trim() || null) : null,
         gender && ['male', 'female', 'other'].includes(gender) ? gender : null,
         blood_group !== undefined ? (blood_group?.trim() || null) : null,

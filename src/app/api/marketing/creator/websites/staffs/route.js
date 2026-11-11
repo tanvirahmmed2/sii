@@ -5,7 +5,7 @@ import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
 import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
-import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
+import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
 
 async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam) {
   const cId = sessionCreator?.id || creatorIdParam;
@@ -161,11 +161,21 @@ export async function POST(request) {
       sendInvite,
     } = body;
 
-    if (!websiteId || !name || !email || !number) {
-      return NextResponse.json(
-        { success: false, error: 'Website ID, name, email, and phone number are required.' },
-        { status: 400 }
-      );
+    const cleanName = (name || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanNumber = (number || body.phone || '').trim();
+
+    if (!websiteId) {
+      return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+    }
+    if (!cleanName) {
+      return NextResponse.json({ success: false, error: 'Staff member full name is required.' }, { status: 400 });
+    }
+    if (!cleanEmail) {
+      return NextResponse.json({ success: false, error: 'Staff member email address is required.' }, { status: 400 });
+    }
+    if (!cleanNumber) {
+      return NextResponse.json({ success: false, error: 'Staff member contact phone number is required.' }, { status: 400 });
     }
 
     const website = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
@@ -173,10 +183,18 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
     }
 
-    const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim());
+    const emailAvail = await checkInstitutionEmailAvailability(websiteId, cleanEmail);
     if (!emailAvail.available) {
       return NextResponse.json(
         { success: false, error: emailAvail.message },
+        { status: 409 }
+      );
+    }
+
+    const phoneAvail = await checkInstitutionPhoneAvailability(websiteId, cleanNumber);
+    if (!phoneAvail.available) {
+      return NextResponse.json(
+        { success: false, error: phoneAvail.message },
         { status: 409 }
       );
     }
@@ -186,15 +204,15 @@ export async function POST(request) {
     let hashedPassword = null;
     let isRegistered = false;
 
-    if (password && password.length >= 6) {
-      hashedPassword = await hashPassword(password);
+    if (password && password.trim().length >= 6) {
+      hashedPassword = await hashPassword(password.trim());
       isRegistered = Boolean(body.markAsRegistered ?? false);
     } else {
       hashedPassword = await hashPassword(generateToken(16));
       isRegistered = false;
     }
 
-    const usernameCandidate = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') + '_' + Math.floor(Math.random() * 899 + 100);
+    const usernameCandidate = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') + '_' + Math.floor(Math.random() * 899 + 100);
 
     const insertStaff = await queryDb(
       `INSERT INTO website_staffs (
@@ -206,9 +224,9 @@ export async function POST(request) {
       RETURNING *`,
       [
         websiteId,
-        name.trim(),
-        email.trim().toLowerCase(),
-        number.trim(),
+        cleanName,
+        cleanEmail,
+        cleanNumber,
         address ? address.trim() : null,
         hashedPassword,
         gradeId ? Number(gradeId) : null,
@@ -230,17 +248,41 @@ export async function POST(request) {
         modIdMap[m.id] = m.id;
       });
 
+      const permRows = [];
       for (const [moduleKey, perm] of Object.entries(permissions)) {
         if (!perm) continue;
-        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
+        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? Number(moduleKey) : null);
         if (!controlModuleId) continue;
+        permRows.push({
+          controlModuleId: Number(controlModuleId),
+          can_view: Boolean(perm.can_view ?? perm.view),
+          can_create: Boolean(perm.can_create ?? perm.create),
+          can_edit: Boolean(perm.can_edit ?? perm.edit),
+          can_delete: Boolean(perm.can_delete ?? perm.delete),
+        });
+      }
+
+      if (permRows.length > 0) {
+        const ctrlIds = permRows.map((r) => r.controlModuleId);
+        const views = permRows.map((r) => r.can_view);
+        const creates = permRows.map((r) => r.can_create);
+        const edits = permRows.map((r) => r.can_edit);
+        const deletes = permRows.map((r) => r.can_delete);
 
         await queryDb(
           `INSERT INTO website_modules_permissions (
             website_id, staff_id, control_module_id, website_module_id,
             can_view, can_create, can_edit, can_delete
           )
-          VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+          SELECT 
+            $1, $2, t.ctrl_id, t.ctrl_id, t.can_v, t.can_c, t.can_e, t.can_d
+          FROM unnest(
+            $3::bigint[],
+            $4::boolean[],
+            $5::boolean[],
+            $6::boolean[],
+            $7::boolean[]
+          ) AS t(ctrl_id, can_v, can_c, can_e, can_d)
           ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
             website_module_id = EXCLUDED.website_module_id,
             can_view = EXCLUDED.can_view,
@@ -248,15 +290,7 @@ export async function POST(request) {
             can_edit = EXCLUDED.can_edit,
             can_delete = EXCLUDED.can_delete,
             updated_at = CURRENT_TIMESTAMP`,
-          [
-            websiteId,
-            newStaff.id,
-            controlModuleId,
-            Boolean(perm.can_view ?? perm.view),
-            Boolean(perm.can_create ?? perm.create),
-            Boolean(perm.can_edit ?? perm.edit),
-            Boolean(perm.can_delete ?? perm.delete),
-          ]
+          [websiteId, newStaff.id, ctrlIds, views, creates, edits, deletes]
         );
       }
     }
@@ -421,17 +455,41 @@ export async function PUT(request) {
         modIdMap[m.id] = m.id;
       });
 
+      const permRows = [];
       for (const [moduleKey, perm] of Object.entries(permissions)) {
         if (!perm) continue;
-        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? moduleKey : null);
+        const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? Number(moduleKey) : null);
         if (!controlModuleId) continue;
+        permRows.push({
+          controlModuleId: Number(controlModuleId),
+          can_view: Boolean(perm.can_view ?? perm.view),
+          can_create: Boolean(perm.can_create ?? perm.create),
+          can_edit: Boolean(perm.can_edit ?? perm.edit),
+          can_delete: Boolean(perm.can_delete ?? perm.delete),
+        });
+      }
+
+      if (permRows.length > 0) {
+        const ctrlIds = permRows.map((r) => r.controlModuleId);
+        const views = permRows.map((r) => r.can_view);
+        const creates = permRows.map((r) => r.can_create);
+        const edits = permRows.map((r) => r.can_edit);
+        const deletes = permRows.map((r) => r.can_delete);
 
         await queryDb(
           `INSERT INTO website_modules_permissions (
             website_id, staff_id, control_module_id, website_module_id,
             can_view, can_create, can_edit, can_delete
           )
-          VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
+          SELECT 
+            $1, $2, t.ctrl_id, t.ctrl_id, t.can_v, t.can_c, t.can_e, t.can_d
+          FROM unnest(
+            $3::bigint[],
+            $4::boolean[],
+            $5::boolean[],
+            $6::boolean[],
+            $7::boolean[]
+          ) AS t(ctrl_id, can_v, can_c, can_e, can_d)
           ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
             website_module_id = EXCLUDED.website_module_id,
             can_view = EXCLUDED.can_view,
@@ -439,15 +497,7 @@ export async function PUT(request) {
             can_edit = EXCLUDED.can_edit,
             can_delete = EXCLUDED.can_delete,
             updated_at = CURRENT_TIMESTAMP`,
-          [
-            websiteId,
-            staffId,
-            controlModuleId,
-            Boolean(perm.can_view ?? perm.view),
-            Boolean(perm.can_create ?? perm.create),
-            Boolean(perm.can_edit ?? perm.edit),
-            Boolean(perm.can_delete ?? perm.delete),
-          ]
+          [websiteId, staffId, ctrlIds, views, creates, edits, deletes]
         );
       }
 
@@ -480,10 +530,24 @@ export async function PUT(request) {
     }
 
     const { name, email, number, address, gradeId, bio } = body;
-    if (email && email.trim()) {
-      const emailAvail = await checkInstitutionEmailAvailability(websiteId, email.trim(), {
+    const cleanNumber = number !== undefined || body.phone !== undefined ? (number || body.phone || '').trim() : undefined;
+    const cleanName = name !== undefined ? name.trim() : undefined;
+    const cleanEmail = email !== undefined ? email.trim().toLowerCase() : undefined;
+
+    if (cleanName !== undefined && !cleanName) {
+      return NextResponse.json({ success: false, error: 'Staff member name cannot be empty.' }, { status: 400 });
+    }
+    if (cleanEmail !== undefined && !cleanEmail) {
+      return NextResponse.json({ success: false, error: 'Staff member email address cannot be empty.' }, { status: 400 });
+    }
+    if (cleanNumber !== undefined && !cleanNumber) {
+      return NextResponse.json({ success: false, error: 'Staff member phone number cannot be empty.' }, { status: 400 });
+    }
+
+    if (cleanEmail) {
+      const emailAvail = await checkInstitutionEmailAvailability(websiteId, cleanEmail, {
         excludeRole: 'staff',
-        excludeId: staffId
+        excludeId: staffId,
       });
       if (!emailAvail.available) {
         return NextResponse.json(
@@ -492,8 +556,21 @@ export async function PUT(request) {
         );
       }
     }
-    const updRes = await queryDb(
 
+    if (cleanNumber) {
+      const phoneAvail = await checkInstitutionPhoneAvailability(websiteId, cleanNumber, {
+        excludeRole: 'staff',
+        excludeId: staffId,
+      });
+      if (!phoneAvail.available) {
+        return NextResponse.json(
+          { success: false, error: phoneAvail.message },
+          { status: 409 }
+        );
+      }
+    }
+
+    const updRes = await queryDb(
       `UPDATE website_staffs
        SET name = COALESCE($1, name),
            email = COALESCE($2, email),
@@ -505,9 +582,9 @@ export async function PUT(request) {
        WHERE id = $7 AND website_id = $8
        RETURNING *`,
       [
-        name ? name.trim() : null,
-        email ? email.trim().toLowerCase() : null,
-        number ? number.trim() : null,
+        cleanName || null,
+        cleanEmail || null,
+        cleanNumber || null,
         address ? address.trim() : null,
         gradeId ? Number(gradeId) : null,
         bio ? bio.trim() : null,

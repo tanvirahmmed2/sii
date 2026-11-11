@@ -142,7 +142,7 @@ export default function WebsiteManagePage() {
     number: '',
     address: '',
     password: '',
-    passwordMode: 'invite', 
+    passwordMode: 'invite',
     gradeId: '',
     bio: '',
     sendInvite: true,
@@ -221,7 +221,7 @@ export default function WebsiteManagePage() {
         setIsMaintenanceMode(Boolean(w.is_maintenance_mode));
         setMaintenanceMessage(
           w.maintenance_message ||
-            'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
+          'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.'
         );
 
         let cleanSub = w.subdomain || w.slug || '';
@@ -236,7 +236,7 @@ export default function WebsiteManagePage() {
           if (typeof recs === 'string') {
             try {
               recs = JSON.parse(recs);
-            } catch {}
+            } catch { }
           }
           if (Array.isArray(recs)) {
             setDomainDnsRecords(recs);
@@ -1104,11 +1104,10 @@ export default function WebsiteManagePage() {
             <span className="text-slate-300">/</span>
             <span className="font-semibold text-slate-900">{website.name}</span>
             <span
-              className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
-                !isMaintenanceMode
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}
+              className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${!isMaintenanceMode
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
             >
               {!isMaintenanceMode ? 'Live' : 'Maintenance Mode'}
             </span>
@@ -1178,11 +1177,10 @@ export default function WebsiteManagePage() {
               setActiveTab(tab.id);
               if (tab.id === 'staffs' && website?.id) fetchStaffs(website.id);
             }}
-            className={`px-3.5 py-2 font-medium text-xs border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
-              activeTab === tab.id
-                ? 'border-slate-900 text-slate-900 bg-white font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-            }`}
+            className={`px-3.5 py-2 font-medium text-xs border-b-2 whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id
+              ? 'border-slate-900 text-slate-900 bg-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+              }`}
           >
             {tab.label}
           </button>
@@ -1258,16 +1256,14 @@ export default function WebsiteManagePage() {
 
               {website.custom_domain && (
                 <span
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded border flex items-center gap-1.5 ${
-                    website.custom_domain_verified
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                  }`}
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded border flex items-center gap-1.5 ${website.custom_domain_verified
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      website.custom_domain_verified ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${website.custom_domain_verified ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                      }`}
                   />
                   {website.custom_domain_verified ? 'DNS Verified & Primary Live Domain' : 'DNS Setup & Propagation Pending'}
                 </span>
@@ -1276,9 +1272,8 @@ export default function WebsiteManagePage() {
 
             <div className="grid grid-cols-4 gap-2 border border-slate-100 bg-slate-50/70 p-2.5 rounded text-[11px]">
               <div
-                className={`flex items-center gap-2 p-1.5 rounded ${
-                  !website.custom_domain ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-600'
-                }`}
+                className={`flex items-center gap-2 p-1.5 rounded ${!website.custom_domain ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-600'
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
                   1
@@ -1286,11 +1281,10 @@ export default function WebsiteManagePage() {
                 <span>Enter Domain</span>
               </div>
               <div
-                className={`flex items-center gap-2 p-1.5 rounded ${
-                  website.custom_domain && !website.custom_domain_verified
-                    ? 'bg-white font-semibold text-slate-900 shadow-xs'
-                    : 'text-slate-600'
-                }`}
+                className={`flex items-center gap-2 p-1.5 rounded ${website.custom_domain && !website.custom_domain_verified
+                  ? 'bg-white font-semibold text-slate-900 shadow-xs'
+                  : 'text-slate-600'
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
                   2
@@ -1298,11 +1292,10 @@ export default function WebsiteManagePage() {
                 <span>DNS Records</span>
               </div>
               <div
-                className={`flex items-center gap-2 p-1.5 rounded ${
-                  website.custom_domain && verifyingDns
-                    ? 'bg-white font-semibold text-slate-900 shadow-xs'
-                    : 'text-slate-600'
-                }`}
+                className={`flex items-center gap-2 p-1.5 rounded ${website.custom_domain && verifyingDns
+                  ? 'bg-white font-semibold text-slate-900 shadow-xs'
+                  : 'text-slate-600'
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
                   3
@@ -1310,9 +1303,8 @@ export default function WebsiteManagePage() {
                 <span>Verify DNS</span>
               </div>
               <div
-                className={`flex items-center gap-2 p-1.5 rounded ${
-                  website.custom_domain_verified ? 'bg-white font-semibold text-emerald-900 shadow-xs' : 'text-slate-600'
-                }`}
+                className={`flex items-center gap-2 p-1.5 rounded ${website.custom_domain_verified ? 'bg-white font-semibold text-emerald-900 shadow-xs' : 'text-slate-600'
+                  }`}
               >
                 <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
                   4
@@ -1323,13 +1315,12 @@ export default function WebsiteManagePage() {
 
             {domainFeedback.text && (
               <div
-                className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
-                  domainFeedback.type === 'error'
-                    ? 'bg-rose-50 border-rose-200 text-rose-800'
-                    : domainFeedback.type === 'info'
+                className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${domainFeedback.type === 'error'
+                  ? 'bg-rose-50 border-rose-200 text-rose-800'
+                  : domainFeedback.type === 'info'
                     ? 'bg-amber-50 border-amber-200 text-amber-800'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2">
                   <span>{domainFeedback.text}</span>
@@ -1499,21 +1490,20 @@ export default function WebsiteManagePage() {
                         const allTxt = (domainDnsRecords.length > 0
                           ? domainDnsRecords
                           : [
-                              {
-                                type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
-                                name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
-                                value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
-                                ttl: '3600',
-                              },
-                              {
-                                type: 'TXT',
-                                name: `_hiesci-challenge${
-                                  website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
+                            {
+                              type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
+                              name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
+                              value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
+                              ttl: '3600',
+                            },
+                            {
+                              type: 'TXT',
+                              name: `_hiesci-challenge${website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
                                 }`,
-                                value: website.custom_domain_record?.verification_token || 'hiesci-verification',
-                                ttl: '3600',
-                              },
-                            ]
+                              value: website.custom_domain_record?.verification_token || 'hiesci-verification',
+                              ttl: '3600',
+                            },
+                          ]
                         )
                           .map((r) => `${r.type}\t${r.name}\t${r.value}\t${r.ttl}`)
                           .join('\n');
@@ -1541,34 +1531,32 @@ export default function WebsiteManagePage() {
                         {(domainDnsRecords.length > 0
                           ? domainDnsRecords
                           : [
-                              {
-                                type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
-                                name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
-                                value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
-                                ttl: '3600',
-                                description: 'Primary hostname routing record',
-                              },
-                              {
-                                type: 'TXT',
-                                name: `_hiesci-challenge${
-                                  website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
+                            {
+                              type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
+                              name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
+                              value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
+                              ttl: '3600',
+                              description: 'Primary hostname routing record',
+                            },
+                            {
+                              type: 'TXT',
+                              name: `_hiesci-challenge${website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
                                 }`,
-                                value: website.custom_domain_record?.verification_token || 'hiesci-verification',
-                                ttl: '3600',
-                                description: 'Domain ownership verification challenge',
-                              },
-                            ]
+                              value: website.custom_domain_record?.verification_token || 'hiesci-verification',
+                              ttl: '3600',
+                              description: 'Domain ownership verification challenge',
+                            },
+                          ]
                         ).map((record, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/60">
                             <td className="py-2 px-3">
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                  record.type === 'CNAME'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : record.type === 'A'
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${record.type === 'CNAME'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : record.type === 'A'
                                     ? 'bg-blue-100 text-blue-800'
                                     : 'bg-amber-100 text-amber-800'
-                                }`}
+                                  }`}
                               >
                                 {record.type}
                               </span>
@@ -1802,66 +1790,60 @@ export default function WebsiteManagePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div
-                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
-                    website?.package?.is_available_student_panel
-                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                      : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${website?.package?.is_available_student_panel
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}
                 >
                   <div className="space-y-0.5">
                     <div className="text-xs font-semibold">Student Portal</div>
                     <div className="text-[11px] opacity-80">Online student dashboard & grades</div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      website?.package?.is_available_student_panel
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-200 text-slate-600'
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${website?.package?.is_available_student_panel
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-200 text-slate-600'
+                      }`}
                   >
                     {website?.package?.is_available_student_panel ? 'Included' : 'Locked'}
                   </span>
                 </div>
 
                 <div
-                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
-                    website?.package?.is_available_teacher_panel
-                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                      : 'bg-slate-50 border-slate-200 text-slate-500'
-                  }`}
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${website?.package?.is_available_teacher_panel
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                    : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}
                 >
                   <div className="space-y-0.5">
                     <div className="text-xs font-semibold">Teacher Portal</div>
                     <div className="text-[11px] opacity-80">Faculty marks, routine & assignments</div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      website?.package?.is_available_teacher_panel
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-slate-200 text-slate-600'
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${website?.package?.is_available_teacher_panel
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-200 text-slate-600'
+                      }`}
                   >
                     {website?.package?.is_available_teacher_panel ? 'Included' : 'Locked'}
                   </span>
                 </div>
 
                 <div
-                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
-                    website?.package?.is_available_custom_domain
-                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
-                      : 'bg-amber-50/60 border-amber-200 text-amber-950'
-                  }`}
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${website?.package?.is_available_custom_domain
+                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                    : 'bg-amber-50/60 border-amber-200 text-amber-950'
+                    }`}
                 >
                   <div className="space-y-0.5">
                     <div className="text-xs font-semibold">Custom Domain</div>
                     <div className="text-[11px] opacity-80">Institutional root domain & SSL</div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      website?.package?.is_available_custom_domain
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${website?.package?.is_available_custom_domain
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-amber-100 text-amber-800'
+                      }`}
                   >
                     {website?.package?.is_available_custom_domain ? 'Included' : 'Locked'}
                   </span>
@@ -1903,27 +1885,24 @@ export default function WebsiteManagePage() {
                   <button
                     type="button"
                     onClick={() => setModuleViewType('all')}
-                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
-                      moduleViewType === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${moduleViewType === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                      }`}
                   >
                     All Modules ({(website?.allowed_home_modules?.length || 0) + (website?.allowed_control_modules?.length || 0)})
                   </button>
                   <button
                     type="button"
                     onClick={() => setModuleViewType('home')}
-                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
-                      moduleViewType === 'home' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${moduleViewType === 'home' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                      }`}
                   >
                     Public Home Modules ({website?.allowed_home_modules?.length || 0})
                   </button>
                   <button
                     type="button"
                     onClick={() => setModuleViewType('control')}
-                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
-                      moduleViewType === 'control' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${moduleViewType === 'control' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                      }`}
                   >
                     Staff Control Modules ({website?.allowed_control_modules?.length || 0})
                   </button>
@@ -2028,20 +2007,10 @@ export default function WebsiteManagePage() {
                         className="bg-white border border-slate-200 rounded p-4 flex flex-col justify-between gap-3 hover:border-slate-300 transition-colors"
                       >
                         <div className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-sky-100 text-sky-800">
-                              {mod.category || 'General'}
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              Active in Plan
-                            </span>
-                          </div>
+
 
                           <h5 className="text-sm font-bold text-slate-900">{mod.name}</h5>
 
-                          <div className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">
-                            {mod.path || '/'}
-                          </div>
 
                           <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
                             {mod.description || 'Public institutional module active for student and visitor navigation.'}
@@ -2166,11 +2135,10 @@ export default function WebsiteManagePage() {
         <div className="space-y-4">
           {staffActionMsg.text && (
             <div
-              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
-                staffActionMsg.type === 'error'
-                  ? 'bg-rose-50 border-rose-200 text-rose-800'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              }`}
+              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${staffActionMsg.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}
             >
               <span>{staffActionMsg.text}</span>
               <button
@@ -2290,21 +2258,19 @@ export default function WebsiteManagePage() {
                           <td className="py-2.5">
                             <div className="flex flex-col gap-1 items-start">
                               <span
-                                className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
-                                  s.is_active
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200'
-                                }`}
+                                className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${s.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }`}
                               >
                                 {s.is_active ? 'Active' : 'Inactive'}
                               </span>
 
                               <span
-                                className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
-                                  s.is_registered
-                                    ? 'bg-slate-100 text-slate-700 border-slate-200'
-                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}
+                                className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${s.is_registered
+                                  ? 'bg-slate-100 text-slate-700 border-slate-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}
                               >
                                 {s.is_registered ? 'Setup Complete' : 'Pending Verification'}
                               </span>
@@ -2382,11 +2348,10 @@ export default function WebsiteManagePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleStaffActive(s.id)}
-                                className={`px-2 py-1 rounded font-medium text-[11px] cursor-pointer border ${
-                                  s.is_active
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                }`}
+                                className={`px-2 py-1 rounded font-medium text-[11px] cursor-pointer border ${s.is_active
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  }`}
                               >
                                 {s.is_active ? 'Deactivate' : 'Activate'}
                               </button>
@@ -2527,207 +2492,53 @@ export default function WebsiteManagePage() {
                   </div>
                 </div>
 
-                  <div className="space-y-2 border-t border-slate-100 pt-2">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-slate-900">
-                        Initial Module Access Permissions
-                      </label>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const full = {};
-                            modulesList.forEach((m) => {
-                              full[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
-                            });
-                            setStaffForm({ ...staffForm, permissions: full });
-                          }}
-                          className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                        >
-                          All Access
-                        </button>
-                        <span>|</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const viewOnly = {};
-                            modulesList.forEach((m) => {
-                              viewOnly[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
-                            });
-                            setStaffForm({ ...staffForm, permissions: viewOnly });
-                          }}
-                          className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                        >
-                          View Only
-                        </button>
-                        <span>|</span>
-                        <button
-                          type="button"
-                          onClick={() => setStaffForm({ ...staffForm, permissions: {} })}
-                          className="text-slate-400 hover:text-slate-600 underline cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                      {modulesList.map((m) => {
-                        const perm = staffForm.permissions[m.slug] || {};
-                        return (
-                          <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
-                            <div>
-                              <span className="font-medium text-slate-800">{m.name}</span>
-                              <span className="text-[10px] text-slate-400 block">{m.category || m.path || 'Workstation'}</span>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(perm.can_view)}
-                                  onChange={(e) => {
-                                    const next = { ...perm, can_view: e.target.checked };
-                                    setStaffForm({
-                                      ...staffForm,
-                                      permissions: { ...staffForm.permissions, [m.slug]: next },
-                                    });
-                                  }}
-                                />
-                                View
-                              </label>
-                              <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(perm.can_create)}
-                                  onChange={(e) => {
-                                    const next = { ...perm, can_create: e.target.checked };
-                                    if (e.target.checked) next.can_view = true;
-                                    setStaffForm({
-                                      ...staffForm,
-                                      permissions: { ...staffForm.permissions, [m.slug]: next },
-                                    });
-                                  }}
-                                />
-                                Create
-                              </label>
-                              <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(perm.can_edit)}
-                                  onChange={(e) => {
-                                    const next = { ...perm, can_edit: e.target.checked };
-                                    if (e.target.checked) next.can_view = true;
-                                    setStaffForm({
-                                      ...staffForm,
-                                      permissions: { ...staffForm.permissions, [m.slug]: next },
-                                    });
-                                  }}
-                                />
-                                Edit
-                              </label>
-                              <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(perm.can_delete)}
-                                  onChange={(e) => {
-                                    const next = { ...perm, can_delete: e.target.checked };
-                                    if (e.target.checked) next.can_view = true;
-                                    setStaffForm({
-                                      ...staffForm,
-                                      permissions: { ...staffForm.permissions, [m.slug]: next },
-                                    });
-                                  }}
-                                />
-                                Delete
-                              </label>
-                            </div>
-                          </div>
-                        );
-                      })}
+                <div className="space-y-2 border-t border-slate-100 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-slate-900">
+                      Initial Module Access Permissions
+                    </label>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const full = {};
+                          modulesList.forEach((m) => {
+                            full[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
+                          });
+                          setStaffForm({ ...staffForm, permissions: full });
+                        }}
+                        className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                      >
+                        All Access
+                      </button>
+                      <span>|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const viewOnly = {};
+                          modulesList.forEach((m) => {
+                            viewOnly[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
+                          });
+                          setStaffForm({ ...staffForm, permissions: viewOnly });
+                        }}
+                        className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                      >
+                        View Only
+                      </button>
+                      <span>|</span>
+                      <button
+                        type="button"
+                        onClick={() => setStaffForm({ ...staffForm, permissions: {} })}
+                        className="text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddStaffModal(false)}
-                      className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submittingStaff}
-                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      {submittingStaff ? 'Creating & Sending Verification...' : 'Create Staff & Send Verification Email'}
-                    </button>
-                  </div>
-                </form>
-            </div>
-          )}
-
-          {showEditPermsModal && targetStaff && (
-            <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Module Permissions: {targetStaff.name}
-                    </h3>
-                    <p className="text-xs text-slate-500">Configure access rights for institutional modules.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEditPermsModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-
-                <form onSubmit={handleSavePermissions} className="space-y-3">
-                  <div className="flex items-center justify-end gap-2 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const all = {};
-                        modulesList.forEach((m) => {
-                          all[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
-                        });
-                        setEditPermsMap(all);
-                      }}
-                      className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                    >
-                      View Only All
-                    </button>
-                    <span>|</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const all = {};
-                        modulesList.forEach((m) => {
-                          all[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
-                        });
-                        setEditPermsMap(all);
-                      }}
-                      className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
-                    >
-                      Full Access All
-                    </button>
-                    <span>|</span>
-                    <button
-                      type="button"
-                      onClick={() => setEditPermsMap({})}
-                      className="text-slate-400 hover:text-slate-600 underline cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  </div>
-
-                  <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                  <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-48 overflow-y-auto">
                     {modulesList.map((m) => {
-                      const perm = editPermsMap[m.slug] || {};
+                      const perm = staffForm.permissions[m.slug] || {};
                       return (
                         <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                           <div>
@@ -2742,7 +2553,10 @@ export default function WebsiteManagePage() {
                                 checked={Boolean(perm.can_view)}
                                 onChange={(e) => {
                                   const next = { ...perm, can_view: e.target.checked };
-                                  setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                                  setStaffForm({
+                                    ...staffForm,
+                                    permissions: { ...staffForm.permissions, [m.slug]: next },
+                                  });
                                 }}
                               />
                               View
@@ -2754,7 +2568,10 @@ export default function WebsiteManagePage() {
                                 onChange={(e) => {
                                   const next = { ...perm, can_create: e.target.checked };
                                   if (e.target.checked) next.can_view = true;
-                                  setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                                  setStaffForm({
+                                    ...staffForm,
+                                    permissions: { ...staffForm.permissions, [m.slug]: next },
+                                  });
                                 }}
                               />
                               Create
@@ -2766,7 +2583,10 @@ export default function WebsiteManagePage() {
                                 onChange={(e) => {
                                   const next = { ...perm, can_edit: e.target.checked };
                                   if (e.target.checked) next.can_view = true;
-                                  setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                                  setStaffForm({
+                                    ...staffForm,
+                                    permissions: { ...staffForm.permissions, [m.slug]: next },
+                                  });
                                 }}
                               />
                               Edit
@@ -2778,7 +2598,10 @@ export default function WebsiteManagePage() {
                                 onChange={(e) => {
                                   const next = { ...perm, can_delete: e.target.checked };
                                   if (e.target.checked) next.can_view = true;
-                                  setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                                  setStaffForm({
+                                    ...staffForm,
+                                    permissions: { ...staffForm.permissions, [m.slug]: next },
+                                  });
                                 }}
                               />
                               Delete
@@ -2788,122 +2611,264 @@ export default function WebsiteManagePage() {
                       );
                     })}
                   </div>
+                </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setShowEditPermsModal(false)}
-                      className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={savingPerms}
-                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      {savingPerms ? 'Saving...' : 'Save Permissions'}
-                    </button>
-                  </div>
-                </form>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddStaffModal(false)}
+                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingStaff}
+                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingStaff ? 'Creating & Sending Verification...' : 'Create Staff & Send Verification Email'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {showEditPermsModal && targetStaff && (
+            <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Module Permissions: {targetStaff.name}
+                  </h3>
+                  <p className="text-xs text-slate-500">Configure access rights for institutional modules.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditPermsModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <form onSubmit={handleSavePermissions} className="space-y-3">
+                <div className="flex items-center justify-end gap-2 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const all = {};
+                      modulesList.forEach((m) => {
+                        all[m.slug] = { can_view: true, can_create: false, can_edit: false, can_delete: false };
+                      });
+                      setEditPermsMap(all);
+                    }}
+                    className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                  >
+                    View Only All
+                  </button>
+                  <span>|</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const all = {};
+                      modulesList.forEach((m) => {
+                        all[m.slug] = { can_view: true, can_create: true, can_edit: true, can_delete: true };
+                      });
+                      setEditPermsMap(all);
+                    }}
+                    className="text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                  >
+                    Full Access All
+                  </button>
+                  <span>|</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditPermsMap({})}
+                    className="text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <div className="border border-slate-200 rounded divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                  {modulesList.map((m) => {
+                    const perm = editPermsMap[m.slug] || {};
+                    return (
+                      <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
+                        <div>
+                          <span className="font-medium text-slate-800">{m.name}</span>
+                          <span className="text-[10px] text-slate-400 block">{m.category || m.path || 'Workstation'}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(perm.can_view)}
+                              onChange={(e) => {
+                                const next = { ...perm, can_view: e.target.checked };
+                                setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                              }}
+                            />
+                            View
+                          </label>
+                          <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(perm.can_create)}
+                              onChange={(e) => {
+                                const next = { ...perm, can_create: e.target.checked };
+                                if (e.target.checked) next.can_view = true;
+                                setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                              }}
+                            />
+                            Create
+                          </label>
+                          <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(perm.can_edit)}
+                              onChange={(e) => {
+                                const next = { ...perm, can_edit: e.target.checked };
+                                if (e.target.checked) next.can_view = true;
+                                setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                              }}
+                            />
+                            Edit
+                          </label>
+                          <label className="inline-flex items-center gap-1 text-[11px] text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(perm.can_delete)}
+                              onChange={(e) => {
+                                const next = { ...perm, can_delete: e.target.checked };
+                                if (e.target.checked) next.can_view = true;
+                                setEditPermsMap({ ...editPermsMap, [m.slug]: next });
+                              }}
+                            />
+                            Delete
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPermsModal(false)}
+                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingPerms}
+                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {savingPerms ? 'Saving...' : 'Save Permissions'}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
 
           {showEditProfileModal && targetStaff && (
             <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Edit Profile: {targetStaff.name}
-                    </h3>
-                    <p className="text-xs text-slate-500">Update staff contact and employment details.</p>
-                  </div>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Edit Profile: {targetStaff.name}
+                  </h3>
+                  <p className="text-xs text-slate-500">Update staff contact and employment details.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editProfileForm.name}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={editProfileForm.email}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, email: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={editProfileForm.number}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, number: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
+                  <select
+                    value={editProfileForm.gradeId}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, gradeId: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  >
+                    <option value="">Unassigned</option>
+                    {payScalesList.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Residential Address</label>
+                  <input
+                    type="text"
+                    value={editProfileForm.address}
+                    onChange={(e) => setEditProfileForm({ ...editProfileForm, address: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setShowEditProfileModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
+                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
                   >
-                    Close
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {savingProfile ? 'Saving...' : 'Save Profile'}
                   </button>
                 </div>
-
-                <form onSubmit={handleSaveProfile} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editProfileForm.name}
-                      onChange={(e) => setEditProfileForm({ ...editProfileForm, name: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={editProfileForm.email}
-                      onChange={(e) => setEditProfileForm({ ...editProfileForm, email: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Phone Number</label>
-                    <input
-                      type="tel"
-                      required
-                      value={editProfileForm.number}
-                      onChange={(e) => setEditProfileForm({ ...editProfileForm, number: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
-                    <select
-                      value={editProfileForm.gradeId}
-                      onChange={(e) => setEditProfileForm({ ...editProfileForm, gradeId: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    >
-                      <option value="">Unassigned</option>
-                      {payScalesList.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Residential Address</label>
-                    <input
-                      type="text"
-                      value={editProfileForm.address}
-                      onChange={(e) => setEditProfileForm({ ...editProfileForm, address: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setShowEditProfileModal(false)}
-                      className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 font-medium text-xs hover:bg-slate-50 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={savingProfile}
-                      className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      {savingProfile ? 'Saving...' : 'Save Profile'}
-                    </button>
-                  </div>
-                </form>
+              </form>
             </div>
           )}
         </div>
@@ -2913,11 +2878,10 @@ export default function WebsiteManagePage() {
         <div className="space-y-4">
           {brandingMsg.text && (
             <div
-              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
-                brandingMsg.type === 'error'
-                  ? 'bg-rose-50 border-rose-200 text-rose-800'
-                  : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              }`}
+              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${brandingMsg.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}
             >
               <span>{brandingMsg.text}</span>
               <button
@@ -3331,11 +3295,10 @@ export default function WebsiteManagePage() {
                     key={c.hex}
                     type="button"
                     onClick={() => setPrimaryColor(c.hex)}
-                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${
-                      primaryColor.toLowerCase() === c.hex.toLowerCase()
-                        ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
-                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
-                    }`}
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${primaryColor.toLowerCase() === c.hex.toLowerCase()
+                      ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                      }`}
                   >
                     <span className="w-3 h-3 rounded-xs border border-black/10 inline-block" style={{ backgroundColor: c.hex }} />
                     <span>{c.name}</span>
@@ -3362,11 +3325,10 @@ export default function WebsiteManagePage() {
                     key={`sec-${c.hex}`}
                     type="button"
                     onClick={() => setSecondaryColor(c.hex)}
-                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${
-                      secondaryColor.toLowerCase() === c.hex.toLowerCase()
-                        ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
-                        : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
-                    }`}
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-medium cursor-pointer ${secondaryColor.toLowerCase() === c.hex.toLowerCase()
+                      ? 'border-slate-900 bg-slate-100 text-slate-900 font-semibold'
+                      : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                      }`}
                   >
                     <span className="w-3 h-3 rounded-xs border border-black/10 inline-block" style={{ backgroundColor: c.hex }} />
                     <span>{c.name}</span>
@@ -3503,11 +3465,10 @@ export default function WebsiteManagePage() {
                 type="button"
                 onClick={() => handleToggleMaintenanceMode(!isMaintenanceMode)}
                 disabled={saving}
-                className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border transition-colors disabled:opacity-50 ${
-                  isMaintenanceMode
-                    ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
-                    : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
-                }`}
+                className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border transition-colors disabled:opacity-50 ${isMaintenanceMode
+                  ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                  : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'
+                  }`}
               >
                 {isMaintenanceMode ? 'Switch to Live Mode' : 'Enable Maintenance Mode'}
               </button>
