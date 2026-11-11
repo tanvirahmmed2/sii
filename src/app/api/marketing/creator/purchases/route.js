@@ -25,8 +25,8 @@ export async function GET(request) {
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description,
-                COALESCE(p.max_websites, 1) AS max_websites,
-                COALESCE(p.max_websites, 1) AS max_portfolios,
+                1 AS max_websites,
+                1 AS max_portfolios,
                 pay.id AS payment_id,
                 pay.status AS payment_status, 
                 pay.transaction_id,
@@ -53,8 +53,8 @@ export async function GET(request) {
       `SELECT pu.*, 
               p.name AS package_name, 
               p.slug AS package_slug, 
-              COALESCE(p.max_websites, 1) AS max_websites,
-              COALESCE(p.max_websites, 1) AS max_portfolios,
+              1 AS max_websites,
+              1 AS max_portfolios,
               pay.id AS payment_id,
               pay.status AS payment_status, 
               pay.transaction_id,
@@ -113,7 +113,10 @@ export async function handlePurchasesAction(body, sessionCreator) {
     let baseAmount = 0;
     let currency = 'USD';
 
-    if (paymentMethod === 'surjopay') {
+    const cleanMethod = String(paymentMethod || 'surjopay').toLowerCase();
+    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(cleanMethod);
+
+    if (isBdt) {
       currency = 'BDT';
       baseAmount = isYearly
         ? Number(pkg.yearly_price_bdt || 0)

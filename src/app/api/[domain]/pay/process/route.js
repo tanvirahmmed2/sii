@@ -33,7 +33,13 @@ export async function POST(request, { params }) {
     await client.query("BEGIN");
 
     const webRes = await client.query(
-      `SELECT id, name, subdomain, domain, currency FROM websites WHERE subdomain = $1 OR domain = $1 LIMIT 1`,
+      `SELECT w.id, w.name, w.currency,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS subdomain,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS domain
+       FROM websites w 
+       WHERE LOWER(w.slug) = LOWER($1) 
+          OR EXISTS (SELECT 1 FROM website_domains wd WHERE wd.website_id = w.id AND LOWER(wd.domain) = LOWER($1))
+       LIMIT 1`,
       [domain]
     );
     if (webRes.rows.length === 0) throw new Error("Institution website not found.");

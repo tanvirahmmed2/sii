@@ -8,22 +8,6 @@ const QUERY_TIMEOUT_MS = 10000;
 const websiteCache = new Map();
 const inFlightResolutions = new Map();
 
-let _websiteSchemaEnsured = false;
-
-function ensureWebsiteSchemaAsync() {
-  if (_websiteSchemaEnsured) return;
-  _websiteSchemaEnsured = true;
-  query(`
-    ALTER TABLE websites
-    ADD COLUMN IF NOT EXISTS facebook_url TEXT,
-    ADD COLUMN IF NOT EXISTS twitter_url TEXT,
-    ADD COLUMN IF NOT EXISTS instagram_url TEXT,
-    ADD COLUMN IF NOT EXISTS youtube_url TEXT,
-    ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
-  `).catch(() => {
-  });
-}
-
 export async function extractWebsiteIdentifier(request, context) {
   if (typeof context === 'string' && context.trim()) {
     const raw = context.trim().toLowerCase().split(':')[0];
@@ -114,31 +98,47 @@ async function fetchWebsiteFromDb(cleanId) {
   const subPrefix = cleanId.includes('.') ? cleanId.split('.')[0] : cleanId;
 
   const sql = `
-    SELECT id, creator_id, subscription_id, name, slug, subdomain, subdomain AS domain, custom_domain,
-           custom_domain_verified, institution_type, eiin_number, contact_email, contact_phone, address,
-           facebook_url, twitter_url, instagram_url, youtube_url, linkedin_url,
-           primary_color, secondary_color, theme, status, is_maintenance_mode,
-           COALESCE(maintenance_message, 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.') AS maintenance_message,
-           COALESCE(currency, 'BDT') AS currency,
-           logo, logo_id, favicon, favicon_id,
-           (status = 'active') AS is_active,
-           (status = 'active' AND is_maintenance_mode = false) AS is_published
-    FROM websites 
-    WHERE LOWER(slug) = $1 
-       OR LOWER(slug) = $2
-       OR LOWER(slug) = $6
-       OR LOWER(subdomain) = $1 
-       OR LOWER(subdomain) = $2
-       OR LOWER(subdomain) = $6
-       OR SPLIT_PART(LOWER(subdomain), '.', 1) = $1
-       OR SPLIT_PART(LOWER(subdomain), '.', 1) = $2
-       OR SPLIT_PART(LOWER(subdomain), '.', 1) = $6
-       OR LOWER(custom_domain) = $1 
-       OR LOWER(custom_domain) = $2
-       OR LOWER(custom_domain) = 'www.' || $2
-       OR LOWER(REPLACE(custom_domain, 'www.', '')) = $2
-       OR LOWER(subdomain) LIKE $3
-       OR ($4 = true AND id = $5::bigint)
+    SELECT w.id, w.creator_id, w.subscription_id, w.name, w.slug,
+           COALESCE(
+             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+             w.slug
+           ) AS subdomain,
+           COALESCE(
+             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
+             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+             w.slug
+           ) AS domain,
+           (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+           (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+           w.institution_type, w.eiin_number, w.contact_email, w.contact_phone, w.address,
+           w.facebook_url, w.twitter_url, w.instagram_url, w.youtube_url, w.linkedin_url,
+           w.primary_color, w.secondary_color, w.theme, w.status, w.is_maintenance_mode,
+           COALESCE(w.maintenance_message, 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.') AS maintenance_message,
+           COALESCE(w.currency, 'BDT') AS currency,
+           w.logo, w.logo_id, w.favicon, w.favicon_id,
+           (w.status = 'active') AS is_active,
+           (w.status = 'active' AND w.is_maintenance_mode = false) AS is_published
+    FROM websites w
+    WHERE LOWER(w.slug) = $1 
+       OR LOWER(w.slug) = $2
+       OR LOWER(w.slug) = $6
+       OR ($4 = true AND w.id = $5::bigint)
+       OR EXISTS (
+            SELECT 1 FROM website_domains wd 
+            WHERE wd.website_id = w.id 
+              AND (
+                LOWER(wd.domain) = $1 
+                OR LOWER(wd.domain) = $2 
+                OR LOWER(wd.domain) = $6
+                OR SPLIT_PART(LOWER(wd.domain), '.', 1) = $1
+                OR SPLIT_PART(LOWER(wd.domain), '.', 1) = $2
+                OR SPLIT_PART(LOWER(wd.domain), '.', 1) = $6
+                OR LOWER(wd.domain) = 'www.' || $2
+                OR LOWER(REPLACE(wd.domain, 'www.', '')) = $2
+                OR LOWER(wd.domain) LIKE $3
+              )
+          )
     LIMIT 1
   `;
   const params = [cleanId, noWww, `${cleanId}.%`, isNum, isNum ? Number(cleanId) : -1, subPrefix];
@@ -166,22 +166,32 @@ async function fetchWebsiteFromDb(cleanId) {
     website.primary_color = website.primary_color || '#1e40af';
     website.secondary_color = website.secondary_color || '#0ea5e9';
 
-    let allowedModules = [];
-    let allowedModuleSlugs = [];
+    let allowedControlModules = [];
+    let allowedControlModulePaths = [];
+    let allowedControlModuleSlugs = [];
+    let allowedHomeModules = [];
+    let allowedHomeModulePaths = [];
+    let allowedHomeModuleSlugs = [];
     let packageInfo = null;
 
     try {
       const pkgRes = await query(
         `SELECT p.id AS package_id, p.name AS package_name, p.slug AS package_slug,
+                p.short_description, p.description, p.tagline,
+                p.monthly_price_usd, p.yearly_price_usd, p.monthly_price_bdt, p.yearly_price_bdt,
+                p.monthly_price, p.yearly_price, p.discount_percentage,
                 p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb,
+                p.monthly_mail, p.monthly_sms,
+                p.is_available_student_panel, p.is_available_teacher_panel, p.is_available_custom_domain,
+                p.features, p.grace_period,
                 s.id AS subscription_id, s.status AS subscription_status,
+                s.billing_cycle AS subscription_billing_cycle, s.current_period_end AS subscription_period_end,
                 COALESCE(
                   (
                     SELECT json_agg(
                       json_build_object(
                         'id', cm.id,
                         'name', cm.name,
-                        'slug', cm.slug,
                         'path', cm.path,
                         'category', cm.category,
                         'description', cm.description,
@@ -193,7 +203,16 @@ async function fetchWebsiteFromDb(cleanId) {
                     WHERE pcm.package_id = p.id AND cm.is_active = TRUE
                   ),
                   '[]'::json
-                ) AS allowed_modules,
+                ) AS allowed_control_modules,
+                COALESCE(
+                  (
+                    SELECT array_agg(DISTINCT cm.path ORDER BY cm.path ASC)
+                    FROM package_control_modules pcm
+                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
+                  ),
+                  ARRAY[]::varchar[]
+                ) AS allowed_control_module_paths,
                 COALESCE(
                   (
                     SELECT array_agg(DISTINCT cm.slug ORDER BY cm.slug ASC)
@@ -202,12 +221,47 @@ async function fetchWebsiteFromDb(cleanId) {
                     WHERE pcm.package_id = p.id AND cm.is_active = TRUE
                   ),
                   ARRAY[]::varchar[]
-                ) AS allowed_module_slugs
+                ) AS allowed_control_module_slugs,
+                COALESCE(
+                  (
+                    SELECT json_agg(
+                      json_build_object(
+                        'id', hm.id,
+                        'name', hm.name,
+                        'path', hm.path,
+                        'category', hm.category,
+                        'description', hm.description,
+                        'icon', hm.icon
+                      ) ORDER BY hm.display_order ASC, hm.id ASC
+                    )
+                    FROM package_home_modules phm
+                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                  ),
+                  '[]'::json
+                ) AS allowed_home_modules,
+                COALESCE(
+                  (
+                    SELECT array_agg(DISTINCT hm.path ORDER BY hm.path ASC)
+                    FROM package_home_modules phm
+                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                  ),
+                  ARRAY[]::varchar[]
+                ) AS allowed_home_module_paths,
+                COALESCE(
+                  (
+                    SELECT array_agg(DISTINCT hm.slug ORDER BY hm.slug ASC)
+                    FROM package_home_modules phm
+                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                  ),
+                  ARRAY[]::varchar[]
+                ) AS allowed_home_module_slugs
          FROM subscriptions s
          JOIN packages p ON p.id = s.package_id
          WHERE (s.id = $1 OR s.website_id = $2)
-           AND s.status = 'active'
-         ORDER BY (s.id = $1) DESC, s.id DESC
+         ORDER BY (s.id = $1) DESC, (s.status = 'active') DESC, s.id DESC
          LIMIT 1`,
         [website.subscription_id || 0, website.id]
       );
@@ -218,21 +272,49 @@ async function fetchWebsiteFromDb(cleanId) {
           id: pRow.package_id,
           name: pRow.package_name,
           slug: pRow.package_slug,
+          short_description: pRow.short_description,
+          description: pRow.description,
+          tagline: pRow.tagline,
+          monthly_price_usd: pRow.monthly_price_usd,
+          yearly_price_usd: pRow.yearly_price_usd,
+          monthly_price_bdt: pRow.monthly_price_bdt,
+          yearly_price_bdt: pRow.yearly_price_bdt,
+          monthly_price: pRow.monthly_price,
+          yearly_price: pRow.yearly_price,
+          discount_percentage: pRow.discount_percentage,
           max_students: pRow.max_students,
           max_teachers: pRow.max_teachers,
           max_staff: pRow.max_staff,
           max_storage_mb: pRow.max_storage_mb,
+          monthly_mail: pRow.monthly_mail,
+          monthly_sms: pRow.monthly_sms,
+          is_available_student_panel: pRow.is_available_student_panel ?? true,
+          is_available_teacher_panel: pRow.is_available_teacher_panel ?? true,
+          is_available_custom_domain: pRow.is_available_custom_domain ?? false,
+          features: pRow.features || [],
+          grace_period: pRow.grace_period,
           subscription_id: pRow.subscription_id,
           subscription_status: pRow.subscription_status,
+          subscription_billing_cycle: pRow.subscription_billing_cycle,
+          subscription_period_end: pRow.subscription_period_end,
         };
-        allowedModules = pRow.allowed_modules || [];
-        allowedModuleSlugs = pRow.allowed_module_slugs || [];
+        allowedControlModules = pRow.allowed_control_modules || [];
+        allowedControlModulePaths = pRow.allowed_control_module_paths || [];
+        allowedControlModuleSlugs = pRow.allowed_control_module_slugs || [];
+        allowedHomeModules = pRow.allowed_home_modules || [];
+        allowedHomeModulePaths = pRow.allowed_home_module_paths || [];
+        allowedHomeModuleSlugs = pRow.allowed_home_module_slugs || [];
       } else {
-        const fallbackMods = await query(
-          `SELECT id, name, slug, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY id ASC`
-        ).catch(() => ({ rows: [] }));
-        allowedModules = fallbackMods.rows || [];
-        allowedModuleSlugs = allowedModules.map((m) => m.slug);
+        const [fallbackControl, fallbackHome] = await Promise.all([
+          query(`SELECT id, name, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] })),
+          query(`SELECT id, name, path, category, description, icon FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] }))
+        ]);
+        allowedControlModules = fallbackControl.rows || [];
+        allowedControlModulePaths = allowedControlModules.map((m) => m.path).filter(Boolean);
+        allowedControlModuleSlugs = [];
+        allowedHomeModules = fallbackHome.rows || [];
+        allowedHomeModulePaths = allowedHomeModules.map((m) => m.path).filter(Boolean);
+        allowedHomeModuleSlugs = [];
       }
     } catch (e) {
       console.warn('[websiteResolver] Error loading package modules:', e.message);
@@ -242,9 +324,22 @@ async function fetchWebsiteFromDb(cleanId) {
     website.package_id = packageInfo?.id || null;
     website.package_name = packageInfo?.name || null;
     website.package_slug = packageInfo?.slug || null;
-    website.allowed_modules = allowedModules;
-    website.allowed_module_slugs = allowedModuleSlugs;
-    website.allowedModules = allowedModuleSlugs;
+
+    website.is_available_student_panel = packageInfo ? Boolean(packageInfo.is_available_student_panel) : true;
+    website.is_available_teacher_panel = packageInfo ? Boolean(packageInfo.is_available_teacher_panel) : true;
+    website.is_available_custom_domain = packageInfo ? Boolean(packageInfo.is_available_custom_domain) : false;
+
+    website.allowed_control_modules = allowedControlModules;
+    website.allowed_control_module_paths = allowedControlModulePaths;
+    website.allowed_control_module_slugs = allowedControlModuleSlugs;
+
+    website.allowed_home_modules = allowedHomeModules;
+    website.allowed_home_module_paths = allowedHomeModulePaths;
+    website.allowed_home_module_slugs = allowedHomeModuleSlugs;
+
+    website.allowed_modules = allowedControlModules;
+    website.allowed_module_slugs = allowedControlModuleSlugs;
+    website.allowedModules = allowedControlModuleSlugs;
 
     const settingsCopy = { ...website };
     website.settings = settingsCopy;
@@ -278,8 +373,6 @@ export async function resolveWebsite(identifier, options = {}) {
   if (!bypassCache && inFlightResolutions.has(cleanId)) {
     return inFlightResolutions.get(cleanId);
   }
-
-  ensureWebsiteSchemaAsync();
 
   const resolutionPromise = (async () => {
     try {

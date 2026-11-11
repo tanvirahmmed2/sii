@@ -66,8 +66,8 @@ function CheckoutContent() {
         setPackages(list);
         if (initialPkgId && list.some((p) => p.id === Number(initialPkgId))) {
           setSelectedPkgId(Number(initialPkgId));
-        } else if (list.length > 0 && !selectedPkgId) {
-          setSelectedPkgId(list[0].id);
+        } else if (list.length > 0) {
+          setSelectedPkgId((current) => current || list[0].id);
         }
       } catch (err) {
         console.error(err);
@@ -119,10 +119,9 @@ function CheckoutContent() {
       });
 
       const data = await res.json();
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else if (data.success && data.payment?.id) {
-        router.push(`/creator/${creator.id}/payments/${data.payment.id}`);
+      if (data.success && (data.paymentId || data.payment?.id)) {
+        const payId = data.paymentId || data.payment?.id;
+        router.push(`/creator/${creator.id}/payments/${payId}/pay?gateway=${paymentMethod}`);
       } else {
         setError(data.error || 'Failed to initiate payment. Please try again.');
       }
@@ -214,7 +213,10 @@ function CheckoutContent() {
                     </div>
                   </div>
                   <span className="font-mono font-medium text-slate-900 text-xs">
-                    ${pkg.monthly_price_usd || pkg.monthly_price}/mo
+                    {paymentMethod === 'surjopay'
+                      ? `৳${isYearly ? (pkg.yearly_price_bdt || 0) : (pkg.monthly_price_bdt || 0)} BDT`
+                      : `$${isYearly ? (pkg.yearly_price_usd || pkg.yearly_price || 0) : (pkg.monthly_price_usd || pkg.monthly_price || 0)} USD`}
+                    <span className="text-[10px] text-slate-500 font-sans ml-1">/{isYearly ? 'yr' : 'mo'}</span>
                   </span>
                 </label>
               ))}

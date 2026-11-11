@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server.js';
+import crypto from 'node:crypto';
+import dns from 'node:dns/promises';
 import { queryDb } from '../../../../../lib/database/db.js';
 import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
-import { BASE_DOMAIN, getBaseUrl } from '../../../../../lib/database/secret.js';
-import { uploadImage, deleteImage } from '../../../../../lib/database/cloudinary.js';
+import { BASE_DOMAIN, getBaseUrl, CUSTOM_DOMAIN_CNAME_TARGET, CUSTOM_DOMAIN_A_TARGET } from '../../../../../lib/database/secret.js';
+import { uploadImage, deleteImage, uploadPdf } from '../../../../../lib/database/cloudinary.js';
 import { checkDomainAvailability, checkCustomDomainAvailability } from './check-domain/route.js';
 
 export const dynamic = 'force-dynamic';
@@ -92,8 +94,30 @@ export async function GET(request) {
                 COALESCE(w.instagram_url, '') AS instagram_url,
                 COALESCE(w.youtube_url, '') AS youtube_url,
                 COALESCE(w.linkedin_url, '') AS linkedin_url,
+                p.id AS package_id,
                 p.name AS package_name,
                 p.slug AS package_slug,
+                p.short_description AS package_short_description,
+                p.description AS package_description,
+                p.tagline AS package_tagline,
+                p.monthly_price_usd AS package_monthly_price_usd,
+                p.yearly_price_usd AS package_yearly_price_usd,
+                p.monthly_price_bdt AS package_monthly_price_bdt,
+                p.yearly_price_bdt AS package_yearly_price_bdt,
+                p.monthly_price AS package_monthly_price,
+                p.yearly_price AS package_yearly_price,
+                p.discount_percentage AS package_discount_percentage,
+                p.max_students AS package_max_students,
+                p.max_teachers AS package_max_teachers,
+                p.max_staff AS package_max_staff,
+                p.max_storage_mb AS package_max_storage_mb,
+                p.monthly_mail AS package_monthly_mail,
+                p.monthly_sms AS package_monthly_sms,
+                p.is_available_student_panel AS package_is_available_student_panel,
+                p.is_available_teacher_panel AS package_is_available_teacher_panel,
+                p.is_available_custom_domain AS package_is_available_custom_domain,
+                p.features AS package_features,
+                p.grace_period AS package_grace_period,
                 s.id AS subscription_id,
                 s.status AS subscription_status,
                 s.billing_cycle AS subscription_billing_cycle,
@@ -106,6 +130,7 @@ export async function GET(request) {
                 ) AS subdomain,
                 (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
                 (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+                (SELECT row_to_json(wd.*) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_record,
                 (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
                 (SELECT json_agg(wd.*) FROM website_domains wd WHERE wd.website_id = w.id) AS domains
          FROM websites w
@@ -133,11 +158,97 @@ export async function GET(request) {
         return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
       }
 
+      const site = singleRes.rows[0];
+      let allowedHomeModules = [];
+      let allowedControlModules = [];
+
+      if (site.package_id) {
+        const [hmRes, cmRes] = await Promise.all([
+          queryDb(
+            `SELECT hm.id, hm.name, hm.path, hm.category, hm.description, hm.icon, hm.is_active, hm.display_order
+             FROM package_home_modules phm
+             JOIN website_home_modules hm ON hm.id = phm.home_module_id
+             WHERE phm.package_id = $1 AND hm.is_active = TRUE
+             ORDER BY hm.display_order ASC, hm.id ASC`,
+            [site.package_id]
+          ).catch(() => ({ rows: [] })),
+          queryDb(
+            `SELECT cm.id, cm.name, cm.path, cm.category, cm.description, cm.icon, cm.is_active, cm.display_order
+             FROM package_control_modules pcm
+             JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+             WHERE pcm.package_id = $1 AND cm.is_active = TRUE
+             ORDER BY cm.display_order ASC, cm.id ASC`,
+            [site.package_id]
+          ).catch(() => ({ rows: [] }))
+        ]);
+        allowedHomeModules = hmRes.rows || [];
+        allowedControlModules = cmRes.rows || [];
+      }
+
+      if (allowedHomeModules.length === 0) {
+        const allHmRes = await queryDb(
+          `SELECT hm.id, hm.name, hm.path, hm.category, hm.description, hm.icon, hm.is_active, hm.display_order
+           FROM website_home_modules hm
+           WHERE hm.is_active = TRUE
+           ORDER BY hm.display_order ASC, hm.id ASC`
+        ).catch(() => ({ rows: [] }));
+        allowedHomeModules = allHmRes.rows || [];
+      }
+
+      if (allowedControlModules.length === 0) {
+        const allCmRes = await queryDb(
+          `SELECT cm.id, cm.name, cm.path, cm.category, cm.description, cm.icon, cm.is_active, cm.display_order
+           FROM website_control_modules cm
+           WHERE cm.is_active = TRUE
+           ORDER BY cm.display_order ASC, cm.id ASC`
+        ).catch(() => ({ rows: [] }));
+        allowedControlModules = allCmRes.rows || [];
+      }
+
+      site.package = {
+        id: site.package_id,
+        name: site.package_name,
+        slug: site.package_slug,
+        short_description: site.package_short_description,
+        description: site.package_description,
+        tagline: site.package_tagline,
+        monthly_price_usd: site.package_monthly_price_usd,
+        yearly_price_usd: site.package_yearly_price_usd,
+        monthly_price_bdt: site.package_monthly_price_bdt,
+        yearly_price_bdt: site.package_yearly_price_bdt,
+        monthly_price: site.package_monthly_price,
+        yearly_price: site.package_yearly_price,
+        discount_percentage: site.package_discount_percentage,
+        max_students: site.package_max_students,
+        max_teachers: site.package_max_teachers,
+        max_staff: site.package_max_staff,
+        max_storage_mb: site.package_max_storage_mb,
+        monthly_mail: site.package_monthly_mail,
+        monthly_sms: site.package_monthly_sms,
+        is_available_student_panel: site.package_is_available_student_panel ?? true,
+        is_available_teacher_panel: site.package_is_available_teacher_panel ?? true,
+        is_available_custom_domain: site.package_is_available_custom_domain ?? false,
+        features: site.package_features || [],
+        grace_period: site.package_grace_period,
+        subscription_id: site.subscription_id,
+        subscription_status: site.subscription_status,
+        subscription_billing_cycle: site.subscription_billing_cycle,
+        subscription_period_end: site.subscription_period_end,
+      };
+
+      site.allowed_home_modules = allowedHomeModules;
+      site.allowed_control_modules = allowedControlModules;
+      site.is_available_student_panel = site.package.is_available_student_panel;
+      site.is_available_teacher_panel = site.package.is_available_teacher_panel;
+      site.is_available_custom_domain = site.package.is_available_custom_domain;
+
       return NextResponse.json({
         success: true,
         baseDomain: BASE_DOMAIN || 'localhost:3000',
         baseUrl: dynamicBaseUrl,
-        website: singleRes.rows[0],
+        cnameTarget: CUSTOM_DOMAIN_CNAME_TARGET,
+        aTarget: CUSTOM_DOMAIN_A_TARGET,
+        website: site,
       });
     }
 
@@ -159,6 +270,7 @@ export async function GET(request) {
               ) AS subdomain,
               (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
               (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+              (SELECT row_to_json(wd.*) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_record,
               (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information
        FROM websites w
        LEFT JOIN subscriptions s ON w.subscription_id = s.id
@@ -218,6 +330,29 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 
   const baseDomain = BASE_DOMAIN || 'localhost:3000';
 
+  if (action === 'upload_document' || action === 'upload_pdf' || action === 'upload_verification') {
+    const fileInput = body.file || body.pdf || body.data;
+    if (!fileInput) {
+      return NextResponse.json({ success: false, error: 'Document data is required.' }, { status: 400 });
+    }
+    const folder = `school/verification/${creatorId}`;
+    try {
+      const uploadRes = await uploadPdf(fileInput, folder);
+      return NextResponse.json({
+        success: true,
+        message: 'PDF document uploaded successfully to Cloudinary.',
+        url: uploadRes.secure_url || uploadRes.url,
+        publicId: uploadRes.publicId,
+        format: uploadRes.format,
+        bytes: uploadRes.bytes,
+        originalFilename: uploadRes.original_filename || body.fileName || 'certificate.pdf',
+      });
+    } catch (upErr) {
+      console.error('Cloudinary document upload error:', upErr);
+      return NextResponse.json({ success: false, error: `Failed to upload document to Cloudinary: ${upErr.message}` }, { status: 500 });
+    }
+  }
+
   if (action === 'create_website' || action === 'setup_website' || !action) {
     const name = (body.name || body.websiteName || '').trim();
     if (!name) {
@@ -253,7 +388,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 
     if (requestedSubId > 0) {
       const subRes = await queryDb(
-        `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id
+        `SELECT s.*, p.name AS package_name, 1 AS max_websites, p.id AS pkg_id
          FROM subscriptions s
          JOIN packages p ON s.package_id = p.id
          WHERE s.id = $1 AND s.creator_id = $2
@@ -298,7 +433,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       }
     } else {
       const allActiveSubsRes = await queryDb(
-        `SELECT s.*, p.name AS package_name, COALESCE(p.max_websites, 1) AS max_websites, p.id AS pkg_id,
+        `SELECT s.*, p.name AS package_name, 1 AS max_websites, p.id AS pkg_id,
                 (SELECT COUNT(*)::int FROM websites w WHERE w.creator_id = $1 AND w.subscription_id = s.id) AS current_count
          FROM subscriptions s
          JOIN packages p ON s.package_id = p.id
@@ -442,9 +577,28 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     }
 
     const creatorNid = (body.creatorNid || body.creator_nid || '').trim();
-    const creatorNidUrl = (body.creatorNidUrl || body.creator_nid_url || '').trim();
+    let creatorNidUrl = (body.creatorNidUrl || body.creator_nid_url || '').trim();
+    if (creatorNidUrl.startsWith('data:')) {
+      try {
+        const up = creatorNidUrl.startsWith('data:application/pdf')
+          ? await uploadPdf(creatorNidUrl, `school/verification/${creatorId}`)
+          : await uploadImage(creatorNidUrl, `school/verification/${creatorId}`);
+        creatorNidUrl = up.secure_url || up.url;
+      } catch (err) {
+        console.warn('Creator NID upload warning:', err.message);
+      }
+    }
+
     const eiinCertificate = (body.eiinCertificate || body.eiin_certificate || '').trim();
-    const eiinCertificateUrl = (body.eiinCertificateUrl || body.eiin_certificate_url || '').trim();
+    let eiinCertificateUrl = (body.eiinCertificateUrl || body.eiin_certificate_url || '').trim();
+    if (eiinCertificateUrl.startsWith('data:application/pdf') || eiinCertificateUrl.startsWith('data:')) {
+      try {
+        const up = await uploadPdf(eiinCertificateUrl, `school/verification/${creatorId}`);
+        eiinCertificateUrl = up.secure_url || up.url;
+      } catch (err) {
+        console.warn('EIIN certificate upload warning during creation:', err.message);
+      }
+    }
     const verificationAddress = (body.verificationAddress || body.verification_address || address || '').trim();
     const otherDetails = typeof body.otherDetails === 'object' && body.otherDetails !== null
       ? JSON.stringify(body.otherDetails)
@@ -703,6 +857,23 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       if (!rawCustom || String(rawCustom).trim() === '') {
         await queryDb(`DELETE FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain'`, [id]).catch(() => {});
       } else {
+        const pkgCheck = await queryDb(
+          `SELECT p.id, p.name, p.is_available_custom_domain
+           FROM websites w
+           LEFT JOIN subscriptions s ON w.subscription_id = s.id
+           LEFT JOIN packages p ON s.package_id = p.id
+           WHERE w.id = $1 AND w.creator_id = $2
+           LIMIT 1`,
+          [id, creatorId]
+        );
+        const sitePkg = pkgCheck.rows[0];
+        if (!sitePkg || sitePkg.is_available_custom_domain !== true) {
+          return NextResponse.json({
+            success: false,
+            error: `Custom domain connection is not included in your current subscription package ("${sitePkg?.name || 'Current Plan'}"). Please upgrade your plan to connect a custom domain.`,
+          }, { status: 403 });
+        }
+
         const valRes = await checkCustomDomainAvailability(String(rawCustom).trim(), id, request);
         if (!valRes.available) {
           return NextResponse.json({ success: false, error: valRes.error }, { status: 400 });
@@ -755,35 +926,22 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       ).catch(() => {});
     }
 
-    if (body.theme_config !== undefined) {
-      const tc = typeof body.theme_config === 'object' ? body.theme_config : {};
-      if (tc.primaryColor) {
-        updates.push(`primary_color = $${idx++}`);
-        values.push(tc.primaryColor);
-      }
-      if (tc.secondaryColor) {
-        updates.push(`secondary_color = $${idx++}`);
-        values.push(tc.secondaryColor);
-      }
-      if (tc.mode || tc.theme) {
-        updates.push(`theme = $${idx++}`);
-        values.push(tc.mode || tc.theme || 'default');
-      }
-    }
-
-    if (body.primary_color !== undefined || body.primaryColor !== undefined) {
+    const finalPrimaryColor = body.primary_color || body.primaryColor || (typeof body.theme_config === 'object' ? body.theme_config?.primaryColor : undefined);
+    if (finalPrimaryColor !== undefined) {
       updates.push(`primary_color = $${idx++}`);
-      values.push(body.primary_color || body.primaryColor);
+      values.push(finalPrimaryColor);
     }
 
-    if (body.secondary_color !== undefined || body.secondaryColor !== undefined) {
+    const finalSecondaryColor = body.secondary_color || body.secondaryColor || (typeof body.theme_config === 'object' ? body.theme_config?.secondaryColor : undefined);
+    if (finalSecondaryColor !== undefined) {
       updates.push(`secondary_color = $${idx++}`);
-      values.push(body.secondary_color || body.secondaryColor);
+      values.push(finalSecondaryColor);
     }
 
-    if (body.theme !== undefined) {
+    const finalTheme = body.theme || (typeof body.theme_config === 'object' ? (body.theme_config?.mode || body.theme_config?.theme) : undefined);
+    if (finalTheme !== undefined) {
       updates.push(`theme = $${idx++}`);
-      values.push(body.theme);
+      values.push(finalTheme);
     }
 
     let currentSiteForBranding = null;
@@ -878,22 +1036,28 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       values.push(String(body.maintenance_message).trim());
     }
 
+    let finalStatus = undefined;
     if (body.status !== undefined) {
-      updates.push(`status = $${idx++}`);
-      values.push(body.status);
+      finalStatus = body.status;
+    } else if (body.is_published !== undefined) {
+      finalStatus = Boolean(body.is_published) ? 'active' : 'suspended';
     }
 
+    if (finalStatus !== undefined) {
+      updates.push(`status = $${idx++}`);
+      values.push(finalStatus);
+    }
+
+    let finalMaintenanceMode = undefined;
     if (body.is_maintenance_mode !== undefined) {
-      updates.push(`is_maintenance_mode = $${idx++}`);
-      values.push(Boolean(body.is_maintenance_mode));
+      finalMaintenanceMode = Boolean(body.is_maintenance_mode);
+    } else if (body.is_published !== undefined) {
+      finalMaintenanceMode = !Boolean(body.is_published);
     }
 
-    if (body.is_published !== undefined) {
-      const isPub = Boolean(body.is_published);
-      updates.push(`status = $${idx++}`);
-      values.push(isPub ? 'active' : 'suspended');
+    if (finalMaintenanceMode !== undefined) {
       updates.push(`is_maintenance_mode = $${idx++}`);
-      values.push(!isPub);
+      values.push(finalMaintenanceMode);
     }
 
     if (updates.length > 0) {
@@ -946,23 +1110,295 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
     });
   }
 
-  if (action === 'verify_custom_domain') {
+  if (action === 'connect_custom_domain') {
     const id = Number(body.id || body.websiteId);
     if (!id) {
       return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
     }
 
-    const checkRes = await queryDb('SELECT custom_domain FROM websites WHERE id = $1 AND creator_id = $2', [id, creatorId]);
-    if (checkRes.rows.length === 0 || !checkRes.rows[0].custom_domain) {
-      return NextResponse.json({ success: false, error: 'Please enter a custom domain first before verifying.' }, { status: 400 });
+    const pkgCheck = await queryDb(
+      `SELECT p.id, p.name, p.is_available_custom_domain
+       FROM websites w
+       LEFT JOIN subscriptions s ON w.subscription_id = s.id
+       LEFT JOIN packages p ON s.package_id = p.id
+       WHERE w.id = $1 AND w.creator_id = $2
+       LIMIT 1`,
+      [id, creatorId]
+    );
+
+    const sitePkg = pkgCheck.rows[0];
+    if (!sitePkg || sitePkg.is_available_custom_domain !== true) {
+      return NextResponse.json({
+        success: false,
+        error: `Custom domain addition is not included in your current subscription package ("${sitePkg?.name || 'Current Plan'}"). Please upgrade your plan to connect a custom domain.`,
+      }, { status: 403 });
     }
 
-    await queryDb('UPDATE websites SET custom_domain_verified = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND creator_id = $2', [id, creatorId]);
+    const rawDomain = String(body.custom_domain || body.domain || '').trim().toLowerCase();
+    const cleanDomain = rawDomain
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '')
+      .replace(/:\d+$/, '')
+      .trim();
+
+    const valRes = await checkCustomDomainAvailability(cleanDomain, id, request);
+    if (!valRes.available) {
+      return NextResponse.json({
+        success: false,
+        error: valRes.error || 'Invalid or unavailable custom domain.',
+      }, { status: 400 });
+    }
+
+    const token = `hiesci-verification-${crypto.randomBytes(8).toString('hex')}`;
+    const isApex = cleanDomain.split('.').length === 2;
+    const dnsRecords = [];
+
+    if (isApex) {
+      dnsRecords.push({
+        type: 'A',
+        name: '@',
+        value: CUSTOM_DOMAIN_A_TARGET,
+        ttl: '3600',
+        description: 'Apex root IP address pointing to platform edge network',
+      });
+      dnsRecords.push({
+        type: 'CNAME',
+        name: 'www',
+        value: CUSTOM_DOMAIN_CNAME_TARGET,
+        ttl: '3600',
+        description: 'WWW subdomain routing to platform host',
+      });
+    } else {
+      const subHost = cleanDomain.split('.')[0];
+      dnsRecords.push({
+        type: 'CNAME',
+        name: subHost,
+        value: CUSTOM_DOMAIN_CNAME_TARGET,
+        ttl: '3600',
+        description: 'Canonical hostname pointing traffic to platform host',
+      });
+    }
+
+    dnsRecords.push({
+      type: 'TXT',
+      name: `_hiesci-challenge${isApex ? '' : '.' + cleanDomain.split('.')[0]}`,
+      value: token,
+      ttl: '3600',
+      description: 'Domain ownership challenge verification record',
+    });
+
+    const existingRes = await queryDb(
+      `SELECT id FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain' LIMIT 1`,
+      [id]
+    );
+
+    let savedDomain;
+    if (existingRes.rows.length > 0) {
+      const upd = await queryDb(
+        `UPDATE website_domains
+         SET domain = $1,
+             domain_name = $1,
+             is_verified = FALSE,
+             is_primary = FALSE,
+             verification_token = $2,
+             dns_record_type = 'CNAME',
+             dns_record_value = $3,
+             dns_records = $4::jsonb,
+             ssl_status = 'pending',
+             verified_at = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $5
+         RETURNING *`,
+        [cleanDomain, token, CUSTOM_DOMAIN_CNAME_TARGET, JSON.stringify(dnsRecords), existingRes.rows[0].id]
+      );
+      savedDomain = upd.rows[0];
+    } else {
+      const ins = await queryDb(
+        `INSERT INTO website_domains (
+           website_id, domain_type, domain, domain_name, is_primary, is_verified,
+           verification_token, dns_record_type, dns_record_value, dns_records, ssl_status
+         ) VALUES (
+           $1, 'custom_domain', $2, $2, FALSE, FALSE,
+           $3, 'CNAME', $4, $5::jsonb, 'pending'
+         ) RETURNING *`,
+        [id, cleanDomain, token, CUSTOM_DOMAIN_CNAME_TARGET, JSON.stringify(dnsRecords)]
+      );
+      savedDomain = ins.rows[0];
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Custom domain "${checkRes.rows[0].custom_domain}" verified and activated successfully!`,
+      message: `Domain "${cleanDomain}" registered! Configure the DNS records below at your DNS provider.`,
+      domain: savedDomain,
+      dns_records: dnsRecords,
+      custom_domain: cleanDomain,
+      custom_domain_verified: false,
+    });
+  }
+
+  if (action === 'verify_dns' || action === 'verify_custom_domain') {
+    const id = Number(body.id || body.websiteId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+    }
+
+    const domRes = await queryDb(
+      `SELECT * FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain' LIMIT 1`,
+      [id]
+    );
+
+    if (domRes.rows.length === 0 || !domRes.rows[0].domain) {
+      return NextResponse.json({ success: false, error: 'Please enter and save a custom domain first before verifying.' }, { status: 400 });
+    }
+
+    const targetDomain = domRes.rows[0].domain.toLowerCase().trim();
+    const token = domRes.rows[0].verification_token;
+    const isApex = targetDomain.split('.').length === 2;
+    const isDev = process.env.NODE_ENV !== 'production';
+    const isLocalOrTest =
+      targetDomain.endsWith('.localhost') ||
+      targetDomain.endsWith('.local') ||
+      targetDomain.endsWith('.test') ||
+      targetDomain.includes('localhost');
+
+    let verified = false;
+    let detectionDetails = { cname: [], txt: [], a: [] };
+
+    if (isLocalOrTest || (isDev && body.bypassInDev === true)) {
+      verified = true;
+    } else {
+      try {
+        const cnames = await dns.resolveCname(targetDomain);
+        detectionDetails.cname = cnames;
+        if (
+          cnames.some(
+            (c) =>
+              c.toLowerCase() === CUSTOM_DOMAIN_CNAME_TARGET.toLowerCase() ||
+              c.toLowerCase().includes('hiesci') ||
+              c.toLowerCase() === 'domains.hiesci.com'
+          )
+        ) {
+          verified = true;
+        }
+      } catch {}
+
+      if (!verified) {
+        try {
+          const txtHost = `_hiesci-challenge.${targetDomain}`;
+          const txtRecords = await dns.resolveTxt(txtHost).catch(() => dns.resolveTxt(targetDomain));
+          detectionDetails.txt = txtRecords.flat();
+          if (token && detectionDetails.txt.some((t) => t.includes(token))) {
+            verified = true;
+          }
+        } catch {}
+      }
+
+      if (!verified && isApex) {
+        try {
+          const aRecords = await dns.resolve4(targetDomain);
+          detectionDetails.a = aRecords;
+          if (aRecords.includes(CUSTOM_DOMAIN_A_TARGET) || aRecords.includes('76.76.21.21')) {
+            verified = true;
+          }
+        } catch {}
+      }
+    }
+
+    if (verified) {
+      const updRes = await queryDb(
+        `UPDATE website_domains 
+         SET is_verified = TRUE,
+             ssl_status = 'active',
+             verified_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+         RETURNING *`,
+        [domRes.rows[0].id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        verified: true,
+        message: `DNS records successfully detected and verified for "${targetDomain}"! Proceed to confirm and activate this domain.`,
+        domain: updRes.rows[0],
+        custom_domain_verified: true,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      verified: false,
+      message: `DNS records for "${targetDomain}" were not detected yet. DNS changes can take a few minutes up to 24 hours to propagate worldwide. Please check your DNS provider settings.`,
+      detected: detectionDetails,
+      canBypassInDev: isDev,
+      custom_domain_verified: false,
+    });
+  }
+
+  if (action === 'confirm_custom_domain') {
+    const id = Number(body.id || body.websiteId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+    }
+
+    const domRes = await queryDb(
+      `SELECT * FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain' LIMIT 1`,
+      [id]
+    );
+
+    if (domRes.rows.length === 0 || !domRes.rows[0].domain) {
+      return NextResponse.json({ success: false, error: 'Please enter and verify a custom domain first before confirming.' }, { status: 400 });
+    }
+
+    const targetDomain = domRes.rows[0].domain;
+
+    await queryDb(
+      `UPDATE website_domains 
+       SET is_primary = FALSE 
+       WHERE website_id = $1 AND domain_type != 'custom_domain'`,
+      [id]
+    );
+
+    const updRes = await queryDb(
+      `UPDATE website_domains 
+       SET is_verified = TRUE,
+           is_primary = TRUE,
+           ssl_status = 'active',
+           verified_at = COALESCE(verified_at, CURRENT_TIMESTAMP),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [domRes.rows[0].id]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `Domain "${targetDomain}" is now confirmed, active, and live! All traffic is routed to your custom domain.`,
+      domain: updRes.rows[0],
+      custom_domain: targetDomain,
       custom_domain_verified: true,
+    });
+  }
+
+  if (action === 'disconnect_custom_domain') {
+    const id = Number(body.id || body.websiteId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+    }
+
+    await queryDb(
+      `DELETE FROM website_domains WHERE website_id = $1 AND domain_type = 'custom_domain'`,
+      [id]
+    );
+
+    await queryDb(
+      `UPDATE website_domains SET is_primary = TRUE WHERE website_id = $1 AND domain_type = 'subdomain'`,
+      [id]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Custom domain removed successfully. Traffic reverted to default subdomain.',
     });
   }
 
@@ -985,7 +1421,18 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 export async function POST(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    let body;
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      body = Object.fromEntries(formData.entries());
+      const file = formData.get('file');
+      if (file) {
+        body.file = file;
+      }
+    } else {
+      body = await request.json();
+    }
     return await handleWebsitesAction(body, sessionCreator, request);
   } catch (error) {
     console.error('Websites POST API error:', error);

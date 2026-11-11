@@ -354,7 +354,7 @@ export default function CreatorSingleTicketPage() {
 
           <input
             type="text"
-            placeholder={selectedImage ? "Add an optional message..." : "Type your message or paste an image..."}
+            aria-label="Reply message"
             value={replyMessage}
             onPaste={handlePaste}
             onChange={(e) => setReplyMessage(e.target.value)}
@@ -376,42 +376,34 @@ export default function CreatorSingleTicketPage() {
       </div>
 
       {previewModalImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in"
-          onClick={() => setPreviewModalImage(null)}
-        >
-          <div
-            className="relative max-w-4xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-3 space-y-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-2 px-1 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-800">Support Attachment Preview</span>
-              <div className="flex items-center gap-3">
-                <a
-                  href={previewModalImage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
-                >
-                  <span>Open Full Size</span>
-                  <span>↗</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setPreviewModalImage(null)}
-                  className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-sm cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
+        <div className="bg-white border border-slate-200 rounded p-4 space-y-2">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <span className="text-xs font-semibold text-slate-800">Support Attachment Preview</span>
+            <div className="flex items-center gap-3">
+              <a
+                href={previewModalImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+              >
+                <span>Open Full Size</span>
+                <span>↗</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewModalImage(null)}
+                className="w-7 h-7 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-sm cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
-            <div className="flex items-center justify-center p-2 max-h-[78vh] overflow-auto">
-              <img
-                src={previewModalImage}
-                alt="Enlarged attachment"
-                className="max-h-[74vh] max-w-full object-contain rounded-lg shadow-sm"
-              />
-            </div>
+          </div>
+          <div className="flex items-center justify-center p-2 max-h-[500px] overflow-auto">
+            <img
+              src={previewModalImage}
+              alt="Enlarged attachment"
+              className="max-h-[460px] max-w-full object-contain rounded border border-slate-200"
+            />
           </div>
         </div>
       )}

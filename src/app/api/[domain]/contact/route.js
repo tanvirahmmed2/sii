@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { ensureContactsTables } from 'src/lib/database/contactsDb.js';
 
 export async function GET(request, context) {
   try {
@@ -42,8 +41,6 @@ export async function POST(request, context) {
         { status: 404 }
       );
     }
-
-    await ensureContactsTables();
 
     let body;
     try {

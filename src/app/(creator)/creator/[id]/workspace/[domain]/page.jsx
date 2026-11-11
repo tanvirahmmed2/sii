@@ -105,11 +105,24 @@ export default function WebsiteManagePage() {
   const [customDomainInput, setCustomDomainInput] = useState('');
   const [customDomainStatus, setCustomDomainStatus] = useState({ state: 'idle', message: '' });
   const [verifyingDns, setVerifyingDns] = useState(false);
+  const [confirmingDomain, setConfirmingDomain] = useState(false);
+  const [domainDnsRecords, setDomainDnsRecords] = useState([]);
+  const [dnsVerificationResult, setDnsVerificationResult] = useState(null);
+  const [copiedRecordKey, setCopiedRecordKey] = useState('');
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [domainFeedback, setDomainFeedback] = useState({ type: '', text: '' });
+  const [showDnsDetails, setShowDnsDetails] = useState(true);
+  const [cnameTarget, setCnameTarget] = useState('domains.hiesci.com');
+  const [aTarget, setATarget] = useState('76.76.21.21');
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveError, setSaveError] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  const [moduleSearch, setModuleSearch] = useState('');
+  const [moduleCategoryFilter, setModuleCategoryFilter] = useState('all');
+  const [moduleViewType, setModuleViewType] = useState('all');
 
   const [staffsList, setStaffsList] = useState([]);
   const [modulesList, setModulesList] = useState([]);
@@ -178,6 +191,8 @@ export default function WebsiteManagePage() {
         const w = data.website;
         setWebsite(w);
         if (data.baseDomain) setBaseDomain(data.baseDomain);
+        if (data.cnameTarget) setCnameTarget(data.cnameTarget);
+        if (data.aTarget) setATarget(data.aTarget);
 
         setName(w.name || '');
         setInstitutionType((w.institution_type || 'school').toLowerCase());
@@ -216,6 +231,17 @@ export default function WebsiteManagePage() {
         setSubdomain(cleanSub);
 
         setCustomDomainInput(w.custom_domain || '');
+        if (w.custom_domain_record?.dns_records) {
+          let recs = w.custom_domain_record.dns_records;
+          if (typeof recs === 'string') {
+            try {
+              recs = JSON.parse(recs);
+            } catch {}
+          }
+          if (Array.isArray(recs)) {
+            setDomainDnsRecords(recs);
+          }
+        }
 
         fetchStaffs(w.id);
       } else {
@@ -229,7 +255,10 @@ export default function WebsiteManagePage() {
   }, [creatorId, domainParam, fetchStaffs]);
 
   useEffect(() => {
-    fetchWebsite();
+    const timer = setTimeout(() => {
+      fetchWebsite();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchWebsite]);
 
   useEffect(() => {
@@ -237,19 +266,19 @@ export default function WebsiteManagePage() {
     const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     const originalSub = (website.subdomain || website.slug || '').split('.')[0].toLowerCase();
 
-    if (!clean || clean === originalSub) {
-      setSubdomainStatus({ state: 'idle', message: 'Current active subdomain' });
-      return;
-    }
-
-    if (clean.length < 3) {
-      setSubdomainStatus({ state: 'invalid', message: 'Subdomain must be at least 3 characters.' });
-      return;
-    }
-
-    setSubdomainStatus({ state: 'checking', message: 'Checking availability...' });
-
     const timer = setTimeout(async () => {
+      if (!clean || clean === originalSub) {
+        setSubdomainStatus({ state: 'idle', message: 'Current active subdomain' });
+        return;
+      }
+
+      if (clean.length < 3) {
+        setSubdomainStatus({ state: 'invalid', message: 'Subdomain must be at least 3 characters.' });
+        return;
+      }
+
+      setSubdomainStatus({ state: 'checking', message: 'Checking availability...' });
+
       try {
         const res = await fetch(
           `/api/marketing/creator/websites/check-domain?domain=${encodeURIComponent(clean)}&websiteId=${website.id}`
@@ -279,19 +308,19 @@ export default function WebsiteManagePage() {
     const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     const originalCustom = (website.custom_domain || '').toLowerCase();
 
-    if (!clean || clean === originalCustom) {
-      setCustomDomainStatus({ state: 'idle', message: '' });
-      return;
-    }
-
-    if (!clean.includes('.') || clean.length < 4) {
-      setCustomDomainStatus({ state: 'invalid', message: 'Enter a valid domain name (e.g. school.edu or academy.org)' });
-      return;
-    }
-
-    setCustomDomainStatus({ state: 'checking', message: 'Checking availability...' });
-
     const timer = setTimeout(async () => {
+      if (!clean || clean === originalCustom) {
+        setCustomDomainStatus({ state: 'idle', message: '' });
+        return;
+      }
+
+      if (!clean.includes('.') || clean.length < 4) {
+        setCustomDomainStatus({ state: 'invalid', message: 'Enter a valid domain name (e.g. school.edu or academy.org)' });
+        return;
+      }
+
+      setCustomDomainStatus({ state: 'checking', message: 'Checking availability...' });
+
       try {
         const res = await fetch(
           `/api/marketing/creator/websites/check-domain?type=custom&domain=${encodeURIComponent(clean)}&websiteId=${website.id}`
@@ -596,13 +625,22 @@ export default function WebsiteManagePage() {
   };
 
   const handleConnectCustomDomain = async (e) => {
-    e.preventDefault();
-    const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    e?.preventDefault?.();
+    if (website?.package && website.package.is_available_custom_domain === false) {
+      setDomainFeedback({
+        type: 'error',
+        text: `Custom domain addition is not included in your ${website.package.name || 'current'} subscription plan. Please upgrade your package to connect a custom domain.`,
+      });
+      return;
+    }
+    const clean = customDomainInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
     if (!clean || !clean.includes('.')) {
-      alert('Please enter a valid custom domain (e.g. school.edu or myacademy.org).');
+      setDomainFeedback({ type: 'error', text: 'Please enter a valid custom domain (e.g. school.edu or portal.academy.com).' });
       return;
     }
     setSaving(true);
+    setDomainFeedback({ type: '', text: '' });
+    setDnsVerificationResult(null);
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
@@ -616,23 +654,34 @@ export default function WebsiteManagePage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSaveSuccess(`Custom domain "${clean}" saved! Follow DNS setup instructions.`);
-        setWebsite((prev) => ({ ...prev, custom_domain: clean, custom_domain_verified: false }));
+        setDomainFeedback({
+          type: 'success',
+          text: data.message || `Custom domain "${clean}" saved! Configure the required DNS records below.`,
+        });
+        setWebsite((prev) => ({
+          ...prev,
+          custom_domain: clean,
+          custom_domain_verified: false,
+          custom_domain_record: data.domain,
+        }));
+        if (data.dns_records && Array.isArray(data.dns_records)) {
+          setDomainDnsRecords(data.dns_records);
+        }
         if (refetchCreator) refetchCreator();
-        setTimeout(() => setSaveSuccess(''), 4000);
       } else {
-        alert(data.error || 'Failed to connect custom domain.');
+        setDomainFeedback({ type: 'error', text: data.error || 'Failed to connect custom domain.' });
       }
     } catch {
-      alert('Network error connecting custom domain.');
+      setDomainFeedback({ type: 'error', text: 'Network error connecting custom domain.' });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleVerifyDns = async () => {
+  const handleVerifyDns = async (bypassInDev = false) => {
     if (!website?.custom_domain) return;
     setVerifyingDns(true);
+    setDomainFeedback({ type: '', text: '' });
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
@@ -641,26 +690,79 @@ export default function WebsiteManagePage() {
           action: 'verify_dns',
           id: website.id,
           creatorId: Number(creatorId),
+          bypassInDev: Boolean(bypassInDev),
         }),
       });
       const data = await res.json();
+      setDnsVerificationResult({
+        verified: Boolean(data.verified),
+        message: data.message || '',
+        canBypassInDev: Boolean(data.canBypassInDev),
+      });
       if (data.verified) {
-        setSaveSuccess('DNS Verified! Your custom domain is now live.');
-        setWebsite((prev) => ({ ...prev, custom_domain_verified: true }));
+        setDomainFeedback({
+          type: 'success',
+          text: data.message || 'DNS Verified! Click Confirm & Activate Domain below to make it live.',
+        });
+        setWebsite((prev) => ({
+          ...prev,
+          custom_domain_verified: true,
+          custom_domain_record: data.domain || prev.custom_domain_record,
+        }));
         if (refetchCreator) refetchCreator();
-        setTimeout(() => setSaveSuccess(''), 4000);
       } else {
-        alert(`DNS Verification Notice: ${data.message || 'CNAME record was not detected yet. DNS changes can take up to 24 hours to propagate.'}`);
+        setDomainFeedback({
+          type: 'info',
+          text: data.message || 'CNAME or TXT record not detected yet. DNS propagation can take up to 24 hours.',
+        });
       }
     } catch {
-      alert('Network error verifying DNS.');
+      setDomainFeedback({ type: 'error', text: 'Network error verifying DNS records.' });
     } finally {
       setVerifyingDns(false);
     }
   };
 
+  const handleConfirmCustomDomain = async () => {
+    if (!website?.custom_domain) return;
+    setConfirmingDomain(true);
+    setDomainFeedback({ type: '', text: '' });
+    try {
+      const res = await fetch('/api/marketing/creator/websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirm_custom_domain',
+          id: website.id,
+          creatorId: Number(creatorId),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDomainFeedback({
+          type: 'success',
+          text: data.message || 'Domain successfully confirmed and activated as live primary domain!',
+        });
+        setWebsite((prev) => ({
+          ...prev,
+          custom_domain_verified: true,
+          custom_domain_record: data.domain,
+        }));
+        if (refetchCreator) refetchCreator();
+      } else {
+        setDomainFeedback({ type: 'error', text: data.error || 'Failed to confirm custom domain.' });
+      }
+    } catch {
+      setDomainFeedback({ type: 'error', text: 'Network error confirming custom domain.' });
+    } finally {
+      setConfirmingDomain(false);
+    }
+  };
+
   const handleDisconnectCustomDomain = async () => {
-    if (!confirm('Disconnect your custom domain? Traffic will revert to the default platform subdomain.')) return;
+    setSaving(true);
+    setDomainFeedback({ type: '', text: '' });
+    setShowDisconnectConfirm(false);
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
@@ -673,14 +775,28 @@ export default function WebsiteManagePage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSaveSuccess('Custom domain disconnected successfully.');
-        setWebsite((prev) => ({ ...prev, custom_domain: null, custom_domain_verified: false }));
+        setDomainFeedback({ type: 'success', text: 'Custom domain disconnected successfully.' });
+        setWebsite((prev) => ({ ...prev, custom_domain: null, custom_domain_verified: false, custom_domain_record: null }));
         setCustomDomainInput('');
+        setDomainDnsRecords([]);
+        setDnsVerificationResult(null);
         if (refetchCreator) refetchCreator();
-        setTimeout(() => setSaveSuccess(''), 3000);
+      } else {
+        setDomainFeedback({ type: 'error', text: data.error || 'Failed to disconnect custom domain.' });
       }
     } catch {
-      setSaveError('Failed to disconnect custom domain.');
+      setDomainFeedback({ type: 'error', text: 'Network error disconnecting custom domain.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyText = (val, key) => {
+    if (!val) return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(val);
+      setCopiedRecordKey(key);
+      setTimeout(() => setCopiedRecordKey(''), 2000);
     }
   };
 
@@ -1048,6 +1164,7 @@ export default function WebsiteManagePage() {
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
         {[
           { id: 'domains', label: 'Domains & DNS' },
+          { id: 'modules', label: 'Package & Modules' },
           { id: 'staffs', label: `Staff Members (${staffsList.length})` },
           { id: 'general', label: 'Institutional Profile' },
           { id: 'branding', label: 'Appearance & Themes' },
@@ -1131,99 +1248,913 @@ export default function WebsiteManagePage() {
           </div>
 
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
-            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+            <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">Custom Domain Configuration</h2>
                 <p className="text-xs text-slate-500">
-                  Connect your institution&apos;s apex or branded domain (e.g. <code>yourschool.edu</code> or <code>campus.org</code>).
+                  Connect your institution&apos;s custom domain (e.g. <code>yourschool.edu</code> or <code>portal.campus.org</code>).
                 </p>
               </div>
 
               {website.custom_domain && (
                 <span
-                  className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded border flex items-center gap-1.5 ${
                     website.custom_domain_verified
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : 'bg-amber-50 text-amber-700 border-amber-200'
                   }`}
                 >
-                  {website.custom_domain_verified ? 'DNS Verified & Connected' : 'DNS Propagation Pending'}
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      website.custom_domain_verified ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                    }`}
+                  />
+                  {website.custom_domain_verified ? 'DNS Verified & Primary Live Domain' : 'DNS Setup & Propagation Pending'}
                 </span>
               )}
             </div>
 
-            <form onSubmit={handleConnectCustomDomain} className="space-y-3 max-w-lg">
-              <label className="block text-xs font-medium text-slate-700">Custom Domain Host</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. portal.oxford.edu"
-                  value={customDomainInput}
-                  onChange={(e) => setCustomDomainInput(e.target.value)}
-                  className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
-                />
+            <div className="grid grid-cols-4 gap-2 border border-slate-100 bg-slate-50/70 p-2.5 rounded text-[11px]">
+              <div
+                className={`flex items-center gap-2 p-1.5 rounded ${
+                  !website.custom_domain ? 'bg-white font-semibold text-slate-900 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+                  1
+                </span>
+                <span>Enter Domain</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 p-1.5 rounded ${
+                  website.custom_domain && !website.custom_domain_verified
+                    ? 'bg-white font-semibold text-slate-900 shadow-xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+                  2
+                </span>
+                <span>DNS Records</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 p-1.5 rounded ${
+                  website.custom_domain && verifyingDns
+                    ? 'bg-white font-semibold text-slate-900 shadow-xs'
+                    : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+                  3
+                </span>
+                <span>Verify DNS</span>
+              </div>
+              <div
+                className={`flex items-center gap-2 p-1.5 rounded ${
+                  website.custom_domain_verified ? 'bg-white font-semibold text-emerald-900 shadow-xs' : 'text-slate-600'
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+                  4
+                </span>
+                <span>Confirm Live</span>
+              </div>
+            </div>
+
+            {domainFeedback.text && (
+              <div
+                className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${
+                  domainFeedback.type === 'error'
+                    ? 'bg-rose-50 border-rose-200 text-rose-800'
+                    : domainFeedback.type === 'info'
+                    ? 'bg-amber-50 border-amber-200 text-amber-800'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{domainFeedback.text}</span>
+                </div>
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                  type="button"
+                  onClick={() => setDomainFeedback({ type: '', text: '' })}
+                  className="text-xs hover:underline cursor-pointer"
                 >
-                  Connect
+                  Dismiss
                 </button>
               </div>
+            )}
 
-              {customDomainStatus.message && (
-                <div className="text-[11px] font-medium">
-                  {customDomainStatus.state === 'available' && (
-                    <span className="text-emerald-700">{customDomainStatus.message}</span>
-                  )}
-                  {customDomainStatus.state === 'taken' && (
-                    <span className="text-rose-600">{customDomainStatus.message}</span>
-                  )}
+            {website.custom_domain && website.custom_domain_verified && (
+              <div className="bg-emerald-50/60 border border-emerald-200 rounded p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs text-emerald-800 font-semibold uppercase tracking-wider">
+                      Active Primary Custom Domain
+                    </div>
+                    <div className="text-base font-bold font-mono text-emerald-950 mt-0.5">
+                      {website.custom_domain}
+                    </div>
+                    <p className="text-xs text-emerald-700 mt-0.5">
+                      SSL/TLS security certificate is active. All institutional traffic is served directly through this domain.
+                    </p>
+                  </div>
+                  <a
+                    href={`https://${website.custom_domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-1.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Visit Live Site</span>
+                    <span>↗</span>
+                  </a>
                 </div>
-              )}
-            </form>
 
-            {website.custom_domain && (
-              <div className="space-y-3 pt-2 border-t border-slate-100">
-                <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-2">
-                  <div className="text-xs font-medium text-slate-800">Required DNS Records:</div>
-                  <div className="overflow-x-auto">
+                <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-800">
+                    <span className="font-semibold">Security:</span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px] font-mono">
+                      TLS 1.3 / SSL Active
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowDnsDetails((prev) => !prev)}
+                      className="px-2.5 py-1 rounded border border-emerald-300 text-emerald-900 bg-white hover:bg-emerald-50 font-medium text-xs cursor-pointer"
+                    >
+                      {showDnsDetails ? 'Hide DNS Setup' : 'View DNS Records'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyDns(false)}
+                      disabled={verifyingDns}
+                      className="px-2.5 py-1 rounded border border-emerald-300 text-emerald-900 bg-white hover:bg-emerald-50 font-medium text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      {verifyingDns ? 'Checking...' : 'Re-check DNS Health'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDisconnectConfirm(true)}
+                      className="px-2.5 py-1 rounded border border-rose-200 text-rose-700 bg-white hover:bg-rose-50 font-medium text-xs cursor-pointer"
+                    >
+                      Disconnect Domain
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {website.package && website.package.is_available_custom_domain === false ? (
+              <div className="bg-amber-50 border border-amber-200 rounded p-4 space-y-3 max-w-xl">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 text-sm font-bold">
+                    🔒
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                      Custom Domain Locked in Current Plan
+                    </h3>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      Your current subscription plan <span className="font-semibold text-amber-950">{website.package?.name || 'Current Plan'}</span> does not include custom domain connectivity. Upgrade your package to connect your custom branded institutional domain with automated SSL.
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between">
+                  <span className="text-[11px] text-amber-700">
+                    Active Plan: {website.package?.name}
+                  </span>
+                  <Link
+                    href={`/creator/${creatorId}/workspace/new`}
+                    className="px-3 py-1.5 rounded bg-amber-700 hover:bg-amber-800 text-white font-medium text-xs cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>Upgrade Package</span>
+                    <span>→</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              (!website.custom_domain || !website.custom_domain_verified) && (
+                <form onSubmit={handleConnectCustomDomain} className="space-y-3 max-w-lg">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-slate-700">Custom Domain Host</label>
+                    <p className="text-[11px] text-slate-500">
+                      Enter your root domain or subdomain without http:// or https://. Example: <code>school.edu</code> or <code>portal.campus.org</code>.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      aria-label="Custom Domain Host"
+                      value={customDomainInput}
+                      onChange={(e) => setCustomDomainInput(e.target.value)}
+                      className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
+                    />
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {saving ? 'Saving...' : website.custom_domain ? 'Update Domain' : 'Save & Generate DNS'}
+                    </button>
+                  </div>
+
+                  {customDomainStatus.message && (
+                    <div className="text-[11px] font-medium">
+                      {customDomainStatus.state === 'available' && (
+                        <span className="text-emerald-700">{customDomainStatus.message}</span>
+                      )}
+                      {customDomainStatus.state === 'taken' && (
+                        <span className="text-rose-600">{customDomainStatus.message}</span>
+                      )}
+                      {customDomainStatus.state === 'invalid' && (
+                        <span className="text-slate-500">{customDomainStatus.message}</span>
+                      )}
+                      {customDomainStatus.state === 'checking' && (
+                        <span className="text-slate-500">Checking availability...</span>
+                      )}
+                    </div>
+                  )}
+                </form>
+              )
+            )}
+
+            {website.custom_domain && (showDnsDetails || !website.custom_domain_verified) && (
+              <div className="space-y-4 pt-3 border-t border-slate-100">
+                <div className="bg-slate-50 border border-slate-200 rounded p-3.5 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-900">
+                        Required DNS Records for: <span className="font-mono text-slate-800">{website.custom_domain}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Add the following DNS records in your domain registrar or DNS management console (Cloudflare, Namecheap, GoDaddy, etc.):
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allTxt = (domainDnsRecords.length > 0
+                          ? domainDnsRecords
+                          : [
+                              {
+                                type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
+                                name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
+                                value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
+                                ttl: '3600',
+                              },
+                              {
+                                type: 'TXT',
+                                name: `_hiesci-challenge${
+                                  website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
+                                }`,
+                                value: website.custom_domain_record?.verification_token || 'hiesci-verification',
+                                ttl: '3600',
+                              },
+                            ]
+                        )
+                          .map((r) => `${r.type}\t${r.name}\t${r.value}\t${r.ttl}`)
+                          .join('\n');
+                        handleCopyText(allTxt, 'all');
+                      }}
+                      className="px-2.5 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-medium cursor-pointer"
+                    >
+                      {copiedRecordKey === 'all' ? 'Copied All Records!' : 'Copy All Records'}
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto border border-slate-200 rounded bg-white">
                     <table className="w-full text-left text-xs font-mono">
                       <thead>
-                        <tr className="text-slate-500 border-b border-slate-200 text-[10px] uppercase font-semibold">
-                          <th className="pb-1.5">Type</th>
-                          <th className="pb-1.5">Name / Host</th>
-                          <th className="pb-1.5">Target Value</th>
+                        <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[10px] uppercase font-semibold">
+                          <th className="py-2 px-3">Type</th>
+                          <th className="py-2 px-3">Name / Host</th>
+                          <th className="py-2 px-3">Target / Address / Value</th>
+                          <th className="py-2 px-3">TTL</th>
+                          <th className="py-2 px-3">Purpose</th>
+                          <th className="py-2 px-3 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 text-slate-800">
-                        <tr>
-                          <td className="py-1.5 font-semibold">CNAME</td>
-                          <td className="py-1.5">{website.custom_domain}</td>
-                          <td className="py-1.5 text-slate-900">{baseDomain}</td>
-                        </tr>
+                      <tbody className="divide-y divide-slate-100 text-slate-800">
+                        {(domainDnsRecords.length > 0
+                          ? domainDnsRecords
+                          : [
+                              {
+                                type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
+                                name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
+                                value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
+                                ttl: '3600',
+                                description: 'Primary hostname routing record',
+                              },
+                              {
+                                type: 'TXT',
+                                name: `_hiesci-challenge${
+                                  website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]
+                                }`,
+                                value: website.custom_domain_record?.verification_token || 'hiesci-verification',
+                                ttl: '3600',
+                                description: 'Domain ownership verification challenge',
+                              },
+                            ]
+                        ).map((record, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/60">
+                            <td className="py-2 px-3">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  record.type === 'CNAME'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : record.type === 'A'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {record.type}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 font-semibold text-slate-900 select-all">
+                              {record.name}
+                            </td>
+                            <td className="py-2 px-3 text-slate-900 break-all select-all font-mono">
+                              {record.value}
+                            </td>
+                            <td className="py-2 px-3 text-slate-500 font-sans text-[11px]">
+                              {record.ttl || '3600'}
+                            </td>
+                            <td className="py-2 px-3 text-slate-600 font-sans text-[11px]">
+                              {record.description || 'DNS record'}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyText(record.value, `val-${idx}`)}
+                                className="px-2 py-0.5 rounded border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-[10px] font-sans font-medium cursor-pointer"
+                              >
+                                {copiedRecordKey === `val-${idx}` ? 'Copied!' : 'Copy Value'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    Note: After adding the records in your DNS console, propagation typically takes 2 to 15 minutes, but may take up to 24 hours depending on your registrar.
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleVerifyDns}
-                    disabled={verifyingDns}
-                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
-                  >
-                    {verifyingDns ? 'Checking DNS...' : 'Verify DNS Records'}
-                  </button>
+                {!website.custom_domain_verified && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-900">
+                          Step 3 & 4: Verify and Confirm Domain
+                        </div>
+                        <p className="text-[11px] text-slate-600">
+                          Click Verify DNS to check that your DNS records are active. Once verified, confirm to activate your live custom domain.
+                        </p>
+                      </div>
 
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyDns(false)}
+                          disabled={verifyingDns}
+                          className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
+                        >
+                          {verifyingDns ? 'Checking DNS Records...' : 'Verify DNS Records'}
+                        </button>
+
+                        {dnsVerificationResult?.canBypassInDev && (
+                          <button
+                            type="button"
+                            onClick={() => handleVerifyDns(true)}
+                            disabled={verifyingDns}
+                            className="px-3 py-1.5 rounded border border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-medium text-xs cursor-pointer disabled:opacity-50"
+                          >
+                            Simulate DNS Verified (Dev Mode)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {dnsVerificationResult && !dnsVerificationResult.verified && (
+                      <div className="p-2.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                        {dnsVerificationResult.message}
+                      </div>
+                    )}
+
+                    {(website.custom_domain_verified || dnsVerificationResult?.verified) && (
+                      <div className="p-3 rounded bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-semibold text-emerald-900">
+                            DNS Records Detected & Verified!
+                          </div>
+                          <p className="text-[11px] text-emerald-800">
+                            Your domain ownership and DNS routing are verified. Click below to activate this domain for all live traffic.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleConfirmCustomDomain}
+                          disabled={confirmingDomain}
+                          className="px-4 py-2 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs cursor-pointer disabled:opacity-50 shadow-xs"
+                        >
+                          {confirmingDomain ? 'Activating...' : 'Confirm & Activate Domain'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showDisconnectConfirm && (
+              <div className="p-3.5 rounded bg-rose-50 border border-rose-200 space-y-2 text-xs">
+                <div className="font-semibold text-rose-900">Disconnect Custom Domain?</div>
+                <p className="text-rose-700">
+                  Are you sure you want to disconnect <code>{website.custom_domain}</code>? Incoming visitor traffic will automatically revert to your platform subdomain (<code>{subdomain}.{baseDomain}</code>).
+                </p>
+                <div className="flex items-center gap-2 pt-1">
                   <button
                     type="button"
                     onClick={handleDisconnectCustomDomain}
-                    className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium text-xs cursor-pointer"
+                    disabled={saving}
+                    className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs cursor-pointer disabled:opacity-50"
                   >
-                    Disconnect Domain
+                    {saving ? 'Disconnecting...' : 'Yes, Disconnect Domain'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDisconnectConfirm(false)}
+                    className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'modules' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded p-5 space-y-5">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Current Package Plan
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                    {website?.package?.subscription_status || 'Active'}
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {website?.package?.name || 'Infinte Campus'}
+                </h2>
+                <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                  {website?.package?.short_description || website?.package?.description || 'Comprehensive institutional management and campus portal automation suite.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href={`/creator/${creatorId}/workspace/new`}
+                  className="px-3.5 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <span>Upgrade Plan</span>
+                  <span>↗</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Students
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.max_students ? Number(website.package.max_students).toLocaleString() : 'Unlimited'}
+                </div>
+                <div className="text-[10px] text-slate-500">Maximum capacity</div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Teachers
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.max_teachers ? Number(website.package.max_teachers).toLocaleString() : 'Unlimited'}
+                </div>
+                <div className="text-[10px] text-slate-500">Faculty seats</div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Staff Members
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.max_staff ? Number(website.package.max_staff).toLocaleString() : 'Unlimited'}
+                </div>
+                <div className="text-[10px] text-slate-500">Workstation seats</div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Storage Quota
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.max_storage_mb ? `${(website.package.max_storage_mb / 1024).toFixed(0)} GB` : '5 GB'}
+                </div>
+                <div className="text-[10px] text-slate-500">
+                  {website?.package?.max_storage_mb ? `${Number(website.package.max_storage_mb).toLocaleString()} MB cloud` : '5,120 MB cloud'}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Monthly Email
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.monthly_mail ? Number(website.package.monthly_mail).toLocaleString() : '1,000'}
+                </div>
+                <div className="text-[10px] text-slate-500">Emails per month</div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
+                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  Monthly SMS
+                </div>
+                <div className="text-base font-bold text-slate-900">
+                  {website?.package?.monthly_sms ? Number(website.package.monthly_sms).toLocaleString() : '200'}
+                </div>
+                <div className="text-[10px] text-slate-500">SMS per month</div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="text-xs font-semibold text-slate-900">
+                Core Feature & Portal Entitlements
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
+                    website?.package?.is_available_student_panel
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                      : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold">Student Portal</div>
+                    <div className="text-[11px] opacity-80">Online student dashboard & grades</div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      website?.package?.is_available_student_panel
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {website?.package?.is_available_student_panel ? 'Included' : 'Locked'}
+                  </span>
+                </div>
+
+                <div
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
+                    website?.package?.is_available_teacher_panel
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                      : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold">Teacher Portal</div>
+                    <div className="text-[11px] opacity-80">Faculty marks, routine & assignments</div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      website?.package?.is_available_teacher_panel
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {website?.package?.is_available_teacher_panel ? 'Included' : 'Locked'}
+                  </span>
+                </div>
+
+                <div
+                  className={`p-3 rounded border flex items-center justify-between gap-2 ${
+                    website?.package?.is_available_custom_domain
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-950'
+                      : 'bg-amber-50/60 border-amber-200 text-amber-950'
+                  }`}
+                >
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold">Custom Domain</div>
+                    <div className="text-[11px] opacity-80">Institutional root domain & SSL</div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      website?.package?.is_available_custom_domain
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {website?.package?.is_available_custom_domain ? 'Included' : 'Locked'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {Array.isArray(website?.package?.features) && website.package.features.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="text-xs font-semibold text-slate-900">
+                  Additional Included Features
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {website.package.features.map((feat, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-slate-700 text-xs inline-flex items-center gap-1.5"
+                    >
+                      <span className="text-emerald-600 font-bold">✓</span>
+                      <span>{typeof feat === 'string' ? feat : feat?.name || JSON.stringify(feat)}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Included Modules & Workstations</h3>
+                <p className="text-xs text-slate-500">
+                  Public institutional frontend modules and administrative staff workstations enabled under your subscription.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center border border-slate-300 rounded overflow-hidden bg-white text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setModuleViewType('all')}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
+                      moduleViewType === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    All Modules ({(website?.allowed_home_modules?.length || 0) + (website?.allowed_control_modules?.length || 0)})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModuleViewType('home')}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
+                      moduleViewType === 'home' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Public Home Modules ({website?.allowed_home_modules?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModuleViewType('control')}
+                    className={`px-3 py-1.5 font-medium transition-colors cursor-pointer ${
+                      moduleViewType === 'control' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Staff Control Modules ({website?.allowed_control_modules?.length || 0})
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex-1 min-w-[220px]">
+                <label className="block text-[11px] font-medium text-slate-600 mb-1">Search Modules by Name or Path</label>
+                <input
+                  type="text"
+                  aria-label="Search Modules by Name or Path"
+                  value={moduleSearch}
+                  onChange={(e) => setModuleSearch(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="w-48 shrink-0">
+                <label className="block text-[11px] font-medium text-slate-600 mb-1">Filter by Category</label>
+                <select
+                  aria-label="Filter by Category"
+                  value={moduleCategoryFilter}
+                  onChange={(e) => setModuleCategoryFilter(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                >
+                  <option value="all">All Categories</option>
+                  {Array.from(
+                    new Set([
+                      ...(website?.allowed_home_modules || []).map((m) => m.category).filter(Boolean),
+                      ...(website?.allowed_control_modules || []).map((m) => m.category).filter(Boolean),
+                    ])
+                  ).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {(moduleSearch || moduleCategoryFilter !== 'all') && (
+                <div className="self-end pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModuleSearch('');
+                      setModuleCategoryFilter('all');
+                    }}
+                    className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {(moduleViewType === 'all' || moduleViewType === 'home') && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Public Institutional Website Modules
+                    </h4>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Showing {(website?.allowed_home_modules || []).filter((m) => {
+                      if (moduleCategoryFilter !== 'all' && m.category?.toLowerCase() !== moduleCategoryFilter.toLowerCase()) return false;
+                      if (moduleSearch.trim()) {
+                        const q = moduleSearch.trim().toLowerCase();
+                        return (
+                          m.name?.toLowerCase().includes(q) ||
+                          m.category?.toLowerCase().includes(q) ||
+                          m.description?.toLowerCase().includes(q) ||
+                          m.path?.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    }).length} of {website?.allowed_home_modules?.length || 0}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(website?.allowed_home_modules || [])
+                    .filter((m) => {
+                      if (moduleCategoryFilter !== 'all' && m.category?.toLowerCase() !== moduleCategoryFilter.toLowerCase()) return false;
+                      if (moduleSearch.trim()) {
+                        const q = moduleSearch.trim().toLowerCase();
+                        return (
+                          m.name?.toLowerCase().includes(q) ||
+                          m.category?.toLowerCase().includes(q) ||
+                          m.description?.toLowerCase().includes(q) ||
+                          m.path?.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((mod) => (
+                      <div
+                        key={mod.id || mod.path}
+                        className="bg-white border border-slate-200 rounded p-4 flex flex-col justify-between gap-3 hover:border-slate-300 transition-colors"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-sky-100 text-sky-800">
+                              {mod.category || 'General'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Active in Plan
+                            </span>
+                          </div>
+
+                          <h5 className="text-sm font-bold text-slate-900">{mod.name}</h5>
+
+                          <div className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">
+                            {mod.path || '/'}
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                            {mod.description || 'Public institutional module active for student and visitor navigation.'}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-slate-500">Public Portal Page</span>
+                          <a
+                            href={
+                              website?.custom_domain && website.custom_domain_verified
+                                ? `https://${website.custom_domain}${mod.path || '/'}`
+                                : `http://${cleanSub}.${baseDomain}${mod.path || '/'}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-slate-800 hover:text-slate-950 inline-flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <span>Open Page</span>
+                            <span>↗</span>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {(moduleViewType === 'all' || moduleViewType === 'control') && (
+              <div className="space-y-3 pt-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      Administrative Staff Control Modules
+                    </h4>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    Showing {(website?.allowed_control_modules || []).filter((m) => {
+                      if (moduleCategoryFilter !== 'all' && m.category?.toLowerCase() !== moduleCategoryFilter.toLowerCase()) return false;
+                      if (moduleSearch.trim()) {
+                        const q = moduleSearch.trim().toLowerCase();
+                        return (
+                          m.name?.toLowerCase().includes(q) ||
+                          m.category?.toLowerCase().includes(q) ||
+                          m.description?.toLowerCase().includes(q) ||
+                          m.path?.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    }).length} of {website?.allowed_control_modules?.length || 0}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(website?.allowed_control_modules || [])
+                    .filter((m) => {
+                      if (moduleCategoryFilter !== 'all' && m.category?.toLowerCase() !== moduleCategoryFilter.toLowerCase()) return false;
+                      if (moduleSearch.trim()) {
+                        const q = moduleSearch.trim().toLowerCase();
+                        return (
+                          m.name?.toLowerCase().includes(q) ||
+                          m.category?.toLowerCase().includes(q) ||
+                          m.description?.toLowerCase().includes(q) ||
+                          m.path?.toLowerCase().includes(q)
+                        );
+                      }
+                      return true;
+                    })
+                    .map((mod) => (
+                      <div
+                        key={mod.id || mod.path}
+                        className="bg-white border border-slate-200 rounded p-4 flex flex-col justify-between gap-3 hover:border-slate-300 transition-colors"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-indigo-100 text-indigo-800">
+                              {mod.category || 'Workstation'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Active in Plan
+                            </span>
+                          </div>
+
+                          <h5 className="text-sm font-bold text-slate-900">{mod.name}</h5>
+
+                          <div className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-[11px]">
+                            {mod.path || '/staff-panel'}
+                          </div>
+
+                          <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                            {mod.description || 'Administrative workstation module enabled for institutional staff.'}
+                          </p>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                          <span className="text-[11px] text-slate-500">Workstation Panel</span>
+                          <a
+                            href={
+                              website?.custom_domain && website.custom_domain_verified
+                                ? `https://${website.custom_domain}${mod.path || '/staff-panel'}`
+                                : `http://${cleanSub}.${baseDomain}${mod.path || '/staff-panel'}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-slate-800 hover:text-slate-950 inline-flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <span>Open Workstation</span>
+                            <span>↗</span>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}
@@ -1479,128 +2410,122 @@ export default function WebsiteManagePage() {
           </div>
 
           {showAddStaffModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-2xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Add Staff Member</h3>
-                    <p className="text-xs text-slate-500">Provide staff credentials and send verification setup email.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddStaffModal(false)}
-                    className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
-                  >
-                    Close
-                  </button>
+            <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Add Staff Member</h3>
+                  <p className="text-xs text-slate-500">Provide staff credentials and send verification setup email.</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddStaffModal(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-medium cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
 
-                <form onSubmit={handleAddStaff} className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={staffForm.name}
-                        onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
-                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                        placeholder="e.g. John Doe"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Email Address *</label>
-                      <input
-                        type="email"
-                        required
-                        value={staffForm.email}
-                        onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                        placeholder="staff@institution.edu"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Contact Phone *</label>
-                      <input
-                        type="tel"
-                        required
-                        value={staffForm.number}
-                        onChange={(e) => setStaffForm({ ...staffForm, number: e.target.value })}
-                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                        placeholder="+880 1700 000000"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
-                      <select
-                        value={staffForm.gradeId}
-                        onChange={(e) => setStaffForm({ ...staffForm, gradeId: e.target.value })}
-                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                      >
-                        <option value="">Unassigned / Default</option>
-                        {payScalesList.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.name} (Basic: ৳{g.basic_salary})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-medium text-slate-700 mb-1">Residential Address</label>
-                      <input
-                        type="text"
-                        value={staffForm.address}
-                        onChange={(e) => setStaffForm({ ...staffForm, address: e.target.value })}
-                        className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                        placeholder="Campus quarter or residential address"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2 space-y-2 border-t border-slate-100 pt-2">
-                      <label className="block text-xs font-medium text-slate-700">Password & Invitation Mode</label>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
-                          <input
-                            type="radio"
-                            name="passwordMode"
-                            value="invite"
-                            checked={staffForm.passwordMode === 'invite'}
-                            onChange={() => setStaffForm({ ...staffForm, passwordMode: 'invite' })}
-                          />
-                          <span>Send verification email invitation (Staff creates password via email link)</span>
-                        </label>
-                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
-                          <input
-                            type="radio"
-                            name="passwordMode"
-                            value="manual"
-                            checked={staffForm.passwordMode === 'manual'}
-                            onChange={() => setStaffForm({ ...staffForm, passwordMode: 'manual' })}
-                          />
-                          <span>Set initial password manually (Staff still receives verification email)</span>
-                        </label>
-                      </div>
-
-                      {staffForm.passwordMode === 'manual' && (
-                        <div className="mt-2">
-                          <label className="block text-xs font-medium text-slate-700 mb-1">Initial Password *</label>
-                          <input
-                            type="password"
-                            required={staffForm.passwordMode === 'manual'}
-                            minLength={6}
-                            value={staffForm.password}
-                            onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-                            className="w-full max-w-sm bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                            placeholder="At least 6 characters"
-                          />
-                        </div>
-                      )}
-                    </div>
+              <form onSubmit={handleAddStaff} className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={staffForm.name}
+                      onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    />
                   </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      value={staffForm.email}
+                      onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Contact Phone *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={staffForm.number}
+                      onChange={(e) => setStaffForm({ ...staffForm, number: e.target.value })}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Pay Grade Scale</label>
+                    <select
+                      value={staffForm.gradeId}
+                      onChange={(e) => setStaffForm({ ...staffForm, gradeId: e.target.value })}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    >
+                      <option value="">Unassigned / Default</option>
+                      {payScalesList.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name} (Basic: ৳{g.basic_salary})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-slate-700 mb-1">Residential Address</label>
+                    <input
+                      type="text"
+                      value={staffForm.address}
+                      onChange={(e) => setStaffForm({ ...staffForm, address: e.target.value })}
+                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-2 border-t border-slate-100 pt-2">
+                    <label className="block text-xs font-medium text-slate-700">Password & Invitation Mode</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
+                        <input
+                          type="radio"
+                          name="passwordMode"
+                          value="invite"
+                          checked={staffForm.passwordMode === 'invite'}
+                          onChange={() => setStaffForm({ ...staffForm, passwordMode: 'invite' })}
+                        />
+                        <span>Send verification email invitation (Staff creates password via email link)</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer text-xs">
+                        <input
+                          type="radio"
+                          name="passwordMode"
+                          value="manual"
+                          checked={staffForm.passwordMode === 'manual'}
+                          onChange={() => setStaffForm({ ...staffForm, passwordMode: 'manual' })}
+                        />
+                        <span>Set initial password manually (Staff still receives verification email)</span>
+                      </label>
+                    </div>
+
+                    {staffForm.passwordMode === 'manual' && (
+                      <div className="mt-2">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">Initial Password *</label>
+                        <input
+                          type="password"
+                          required={staffForm.passwordMode === 'manual'}
+                          minLength={6}
+                          value={staffForm.password}
+                          onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                          className="w-full max-w-sm bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                   <div className="space-y-2 border-t border-slate-100 pt-2">
                     <div className="flex items-center justify-between">
@@ -1653,7 +2578,7 @@ export default function WebsiteManagePage() {
                           <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                             <div>
                               <span className="font-medium text-slate-800">{m.name}</span>
-                              <span className="text-[10px] text-slate-400 font-mono block">slug: {m.slug}</span>
+                              <span className="text-[10px] text-slate-400 block">{m.category || m.path || 'Workstation'}</span>
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -1740,13 +2665,11 @@ export default function WebsiteManagePage() {
                     </button>
                   </div>
                 </form>
-              </div>
             </div>
           )}
 
           {showEditPermsModal && targetStaff && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-xl w-full p-4 max-h-[90vh] overflow-y-auto space-y-3 shadow-md">
+            <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
@@ -1809,7 +2732,7 @@ export default function WebsiteManagePage() {
                         <div key={m.slug} className="p-2 flex items-center justify-between gap-2 text-xs hover:bg-slate-50">
                           <div>
                             <span className="font-medium text-slate-800">{m.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono block">slug: {m.slug}</span>
+                            <span className="text-[10px] text-slate-400 block">{m.category || m.path || 'Workstation'}</span>
                           </div>
 
                           <div className="flex items-center gap-3">
@@ -1883,13 +2806,11 @@ export default function WebsiteManagePage() {
                     </button>
                   </div>
                 </form>
-              </div>
             </div>
           )}
 
           {showEditProfileModal && targetStaff && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-              <div className="bg-white rounded border border-slate-200 max-w-md w-full p-4 space-y-3 shadow-md">
+            <div className="bg-white rounded border border-slate-200 p-4 space-y-3 shadow-sm mb-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
@@ -1983,7 +2904,6 @@ export default function WebsiteManagePage() {
                     </button>
                   </div>
                 </form>
-              </div>
             </div>
           )}
         </div>
@@ -2214,7 +3134,6 @@ export default function WebsiteManagePage() {
                   type="text"
                   value={eeinNumber}
                   onChange={(e) => setEeinNumber(e.target.value)}
-                  placeholder="e.g. 108342"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2239,7 +3158,6 @@ export default function WebsiteManagePage() {
                   type="text"
                   value={tagline}
                   onChange={(e) => setTagline(e.target.value)}
-                  placeholder="e.g. Inspiring Excellence, Cultivating Leadership"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2250,7 +3168,6 @@ export default function WebsiteManagePage() {
                   type="email"
                   value={contactEmail}
                   onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="info@institution.edu"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2261,7 +3178,6 @@ export default function WebsiteManagePage() {
                   type="tel"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+880 2 9876543"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2272,7 +3188,6 @@ export default function WebsiteManagePage() {
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Road, Sector, City, Country"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2283,7 +3198,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={mapUrl}
                   onChange={(e) => setMapUrl(e.target.value)}
-                  placeholder="https://maps.google.com/..."
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2303,7 +3217,6 @@ export default function WebsiteManagePage() {
                   rows={2}
                   value={mission}
                   onChange={(e) => setMission(e.target.value)}
-                  placeholder="Educational mission and pedagogical goals..."
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2314,7 +3227,6 @@ export default function WebsiteManagePage() {
                   rows={2}
                   value={vision}
                   onChange={(e) => setVision(e.target.value)}
-                  placeholder="Long-term institution vision..."
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2325,7 +3237,6 @@ export default function WebsiteManagePage() {
                   rows={3}
                   value={history}
                   onChange={(e) => setHistory(e.target.value)}
-                  placeholder="Founding background, founding year, milestones..."
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2345,7 +3256,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={facebookUrl}
                   onChange={(e) => setFacebookUrl(e.target.value)}
-                  placeholder="https://facebook.com/yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2356,7 +3266,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={twitterUrl}
                   onChange={(e) => setTwitterUrl(e.target.value)}
-                  placeholder="https://twitter.com/yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2367,7 +3276,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
-                  placeholder="https://instagram.com/yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2378,7 +3286,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://youtube.com/@yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2389,7 +3296,6 @@ export default function WebsiteManagePage() {
                   type="url"
                   value={linkedinUrl}
                   onChange={(e) => setLinkedinUrl(e.target.value)}
-                  placeholder="https://linkedin.com/school/yourschool"
                   className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
                 />
               </div>
@@ -2615,7 +3521,6 @@ export default function WebsiteManagePage() {
                 rows={3}
                 value={maintenanceMessage}
                 onChange={(e) => setMaintenanceMessage(e.target.value)}
-                placeholder="Our campus portal is temporarily under scheduled maintenance. Please check back shortly."
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
               />
               <div className="flex justify-end">

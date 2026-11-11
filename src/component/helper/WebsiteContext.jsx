@@ -13,6 +13,17 @@ export function useTenantWebsite() {
   return context;
 }
 
+if (typeof window !== 'undefined' && window.performance && typeof window.performance.measure === 'function') {
+  const _origMeasure = window.performance.measure.bind(window.performance);
+  window.performance.measure = function(...args) {
+    try {
+      return _origMeasure(...args);
+    } catch {
+      return null;
+    }
+  };
+}
+
 import { hexToRgb, mixColor, calculateColorShades } from 'src/lib/utils/colors';
 
 export { calculateColorShades };
@@ -57,10 +68,13 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   });
 
   useEffect(() => {
-    const candidate = propSlug || params?.domain || params?.slug || extractBrowserTenant();
-    if (candidate) {
-      setActiveSlug(candidate);
-    }
+    const timer = setTimeout(() => {
+      const candidate = propSlug || params?.domain || params?.slug || extractBrowserTenant();
+      if (candidate) {
+        setActiveSlug(candidate);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [propSlug, params?.domain, params?.slug]);
 
   const [website, setWebsite] = useState(initialWebsite);
@@ -70,19 +84,22 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
   const [theme, setThemeState] = useState('light');
 
   useEffect(() => {
-    try {
-      const storedTheme = localStorage.getItem('tenant_theme') || localStorage.getItem('theme');
-      if (
-        storedTheme === 'dark' ||
-        (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      ) {
-        setThemeState('dark');
-        document.documentElement.classList.add('dark');
-      } else {
-        setThemeState('light');
-        document.documentElement.classList.remove('dark');
-      }
-    } catch (_) {}
+    const timer = setTimeout(() => {
+      try {
+        const storedTheme = localStorage.getItem('tenant_theme') || localStorage.getItem('theme');
+        if (
+          storedTheme === 'dark' ||
+          (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+          setThemeState('dark');
+          document.documentElement.classList.add('dark');
+        } else {
+          setThemeState('light');
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (_) {}
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const setTheme = useCallback((newTheme) => {
@@ -260,16 +277,22 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
 
   useEffect(() => {
     if (!initialWebsite && activeSlug) {
-      fetchWebsiteData();
+      const timer = setTimeout(() => {
+        fetchWebsiteData();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [initialWebsite, activeSlug, fetchWebsiteData]);
 
   useEffect(() => {
-    fetchWebsiteSettings();
-    fetchDesignations();
-    fetchDepartments();
-    fetchClasses();
-    fetchClubs();
+    const timer = setTimeout(() => {
+      fetchWebsiteSettings();
+      fetchDesignations();
+      fetchDepartments();
+      fetchClasses();
+      fetchClubs();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchWebsiteSettings, fetchDesignations, fetchDepartments, fetchClasses, fetchClubs]);
 
   const tenantUrl = useCallback(
@@ -356,6 +379,13 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
       package: website?.package || null,
       allowedModules: website?.allowed_modules || [],
       allowedModuleSlugs: website?.allowed_module_slugs || [],
+      allowedHomeModules: website?.allowed_home_modules || [],
+      allowedHomeModulePaths: website?.allowed_home_module_paths || [],
+      allowedControlModules: website?.allowed_control_modules || [],
+      allowedControlModulePaths: website?.allowed_control_module_paths || [],
+      isAvailableStudentPanel: website?.is_available_student_panel ?? true,
+      isAvailableTeacherPanel: website?.is_available_teacher_panel ?? true,
+      isAvailableCustomDomain: website?.is_available_custom_domain ?? false,
       hasModuleAllowance: (slug) => {
         if (!slug) return false;
         const target = String(slug).toLowerCase().trim();

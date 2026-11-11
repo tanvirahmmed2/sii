@@ -33,7 +33,8 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
                     'category', hm.category,
                     'description', hm.description,
                     'icon', hm.icon,
-                    'is_active', hm.is_active
+                    'is_active', hm.is_active,
+                    'display_order', hm.display_order
                   ) ORDER BY hm.display_order ASC, hm.id ASC
                 )
                 FROM package_home_modules phm
@@ -61,7 +62,8 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
                     'category', cm.category,
                     'description', cm.description,
                     'icon', cm.icon,
-                    'is_active', cm.is_active
+                    'is_active', cm.is_active,
+                    'display_order', cm.display_order
                   ) ORDER BY cm.category ASC, cm.display_order ASC, cm.id ASC
                 )
                 FROM package_control_modules pcm
@@ -77,9 +79,17 @@ async function fetchFullPackageBySlugOrId(slugOrId) {
                 WHERE pcm.package_id = p.id
               ),
               '[]'::json
-            ) AS control_module_ids
+            ) AS control_module_ids,
+            COALESCE(
+              (SELECT COUNT(*)::int FROM subscriptions s WHERE s.package_id = p.id),
+              0
+            ) AS subscriptions_count,
+            COALESCE(
+              (SELECT COUNT(*)::int FROM websites w JOIN subscriptions s ON w.subscription_id = s.id WHERE s.package_id = p.id),
+              0
+            ) AS websites_count
      FROM packages p
-     WHERE p.slug = $1 OR p.id::text = $1
+     WHERE LOWER(p.slug) = LOWER($1) OR p.id::text = $1
      LIMIT 1`,
     [slugOrId]
   );
@@ -97,8 +107,9 @@ export async function GET(request, { params }) {
       );
     }
 
-    const { slug } = await params;
-    const cleanSlug = decodeURIComponent(slug || '').trim();
+    const resolvedParams = await params;
+    const rawSlug = resolvedParams?.slug;
+    const cleanSlug = decodeURIComponent(rawSlug || '').trim();
 
     const record = await fetchFullPackageBySlugOrId(cleanSlug);
 
@@ -106,20 +117,12 @@ export async function GET(request, { params }) {
       return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
     }
 
-    let subscriptionsCount = 0;
-    try {
-      const subRes = await queryDb(
-        `SELECT COUNT(*)::int AS count FROM subscription WHERE package_id = $1`,
-        [record.id]
-      );
-      subscriptionsCount = subRes.rows[0]?.count || 0;
-    } catch (_) {}
-
     return NextResponse.json({
       success: true,
       record,
       package: record,
-      subscriptions_count: subscriptionsCount,
+      subscriptions_count: record.subscriptions_count || 0,
+      websites_count: record.websites_count || 0,
     });
   } catch (error) {
     console.error('Developer package GET error:', error);
@@ -137,10 +140,11 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const { slug } = await params;
-    const cleanSlug = decodeURIComponent(slug || '').trim();
+    const resolvedParams = await params;
+    const rawSlug = resolvedParams?.slug;
+    const cleanSlug = decodeURIComponent(rawSlug || '').trim();
 
-    const existingRes = await queryDb('SELECT * FROM packages WHERE slug = $1 OR id::text = $1 LIMIT 1', [cleanSlug]);
+    const existingRes = await queryDb('SELECT * FROM packages WHERE LOWER(slug) = LOWER($1) OR id::text = $1 LIMIT 1', [cleanSlug]);
     if (existingRes.rows.length === 0) {
       return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
     }
@@ -155,7 +159,9 @@ export async function PUT(request, { params }) {
     }
 
     let newSlug = current.slug;
-    if (name && name !== current.name) {
+    if (data.slug && String(data.slug).trim() && String(data.slug).trim().toLowerCase() !== current.slug.toLowerCase()) {
+      newSlug = await generateUniqueSlug(String(data.slug).trim(), current.id);
+    } else if (name && name !== current.name) {
       newSlug = await generateUniqueSlug(name, current.id);
     }
 
@@ -199,10 +205,6 @@ export async function PUT(request, { params }) {
       ? Math.max(100, Number(data.max_storage_mb))
       : (current.max_storage_mb || 5120);
 
-    const maxStorage = data.max_storage !== undefined
-      ? String(data.max_storage).trim()
-      : (current.max_storage || `${Math.round(maxStorageMb / 1024)} GB`);
-
     const isAvailableStudentPanel = data.is_available_student_panel !== undefined
       ? Boolean(data.is_available_student_panel)
       : (current.is_available_student_panel !== undefined ? Boolean(current.is_available_student_panel) : true);
@@ -220,12 +222,21 @@ export async function PUT(request, { params }) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : Boolean(current.is_active);
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
+
     const monthlyMail = data.monthly_mail !== undefined
       ? Math.max(0, Number(data.monthly_mail))
       : (current.monthly_mail !== undefined ? Number(current.monthly_mail) : 1000);
+
     const monthlySms = data.monthly_sms !== undefined
       ? Math.max(0, Number(data.monthly_sms))
       : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
+
+    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : (current.charge_model || 'subscription_only');
+    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : (current.per_tx_fee_type || 'percentage');
+    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : Number(current.per_tx_fee_value || 0);
+    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : Number(current.per_student_fee_usd || 0);
+    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : Number(current.per_student_fee_bdt || 0);
+    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : Number(current.student_fee_cycle_days || 30);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
@@ -251,29 +262,35 @@ export async function PUT(request, { params }) {
            max_students = $13,
            max_teachers = $14,
            max_staff = $15,
-           max_storage = $16,
-           max_storage_mb = $17,
-           is_available_student_panel = $18,
-           is_available_teacher_panel = $19,
-           is_available_custom_domain = $20,
-           features = $21::jsonb,
-           is_popular = $22,
-           is_public = $23,
-           is_active = $24,
-           grace_period = $25,
-           sort_order = $26,
-           monthly_mail = $27,
-           monthly_sms = $28,
+           max_storage_mb = $16,
+           is_available_student_panel = $17,
+           is_available_teacher_panel = $18,
+           is_available_custom_domain = $19,
+           features = $20::jsonb,
+           is_popular = $21,
+           is_public = $22,
+           is_active = $23,
+           grace_period = $24,
+           sort_order = $25,
+           monthly_mail = $26,
+           monthly_sms = $27,
+           charge_model = $28,
+           per_tx_fee_type = $29,
+           per_tx_fee_value = $30,
+           per_student_fee_usd = $31,
+           per_student_fee_bdt = $32,
+           student_fee_cycle_days = $33,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $29`,
+       WHERE id = $34`,
       [
         name, newSlug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
         monthlyMail, monthlySms,
+        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays,
         current.id
       ]
     );
@@ -289,13 +306,13 @@ export async function PUT(request, { params }) {
       }
 
       await queryDb('DELETE FROM package_home_modules WHERE package_id = $1', [current.id]).catch(() => {});
-      for (const hId of homeIds) {
+      if (homeIds.length > 0) {
         await queryDb(
           `INSERT INTO package_home_modules (package_id, home_module_id)
-           VALUES ($1, $2)
+           SELECT $1, unnest($2::bigint[])
            ON CONFLICT (package_id, home_module_id) DO NOTHING`,
-          [current.id, hId]
-        ).catch((e) => console.warn('Error syncing package_home_module:', e.message));
+          [current.id, homeIds]
+        ).catch((e) => console.warn('Error syncing package_home_module batch:', e.message));
       }
     }
 
@@ -310,13 +327,13 @@ export async function PUT(request, { params }) {
       }
 
       await queryDb('DELETE FROM package_control_modules WHERE package_id = $1', [current.id]).catch(() => {});
-      for (const cId of controlIds) {
+      if (controlIds.length > 0) {
         await queryDb(
           `INSERT INTO package_control_modules (package_id, control_module_id)
-           VALUES ($1, $2)
+           SELECT $1, unnest($2::bigint[])
            ON CONFLICT (package_id, control_module_id) DO NOTHING`,
-          [current.id, cId]
-        ).catch((e) => console.warn('Error syncing package_control_module:', e.message));
+          [current.id, controlIds]
+        ).catch((e) => console.warn('Error syncing package_control_module batch:', e.message));
       }
     }
 
@@ -326,7 +343,7 @@ export async function PUT(request, { params }) {
       success: true,
       record: updatedPackage,
       package: updatedPackage,
-      message: 'Package updated successfully',
+      message: 'Package and related module data updated successfully',
     });
   } catch (error) {
     console.error('Developer package PUT error:', error);
@@ -344,11 +361,12 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    const { slug } = await params;
-    const cleanSlug = decodeURIComponent(slug || '').trim();
+    const resolvedParams = await params;
+    const rawSlug = resolvedParams?.slug;
+    const cleanSlug = decodeURIComponent(rawSlug || '').trim();
 
     const deleteRes = await queryDb(
-      'DELETE FROM packages WHERE slug = $1 OR id::text = $1 RETURNING id, name',
+      'DELETE FROM packages WHERE LOWER(slug) = LOWER($1) OR id::text = $1 RETURNING id, name',
       [cleanSlug]
     );
 

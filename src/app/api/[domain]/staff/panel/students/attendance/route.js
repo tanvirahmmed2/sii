@@ -150,28 +150,6 @@ export async function POST(request, context) {
       return NextResponse.json({ success: false, error: 'Attendance records are required.' }, { status: 400 });
     }
 
-    try {
-      await queryDb(`
-        CREATE TABLE IF NOT EXISTS website_student_attendances (
-            id BIGSERIAL PRIMARY KEY,
-            website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-            student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
-            class_id BIGINT REFERENCES website_classes(id) ON DELETE SET NULL,
-            section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
-            session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
-            date DATE NOT NULL,
-            status VARCHAR(50) NOT NULL DEFAULT 'present',
-            in_time TIME,
-            out_time TIME,
-            remark TEXT,
-            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(student_id, date)
-        );
-      `);
-    } catch {
-    }
-
     let savedCount = 0;
     for (const rec of records) {
       if (!rec.student_id) continue;

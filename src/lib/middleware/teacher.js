@@ -164,7 +164,9 @@ export async function getTeacherSession(request) {
               wt.photo_id, wt.is_active, wt.is_registered, wt.created_at,
               wd.title AS designation_title,
               dept.name AS department_name, dept.code AS department_code,
-              w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+              w.name AS website_name,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
        FROM website_teachers wt
        LEFT JOIN website_designations wd ON wd.id = wt.designation_id
        LEFT JOIN website_departments dept ON dept.id = wt.department_id

@@ -113,7 +113,7 @@ function PaymentsContent() {
           </h2>
           <input
             type="text"
-            placeholder="Search by ID, package, status..."
+            aria-label="Search payment history"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full sm:w-60 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"

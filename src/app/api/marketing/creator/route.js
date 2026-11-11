@@ -64,6 +64,7 @@ export async function GET(request) {
       packagesRes,
       ticketsRes,
       purchasesRes,
+      updatesRes,
     ] = await Promise.all([
       queryDb(
         `SELECT s.id, s.creator_id, s.package_id, s.purchase_id, s.status,
@@ -79,8 +80,8 @@ export async function GET(request) {
                 COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
                 (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
-                COALESCE(p.max_websites, 1) AS max_websites,
-                COALESCE(p.max_websites, 1) AS max_portfolios,
+                1 AS max_websites,
+                1 AS max_portfolios,
                 COALESCE(p.max_teachers, 0) AS max_teachers,
                 COALESCE(p.max_students, 0) AS max_students,
                 COALESCE(p.max_staff, 0) AS max_staff,
@@ -169,7 +170,7 @@ export async function GET(request) {
                 COALESCE(monthly_price_usd, monthly_price, 0) AS monthly_price,
                 (COALESCE(monthly_price_usd, monthly_price, 0) * 100)::bigint AS price_in_cents,
                 discount_percentage, max_students, max_teachers, max_staff, max_storage_mb,
-                COALESCE(max_websites, 1) AS max_websites,
+                1 AS max_websites,
                 features, is_popular, is_active, grace_period, sort_order
          FROM packages
          WHERE is_active = TRUE AND is_public = TRUE
@@ -197,6 +198,14 @@ export async function GET(request) {
          WHERE pu.creator_id = $1
          ORDER BY pu.id DESC LIMIT 20`,
         [creatorId]
+      ).catch(() => ({ rows: [] })),
+
+      queryDb(
+        `SELECT id, version, title, slug, description, release_date, created_at
+         FROM updates
+         WHERE is_published = TRUE
+         ORDER BY release_date DESC, id DESC
+         LIMIT 10`
       ).catch(() => ({ rows: [] })),
     ]);
 
@@ -250,6 +259,7 @@ export async function GET(request) {
     const packages = packagesRes?.rows || [];
     const tickets = ticketsRes?.rows || [];
     const purchases = purchasesRes?.rows || [];
+    const updates = updatesRes?.rows || [];
 
     let totalSpentUsd = 0;
     let totalSpentBdt = 0;
@@ -282,7 +292,7 @@ export async function GET(request) {
       packages,
       tickets,
       projects: [],
-      updates: [],
+      updates,
       creators: [],
       stats: {
         totalWebsites: websites.length,

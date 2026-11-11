@@ -2,15 +2,20 @@
 
 import { useState, useEffect, useMemo } from 'react';
 
-export default function PackageForm({
-  initialData = null,
-  onSuccess,
-  onCancel,
-  apiEndpoint = '/api/marketing/developer/packages',
-}) {
-  const isEditing = Boolean(initialData?.id);
+function parseInitialFeatures(data) {
+  if (!data?.features) return [];
+  if (Array.isArray(data.features)) return data.features.filter(Boolean);
+  if (typeof data.features === 'string') {
+    try {
+      const parsed = JSON.parse(data.features);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch (_) {}
+  }
+  return [];
+}
 
-  const [formData, setFormData] = useState({
+function buildInitialFormData(initialData) {
+  return {
     name: initialData?.name || '',
     slug: initialData?.slug || '',
     short_description: initialData?.short_description || '',
@@ -43,8 +48,19 @@ export default function PackageForm({
     max_students: initialData?.max_students ?? 500,
     max_teachers: initialData?.max_teachers ?? 30,
     max_staff: initialData?.max_staff ?? 20,
-    max_storage: initialData?.max_storage || '5 GB',
     max_storage_mb: initialData?.max_storage_mb ?? 5120,
+    monthly_mail: initialData?.monthly_mail ?? 1000,
+    monthly_sms: initialData?.monthly_sms ?? 200,
+    charge_model: initialData?.charge_model || 'subscription_only',
+    per_tx_fee_type: initialData?.per_tx_fee_type || 'percentage',
+    per_tx_fee_value:
+      initialData?.per_tx_fee_value !== undefined ? String(initialData.per_tx_fee_value) : '0',
+    per_student_fee_usd:
+      initialData?.per_student_fee_usd !== undefined ? String(initialData.per_student_fee_usd) : '0',
+    per_student_fee_bdt:
+      initialData?.per_student_fee_bdt !== undefined ? String(initialData.per_student_fee_bdt) : '0',
+    student_fee_cycle_days:
+      initialData?.student_fee_cycle_days !== undefined ? Number(initialData.student_fee_cycle_days) : 30,
     is_available_student_panel: initialData?.is_available_student_panel !== false,
     is_available_teacher_panel: initialData?.is_available_teacher_panel !== false,
     is_available_custom_domain: Boolean(initialData?.is_available_custom_domain),
@@ -53,33 +69,78 @@ export default function PackageForm({
     is_public: initialData?.is_public !== undefined ? Boolean(initialData.is_public) : true,
     is_active: initialData?.is_active !== undefined ? Boolean(initialData.is_active) : true,
     sort_order: initialData?.sort_order ?? 0,
-  });
+    features: parseInitialFeatures(initialData),
+  };
+}
 
+function getInitialHomeIds(initialData) {
+  if (!initialData) return [];
+  if (Array.isArray(initialData.home_module_ids)) {
+    return initialData.home_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+  }
+  if (Array.isArray(initialData.home_modules)) {
+    return initialData.home_modules
+      .map((m) => Number(m.id || m))
+      .filter((n) => !isNaN(n) && n > 0);
+  }
+  return [];
+}
+
+function getInitialControlIds(initialData) {
+  if (!initialData) return [];
+  if (Array.isArray(initialData.control_module_ids)) {
+    return initialData.control_module_ids.map(Number).filter((n) => !isNaN(n) && n > 0);
+  }
+  if (Array.isArray(initialData.control_modules)) {
+    return initialData.control_modules
+      .map((m) => Number(m.id || m))
+      .filter((n) => !isNaN(n) && n > 0);
+  }
+  return [];
+}
+
+export default function PackageForm({
+  initialData = null,
+  onSuccess,
+  onCancel,
+  apiEndpoint = '/api/marketing/developer/packages',
+}) {
+  const isEditing = Boolean(initialData?.id);
+
+  const [formData, setFormData] = useState(() => buildInitialFormData(initialData));
+  const [newFeatureText, setNewFeatureText] = useState('');
   const [homeModules, setHomeModules] = useState([]);
   const [controlModules, setControlModules] = useState([]);
-  const [selectedHomeIds, setSelectedHomeIds] = useState([]);
-  const [selectedControlIds, setSelectedControlIds] = useState([]);
-  const [activeModuleTab, setActiveModuleTab] = useState('control'); 
+  const [selectedHomeIds, setSelectedHomeIds] = useState(() => getInitialHomeIds(initialData));
+  const [selectedControlIds, setSelectedControlIds] = useState(() => getInitialControlIds(initialData));
+  const [activeModuleTab, setActiveModuleTab] = useState('control');
   const [loadingModules, setLoadingModules] = useState(true);
   const [homeSearch, setHomeSearch] = useState('');
   const [controlSearch, setControlSearch] = useState('');
   const [controlCategoryFilter, setControlCategoryFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     let isMounted = true;
-    setLoadingModules(true);
 
     fetch('/api/marketing/developer/tenant-modules?type=all')
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        if (Array.isArray(data.home_modules)) {
-          setHomeModules(data.home_modules);
-        }
-        if (Array.isArray(data.control_modules)) {
-          setControlModules(data.control_modules);
+        const hMods = Array.isArray(data.home_modules) ? data.home_modules : [];
+        const cMods = Array.isArray(data.control_modules) ? data.control_modules : [];
+        setHomeModules(hMods);
+        setControlModules(cMods);
+
+        if (!initialData) {
+          setSelectedHomeIds((prev) =>
+            prev.length === 0 ? hMods.filter((m) => m.is_active).map((m) => Number(m.id)) : prev
+          );
+          setSelectedControlIds((prev) =>
+            prev.length === 0 ? cMods.filter((m) => m.is_active).map((m) => Number(m.id)) : prev
+          );
         }
       })
       .catch((err) => {
@@ -92,30 +153,7 @@ export default function PackageForm({
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (initialData) {
-      if (Array.isArray(initialData.home_module_ids)) {
-        setSelectedHomeIds(initialData.home_module_ids.map(Number));
-      } else if (Array.isArray(initialData.home_modules)) {
-        setSelectedHomeIds(initialData.home_modules.map((m) => Number(m.id || m)).filter(Boolean));
-      }
-
-      if (Array.isArray(initialData.control_module_ids)) {
-        setSelectedControlIds(initialData.control_module_ids.map(Number));
-      } else if (Array.isArray(initialData.control_modules)) {
-        setSelectedControlIds(initialData.control_modules.map((m) => Number(m.id || m)).filter(Boolean));
-      }
-    } else if (!isEditing) {
-      if (homeModules.length > 0 && selectedHomeIds.length === 0) {
-        setSelectedHomeIds(homeModules.filter((m) => m.is_active).map((m) => Number(m.id)));
-      }
-      if (controlModules.length > 0 && selectedControlIds.length === 0) {
-        setSelectedControlIds(controlModules.filter((m) => m.is_active).map((m) => Number(m.id)));
-      }
-    }
-  }, [initialData, homeModules, controlModules, isEditing]);
+  }, [initialData]);
 
   const toggleHomeModule = (id) => {
     const num = Number(id);
@@ -162,9 +200,37 @@ export default function PackageForm({
     });
   }, [controlModules, controlSearch, controlCategoryFilter]);
 
+  const handleAddFeature = (e) => {
+    e.preventDefault();
+    const text = newFeatureText.trim();
+    if (!text) return;
+    if (!formData.features.includes(text)) {
+      setFormData((prev) => ({
+        ...prev,
+        features: [...prev.features, text],
+      }));
+    }
+    setNewFeatureText('');
+  };
+
+  const handleRemoveFeature = (featureToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: prev.features.filter((f) => f !== featureToRemove),
+    }));
+  };
+
+  const handleStoragePreset = (mb) => {
+    setFormData((prev) => ({
+      ...prev,
+      max_storage_mb: mb,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
 
     if (!formData.name.trim()) {
       setError('Package name is required.');
@@ -188,7 +254,6 @@ export default function PackageForm({
     const monthlyBdt = Math.max(0, parseFloat(formData.monthly_price_bdt) || 0);
     const yearlyBdt = Math.max(0, parseFloat(formData.yearly_price_bdt) || 0);
     const maxStorageMb = Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120);
-    const maxStorage = formData.max_storage.trim() || `${Math.round(maxStorageMb / 1024)} GB`;
 
     const payload = {
       name: formData.name.trim(),
@@ -206,8 +271,16 @@ export default function PackageForm({
       max_students: Math.max(1, parseInt(formData.max_students, 10) || 500),
       max_teachers: Math.max(1, parseInt(formData.max_teachers, 10) || 30),
       max_staff: Math.max(1, parseInt(formData.max_staff, 10) || 20),
-      max_storage: maxStorage,
       max_storage_mb: maxStorageMb,
+      monthly_mail: Math.max(0, parseInt(formData.monthly_mail, 10) || 0),
+      monthly_sms: Math.max(0, parseInt(formData.monthly_sms, 10) || 0),
+      charge_model: formData.charge_model,
+      per_tx_fee_type: formData.per_tx_fee_type,
+      per_tx_fee_value: Math.max(0, parseFloat(formData.per_tx_fee_value) || 0),
+      per_student_fee_usd: Math.max(0, parseFloat(formData.per_student_fee_usd) || 0),
+      per_student_fee_bdt: Math.max(0, parseFloat(formData.per_student_fee_bdt) || 0),
+      student_fee_cycle_days: Math.max(1, parseInt(formData.student_fee_cycle_days, 10) || 30),
+      features: formData.features,
       is_available_student_panel: Boolean(formData.is_available_student_panel),
       is_available_teacher_panel: Boolean(formData.is_available_teacher_panel),
       is_available_custom_domain: Boolean(formData.is_available_custom_domain),
@@ -223,7 +296,7 @@ export default function PackageForm({
     try {
       const targetUrl =
         isEditing && initialData?.id
-          ? apiEndpoint.includes('/[slug]') || apiEndpoint.endsWith(`/${initialData.slug}`)
+          ? apiEndpoint !== '/api/marketing/developer/packages'
             ? apiEndpoint
             : `/api/marketing/developer/packages?id=${initialData.id}`
           : apiEndpoint;
@@ -236,32 +309,9 @@ export default function PackageForm({
 
       const data = await res.json();
       if (data.success) {
+        setSuccessMessage(isEditing ? 'Package updated successfully.' : 'Package created successfully.');
         if (!isEditing) {
-          setFormData({
-            name: '',
-            slug: '',
-            short_description: '',
-            tagline: '',
-            description: '',
-            monthly_price_usd: '29.00',
-            yearly_price_usd: '290.00',
-            monthly_price_bdt: '3500.00',
-            yearly_price_bdt: '35000.00',
-            discount_percentage: '15.00',
-            max_students: 500,
-            max_teachers: 30,
-            max_staff: 20,
-            max_storage: '5 GB',
-            max_storage_mb: 5120,
-            is_available_student_panel: true,
-            is_available_teacher_panel: true,
-            is_available_custom_domain: false,
-            grace_period: 3,
-            is_popular: false,
-            is_public: true,
-            is_active: true,
-            sort_order: 0,
-          });
+          setFormData(buildInitialFormData(null));
         }
         if (onSuccess) onSuccess(data.record || data.package);
       } else {
@@ -283,8 +333,8 @@ export default function PackageForm({
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isEditing
-              ? `Updating package #${initialData.id} rates, institutional capacity, and linked modules.`
-              : 'Configure subscription pricing, capacity quotas, portal availability, and linked home & control modules.'}
+              ? `Updating package #${initialData.id} rates, capacity quotas, fee models, and linked modules.`
+              : 'Configure subscription pricing, capacity quotas, fee models, and linked home & control modules.'}
           </p>
         </div>
         {onCancel && (
@@ -301,6 +351,12 @@ export default function PackageForm({
       {error && (
         <div className="p-3 rounded border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="p-3 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium">
+          {successMessage}
         </div>
       )}
 
@@ -321,13 +377,13 @@ export default function PackageForm({
 
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Short Description
+              Slug Identifier
             </label>
             <input
               type="text"
-              value={formData.short_description}
-              onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
 
@@ -342,6 +398,18 @@ export default function PackageForm({
               className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Short Description
+          </label>
+          <input
+            type="text"
+            value={formData.short_description}
+            onChange={(e) => setFormData({ ...formData, short_description: e.target.value })}
+            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+          />
         </div>
 
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
@@ -458,14 +526,120 @@ export default function PackageForm({
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-              School Capacity Quotas &amp; Storage Limits
+              Monetization &amp; Transaction Fee Models
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Limits provisioned for client educational institutions subscribing to this package tier.
+              Control platform commission policies, transaction surcharges, and per-student billing cycles.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Platform Charge Model
+              </label>
+              <select
+                value={formData.charge_model}
+                onChange={(e) => setFormData({ ...formData, charge_model: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200"
+              >
+                <option value="subscription_only">Subscription Only (Flat monthly/yearly fee)</option>
+                <option value="per_transaction">Per-Transaction Fee (Fee on collected payments)</option>
+                <option value="per_student">Per-Student Billing (Charged by active students)</option>
+                <option value="hybrid">Hybrid (Subscription fee + Transaction fee)</option>
+              </select>
+            </div>
+
+            {(formData.charge_model === 'per_transaction' || formData.charge_model === 'hybrid') && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Transaction Fee Type
+                  </label>
+                  <select
+                    value={formData.per_tx_fee_type}
+                    onChange={(e) => setFormData({ ...formData, per_tx_fee_type: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="percentage">Percentage Rate (%)</option>
+                    <option value="fixed">Fixed Amount per Transaction</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Fee Value {formData.per_tx_fee_type === 'percentage' ? '(%)' : '(Amount)'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.per_tx_fee_value}
+                    onChange={(e) => setFormData({ ...formData, per_tx_fee_value: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </>
+            )}
+
+            {(formData.charge_model === 'per_student' || formData.charge_model === 'hybrid') && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Per-Student USD Fee ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.per_student_fee_usd}
+                    onChange={(e) => setFormData({ ...formData, per_student_fee_usd: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Per-Student BDT Fee (৳)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.per_student_fee_bdt}
+                    onChange={(e) => setFormData({ ...formData, per_student_fee_bdt: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Student Fee Billing Cycle (Days)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.student_fee_cycle_days}
+                    onChange={(e) => setFormData({ ...formData, student_fee_cycle_days: e.target.value })}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+              School Capacity Quotas &amp; Limit Allocations
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Account thresholds provisioned for client educational institutions subscribing to this package tier.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Students
@@ -513,17 +687,74 @@ export default function PackageForm({
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Max Storage Limit
+                Monthly Email
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={formData.max_storage}
-                  onChange={(e) => setFormData({ ...formData, max_storage: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                />
+              <input
+                type="number"
+                min={0}
+                required
+                value={formData.monthly_mail}
+                onChange={(e) => setFormData({ ...formData, monthly_mail: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Outbound emails</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Monthly SMS
+              </label>
+              <input
+                type="number"
+                min={0}
+                required
+                value={formData.monthly_sms}
+                onChange={(e) => setFormData({ ...formData, monthly_sms: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Broadcast SMS</span>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Storage (MB)
+                </label>
+                <span className="text-[10px] font-mono text-slate-500">
+                  {(Number(formData.max_storage_mb || 0) / 1024).toFixed(1)} GB
+                </span>
               </div>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Cloud media &amp; asset storage</span>
+              <input
+                type="number"
+                min={100}
+                required
+                value={formData.max_storage_mb}
+                onChange={(e) => setFormData({ ...formData, max_storage_mb: e.target.value })}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                {[
+                  { label: '1GB', mb: 1024 },
+                  { label: '5GB', mb: 5120 },
+                  { label: '10GB', mb: 10240 },
+                  { label: '20GB', mb: 20480 },
+                  { label: '50GB', mb: 51200 },
+                  { label: '100GB', mb: 102400 },
+                ].map((preset) => (
+                  <button
+                    key={preset.mb}
+                    type="button"
+                    onClick={() => handleStoragePreset(preset.mb)}
+                    className={`text-[9px] px-1 py-0.2 rounded border transition-colors cursor-pointer ${
+                      Number(formData.max_storage_mb) === preset.mb
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent font-medium'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -551,7 +782,7 @@ export default function PackageForm({
                   Student Portal Access
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Grants student attendance, grades, and fee payment panel.
+                  Grants student attendance, grades, routine, and fee payment panel.
                 </span>
               </div>
             </label>
@@ -590,6 +821,64 @@ export default function PackageForm({
               </div>
             </label>
           </div>
+        </div>
+
+        <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
+            <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+              Marketing Feature Tags
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Highlight bullet points displayed on customer pricing comparison tables.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <label className="sr-only">Add Feature Tag</label>
+              <input
+                type="text"
+                value={newFeatureText}
+                onChange={(e) => setNewFeatureText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddFeature(e);
+                  }
+                }}
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleAddFeature}
+              className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium cursor-pointer"
+            >
+              Add Tag
+            </button>
+          </div>
+
+          {formData.features.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {formData.features.map((feature, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200"
+                >
+                  <span>{feature}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFeature(feature)}
+                    className="text-slate-400 hover:text-rose-500 font-bold leading-none cursor-pointer"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic">No marketing feature tags added yet.</p>
+          )}
         </div>
 
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">

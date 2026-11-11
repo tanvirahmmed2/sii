@@ -35,8 +35,8 @@ export const SITE_NAME = 'Hiesci';
 export const SITE_MAIL = 'support@hiesci.io';
 export const SITE_CONTACT = '+1 (800) 555-0199';
 export const SITE_ADDRESS = 'Tech Innovation District, 100 Enterprise Way, Suite 400';
-export const COMPANY_NAME = 'EduCraft Technologies Inc.';
-export const COMPANY_URL = process.env.COMPANY_URL || 'https://educraft.io';
+export const COMPANY_NAME = 'Sky International Institute';
+export const COMPANY_URL = process.env.COMPANY_URL || 'http://localhost:3000';
 
 export const BASE_URL = cleanEnv(process.env.BASE_URL) || 'localhost:3000';
 
@@ -55,6 +55,16 @@ export const extractBaseDomain = (url = '') => {
 export const BASE_DOMAIN = extractBaseDomain(BASE_URL);
 
 export const BASE_HOST = BASE_DOMAIN.split(':')[0].toLowerCase();
+
+export const CUSTOM_DOMAIN_CNAME_TARGET =
+  cleanEnv(process.env.CUSTOM_DOMAIN_CNAME_TARGET) ||
+  cleanEnv(process.env.CNAME_TARGET) ||
+  (BASE_HOST && BASE_HOST !== 'localhost' && BASE_HOST !== '127.0.0.1' ? `cname.${BASE_HOST}` : 'domains.hiesci.com');
+
+export const CUSTOM_DOMAIN_A_TARGET =
+  cleanEnv(process.env.CUSTOM_DOMAIN_A_TARGET) ||
+  cleanEnv(process.env.SERVER_IP) ||
+  '76.76.21.21';
 
 export const getBaseProtocol = (request = null) => {
   const raw = cleanEnv(BASE_URL) || '';

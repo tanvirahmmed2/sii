@@ -88,21 +88,8 @@ export async function clearStaffSessionCookie(response) {
   }
 }
 
-let _schemaEnsured = false;
-async function ensureStaffSchema() {
-  if (_schemaEnsured) return;
-  _schemaEnsured = true;
-  try {
-    await queryDb(`
-      ALTER TABLE website_staffs ADD COLUMN IF NOT EXISTS image TEXT;
-      ALTER TABLE website_staffs ADD COLUMN IF NOT EXISTS image_id VARCHAR(255);
-    `);
-  } catch {}
-}
-
 export async function getStaffSession(request) {
   try {
-    await ensureStaffSchema().catch(() => {});
     let token = null;
 
     if (request) {
@@ -132,7 +119,9 @@ export async function getStaffSession(request) {
               ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
               ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
               ws.bio, ws.username,
-              w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+              w.name AS website_name,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
        FROM staff_sessions ss
        JOIN website_staffs ws ON ws.id = ss.staff_id
        JOIN websites w ON w.id = ss.website_id
@@ -143,7 +132,9 @@ export async function getStaffSession(request) {
 
     if (sessRes.rows.length === 0) {
       const staffCheck = await queryDb(
-        `SELECT ws.*, w.id AS web_id, w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+        `SELECT ws.*, w.id AS web_id, w.name AS website_name,
+                COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
          FROM website_staffs ws
          JOIN websites w ON w.id = ws.website_id
          WHERE ws.id = $1 AND ws.is_active = TRUE
@@ -167,7 +158,9 @@ export async function getStaffSession(request) {
                     ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
                     ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
                     ws.bio, ws.username,
-                    w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+                    w.name AS website_name,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
              FROM staff_sessions ss
              JOIN website_staffs ws ON ws.id = ss.staff_id
              JOIN websites w ON w.id = ss.website_id
@@ -441,6 +434,31 @@ export async function verifyStaffModuleAccess(request, context, moduleSlug, acti
   };
 }
 
+export function checkStaffContactsPermission(staffSession, action = 'view') {
+  if (!staffSession) return false;
+  const staff = staffSession.staff || staffSession.user || staffSession;
+  if (!staff) return false;
+
+  const perms = staff.permissions || staffSession.permissions || {};
+  if (Object.keys(perms).length === 0) {
+    return true;
+  }
+
+  if (hasStaffModulePermission(staffSession, 'communications', action)) {
+    return true;
+  }
+
+  if (hasStaffModulePermission(staffSession, 'website-builder', action)) {
+    return true;
+  }
+
+  if (hasStaffModulePermission(staffSession, 'contacts', action)) {
+    return true;
+  }
+
+  return false;
+}
+
 const StaffMiddleware = {
   STAFF_COOKIE_NAME,
   getStaffSession,
@@ -451,6 +469,7 @@ const StaffMiddleware = {
   isGeneralStaff,
   isStaffRole,
   hasStaffModulePermission,
+  checkStaffContactsPermission,
   verifyStaffModuleAccess,
   createStaffSession,
   revokeStaffSession,

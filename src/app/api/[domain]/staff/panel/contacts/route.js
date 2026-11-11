@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession } from 'src/lib/middleware/staff.js';
-import { ensureContactsTables, checkStaffContactsPermission } from 'src/lib/database/contactsDb.js';
+import { getStaffSession, checkStaffContactsPermission } from 'src/lib/middleware/staff.js';
 
 async function verifyContactsStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -24,8 +23,6 @@ async function verifyContactsStaffAccess(request, context, action = 'view') {
   if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403, allowed: false };
   }
-
-  await ensureContactsTables();
 
   const canView = checkStaffContactsPermission(staffSession, 'view');
   const canReply = checkStaffContactsPermission(staffSession, 'create') || checkStaffContactsPermission(staffSession, 'edit');

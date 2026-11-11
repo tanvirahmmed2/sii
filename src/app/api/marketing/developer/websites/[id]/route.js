@@ -39,7 +39,7 @@ async function fetchFullWebsite(websiteId) {
             p.max_teachers,
             p.max_staff,
             p.max_storage_mb,
-            p.max_websites,
+            1 AS max_websites,
             p.features AS package_features,
             p.is_active AS package_is_active,
             s.id AS subscription_id,
@@ -128,7 +128,7 @@ export async function GET(request, { params }) {
       queryDb(
         `SELECT id, name, slug, tagline, description,
                 monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
-                max_students, max_teachers, max_staff, max_storage_mb, max_websites,
+                max_students, max_teachers, max_staff, max_storage_mb, 1 AS max_websites,
                 features, is_active
          FROM packages
          WHERE is_active = TRUE

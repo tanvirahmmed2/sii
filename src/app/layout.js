@@ -11,6 +11,24 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="w-full h-full" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && window.performance && typeof window.performance.measure === 'function') {
+                const _orig = window.performance.measure.bind(window.performance);
+                window.performance.measure = function(...args) {
+                  try {
+                    return _orig(...args);
+                  } catch {
+                    return null;
+                  }
+                };
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full w-full overflow-x-hidden" suppressHydrationWarning>
         <ContextProvider>
           <ToastProvider />

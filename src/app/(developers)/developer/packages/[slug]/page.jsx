@@ -45,7 +45,9 @@ export default function PackageDetailPage({ params }) {
   const [pkg, setPkg] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
+  const [actionMessage, setActionMessage] = useState('');
 
   const fetchPackage = async () => {
     try {
@@ -59,7 +61,6 @@ export default function PackageDetailPage({ params }) {
         setError(data.error || 'Package plan not found');
       }
     } catch (err) {
-      console.error('Error fetching package details:', err);
       setError(err.message || 'Failed to load package');
     } finally {
       setLoading(false);
@@ -80,7 +81,6 @@ export default function PackageDetailPage({ params }) {
       })
       .catch((err) => {
         if (!isMounted) return;
-        console.error('Error fetching package details:', err);
         setError(err.message || 'Failed to load package');
       })
       .finally(() => {
@@ -92,18 +92,16 @@ export default function PackageDetailPage({ params }) {
     };
   }, [slug]);
 
-  const handleDelete = async () => {
+  const handleExecuteDelete = async () => {
     if (!canDelete) {
-      alert('Access denied: Delete permission required for packages.');
-      return;
-    }
-
-    if (!window.confirm(`Are you sure you want to permanently delete plan "${pkg?.name}"?`)) {
+      setError('Access denied: Delete permission required for packages.');
+      setConfirmDelete(false);
       return;
     }
 
     try {
       setDeleting(true);
+      setError('');
       const res = await fetch(`/api/marketing/developer/packages/${encodeURIComponent(slug)}`, {
         method: 'DELETE',
       });
@@ -111,18 +109,20 @@ export default function PackageDetailPage({ params }) {
       if (data.success) {
         router.push('/developer/packages');
       } else {
-        alert(data.error || 'Failed to delete package');
+        setError(data.error || 'Failed to delete package');
       }
     } catch (err) {
-      alert(err.message || 'Error deleting package');
+      setError(err.message || 'Error deleting package');
     } finally {
       setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
   const handleUpdateSuccess = (updated) => {
+    setActionMessage('Package updated successfully.');
     if (updated?.slug && updated.slug !== slug) {
-      router.push(`/developer/packages/${updated.slug}`);
+      router.push(`/developer/packages/${encodeURIComponent(updated.slug)}`);
     } else {
       fetchPackage();
     }
@@ -132,7 +132,7 @@ export default function PackageDetailPage({ params }) {
     return <LoadingScreen fullScreen={false} label="Loading subscription tier..." />;
   }
 
-  if (error || !pkg) {
+  if (error && !pkg) {
     return (
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-6 text-center space-y-3">
         <h2 className="text-base font-semibold text-slate-900 dark:text-white">Package Not Found</h2>
@@ -158,15 +158,15 @@ export default function PackageDetailPage({ params }) {
             <span>/</span>
             <Link href="/developer/packages" className="hover:underline">Packages</Link>
             <span>/</span>
-            <span className="text-slate-800 dark:text-slate-200 font-medium">{pkg.name || 'Package'}</span>
+            <span className="text-slate-800 dark:text-slate-200 font-medium">{pkg?.name || 'Package'}</span>
           </div>
 
           <div>
             <h1 className="text-base font-semibold text-slate-900 dark:text-white">
-              Edit Package: {pkg.name}
+              Edit Package: {pkg?.name}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Manage quotas, pricing models, and module entitlements for &quot;{pkg.name}&quot;
+              Manage quotas, pricing models, and module entitlements for &quot;{pkg?.name}&quot;
             </p>
           </div>
         </div>
@@ -179,24 +179,71 @@ export default function PackageDetailPage({ params }) {
             All Packages
           </Link>
 
-          {canDelete && (
+          {canDelete && !confirmDelete && (
             <button
               type="button"
               disabled={deleting}
-              onClick={handleDelete}
+              onClick={() => setConfirmDelete(true)}
               className="px-3 py-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              Delete
             </button>
           )}
         </div>
       </div>
 
-      <PackageForm
-        initialData={pkg}
-        onSuccess={handleUpdateSuccess}
-        onCancel={() => router.push('/developer/packages')}
-      />
+      {confirmDelete && (
+        <div className="p-4 rounded border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-rose-800 dark:text-rose-300">
+              Permanently delete &quot;{pkg?.name}&quot;?
+            </div>
+            <div className="text-[11px] text-rose-700 dark:text-rose-400 mt-0.5">
+              This action cannot be undone. Any websites or subscriptions linked to this package may be affected.
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={handleExecuteDelete}
+              className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {deleting ? 'Deleting...' : 'Yes, Delete Permanently'}
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3 rounded border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
+          {error}
+        </div>
+      )}
+
+      {actionMessage && (
+        <div className="p-3 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium">
+          {actionMessage}
+        </div>
+      )}
+
+      {pkg && (
+        <PackageForm
+          key={pkg.id || pkg.slug}
+          initialData={pkg}
+          apiEndpoint={`/api/marketing/developer/packages/${encodeURIComponent(slug)}`}
+          onSuccess={handleUpdateSuccess}
+          onCancel={() => router.push('/developer/packages')}
+        />
+      )}
     </div>
   );
 }

@@ -33,7 +33,11 @@ export async function GET(request) {
                 p.slug AS package_slug, 
                 p.tagline AS package_tagline,
                 p.description AS package_description,
-                COALESCE(p.max_websites, 1) AS max_websites,
+                p.monthly_price_usd,
+                p.yearly_price_usd,
+                p.monthly_price_bdt,
+                p.yearly_price_bdt,
+                1 AS max_websites,
                 COALESCE(p.max_teachers, 0) AS max_teachers,
                 COALESCE(p.max_students, 0) AS max_students,
                 COALESCE(p.max_staff, 0) AS max_staff,
@@ -179,7 +183,7 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
       const pp = await createPayPalOrder({
         amountUsd: finalAmount,
         currency: 'USD',
-        description: `EduCraft SaaS - ${payment.package_name || 'Package Subscription'}`,
+        description: `Sky International Institute - ${payment.package_name || 'Package Subscription'}`,
         customId: JSON.stringify({ tier: 'TIER_1', paymentId: payment.id, creatorId }),
       });
       checkoutUrl = pp.approveUrl;
@@ -189,7 +193,7 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
         amount: finalAmount,
         currency: 'USD',
         orderId: `TIER1-PKG-${payment.id}-${Date.now()}`,
-        description: `EduCraft SaaS - ${payment.package_name || 'Package Subscription'}`,
+        description: `Sky International Institute - ${payment.package_name || 'Package Subscription'}`,
         customerEmail: payment.creator_email,
         customerName: payment.creator_name,
         meta: {
@@ -222,6 +226,125 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
       amount: finalAmount,
       currency: finalCurrency,
     });
+  }
+
+  if (action === 'confirm_payment' || action === 'complete_payment') {
+    const paymentId = Number(body.paymentId || body.id);
+    const payRes = await queryDb(
+      `SELECT pay.*, 
+              pu.package_id,
+              pu.billing_cycle,
+              pu.period_start,
+              pu.period_end,
+              p.name AS package_name, 
+              p.monthly_price_usd,
+              p.yearly_price_usd,
+              p.monthly_price_bdt,
+              p.yearly_price_bdt,
+              c.name AS creator_name,
+              c.email AS creator_email,
+              c.phone AS creator_phone
+       FROM payments pay
+       LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+       LEFT JOIN packages p ON pu.package_id = p.id
+       LEFT JOIN creators c ON pay.creator_id = c.id
+       WHERE pay.id = $1 AND pay.creator_id = $2
+       LIMIT 1`,
+      [paymentId, creatorId]
+    );
+
+    const payment = payRes.rows[0];
+    if (!payment) {
+      return NextResponse.json({ success: false, error: 'Payment invoice not found or unauthorized' }, { status: 404 });
+    }
+
+    if (payment.status === 'successful' || payment.status === 'COMPLETED') {
+      return NextResponse.json({
+        success: true,
+        message: 'This invoice is already paid and completed.',
+        payment,
+      });
+    }
+
+    const isYearly = String(payment.billing_cycle || '').toLowerCase() === 'yearly';
+    const gatewayCode = body.gatewayCode || body.gateway || payment.payment_method || 'surjopay';
+    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(String(gatewayCode).toLowerCase());
+    const finalCurrency = isBdt ? 'BDT' : 'USD';
+    const finalAmount = isYearly
+      ? Number(isBdt ? (payment.yearly_price_bdt || payment.amount || 0) : (payment.yearly_price_usd || payment.amount || 0))
+      : Number(isBdt ? (payment.monthly_price_bdt || payment.amount || 0) : (payment.monthly_price_usd || payment.amount || 0));
+
+    const durationDays = isYearly ? 365 : 30;
+    const txnId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    await queryDb('BEGIN');
+    try {
+      await queryDb(
+        `UPDATE payments
+         SET status = 'successful',
+             amount = $1,
+             currency = $2,
+             payment_method = $3,
+             payment_gateway = $3,
+             transaction_id = $4,
+             gateway_order_id = $5,
+             payment_date = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6`,
+        [finalAmount, finalCurrency, gatewayCode, txnId, body.accountNumber || body.gatewayOrderId || txnId, payment.id]
+      );
+
+      await queryDb(
+        `UPDATE purchases
+         SET status = 'completed',
+             total_amount = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [finalAmount, payment.purchase_id]
+      );
+
+      const existingSubRes = await queryDb(
+        `SELECT id FROM subscriptions WHERE creator_id = $1 AND package_id = $2 ORDER BY id DESC LIMIT 1`,
+        [creatorId, payment.package_id]
+      );
+
+      if (existingSubRes.rows.length > 0) {
+        await queryDb(
+          `UPDATE subscriptions
+           SET status = 'active',
+               billing_cycle = $1,
+               purchase_id = $2,
+               current_period_start = CURRENT_TIMESTAMP,
+               current_period_end = CURRENT_TIMESTAMP + ($3 || ' days')::interval,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $4`,
+          [payment.billing_cycle || 'monthly', payment.purchase_id, durationDays, existingSubRes.rows[0].id]
+        );
+      } else {
+        await queryDb(
+          `INSERT INTO subscriptions (
+             creator_id, package_id, purchase_id, status,
+             billing_cycle, current_period_start, current_period_end
+           ) VALUES (
+             $1, $2, $3, 'active',
+             $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($5 || ' days')::interval
+           )`,
+          [creatorId, payment.package_id, payment.purchase_id, payment.billing_cycle || 'monthly', durationDays]
+        );
+      }
+
+      await queryDb('COMMIT');
+
+      return NextResponse.json({
+        success: true,
+        message: 'Payment completed successfully. Your package subscription is now active!',
+        transactionId: txnId,
+        paymentId: payment.id,
+      });
+    } catch (e) {
+      await queryDb('ROLLBACK');
+      throw e;
+    }
   }
 
   return NextResponse.json({ success: false, error: `Unknown payments action: ${action}` }, { status: 400 });

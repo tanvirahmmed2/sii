@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import staffNavDataDefault, { staffNavData as staffNavDataNamed } from 'src/component/website/bars/admin/staffNavData';
 
 const staffNavData = staffNavDataDefault || staffNavDataNamed || [];
@@ -15,8 +16,8 @@ const routeToModuleMap = (() => {
     for (const item of items) {
       if (item.path && item.module) {
         const clean = item.path.startsWith('/') ? item.path : `/${item.path}`;
-        map[clean] = item.module;
-        map[`/staff-panel${clean}`] = item.module;
+        map[clean] = { module: item.module, title: item.title || item.name || 'Workstation' };
+        map[`/staff-panel${clean}`] = { module: item.module, title: item.title || item.name || 'Workstation' };
       }
       if (item.children && Array.isArray(item.children)) {
         traverse(item.children);
@@ -30,12 +31,9 @@ const routeToModuleMap = (() => {
 
 export default function StaffModuleRouteGuard({ children, allowedModules = null, isDevAdmin = false }) {
   const pathname = usePathname();
+  const { website } = useTenantWebsite();
 
   const accessStatus = useMemo(() => {
-    if (isDevAdmin || !Array.isArray(allowedModules) || allowedModules.length === 0) {
-      return { allowed: true };
-    }
-
     if (
       pathname === '/staff-panel' ||
       pathname === '/staff-panel/' ||
@@ -46,21 +44,50 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
       return { allowed: true };
     }
 
-    let targetModule = routeToModuleMap[pathname];
+    const packagePaths = website?.allowed_control_module_paths;
+    if (Array.isArray(packagePaths) && packagePaths.length > 0) {
+      const cleanPath = pathname.toLowerCase().replace(/\/+$/, '') || '/staff-panel';
+      const cleanPrefix = cleanPath.split('/').slice(0, 3).join('/');
 
-    if (!targetModule) {
-      for (const [pathKey, mod] of Object.entries(routeToModuleMap)) {
+      const isIncludedInPackage = packagePaths.some((p) => {
+        const allowedClean = String(p).toLowerCase().replace(/\/+$/, '');
+        return cleanPath === allowedClean || cleanPrefix === allowedClean;
+      });
+
+      if (!isIncludedInPackage) {
+        const matchedItem = website?.allowed_control_modules?.find((m) => {
+          const p = String(m.path || '').toLowerCase().replace(/\/+$/, '');
+          return cleanPath === p || cleanPrefix === p;
+        });
+
+        return {
+          allowed: false,
+          reason: 'package_locked',
+          title: matchedItem?.name || 'Academic Workstation',
+        };
+      }
+    }
+
+    if (isDevAdmin || !Array.isArray(allowedModules) || allowedModules.length === 0) {
+      return { allowed: true };
+    }
+
+    let targetInfo = routeToModuleMap[pathname];
+
+    if (!targetInfo) {
+      for (const [pathKey, info] of Object.entries(routeToModuleMap)) {
         if (pathname === pathKey || pathname.startsWith(`${pathKey}/`)) {
-          targetModule = mod;
+          targetInfo = info;
           break;
         }
       }
     }
 
-    if (!targetModule) {
+    if (!targetInfo) {
       return { allowed: true };
     }
 
+    const targetModule = targetInfo.module;
     const allowedSet = new Set(allowedModules.map((m) => String(m).toLowerCase().trim()));
     let isAllowed = false;
     if (Array.isArray(targetModule)) {
@@ -73,11 +100,14 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
 
     return {
       allowed: isAllowed,
-      module: targetModule,
+      reason: 'permission_denied',
+      title: targetInfo.title,
     };
-  }, [pathname, allowedModules, isDevAdmin]);
+  }, [pathname, allowedModules, isDevAdmin, website?.allowed_control_module_paths, website?.allowed_control_modules]);
 
   if (!accessStatus.allowed) {
+    const isPkgLocked = accessStatus.reason === 'package_locked';
+
     return (
       <div className="w-full max-w-2xl mx-auto my-12 p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs text-center space-y-5">
         <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400">
@@ -87,14 +117,16 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
         </div>
 
         <div className="space-y-2">
-          <div className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            Module: {accessStatus.module}
+          <div className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            {accessStatus.title}
           </div>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-            Access Restricted
+            {isPkgLocked ? 'Module Not Included in Subscription Package' : 'Access Restricted'}
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
-            This workstation belongs to the <span className="font-semibold text-slate-900 dark:text-slate-200 uppercase">{accessStatus.module}</span> module, which is either not included in your institution&apos;s current subscription package or has not been granted to your staff profile.
+            {isPkgLocked
+              ? `This workstation is not included in your institution's active subscription package (${website?.package?.name || 'Current Plan'}). Please contact campus administration to upgrade.`
+              : 'This workstation has not been assigned to your staff profile permissions. Please contact your institution administrator to request access.'}
           </p>
         </div>
 
@@ -105,12 +137,14 @@ export default function StaffModuleRouteGuard({ children, allowedModules = null,
           >
             Return to Staff Dashboard
           </Link>
-          <Link
-            href="/staff-panel/staff-profile"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-          >
-            View My Permissions
-          </Link>
+          {!isPkgLocked && (
+            <Link
+              href="/staff-panel/staff-profile"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              View My Permissions
+            </Link>
+          )}
         </div>
       </div>
     );

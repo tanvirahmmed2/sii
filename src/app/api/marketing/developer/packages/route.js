@@ -238,7 +238,6 @@ export async function POST(request) {
     const maxTeachers = data.max_teachers !== undefined ? Math.max(1, Number(data.max_teachers)) : 30;
     const maxStaff = data.max_staff !== undefined ? Math.max(1, Number(data.max_staff)) : 20;
     const maxStorageMb = data.max_storage_mb !== undefined ? Math.max(100, Number(data.max_storage_mb)) : 5120;
-    const maxStorage = data.max_storage ? String(data.max_storage).trim() : `${Math.round(maxStorageMb / 1024)} GB`;
 
     const isAvailableStudentPanel = data.is_available_student_panel !== undefined ? Boolean(data.is_available_student_panel) : true;
     const isAvailableTeacherPanel = data.is_available_teacher_panel !== undefined ? Boolean(data.is_available_teacher_panel) : true;
@@ -251,6 +250,14 @@ export async function POST(request) {
     const sortOrder = Number(data.sort_order) || 0;
     const monthlyMail = data.monthly_mail !== undefined ? Math.max(0, Number(data.monthly_mail)) : 1000;
     const monthlySms = data.monthly_sms !== undefined ? Math.max(0, Number(data.monthly_sms)) : 200;
+
+    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : 'subscription_only';
+    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : 'percentage';
+    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : 0;
+    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : 0;
+    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : 0;
+    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : 30;
+
     const features = Array.isArray(data.features)
       ? JSON.stringify(data.features)
       : (typeof data.features === 'object' && data.features !== null ? JSON.stringify(data.features) : '[]');
@@ -288,49 +295,52 @@ export async function POST(request) {
         name, slug, short_description, tagline, description,
         monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
         monthly_price, yearly_price, discount_percentage,
-        max_students, max_teachers, max_staff, max_storage, max_storage_mb,
+        max_students, max_teachers, max_staff, max_storage_mb,
         is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
         features, is_popular, is_public, is_active, grace_period, sort_order,
-        monthly_mail, monthly_sms
+        monthly_mail, monthly_sms,
+        charge_model, per_tx_fee_type, per_tx_fee_value, per_student_fee_usd, per_student_fee_bdt, student_fee_cycle_days
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9,
         $10, $11, $12,
-        $13, $14, $15, $16, $17,
-        $18, $19, $20,
-        $21::jsonb, $22, $23, $24, $25, $26,
-        $27, $28
+        $13, $14, $15, $16,
+        $17, $18, $19,
+        $20::jsonb, $21, $22, $23, $24, $25,
+        $26, $27,
+        $28, $29, $30, $31, $32, $33
       )
       RETURNING *`,
       [
         name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         features, isPopular, isPublic, isActive, gracePeriod, sortOrder,
-        monthlyMail, monthlySms
+        monthlyMail, monthlySms,
+        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays
       ]
     );
 
     const newPackage = res.rows[0];
 
-    for (const hId of homeModuleIds) {
+    if (homeModuleIds.length > 0) {
       await queryDb(
         `INSERT INTO package_home_modules (package_id, home_module_id)
-         VALUES ($1, $2)
+         SELECT $1, unnest($2::bigint[])
          ON CONFLICT (package_id, home_module_id) DO NOTHING`,
-        [newPackage.id, hId]
-      ).catch((e) => console.warn('Error linking package_home_module:', e.message));
+        [newPackage.id, homeModuleIds]
+      ).catch((e) => console.warn('Error linking package_home_module batch:', e.message));
     }
 
-    for (const cId of controlModuleIds) {
+    if (controlModuleIds.length > 0) {
       await queryDb(
         `INSERT INTO package_control_modules (package_id, control_module_id)
-         VALUES ($1, $2)
+         SELECT $1, unnest($2::bigint[])
          ON CONFLICT (package_id, control_module_id) DO NOTHING`,
-        [newPackage.id, cId]
-      ).catch((e) => console.warn('Error linking package_control_module:', e.message));
+        [newPackage.id, controlModuleIds]
+      ).catch((e) => console.warn('Error linking package_control_module batch:', e.message));
     }
 
     const fullPackage = await fetchPackageById(newPackage.id);
@@ -422,10 +432,6 @@ export async function PUT(request) {
       ? Math.max(100, Number(data.max_storage_mb))
       : (current.max_storage_mb || 5120);
 
-    const maxStorage = data.max_storage !== undefined
-      ? String(data.max_storage).trim()
-      : (current.max_storage || `${Math.round(maxStorageMb / 1024)} GB`);
-
     const isAvailableStudentPanel = data.is_available_student_panel !== undefined
       ? Boolean(data.is_available_student_panel)
       : (current.is_available_student_panel !== undefined ? Boolean(current.is_available_student_panel) : true);
@@ -449,6 +455,13 @@ export async function PUT(request) {
     const monthlySms = data.monthly_sms !== undefined
       ? Math.max(0, Number(data.monthly_sms))
       : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
+
+    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : (current.charge_model || 'subscription_only');
+    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : (current.per_tx_fee_type || 'percentage');
+    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : Number(current.per_tx_fee_value || 0);
+    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : Number(current.per_student_fee_usd || 0);
+    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : Number(current.per_student_fee_bdt || 0);
+    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : Number(current.student_fee_cycle_days || 30);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
@@ -474,29 +487,35 @@ export async function PUT(request) {
            max_students = $13,
            max_teachers = $14,
            max_staff = $15,
-           max_storage = $16,
-           max_storage_mb = $17,
-           is_available_student_panel = $18,
-           is_available_teacher_panel = $19,
-           is_available_custom_domain = $20,
-           features = $21::jsonb,
-           is_popular = $22,
-           is_public = $23,
-           is_active = $24,
-           grace_period = $25,
-           sort_order = $26,
-           monthly_mail = $27,
-           monthly_sms = $28,
+           max_storage_mb = $16,
+           is_available_student_panel = $17,
+           is_available_teacher_panel = $18,
+           is_available_custom_domain = $19,
+           features = $20::jsonb,
+           is_popular = $21,
+           is_public = $22,
+           is_active = $23,
+           grace_period = $24,
+           sort_order = $25,
+           monthly_mail = $26,
+           monthly_sms = $27,
+           charge_model = $28,
+           per_tx_fee_type = $29,
+           per_tx_fee_value = $30,
+           per_student_fee_usd = $31,
+           per_student_fee_bdt = $32,
+           student_fee_cycle_days = $33,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $29`,
+       WHERE id = $34`,
       [
         name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
-        maxStudents, maxTeachers, maxStaff, maxStorage, maxStorageMb,
+        maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
         monthlyMail, monthlySms,
+        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays,
         Number(id)
       ]
     );
@@ -519,14 +538,12 @@ export async function PUT(request) {
       }
 
       await queryDb('DELETE FROM package_home_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
-      for (const hId of homeIds) {
-        await queryDb(
-          `INSERT INTO package_home_modules (package_id, home_module_id)
-           VALUES ($1, $2)
-           ON CONFLICT (package_id, home_module_id) DO NOTHING`,
-          [Number(id), hId]
-        ).catch((e) => console.warn('Error syncing package_home_module:', e.message));
-      }
+      await queryDb(
+        `INSERT INTO package_home_modules (package_id, home_module_id)
+         SELECT $1, unnest($2::bigint[])
+         ON CONFLICT (package_id, home_module_id) DO NOTHING`,
+        [Number(id), homeIds]
+      ).catch((e) => console.warn('Error linking package_home_module batch:', e.message));
     }
 
     if (data.control_module_ids !== undefined || data.control_modules !== undefined) {
@@ -547,14 +564,12 @@ export async function PUT(request) {
       }
 
       await queryDb('DELETE FROM package_control_modules WHERE package_id = $1', [Number(id)]).catch(() => {});
-      for (const cId of controlIds) {
-        await queryDb(
-          `INSERT INTO package_control_modules (package_id, control_module_id)
-           VALUES ($1, $2)
-           ON CONFLICT (package_id, control_module_id) DO NOTHING`,
-          [Number(id), cId]
-        ).catch((e) => console.warn('Error syncing package_control_module:', e.message));
-      }
+      await queryDb(
+        `INSERT INTO package_control_modules (package_id, control_module_id)
+         SELECT $1, unnest($2::bigint[])
+         ON CONFLICT (package_id, control_module_id) DO NOTHING`,
+        [Number(id), controlIds]
+      ).catch((e) => console.warn('Error linking package_control_module batch:', e.message));
     }
 
     const fullPackage = await fetchPackageById(Number(id));

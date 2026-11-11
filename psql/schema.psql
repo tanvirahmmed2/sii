@@ -221,7 +221,6 @@ CREATE TABLE IF NOT EXISTS packages (
     max_students INT DEFAULT 500,
     max_teachers INT DEFAULT 30,
     max_staff INT DEFAULT 20,
-    max_storage VARCHAR(50) DEFAULT '5 GB',
     max_storage_mb BIGINT DEFAULT 5120,
     is_available_student_panel BOOLEAN DEFAULT TRUE,
     is_available_teacher_panel BOOLEAN DEFAULT TRUE,
@@ -234,6 +233,12 @@ CREATE TABLE IF NOT EXISTS packages (
     sort_order INT DEFAULT 0,
     monthly_mail INT NOT NULL DEFAULT 1000,
     monthly_sms INT NOT NULL DEFAULT 200,
+    charge_model VARCHAR(50) DEFAULT 'subscription_only',
+    per_tx_fee_type VARCHAR(20) DEFAULT 'percentage',
+    per_tx_fee_value DECIMAL(10, 2) DEFAULT 0.00,
+    per_student_fee_usd DECIMAL(10, 2) DEFAULT 0.00,
+    per_student_fee_bdt DECIMAL(10, 2) DEFAULT 0.00,
+    student_fee_cycle_days INT DEFAULT 30,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -241,18 +246,10 @@ CREATE TABLE IF NOT EXISTS packages (
 -- Idempotent column migrations for existing packages table
 ALTER TABLE packages DROP COLUMN IF EXISTS max_websites;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS short_description TEXT;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage VARCHAR(50) DEFAULT '5 GB';
+ALTER TABLE packages DROP COLUMN IF EXISTS max_storage CASCADE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage_mb BIGINT DEFAULT 5120;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_mail INT NOT NULL DEFAULT 1000;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_sms INT NOT NULL DEFAULT 200;
-DO $$ BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'packages' AND column_name = 'max_storage' AND data_type != 'character varying'
-    ) THEN
-        ALTER TABLE packages ALTER COLUMN max_storage TYPE VARCHAR(50) USING max_storage::text;
-    END IF;
-END $$;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_student_panel BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_teacher_panel BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_custom_domain BOOLEAN DEFAULT FALSE;
@@ -262,6 +259,12 @@ ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) N
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 3;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS charge_model VARCHAR(50) DEFAULT 'subscription_only';
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS per_tx_fee_type VARCHAR(20) DEFAULT 'percentage';
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS per_tx_fee_value DECIMAL(10, 2) DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS per_student_fee_usd DECIMAL(10, 2) DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS per_student_fee_bdt DECIMAL(10, 2) DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS student_fee_cycle_days INT DEFAULT 30;
 ALTER TABLE packages DROP COLUMN IF EXISTS trial_days;
 
 CREATE INDEX IF NOT EXISTS idx_packages_public ON packages(is_public, is_active, sort_order);

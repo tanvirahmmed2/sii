@@ -19,7 +19,7 @@ export default function CreatorPurchasesPage() {
 
   const [renewalModalOpen, setRenewalModalOpen] = useState(false);
   const [renewalCycle, setRenewalCycle] = useState('monthly');
-  const [renewalGateway, setRenewalGateway] = useState('BKASH');
+  const [renewalGateway, setRenewalGateway] = useState('surjopay');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [activePaymentId, setActivePaymentId] = useState(null);
   const [renewalError, setRenewalError] = useState('');
@@ -42,7 +42,24 @@ export default function CreatorPurchasesPage() {
   };
 
   useEffect(() => {
-    loadPurchases();
+    let isMounted = true;
+    fetch(`/api/marketing/creator/purchases?creatorId=${creatorId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (isMounted && json.success && Array.isArray(json.purchases)) {
+          setPurchasesList(json.purchases);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) {
+          setLoadingPurchases(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [creatorId]);
 
   const isYearly = renewalCycle === 'yearly';
@@ -332,152 +349,168 @@ export default function CreatorPurchasesPage() {
       </div>
 
       {renewalModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white border border-slate-200 rounded max-w-lg w-full p-5 space-y-4 text-xs text-slate-800 shadow-xl max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">
-                  Renew Subscription Plan
-                </h3>
-                <p className="text-[11px] text-slate-500">
-                  {activeSubscription?.package_name || 'Package'} &middot; Extend Duration
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRenewalModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-medium"
-              >
-                Close
-              </button>
+        <div className="bg-white border border-slate-200 rounded p-5 space-y-4 text-xs text-slate-800 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">
+                Renew Subscription Plan
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                {activeSubscription?.package_name || 'Package'} &middot; Extend Duration
+              </p>
             </div>
-
-            {renewalError && (
-              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-                {renewalError}
-              </div>
-            )}
-
-            {!activePaymentId ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
-                    Select Renewal Duration
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRenewalCycle('monthly')}
-                      className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                        renewalCycle === 'monthly'
-                          ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="block text-xs font-semibold">Monthly Renewal</span>
-                      <span className="block text-[10px] text-slate-500 mt-0.5">+30 Days Duration</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRenewalCycle('yearly')}
-                      className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                        renewalCycle === 'yearly'
-                          ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="block text-xs font-semibold">Annual Renewal</span>
-                      <span className="block text-[10px] text-slate-500 mt-0.5">+365 Days Duration</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
-                    Select Payment Gateway
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRenewalGateway('BKASH')}
-                      className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                        renewalGateway === 'BKASH'
-                          ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="block text-xs font-semibold">bKash (বিকাশ)</span>
-                      <span className="block font-mono text-xs text-slate-900 mt-0.5">
-                        ৳{pkgBdtPrice} BDT
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRenewalGateway('PADDLE')}
-                      className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                        renewalGateway === 'PADDLE'
-                          ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="block text-xs font-semibold">Paddle / Card</span>
-                      <span className="block font-mono text-xs text-slate-900 mt-0.5">
-                        ${pkgUsdPrice.toFixed(2)} USD
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded bg-slate-50 border border-slate-200 space-y-1 font-mono text-[11px]">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Package:</span>
-                    <span className="text-slate-900 font-sans font-medium">{activeSubscription?.package_name}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Extension:</span>
-                    <span className="text-slate-900">{isYearly ? '365 Days' : '30 Days'}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
-                    <span>Payable Total:</span>
-                    <span>
-                      {renewalGateway === 'BKASH' ? `৳${pkgBdtPrice} BDT` : `$${pkgUsdPrice.toFixed(2)} USD`}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setRenewalModalOpen(false)}
-                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleStartRenewalPayment}
-                    disabled={creatingOrder}
-                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                  >
-                    {creatingOrder ? 'Initiating Gateway...' : 'Proceed to Payment Gateway'}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <PaymentGatewayCheckout
-                  creatorId={creatorId}
-                  paymentId={activePaymentId}
-                  initialGateway={renewalGateway}
-                  onSuccess={handlePaymentCompleted}
-                  onClose={() => setActivePaymentId(null)}
-                  isModal={true}
-                />
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setRenewalModalOpen(false)}
+              className="text-slate-400 hover:text-slate-700 font-medium cursor-pointer"
+            >
+              Close
+            </button>
           </div>
+
+          {renewalError && (
+            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
+              {renewalError}
+            </div>
+          )}
+
+          {!activePaymentId ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
+                  Select Renewal Duration
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRenewalCycle('monthly')}
+                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                      renewalCycle === 'monthly'
+                        ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold">Monthly Renewal</span>
+                    <span className="block text-[10px] text-slate-500 mt-0.5">+30 Days Duration</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRenewalCycle('yearly')}
+                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                      renewalCycle === 'yearly'
+                        ? 'border-slate-900 bg-slate-50 font-semibold text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold">Annual Renewal</span>
+                    <span className="block text-[10px] text-slate-500 mt-0.5">+365 Days Duration</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
+                  Select Payment Gateway
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRenewalGateway('surjopay')}
+                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                      renewalGateway === 'surjopay'
+                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 font-semibold text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold text-emerald-700">shurjoPay</span>
+                    <span className="block text-[10px] text-slate-500">bKash, Nagad, Cards</span>
+                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
+                      ৳{pkgBdtPrice.toLocaleString()} BDT
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRenewalGateway('paypal')}
+                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                      renewalGateway === 'paypal'
+                        ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-500 font-semibold text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold text-blue-700">PayPal</span>
+                    <span className="block text-[10px] text-slate-500">Global USD Wallet</span>
+                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
+                      ${pkgUsdPrice.toFixed(2)} USD
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRenewalGateway('paddle')}
+                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
+                      renewalGateway === 'paddle'
+                        ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500 font-semibold text-slate-900'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="block text-xs font-semibold text-indigo-700">Paddle Billing</span>
+                    <span className="block text-[10px] text-slate-500">Global Cards & Pay</span>
+                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
+                      ${pkgUsdPrice.toFixed(2)} USD
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded bg-slate-50 border border-slate-200 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between text-slate-600">
+                  <span>Package:</span>
+                  <span className="text-slate-900 font-sans font-medium">{activeSubscription?.package_name}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Extension:</span>
+                  <span className="text-slate-900">{isYearly ? '365 Days' : '30 Days'}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
+                  <span>Payable Total:</span>
+                  <span>
+                    {renewalGateway === 'surjopay' ? `৳${pkgBdtPrice.toLocaleString()} BDT` : `$${pkgUsdPrice.toFixed(2)} USD`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRenewalModalOpen(false)}
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartRenewalPayment}
+                  disabled={creatingOrder}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+                >
+                  {creatingOrder ? 'Initiating Gateway...' : 'Proceed to Payment Gateway'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <PaymentGatewayCheckout
+                creatorId={creatorId}
+                paymentId={activePaymentId}
+                initialGateway={renewalGateway}
+                onSuccess={handlePaymentCompleted}
+                onClose={() => setActivePaymentId(null)}
+                isModal={false}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

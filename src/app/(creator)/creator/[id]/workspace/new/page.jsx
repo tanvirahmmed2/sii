@@ -81,8 +81,14 @@ export default function CreateWebsitePage() {
 
   const [creatorNid, setCreatorNid] = useState('');
   const [creatorNidUrl, setCreatorNidUrl] = useState('');
+  const [uploadingNidPdf, setUploadingNidPdf] = useState(false);
+  const [nidPdfUploadError, setNidPdfUploadError] = useState('');
+  const [uploadedNidPdfMeta, setUploadedNidPdfMeta] = useState(null);
   const [eiinCertificate, setEiinCertificate] = useState('');
   const [eiinCertificateUrl, setEiinCertificateUrl] = useState('');
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [pdfUploadError, setPdfUploadError] = useState('');
+  const [uploadedPdfMeta, setUploadedPdfMeta] = useState(null);
   const [verificationAddress, setVerificationAddress] = useState('');
   const [principalName, setPrincipalName] = useState('');
   const [boardAffiliation, setBoardAffiliation] = useState('');
@@ -93,16 +99,24 @@ export default function CreateWebsitePage() {
   const [createSuccess, setCreateSuccess] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     if (querySubId) {
-      setSelectedSubscriptionId(querySubId);
+      setTimeout(() => {
+        if (isMounted) setSelectedSubscriptionId(querySubId);
+      }, 0);
     } else if (activeSubs.length > 0 && !selectedSubscriptionId) {
       const preferred = activeSubs.find((s) => {
         const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
         const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
         return allowed - used > 0;
       });
-      setSelectedSubscriptionId(String(preferred?.id || activeSubs[0].id));
+      setTimeout(() => {
+        if (isMounted) setSelectedSubscriptionId(String(preferred?.id || activeSubs[0].id));
+      }, 0);
     }
+    return () => {
+      isMounted = false;
+    };
   }, [querySubId, activeSubs, selectedSubscriptionId]);
 
   useEffect(() => {
@@ -123,54 +137,75 @@ export default function CreateWebsitePage() {
   }, [creatorId]);
 
   useEffect(() => {
-    if (creator?.email && !contactEmail) setContactEmail(creator.email);
-    if (creator?.phone && !contactPhone) setContactPhone(creator.phone);
+    let isMounted = true;
+    if (creator?.email && !contactEmail) {
+      setTimeout(() => {
+        if (isMounted) setContactEmail(creator.email);
+      }, 0);
+    }
+    if (creator?.phone && !contactPhone) {
+      setTimeout(() => {
+        if (isMounted) setContactPhone(creator.phone);
+      }, 0);
+    }
+    return () => {
+      isMounted = false;
+    };
   }, [creator, contactEmail, contactPhone]);
 
   useEffect(() => {
+    let isMounted = true;
     if (address && !verificationAddress) {
-      setVerificationAddress(address);
+      setTimeout(() => {
+        if (isMounted) setVerificationAddress(address);
+      }, 0);
     }
+    return () => {
+      isMounted = false;
+    };
   }, [address, verificationAddress]);
 
   useEffect(() => {
-    if (!subdomain) {
-      setDomainStatus({ state: 'idle', message: '', fullDomain: '' });
-      setIsSubdomainClaimed(false);
-      return;
-    }
-
-    const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
-    if (clean.length < 3) {
-      setDomainStatus({
-        state: 'invalid',
-        message: 'Subdomain prefix must be at least 3 characters.',
-        fullDomain: `${clean}.${baseDomain}`,
-      });
-      setIsSubdomainClaimed(false);
-      return;
-    }
-
-    if (clean.startsWith('-') || clean.endsWith('-')) {
-      setDomainStatus({
-        state: 'invalid',
-        message: 'Subdomain cannot begin or end with a hyphen.',
-        fullDomain: `${clean}.${baseDomain}`,
-      });
-      setIsSubdomainClaimed(false);
-      return;
-    }
-
-    setDomainStatus({
-      state: 'checking',
-      message: 'Checking availability...',
-      fullDomain: `${clean}.${baseDomain}`,
-    });
-
+    let isMounted = true;
     const checkTimer = setTimeout(async () => {
+      if (!isMounted) return;
+      if (!subdomain) {
+        setDomainStatus({ state: 'idle', message: '', fullDomain: '' });
+        setIsSubdomainClaimed(false);
+        return;
+      }
+
+      const clean = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
+      if (clean.length < 3) {
+        setDomainStatus({
+          state: 'invalid',
+          message: 'Subdomain prefix must be at least 3 characters.',
+          fullDomain: `${clean}.${baseDomain}`,
+        });
+        setIsSubdomainClaimed(false);
+        return;
+      }
+
+      if (clean.startsWith('-') || clean.endsWith('-')) {
+        setDomainStatus({
+          state: 'invalid',
+          message: 'Subdomain cannot begin or end with a hyphen.',
+          fullDomain: `${clean}.${baseDomain}`,
+        });
+        setIsSubdomainClaimed(false);
+        return;
+      }
+
+      setDomainStatus({
+        state: 'checking',
+        message: 'Checking availability...',
+        fullDomain: `${clean}.${baseDomain}`,
+      });
+
       try {
         const res = await fetch(`/api/marketing/creator/websites/check-domain?domain=${encodeURIComponent(clean)}`);
         const json = await res.json();
+        if (!isMounted) return;
 
         if (json.available) {
           setDomainStatus({
@@ -187,6 +222,7 @@ export default function CreateWebsitePage() {
           setIsSubdomainClaimed(false);
         }
       } catch {
+        if (!isMounted) return;
         setDomainStatus({
           state: 'error',
           fullDomain: `${clean}.${baseDomain}`,
@@ -196,29 +232,35 @@ export default function CreateWebsitePage() {
       }
     }, 250);
 
-    return () => clearTimeout(checkTimer);
+    return () => {
+      isMounted = false;
+      clearTimeout(checkTimer);
+    };
   }, [subdomain, baseDomain]);
 
   useEffect(() => {
-    if (!customDomain.trim()) {
-      setCustomDomainStatus({ state: 'idle', message: '', dnsInstructions: null });
-      return;
-    }
-
-    const clean = customDomain.trim().toLowerCase();
-    if (!clean.includes('.') || clean.length < 4) {
-      setCustomDomainStatus({
-        state: 'invalid',
-        message: 'Enter a valid domain name (e.g. school.edu.bd)',
-        dnsInstructions: null,
-      });
-      return;
-    }
-
+    let isMounted = true;
     const timer = setTimeout(async () => {
+      if (!isMounted) return;
+      if (!customDomain.trim()) {
+        setCustomDomainStatus({ state: 'idle', message: '', dnsInstructions: null });
+        return;
+      }
+
+      const clean = customDomain.trim().toLowerCase();
+      if (!clean.includes('.') || clean.length < 4) {
+        setCustomDomainStatus({
+          state: 'invalid',
+          message: 'Enter a valid domain name (e.g. school.edu.bd)',
+          dnsInstructions: null,
+        });
+        return;
+      }
+
       try {
         const res = await fetch(`/api/marketing/creator/websites/check-domain?type=custom&customDomain=${encodeURIComponent(clean)}`);
         const json = await res.json();
+        if (!isMounted) return;
         if (json.available) {
           setCustomDomainStatus({
             state: 'available',
@@ -237,6 +279,7 @@ export default function CreateWebsitePage() {
           });
         }
       } catch {
+        if (!isMounted) return;
         setCustomDomainStatus({
           state: 'error',
           message: 'Error verifying custom domain.',
@@ -245,7 +288,10 @@ export default function CreateWebsitePage() {
       }
     }, 350);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [customDomain]);
 
   const selectedSub = activeSubs.find((s) => String(s.id) === String(selectedSubscriptionId)) || (activeSubs.length > 0 ? activeSubs[0] : null);
@@ -331,6 +377,140 @@ export default function CreateWebsitePage() {
 
     setCurrentStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNidPdfFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setNidPdfUploadError('Only PDF documents are allowed. Please select an authentic NID PDF file.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setNidPdfUploadError('File size exceeds the 10MB limit.');
+      return;
+    }
+
+    setNidPdfUploadError('');
+    setUploadingNidPdf(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (uploadEvent) => {
+        const base64Data = uploadEvent.target.result;
+        try {
+          const res = await fetch('/api/marketing/creator/websites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'upload_document',
+              creatorId: Number(creatorId),
+              file: base64Data,
+              fileName: file.name,
+              documentType: 'creator_nid',
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.url) {
+            setCreatorNidUrl(data.url);
+            setUploadedNidPdfMeta({
+              name: file.name,
+              size: (file.size / 1024).toFixed(1) + ' KB',
+              url: data.url,
+            });
+          } else {
+            setNidPdfUploadError(data.error || 'Failed to upload NID PDF document to Cloudinary.');
+          }
+        } catch {
+          setNidPdfUploadError('Network error uploading NID PDF to Cloudinary.');
+        } finally {
+          setUploadingNidPdf(false);
+        }
+      };
+      reader.onerror = () => {
+        setNidPdfUploadError('Failed to read NID PDF file.');
+        setUploadingNidPdf(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setNidPdfUploadError('Unexpected error uploading NID PDF.');
+      setUploadingNidPdf(false);
+    }
+  };
+
+  const handleRemoveNidPdf = () => {
+    setCreatorNidUrl('');
+    setUploadedNidPdfMeta(null);
+    setNidPdfUploadError('');
+  };
+
+  const handlePdfFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfUploadError('Only PDF documents are allowed. Please select an authentic PDF file.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setPdfUploadError('File size exceeds the 10MB limit.');
+      return;
+    }
+
+    setPdfUploadError('');
+    setUploadingPdf(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (uploadEvent) => {
+        const base64Data = uploadEvent.target.result;
+        try {
+          const res = await fetch('/api/marketing/creator/websites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'upload_document',
+              creatorId: Number(creatorId),
+              file: base64Data,
+              fileName: file.name,
+              documentType: 'eiin_certificate',
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.url) {
+            setEiinCertificateUrl(data.url);
+            setUploadedPdfMeta({
+              name: file.name,
+              size: (file.size / 1024).toFixed(1) + ' KB',
+              url: data.url,
+            });
+          } else {
+            setPdfUploadError(data.error || 'Failed to upload PDF document to Cloudinary.');
+          }
+        } catch {
+          setPdfUploadError('Network error uploading PDF to Cloudinary.');
+        } finally {
+          setUploadingPdf(false);
+        }
+      };
+      reader.onerror = () => {
+        setPdfUploadError('Failed to read PDF file.');
+        setUploadingPdf(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setPdfUploadError('Unexpected error uploading PDF.');
+      setUploadingPdf(false);
+    }
+  };
+
+  const handleRemovePdf = () => {
+    setEiinCertificateUrl('');
+    setUploadedPdfMeta(null);
+    setPdfUploadError('');
   };
 
   const handleFinalSubmit = async (e) => {
@@ -1070,14 +1250,90 @@ export default function CreateWebsitePage() {
 
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-slate-700">
-                    Creator NID Document / Photo URL
+                    Creator NID Document (PDF Upload)
                   </label>
-                  <input
-                    type="text"
-                    value={creatorNidUrl}
-                    onChange={(e) => setCreatorNidUrl(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
+                  {!uploadedNidPdfMeta && !creatorNidUrl ? (
+                    <div>
+                      <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-300 rounded bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
+                        <svg className="w-5 h-5 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span className="text-xs font-medium text-slate-700">
+                          {uploadingNidPdf ? 'Uploading NID PDF to Cloudinary...' : 'Upload NID PDF Document'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">
+                          PDF format up to 10MB
+                        </span>
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          disabled={uploadingNidPdf}
+                          onChange={handleNidPdfFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      {uploadingNidPdf && (
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-blue-600 font-medium">
+                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <span>Saving NID PDF securely in Cloudinary...</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-2.5 border border-emerald-200 bg-emerald-50/60 rounded space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-6 h-6 rounded bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
+                            PDF
+                          </div>
+                          <div className="truncate">
+                            <div className="text-xs font-medium text-slate-900 truncate">
+                              {uploadedNidPdfMeta?.name || 'Creator_NID.pdf'}
+                            </div>
+                            <div className="text-[10px] text-emerald-700 font-mono flex items-center gap-1">
+                              <span>✓ Saved in Cloudinary</span>
+                              {uploadedNidPdfMeta?.size && <span>&middot; {uploadedNidPdfMeta.size}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveNidPdf}
+                          className="text-[11px] text-rose-600 hover:text-rose-800 font-medium cursor-pointer shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="pt-1 border-t border-emerald-100 flex items-center justify-between text-[11px]">
+                        <a
+                          href={creatorNidUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+                        >
+                          <span>View Document</span>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        <label className="text-slate-600 hover:text-slate-900 font-medium cursor-pointer">
+                          <span>Replace PDF</span>
+                          <input
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            disabled={uploadingNidPdf}
+                            onChange={handleNidPdfFileSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                  {nidPdfUploadError && (
+                    <div className="text-[11px] text-rose-600 font-medium mt-1">
+                      {nidPdfUploadError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
@@ -1114,14 +1370,90 @@ export default function CreateWebsitePage() {
 
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-slate-700">
-                    EIIN Certificate Document URL
+                    EIIN Certificate Document (PDF Upload)
                   </label>
-                  <input
-                    type="text"
-                    value={eiinCertificateUrl}
-                    onChange={(e) => setEiinCertificateUrl(e.target.value)}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
+                  {!uploadedPdfMeta && !eiinCertificateUrl ? (
+                    <div>
+                      <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-300 rounded bg-slate-50 hover:bg-slate-100 cursor-pointer transition">
+                        <svg className="w-5 h-5 text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span className="text-xs font-medium text-slate-700">
+                          {uploadingPdf ? 'Uploading PDF to Cloudinary...' : 'Upload PDF Document'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">
+                          PDF format up to 10MB
+                        </span>
+                        <input
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          disabled={uploadingPdf}
+                          onChange={handlePdfFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      {uploadingPdf && (
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-blue-600 font-medium">
+                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <span>Saving PDF securely in Cloudinary...</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-2.5 border border-emerald-200 bg-emerald-50/60 rounded space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-6 h-6 rounded bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-[10px] shrink-0 font-mono">
+                            PDF
+                          </div>
+                          <div className="truncate">
+                            <div className="text-xs font-medium text-slate-900 truncate">
+                              {uploadedPdfMeta?.name || 'EIIN_Certificate.pdf'}
+                            </div>
+                            <div className="text-[10px] text-emerald-700 font-mono flex items-center gap-1">
+                              <span>✓ Saved in Cloudinary</span>
+                              {uploadedPdfMeta?.size && <span>&middot; {uploadedPdfMeta.size}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemovePdf}
+                          className="text-[11px] text-rose-600 hover:text-rose-800 font-medium cursor-pointer shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <div className="pt-1 border-t border-emerald-100 flex items-center justify-between text-[11px]">
+                        <a
+                          href={eiinCertificateUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+                        >
+                          <span>View Document</span>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
+                        <label className="text-slate-600 hover:text-slate-900 font-medium cursor-pointer">
+                          <span>Replace PDF</span>
+                          <input
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            disabled={uploadingPdf}
+                            onChange={handlePdfFileSelect}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                  {pdfUploadError && (
+                    <div className="text-[11px] text-rose-600 font-medium mt-1">
+                      {pdfUploadError}
+                    </div>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">

@@ -42,8 +42,8 @@ export async function GET(request) {
               COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
               (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
               'USD' AS currency, 
-              COALESCE(p.max_websites, 1) AS max_websites,
-              COALESCE(p.max_websites, 1) AS max_portfolios,
+              1 AS max_websites,
+              1 AS max_portfolios,
               COALESCE(p.max_teachers, 0) AS max_teachers,
               COALESCE(p.max_students, 0) AS max_students,
               COALESCE(p.max_staff, 0) AS max_staff,
@@ -197,7 +197,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const subId = Number(body.subscriptionId || body.id);
     const packageId = Number(body.packageId || 0);
 
-    let queryText = 'SELECT s.*, p.name AS package_name, p.slug AS package_slug, p.monthly_price_usd, p.yearly_price_usd, p.monthly_price_bdt, p.yearly_price_bdt, p.monthly_price, p.yearly_price, COALESCE(p.max_websites, 1) AS max_websites FROM subscriptions s JOIN packages p ON s.package_id = p.id WHERE s.creator_id = $1';
+    let queryText = 'SELECT s.*, p.name AS package_name, p.slug AS package_slug, p.monthly_price_usd, p.yearly_price_usd, p.monthly_price_bdt, p.yearly_price_bdt, p.monthly_price, p.yearly_price, 1 AS max_websites FROM subscriptions s JOIN packages p ON s.package_id = p.id WHERE s.creator_id = $1';
     const params = [creatorId];
 
     if (subId) {
@@ -219,9 +219,12 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const isYearly = String(body.billingCycle || sub.billing_cycle || '').toLowerCase() === 'yearly';
     const billingCycle = isYearly ? 'yearly' : 'monthly';
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
+    const cleanMethod = String(body.paymentMethod || '').toLowerCase();
+    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(cleanMethod) || String(body.currency || '').toUpperCase() === 'BDT';
+    const currency = isBdt ? 'BDT' : 'USD';
     const baseAmount = isYearly
-      ? Number(sub.yearly_price_usd || sub.yearly_price || 0)
-      : Number(sub.monthly_price_usd || sub.monthly_price || 0);
+      ? Number(isBdt ? (sub.yearly_price_bdt || 0) : (sub.yearly_price_usd || sub.yearly_price || 0))
+      : Number(isBdt ? (sub.monthly_price_bdt || 0) : (sub.monthly_price_usd || sub.monthly_price || 0));
 
     const now = new Date();
     const currentEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
@@ -282,9 +285,9 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
       `INSERT INTO payments (
          purchase_id, creator_id, transaction_id, amount, currency,
          payment_method, status, payment_date
-       ) VALUES ($1, $2, $3, $4, 'USD', $5, 'successful', CURRENT_TIMESTAMP)
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'successful', CURRENT_TIMESTAMP)
        RETURNING *`,
-      [puRes.rows[0].id, creatorId, transactionId, baseAmount, body.paymentMethod || 'renewal']
+      [puRes.rows[0].id, creatorId, transactionId, baseAmount, currency, body.paymentMethod || 'renewal']
     );
 
     return NextResponse.json({

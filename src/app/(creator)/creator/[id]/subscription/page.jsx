@@ -487,139 +487,137 @@ function SubscriptionContent() {
       </div>
 
       {selectedWebsiteForSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-semibold text-slate-900">
-                Website Settings: {selectedWebsiteForSettings.name}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedWebsiteForSettings(null)}
-                className="text-slate-400 hover:text-slate-700 font-medium"
-              >
-                Close
-              </button>
-            </div>
-
-            {settingsErr && (
-              <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
-                {settingsErr}
-              </div>
-            )}
-            {settingsMsg && (
-              <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
-                {settingsMsg}
-              </div>
-            )}
-
-            {loadingSettings ? (
-              <LoadingScreen fullScreen={false} size="sm" label="Loading settings..." />
-            ) : (
-              <form onSubmit={handleSaveSettings} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Site Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={siteSettings?.site_title || ''}
-                    onChange={(e) => setSiteSettings({ ...siteSettings, site_title: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Tagline</label>
-                  <input
-                    type="text"
-                    value={siteSettings?.tagline || ''}
-                    onChange={(e) => setSiteSettings({ ...siteSettings, tagline: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Email</label>
-                    <input
-                      type="email"
-                      value={siteSettings?.contact_email || ''}
-                      onChange={(e) => setSiteSettings({ ...siteSettings, contact_email: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Phone</label>
-                    <input
-                      type="text"
-                      value={siteSettings?.contact_phone || ''}
-                      onChange={(e) => setSiteSettings({ ...siteSettings, contact_phone: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Primary Color</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={siteSettings?.primary_color || '#2563eb'}
-                        onChange={(e) => setSiteSettings({ ...siteSettings, primary_color: e.target.value })}
-                        className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
-                      />
-                      <span className="font-mono text-[11px]">{siteSettings?.primary_color}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Secondary Color</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={siteSettings?.secondary_color || '#0ea5e9'}
-                        onChange={(e) => setSiteSettings({ ...siteSettings, secondary_color: e.target.value })}
-                        className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
-                      />
-                      <span className="font-mono text-[11px]">{siteSettings?.secondary_color}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Font Family</label>
-                    <select
-                      value={siteSettings?.font_family || 'Inter'}
-                      onChange={(e) => setSiteSettings({ ...siteSettings, font_family: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
-                    >
-                      <option value="Inter">Inter</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Outfit">Outfit</option>
-                      <option value="Poppins">Poppins</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedWebsiteForSettings(null)}
-                    className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingSettings}
-                    className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
-                  >
-                    {savingSettings ? 'Saving...' : 'Save Settings'}
-                  </button>
-                </div>
-              </form>
-            )}
+        <div className="bg-white rounded border border-slate-200 p-5 space-y-4 text-xs shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-semibold text-slate-900">
+              Website Settings: {selectedWebsiteForSettings.name}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setSelectedWebsiteForSettings(null)}
+              className="text-slate-400 hover:text-slate-700 font-medium cursor-pointer"
+            >
+              Close
+            </button>
           </div>
+
+          {settingsErr && (
+            <div className="p-2.5 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
+              {settingsErr}
+            </div>
+          )}
+          {settingsMsg && (
+            <div className="p-2.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
+              {settingsMsg}
+            </div>
+          )}
+
+          {loadingSettings ? (
+            <LoadingScreen fullScreen={false} size="sm" label="Loading settings..." />
+          ) : (
+            <form onSubmit={handleSaveSettings} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">Site Title</label>
+                <input
+                  type="text"
+                  required
+                  value={siteSettings?.site_title || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, site_title: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">Tagline</label>
+                <input
+                  type="text"
+                  value={siteSettings?.tagline || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, tagline: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={siteSettings?.contact_email || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, contact_email: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Contact Phone</label>
+                  <input
+                    type="text"
+                    value={siteSettings?.contact_phone || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, contact_phone: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Primary Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={siteSettings?.primary_color || '#2563eb'}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, primary_color: e.target.value })}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <span className="font-mono text-[11px]">{siteSettings?.primary_color}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Secondary Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={siteSettings?.secondary_color || '#0ea5e9'}
+                      onChange={(e) => setSiteSettings({ ...siteSettings, secondary_color: e.target.value })}
+                      className="w-8 h-8 rounded border border-slate-300 p-0.5 cursor-pointer"
+                    />
+                    <span className="font-mono text-[11px]">{siteSettings?.secondary_color}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">Font Family</label>
+                  <select
+                    value={siteSettings?.font_family || 'Inter'}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, font_family: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
+                  >
+                    <option value="Inter">Inter</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Outfit">Outfit</option>
+                    <option value="Poppins">Poppins</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSelectedWebsiteForSettings(null)}
+                  className="px-3 py-1.5 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50"
+                >
+                  {savingSettings ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 

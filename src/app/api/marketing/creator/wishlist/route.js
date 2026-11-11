@@ -36,7 +36,7 @@ export async function GET(request) {
               p.max_teachers,
               p.max_staff,
               p.max_storage_mb,
-              p.max_websites,
+              1 AS max_websites,
               p.is_popular,
               p.is_active,
               p.features

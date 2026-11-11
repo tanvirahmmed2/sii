@@ -13,7 +13,11 @@ export async function GET(request, { params }) {
   const client = await pool.connect();
   try {
     const webRes = await client.query(
-      `SELECT id, name, currency FROM websites WHERE subdomain = $1 OR domain = $1 LIMIT 1`,
+      `SELECT w.id, w.name, w.currency 
+       FROM websites w 
+       WHERE LOWER(w.slug) = LOWER($1) 
+          OR EXISTS (SELECT 1 FROM website_domains wd WHERE wd.website_id = w.id AND LOWER(wd.domain) = LOWER($1))
+       LIMIT 1`,
       [domain]
     );
     if (webRes.rows.length === 0) {

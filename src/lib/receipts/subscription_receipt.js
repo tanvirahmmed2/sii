@@ -12,8 +12,8 @@ export const PLATFORM_INFO = {
   SITE_MAIL: SITE_MAIL || 'support@hiesci.io',
   SITE_CONTACT: SITE_CONTACT || '+1 (800) 555-0199',
   SITE_ADDRESS: SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400',
-  COMPANY_NAME: COMPANY_NAME || 'EduCraft Technologies Inc.',
-  COMPANY_URL: COMPANY_URL || 'https://educraft.io',
+  COMPANY_NAME: COMPANY_NAME || 'Sky International Institute',
+  COMPANY_URL: COMPANY_URL || 'http://localhost:3000',
 };
 
 export function numberToWords(num, currency = 'USD') {
@@ -69,12 +69,12 @@ export function numberToWords(num, currency = 'USD') {
 }
 
 export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, packageInfo = {}, purchase = {}) {
-  const platformName = COMPANY_NAME || 'EduCraft Technologies Inc.';
+  const platformName = COMPANY_NAME || 'Sky International Institute';
   const brandName = SITE_NAME || 'Hiesci';
   const siteAddress = SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400';
   const siteContact = SITE_CONTACT || '+1 (800) 555-0199';
   const siteEmail = SITE_MAIL || 'support@hiesci.io';
-  const siteWebsite = COMPANY_URL || 'https://educraft.io';
+  const siteWebsite = COMPANY_URL || 'http://localhost:3000';
 
   const receiptNo = payment.transaction_id || (payment.id ? `REC-PAY-${payment.id}` : 'REC-OFFICIAL');
   const purchaseCode = purchase.purchase_code || payment.purchase_code || payment.order_code || 'N/A';
@@ -190,7 +190,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       position: relative;
     }
 
-    /* Decorative top brand bar */
     .top-brand-accent {
       position: absolute;
       top: 0;
@@ -272,7 +271,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       font-size: 12px;
     }
 
-    /* Billing / Client Grid */
     .parties-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -310,7 +308,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       line-height: 1.5;
     }
 
-    /* Package Specifications Table */
     .specs-header {
       font-size: 13px;
       font-weight: 700;
@@ -382,7 +379,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       color: #0f172a;
     }
 
-    /* Financial Summary */
     .financial-table {
       width: 100%;
       border-collapse: collapse;
@@ -436,7 +432,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       margin-right: 6px;
     }
 
-    /* Signatures & Footer */
     .receipt-footer {
       border-top: 1px solid #e2e8f0;
       padding-top: 24px;
@@ -509,7 +504,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
     <div class="receipt-container">
       <div class="top-brand-accent"></div>
 
-      <!-- Header -->
       <div class="header-section">
         <div>
           <div class="company-title">${platformName}</div>
@@ -539,7 +533,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
         </div>
       </div>
 
-      <!-- Parties: Bill To & Terms -->
       <div class="parties-grid">
         <div class="party-block">
           <h4>Billed To (Creator)</h4>
@@ -560,7 +553,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
         </div>
       </div>
 
-      <!-- Package & Resource Allocation Table -->
       <div class="specs-header">
         <span>Subscribed Plan & Entitlements</span>
         <span style="font-size: 11px; color: #64748b; font-weight: 500;">Cycle: ${billingCycle}</span>
@@ -600,7 +592,6 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
         </tbody>
       </table>
 
-      <!-- Financial Calculation -->
       <table class="financial-table">
         <tbody>
           <tr>
@@ -622,12 +613,10 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
         </tbody>
       </table>
 
-      <!-- Amount in Words -->
       <div class="words-box">
         <strong>Amount In Words:</strong> ${amountWords}
       </div>
 
-      <!-- Footer Notes & Seal -->
       <div class="receipt-footer">
         <div class="footer-notes">
           <div>This is an official, system-generated payment receipt and certificate of subscription.</div>

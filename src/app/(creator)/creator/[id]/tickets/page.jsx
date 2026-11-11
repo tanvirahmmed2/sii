@@ -173,7 +173,6 @@ export default function CreatorTicketsPage() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Domain SSL verification issue"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
@@ -216,7 +215,6 @@ export default function CreatorTicketsPage() {
               <textarea
                 required
                 rows={4}
-                placeholder="Describe your issue with relevant error details... (You can also paste a screenshot directly with Ctrl+V)"
                 value={message}
                 onPaste={handlePaste}
                 onChange={(e) => setMessage(e.target.value)}
@@ -295,9 +293,9 @@ export default function CreatorTicketsPage() {
           </h2>
           <input
             type="text"
-            placeholder="Search tickets..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search tickets"
             className="w-full sm:w-56 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs text-slate-900 focus:outline-none focus:border-slate-800"
           />
         </div>

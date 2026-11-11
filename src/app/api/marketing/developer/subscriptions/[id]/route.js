@@ -42,16 +42,16 @@ async function fetchFullSubscription(idNum) {
             p.max_teachers,
             p.max_staff,
             p.max_storage_mb,
-            p.max_websites,
+            1 AS max_websites,
             p.features AS package_features,
             p.grace_period AS package_grace_period,
             p.is_public AS package_is_public,
             w.id AS website_id,
             w.name AS website_name,
             w.slug AS website_slug,
-            w.subdomain AS website_subdomain,
-            w.custom_domain AS website_custom_domain,
-            w.custom_domain_verified AS website_custom_domain_verified,
+            COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS website_custom_domain,
+            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS website_custom_domain_verified,
             w.status AS website_status,
             w.theme AS website_theme,
             w.primary_color AS website_primary_color,
@@ -129,16 +129,16 @@ async function fetchFullSubscription(idNum) {
               p.max_teachers,
               p.max_staff,
               p.max_storage_mb,
-              p.max_websites,
+              1 AS max_websites,
               p.features AS package_features,
               p.grace_period AS package_grace_period,
               p.is_public AS package_is_public,
               w.id AS website_id,
               w.name AS website_name,
               w.slug AS website_slug,
-              w.subdomain AS website_subdomain,
-              w.custom_domain AS website_custom_domain,
-              w.custom_domain_verified AS website_custom_domain_verified,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS website_custom_domain,
+              (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS website_custom_domain_verified,
               w.status AS website_status,
               w.theme AS website_theme,
               w.primary_color AS website_primary_color,
@@ -229,7 +229,7 @@ export async function GET(request, { params }) {
       queryDb(
         `SELECT id, name, slug, tagline, description,
                 monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
-                discount_percentage, max_students, max_teachers, max_staff, max_storage_mb, max_websites,
+                discount_percentage, max_students, max_teachers, max_staff, max_storage_mb, 1 AS max_websites,
                 features, is_active, is_public
          FROM packages
          WHERE is_active = TRUE
@@ -237,7 +237,10 @@ export async function GET(request, { params }) {
       ).catch(() => ({ rows: [] })),
 
       queryDb(
-        `SELECT id, creator_id, name, slug, subdomain, custom_domain, status, storage_used_mb,
+        `SELECT id, creator_id, name, slug,
+                COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.is_primary = TRUE LIMIT 1), websites.slug) AS subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain,
+                status, storage_used_mb,
                 subscription_expires_at, is_maintenance_mode, primary_color, secondary_color, created_at
          FROM websites
          WHERE creator_id = $1

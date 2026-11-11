@@ -16,7 +16,6 @@ const SEED_PACKAGES = [
     max_students: 500,
     max_teachers: 30,
     max_staff: 15,
-    max_storage: '5 GB',
     max_storage_mb: 5120,
     monthly_mail: 1000,
     monthly_sms: 200,
@@ -46,7 +45,6 @@ const SEED_PACKAGES = [
     max_students: 2500,
     max_teachers: 100,
     max_staff: 50,
-    max_storage: '20 GB',
     max_storage_mb: 20480,
     monthly_mail: 5000,
     monthly_sms: 1000,
@@ -76,7 +74,6 @@ const SEED_PACKAGES = [
     max_students: 15000,
     max_teachers: 500,
     max_staff: 200,
-    max_storage: '100 GB',
     max_storage_mb: 102400,
     monthly_mail: 25000,
     monthly_sms: 5000,
@@ -116,7 +113,7 @@ async function seedPackages() {
          name, slug, short_description, description,
          monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
          monthly_price, yearly_price, discount_percentage,
-         max_students, max_teachers, max_staff, max_storage, max_storage_mb,
+         max_students, max_teachers, max_staff, max_storage_mb,
          is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
          grace_period, sort_order, is_popular, is_public, is_active,
          monthly_mail, monthly_sms, updated_at
@@ -124,10 +121,10 @@ async function seedPackages() {
          $1, $2, $3, $4,
          $5, $6, $7, $8,
          $9, $10, $11,
-         $12, $13, $14, $15, $16,
-         $17, $18, $19,
-         $20, $21, $22, $23, $24,
-         $25, $26, CURRENT_TIMESTAMP
+         $12, $13, $14, $15,
+         $16, $17, $18,
+         $19, $20, $21, $22, $23,
+         $24, $25, CURRENT_TIMESTAMP
        )
        ON CONFLICT (slug) DO UPDATE SET
          name = EXCLUDED.name,
@@ -143,7 +140,6 @@ async function seedPackages() {
          max_students = EXCLUDED.max_students,
          max_teachers = EXCLUDED.max_teachers,
          max_staff = EXCLUDED.max_staff,
-         max_storage = EXCLUDED.max_storage,
          max_storage_mb = EXCLUDED.max_storage_mb,
          is_available_student_panel = EXCLUDED.is_available_student_panel,
          is_available_teacher_panel = EXCLUDED.is_available_teacher_panel,
@@ -161,7 +157,7 @@ async function seedPackages() {
         pkg.name, pkg.slug, pkg.short_description, pkg.description,
         pkg.monthly_price_usd, pkg.yearly_price_usd, pkg.monthly_price_bdt, pkg.yearly_price_bdt,
         pkg.monthly_price, pkg.yearly_price, pkg.discount_percentage,
-        pkg.max_students, pkg.max_teachers, pkg.max_staff, pkg.max_storage, pkg.max_storage_mb,
+        pkg.max_students, pkg.max_teachers, pkg.max_staff, pkg.max_storage_mb,
         pkg.is_available_student_panel, pkg.is_available_teacher_panel, pkg.is_available_custom_domain,
         pkg.grace_period, pkg.sort_order, pkg.is_popular, pkg.is_public, pkg.is_active,
         pkg.monthly_mail, pkg.monthly_sms

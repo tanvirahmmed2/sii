@@ -20,33 +20,36 @@ async function handleCallback(request) {
       if (!spOrderId) throw new Error("Missing shurjoPay order_id");
       verified = await verifyShurjoPayPayment(spOrderId);
     } else if (gateway === "paypal") {
-      const token = searchParams.get("token"); 
+      const token = searchParams.get("token") || searchParams.get("order_id"); 
       if (!token) throw new Error("Missing PayPal order token");
       verified = await capturePayPalOrder(token);
     } else if (gateway === "paddle" || gateway === "stripe_connect") {
       const orderId = searchParams.get("order_id") || searchParams.get("transaction_id") || searchParams.get("session_id");
       if (!orderId) throw new Error("Missing Paddle transaction / order_id");
       verified = await retrievePaddleTransaction(orderId);
-      if (!verified.meta?.internalTxId && searchParams.get("internalTxId")) {
-        verified.meta = {
-          ...verified.meta,
-          internalTxId: searchParams.get("internalTxId"),
-          tier: searchParams.get("tier") || "TIER_2",
-        };
-      }
-      if (!verified.meta?.internalTxId && searchParams.get("paymentId")) {
-        verified.meta = {
-          ...verified.meta,
-          internalTxId: searchParams.get("paymentId"),
-          tier: searchParams.get("tier") || "TIER_1",
-        };
-      }
     } else {
       throw new Error("Invalid gateway callback");
     }
 
+    if (!verified) {
+      throw new Error("Payment verification failed");
+    }
+    if (!verified.meta) {
+      verified.meta = {};
+    }
+
+    if (!verified.meta.internalTxId) {
+      const fallbackId = searchParams.get("paymentId") || searchParams.get("internalTxId");
+      if (fallbackId) {
+        verified.meta.internalTxId = fallbackId;
+      }
+    }
+    if (!verified.meta.tier && searchParams.get("tier")) {
+      verified.meta.tier = searchParams.get("tier");
+    }
+
     const tier = verified.meta?.tier || searchParams.get("tier") || "TIER_2";
-    const internalTxId = Number(verified.meta?.internalTxId);
+    const internalTxId = Number(verified.meta?.internalTxId || 0);
 
     await client.query("BEGIN");
 
@@ -55,13 +58,22 @@ async function handleCallback(request) {
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
     if (tier === "TIER_1") {
-      const payRes = await client.query(
+      let payRes = await client.query(
         `SELECT p.*, pur.website_id, pur.package_id, pur.billing_cycle, pur.period_start, pur.period_end
          FROM payments p
          JOIN purchases pur ON pur.id = p.purchase_id
          WHERE p.id = $1 FOR UPDATE`,
         [internalTxId]
       );
+      if (payRes.rows.length === 0 && (verified.gatewayOrderId || searchParams.get("order_id"))) {
+        payRes = await client.query(
+          `SELECT p.*, pur.website_id, pur.package_id, pur.billing_cycle, pur.period_start, pur.period_end
+           FROM payments p
+           JOIN purchases pur ON pur.id = p.purchase_id
+           WHERE p.gateway_order_id = $1 OR pur.purchase_code = $2 FOR UPDATE`,
+          [verified.gatewayOrderId, searchParams.get("order_id")]
+        );
+      }
       if (payRes.rows.length === 0) throw new Error("Tier 1 payment record not found.");
       const payRow = payRes.rows[0];
 

@@ -95,7 +95,6 @@ export async function ensureOfficerSchema() {
 
 export async function createOfficerSession({ websiteId, officerId, token, request, expiresAt }) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     let ip = null;
     let userAgent = null;
 
@@ -127,7 +126,6 @@ export async function createOfficerSession({ websiteId, officerId, token, reques
 
 export async function getOfficerSession(request) {
   try {
-    await ensureOfficerSchema().catch(() => {});
     let token = null;
 
     if (request) {
@@ -157,7 +155,9 @@ export async function getOfficerSession(request) {
               wo.permanent_address, wo.is_active AS officer_active, wo.is_registered,
               wo.is_two_factor_enabled, wo.photo_url, wo.nid_number, wo.gender, wo.blood_group,
               wo.date_of_birth, wo.joining_date, wo.salary, wo.bio, wo.username,
-              w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+              w.name AS website_name,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
        FROM website_officer_login_sessions os
        JOIN website_officers wo ON wo.id = os.officer_id
        JOIN websites w ON w.id = os.website_id
@@ -168,7 +168,9 @@ export async function getOfficerSession(request) {
 
     if (sessRes.rows.length === 0) {
       const officerCheck = await queryDb(
-        `SELECT wo.*, w.id AS web_id, w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+        `SELECT wo.*, w.id AS web_id, w.name AS website_name,
+                COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
          FROM website_officers wo
          JOIN websites w ON w.id = wo.website_id
          WHERE wo.id = $1 AND wo.is_active = TRUE
@@ -192,7 +194,9 @@ export async function getOfficerSession(request) {
                     wo.permanent_address, wo.is_active AS officer_active, wo.is_registered,
                     wo.is_two_factor_enabled, wo.photo_url, wo.nid_number, wo.gender, wo.blood_group,
                     wo.date_of_birth, wo.joining_date, wo.salary, wo.bio, wo.username,
-                    w.name AS website_name, w.subdomain AS website_subdomain, w.custom_domain AS website_custom_domain
+                    w.name AS website_name,
+              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
              FROM website_officer_login_sessions os
              JOIN website_officers wo ON wo.id = os.officer_id
              JOIN websites w ON w.id = os.website_id

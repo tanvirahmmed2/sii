@@ -2,34 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { queryDb } from 'src/lib/database/db';
 
-async function ensureSessionsTable() {
-  try {
-    await queryDb(`
-      CREATE TABLE IF NOT EXISTS creator_login_sessions (
-          id BIGSERIAL PRIMARY KEY,
-          creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
-          token TEXT UNIQUE NOT NULL,
-          ip_address VARCHAR(100),
-          user_agent TEXT,
-          expires_at TIMESTAMPTZ NOT NULL,
-          is_active BOOLEAN DEFAULT TRUE,
-          last_active_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_creator ON creator_login_sessions(creator_id);
-      CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_token ON creator_login_sessions(token);
-      CREATE INDEX IF NOT EXISTS idx_creator_login_sessions_active ON creator_login_sessions(is_active);
-    `);
-  } catch (e) {
-    console.warn('Notice ensuring creator_login_sessions table:', e.message);
-  }
-}
-
 export async function GET(request) {
   try {
-    await ensureSessionsTable();
-
     const sessionCreator = await getCreatorSession(request);
     if (!sessionCreator) {
       return NextResponse.json(
