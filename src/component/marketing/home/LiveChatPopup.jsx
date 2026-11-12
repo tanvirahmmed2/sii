@@ -14,7 +14,7 @@ import {
 import { SITE_NAME, LIVE_CHAT_TOKEN } from 'src/lib/database/secret';
 
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
-const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000; 
+const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 function getLiveCookie() {
   if (typeof document === 'undefined') return null;
@@ -138,7 +138,7 @@ export default function LiveChatPopup() {
           });
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function LiveChatPopup() {
         };
         try {
           localStorage.setItem('hiesci_live_chat_icon_pos', JSON.stringify(clamped));
-        } catch (_) {}
+        } catch (_) { }
         return clamped;
       });
     };
@@ -216,7 +216,7 @@ export default function LiveChatPopup() {
     if (moved && finalPos) {
       try {
         localStorage.setItem('hiesci_live_chat_icon_pos', JSON.stringify(finalPos));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (!moved) {
@@ -356,20 +356,20 @@ export default function LiveChatPopup() {
         typeof navigator !== 'undefined' && navigator.userAgent.includes('Windows')
           ? 'Windows'
           : typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
-          ? 'macOS'
-          : typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
-          ? 'Android'
-          : typeof navigator !== 'undefined' && navigator.userAgent.includes('iPhone')
-          ? 'iOS'
-          : 'Linux/Other',
+            ? 'macOS'
+            : typeof navigator !== 'undefined' && navigator.userAgent.includes('Android')
+              ? 'Android'
+              : typeof navigator !== 'undefined' && navigator.userAgent.includes('iPhone')
+                ? 'iOS'
+                : 'Linux/Other',
       browser:
         typeof navigator !== 'undefined' && navigator.userAgent.includes('Chrome')
           ? 'Chrome'
           : typeof navigator !== 'undefined' && navigator.userAgent.includes('Firefox')
-          ? 'Firefox'
-          : typeof navigator !== 'undefined' && navigator.userAgent.includes('Safari')
-          ? 'Safari'
-          : 'Browser',
+            ? 'Firefox'
+            : typeof navigator !== 'undefined' && navigator.userAgent.includes('Safari')
+              ? 'Safari'
+              : 'Browser',
     };
 
     try {
@@ -537,10 +537,7 @@ export default function LiveChatPopup() {
               </div>
               <div>
                 <h3 className="text-sm font-bold leading-tight">{SITE_NAME || 'Platform'} Support Desk</h3>
-                <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Engineering & Support Online
-                </p>
+
               </div>
             </div>
 
@@ -598,7 +595,6 @@ export default function LiveChatPopup() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Alex"
                       value={visitorName}
                       onChange={(e) => setVisitorName(e.target.value)}
                       className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 transition-colors shadow-2xs"
@@ -611,7 +607,6 @@ export default function LiveChatPopup() {
                     </label>
                     <input
                       type="email"
-                      placeholder="alex@example.com"
                       value={visitorEmail}
                       onChange={(e) => setVisitorEmail(e.target.value)}
                       className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800 transition-colors shadow-2xs"
@@ -662,20 +657,19 @@ export default function LiveChatPopup() {
                         </span>
                       </div>
                       <div
-                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${
-                          isVisitor
-                            ? 'bg-slate-900 text-white rounded-br-xs'
-                            : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
-                        }`}
+                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-2xs ${isVisitor
+                          ? 'bg-slate-900 text-white rounded-br-xs'
+                          : 'bg-white text-slate-900 border border-slate-200 rounded-bl-xs'
+                          }`}
                       >
                         {msg.message}
                       </div>
                       <span className="text-[9px] text-slate-400 mt-0.5 px-1">
                         {msg.created_at
                           ? new Date(msg.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
                           : ''}
                       </span>
                     </div>
@@ -719,19 +713,19 @@ export default function LiveChatPopup() {
         style={
           position
             ? {
-                position: 'fixed',
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                zIndex: 70,
-                touchAction: 'none',
-              }
+              position: 'fixed',
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+              zIndex: 70,
+              touchAction: 'none',
+            }
             : {
-                position: 'fixed',
-                left: '32px',
-                bottom: '24px',
-                zIndex: 70,
-                touchAction: 'none',
-              }
+              position: 'fixed',
+              left: '32px',
+              bottom: '24px',
+              zIndex: 70,
+              touchAction: 'none',
+            }
         }
         className={`font-sans select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       >
@@ -747,9 +741,8 @@ export default function LiveChatPopup() {
               handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
             }
           }}
-          className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl hover:scale-105 active:scale-95 transition-transform duration-150 select-none ${
-            isDragging ? 'cursor-grabbing scale-105 shadow-indigo-500/30' : 'cursor-grab'
-          }`}
+          className={`relative flex items-center justify-center w-14 h-14 rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl hover:scale-105 active:scale-95 transition-transform duration-150 select-none ${isDragging ? 'cursor-grabbing scale-105 shadow-indigo-500/30' : 'cursor-grab'
+            }`}
           aria-label="Live chat support (click to chat or drag anywhere)"
           title={isDragging ? 'Dragging...' : 'Click to chat, or drag anywhere on screen'}
         >
