@@ -18,7 +18,7 @@ const Footer = () => {
   const isDark = theme === 'dark';
 
   return (
-    <footer className="w-full bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
+    <footer className="w-full mx-4 bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
       <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
           <div className="lg:col-span-7 space-y-2">
@@ -156,10 +156,10 @@ const Footer = () => {
                 </Link>
               </div>
 
-              <div className="pt-1 space-y-1.5 font-mono text-[11px]">
+              <div className="pt-1 space-y-1.5 font-mono text-11px">
                 {SITE_MAIL && (
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-slate-500 font-sans text-[10px] uppercase">[Email]</span>
+                    <span className="text-slate-500 font-sans text-10px uppercase">Email</span>
                     <a href={`mailto:${SITE_MAIL}`} className="hover:text-white transition-colors truncate">
                       {SITE_MAIL}
                     </a>
@@ -168,7 +168,7 @@ const Footer = () => {
 
                 {SITE_CONTACT && (
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-slate-500 font-sans text-[10px] uppercase">[Phone]</span>
+                    <span className="text-slate-500 font-sans text-10px uppercase">Phone</span>
                     <a href={`tel:${SITE_CONTACT}`} className="hover:text-white transition-colors truncate">
                       {SITE_CONTACT}
                     </a>
@@ -177,7 +177,7 @@ const Footer = () => {
 
                 {SITE_ADDRESS && (
                   <div className="flex items-start gap-1.5 pt-0.5">
-                    <span className="text-slate-500 font-sans text-[10px] uppercase shrink-0 mt-0.5">[Address]</span>
+                    <span className="text-slate-500 font-sans text-10px uppercase shrink-0 mt-0.5">Address</span>
                     <span className="line-clamp-2 text-slate-400 font-sans text-xs">{SITE_ADDRESS}</span>
                   </div>
                 )}

@@ -67,9 +67,7 @@ export default function SubscribeForm({ source = 'HOME_FOOTER' }) {
     <div className="w-full space-y-3">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-1.5 py-0.5 rounded">
-            Newsletter
-          </span>
+
           <h4 className="text-sm sm:text-base font-semibold text-white tracking-tight">
             Stay Updated
           </h4>
@@ -106,13 +104,12 @@ export default function SubscribeForm({ source = 'HOME_FOOTER' }) {
         {status.message && (
           <div
             role="alert"
-            className={`p-2.5 rounded text-xs flex items-start gap-2 border font-medium ${
-              status.type === 'success'
+            className={`p-2.5 rounded text-xs flex items-start gap-2 border font-medium ${status.type === 'success'
                 ? 'bg-emerald-950/40 border-emerald-800 text-emerald-200'
                 : status.type === 'info'
-                ? 'bg-sky-950/40 border-sky-800 text-sky-200'
-                : 'bg-rose-950/40 border-rose-800 text-rose-200'
-            }`}
+                  ? 'bg-sky-950/40 border-sky-800 text-sky-200'
+                  : 'bg-rose-950/40 border-rose-800 text-rose-200'
+              }`}
           >
             <span className="text-[10px] uppercase font-semibold px-1 py-0.2 rounded bg-white/10 shrink-0">
               {status.type === 'success' ? 'Success' : status.type === 'info' ? 'Info' : 'Alert'}
