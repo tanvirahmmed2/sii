@@ -18,7 +18,7 @@ const Footer = () => {
   const isDark = theme === 'dark';
 
   return (
-    <footer className="w-full mx-4 bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
+    <footer className="w-full bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
       <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
           <div className="lg:col-span-7 space-y-2">
