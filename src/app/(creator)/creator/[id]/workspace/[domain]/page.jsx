@@ -993,7 +993,7 @@ export default function WebsiteManagePage() {
     setEditProfileForm({
       name: staff.name || '',
       email: staff.email || '',
-      number: staff.number || '',
+      number: staff.phone || staff.number || '',
       address: staff.address || '',
       gradeId: staff.grade_id || '',
       bio: staff.bio || '',
@@ -2244,7 +2244,7 @@ export default function WebsiteManagePage() {
                           <td className="py-2.5">
                             <div className="font-medium text-slate-900">{s.name}</div>
                             <div className="text-[11px] text-slate-500">{s.email}</div>
-                            <div className="text-[11px] text-slate-400 font-mono">{s.number}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">{s.phone || s.number}</div>
                           </td>
 
                           <td className="py-2.5">
@@ -2265,6 +2265,12 @@ export default function WebsiteManagePage() {
                               >
                                 {s.is_active ? 'Active' : 'Inactive'}
                               </span>
+
+                              {s.locked_until && new Date(s.locked_until) > new Date() && (
+                                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-rose-50 text-rose-700 border-rose-200">
+                                  Account Locked
+                                </span>
+                              )}
 
                               <span
                                 className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${s.is_registered

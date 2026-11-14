@@ -2,10 +2,20 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { queryDb } from '../database/db.js';
 import { JWT_SECRET, STAFF_TOKEN } from '../database/secret.js';
+import {
+  checkAccountLockout,
+  recordFailedLogin,
+  recordSuccessfulLogin,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
+  generateSecureOtp,
+} from '../security/shield.js';
+import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendSms } from '../database/smsSender.js';
 
-const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
+const DEFAULT_JWT_SECRET = JWT_SECRET;
 
-export const STAFF_COOKIE_NAME = STAFF_TOKEN || 'hiesci-staff';
+export const STAFF_COOKIE_NAME = STAFF_TOKEN;
 
 export async function hashPassword(password) {
   const salt = await bcrypt.genSalt(10);
@@ -115,7 +125,7 @@ export async function getStaffSession(request) {
 
     let sessRes = await queryDb(
       `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
-              ws.id, ws.name, ws.email, ws.number, ws.address, ws.is_active AS staff_active,
+              ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
               ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
               ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
               ws.bio, ws.username,
@@ -154,7 +164,7 @@ export async function getStaffSession(request) {
 
           sessRes = await queryDb(
             `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
-                    ws.id, ws.name, ws.email, ws.number, ws.address, ws.is_active AS staff_active,
+                    ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
                     ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
                     ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
                     ws.bio, ws.username,
@@ -224,8 +234,8 @@ export async function getStaffSession(request) {
       website_id: row.website_id,
       name: row.name,
       email: row.email,
-      number: row.number,
-      phone: row.number,
+      number: row.phone || row.number,
+      phone: row.phone || row.number,
       address: row.address,
       isActive: Boolean(row.staff_active),
       isRegistered: Boolean(row.is_registered),
@@ -459,8 +469,270 @@ export function checkStaffContactsPermission(staffSession, action = 'view') {
   return false;
 }
 
+export async function authenticateStaff({
+  websiteId,
+  identifier,
+  password,
+  ip = '127.0.0.1',
+  userAgent = 'Unknown',
+  twoFactorCode = null,
+  channel = 'email',
+  request = null,
+  website = null,
+} = {}) {
+  const raw = String(identifier || '').trim();
+  const cleanEmail = raw.toLowerCase();
+  const digits = raw.replace(/\D/g, '');
+  const cleanPassword = String(password || '');
+
+  const lockoutCheck = await checkAccountLockout({
+    table: 'website_staffs',
+    identifier: raw,
+    websiteId,
+  });
+
+  if (lockoutCheck.isLocked) {
+    const err = new Error(lockoutCheck.error);
+    err.status = 429;
+    err.locked = true;
+    err.remainingMinutes = lockoutCheck.remainingMinutes;
+    throw err;
+  }
+
+  const staffRes = await queryDb(
+    `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, COALESCE(ws.phone, ws.number) AS phone,
+            ws.address, ws.password, ws.is_active, ws.is_registered, ws.is_two_factor_enabled,
+            ws.two_factor_code, ws.two_factor_expires, ws.grade_id, ws.username, ws.bio,
+            gp.name AS grade_name, gp.basic_salary, gp.allowance
+     FROM website_staffs ws
+     LEFT JOIN website_staff_pay_scale gp ON gp.id = ws.grade_id
+     WHERE ws.website_id = $1 
+       AND (
+         LOWER(ws.email) = $2 
+         OR ws.number = $3 
+         OR ws.phone = $3 
+         OR (LENGTH($4) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(ws.phone, ws.number, ''), '\\D', '', 'g'), 10) = RIGHT($4, 10))
+       )
+     LIMIT 1`,
+    [websiteId, cleanEmail, raw, digits]
+  );
+
+  if (staffRes.rows.length === 0) {
+    throw new Error('Invalid email, phone number, or password.');
+  }
+
+  const staff = staffRes.rows[0];
+
+  if (!staff.is_active) {
+    try {
+      await queryDb(
+        `INSERT INTO website_staff_login_activities (website_id, staff_id, ip_address, user_agent, status, failure_reason)
+         VALUES ($1, $2, $3, $4, 'Failed', 'Account deactivated')`,
+        [websiteId, staff.id, ip, userAgent]
+      );
+    } catch (_) {}
+    const err = new Error('Your staff account has been deactivated. Please contact campus administration.');
+    err.deactivated = true;
+    err.status = 403;
+    throw err;
+  }
+
+  const isMatch = await comparePassword(cleanPassword, staff.password);
+  if (!isMatch) {
+    const failInfo = await recordFailedLogin({
+      table: 'website_staffs',
+      id: staff.id,
+      websiteId,
+      ip,
+      userAgent,
+      reason: 'Incorrect password',
+      maxFailedAttempts: 5,
+      lockoutMinutes: 15,
+    });
+
+    if (failInfo.isLockedNow) {
+      const err = new Error(failInfo.error);
+      err.status = 429;
+      err.locked = true;
+      throw err;
+    }
+
+    const message = failInfo.warning
+      ? `Invalid password. ${failInfo.warning}`
+      : 'Invalid email, phone number, or password.';
+    throw new Error(message);
+  }
+
+  if (staff.is_two_factor_enabled) {
+    if (!twoFactorCode) {
+      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+
+      const rateCheck = await checkOtpDispatchRateLimit({
+        identifier: staff.email,
+        phone: staff.phone || staff.number,
+        email: staff.email,
+        ip,
+      });
+
+      if (!rateCheck.isAllowed) {
+        const err = new Error(rateCheck.error);
+        err.status = 429;
+        err.rateLimited = true;
+        err.remainingMinutes = rateCheck.remainingMinutes;
+        err.requires2FA = true;
+        err.twoFactorRequired = true;
+        err.email = staff.email;
+        err.phone = staff.phone || staff.number;
+        throw err;
+      }
+
+      const secureOtp = generateSecureOtp(6);
+      await queryDb(
+        `UPDATE website_staffs 
+         SET two_factor_code = $1, 
+             two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes',
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2`,
+        [secureOtp, staff.id]
+      );
+
+      await recordOtpDispatch({
+        identifier: staff.email,
+        phone: staff.phone || staff.number,
+        email: staff.email,
+        channel: selectedChannel,
+        purpose: 'staff_2fa',
+        ip,
+      });
+
+      const institutionName = website?.name || 'Institution Staff Portal';
+
+      if (selectedChannel === 'sms') {
+        const targetPhone = staff.phone || staff.number;
+        if (!targetPhone) {
+          const err = new Error('No phone number is registered for SMS verification on this staff account.');
+          err.status = 400;
+          throw err;
+        }
+        try {
+          await sendSms({
+            to: targetPhone,
+            message: `Your ${institutionName} staff 2FA security code is: ${secureOtp}. Valid for 10 minutes.`,
+            purpose: '2fa',
+            userId: staff.id,
+            userType: 'staff',
+            ip,
+            websiteId,
+          });
+        } catch (smsErr) {
+          const err = new Error(smsErr.message || 'Failed to dispatch 2FA SMS code.');
+          err.dispatchFailed = true;
+          throw err;
+        }
+      } else {
+        try {
+          const html = buildStyledEmail({
+            title: 'Staff Security Verification',
+            subtitle: `${institutionName} — Staff Operations Portal`,
+            recipientName: staff.name,
+            bodyParagraphs: [
+              'A login request to your staff portal was detected. Please use the verification code below to complete your authentication.',
+              'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
+            ],
+            code: secureOtp,
+            codeLabel: 'Two-Factor Authentication Code',
+          });
+
+          await sendEmail({
+            to: staff.email,
+            toName: staff.name,
+            subject: `${institutionName} - Staff Portal Login Verification Code`,
+            html,
+            websiteId,
+          });
+        } catch (mailErr) {
+          const err = new Error(mailErr.message || 'Failed to dispatch 2FA email code.');
+          err.dispatchFailed = true;
+          throw err;
+        }
+      }
+
+      const err = new Error(`Two-factor verification code sent to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`);
+      err.requires2FA = true;
+      err.twoFactorRequired = true;
+      err.channel = selectedChannel;
+      err.hasPhone = Boolean(staff.phone || staff.number);
+      err.hasEmail = Boolean(staff.email);
+      err.email = staff.email;
+      err.phone = staff.phone || staff.number;
+      throw err;
+    }
+
+    const clean2Fa = String(twoFactorCode).trim();
+    if (staff.two_factor_code !== clean2Fa) {
+      throw new Error('Invalid two-factor verification code. Please check and try again.');
+    }
+
+    if (!staff.two_factor_expires || new Date(staff.two_factor_expires) < new Date()) {
+      throw new Error('Two-factor verification code has expired. Please request a new code.');
+    }
+
+    await queryDb(
+      `UPDATE website_staffs 
+       SET two_factor_code = NULL, 
+           two_factor_expires = NULL,
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`,
+      [staff.id]
+    );
+  }
+
+  await recordSuccessfulLogin({
+    table: 'website_staffs',
+    id: staff.id,
+    websiteId,
+    ip,
+    userAgent,
+  });
+
+  const token = generateToken({
+    id: staff.id,
+    email: staff.email,
+    websiteId,
+    name: staff.name,
+  });
+
+  await createStaffSession({
+    websiteId,
+    staffId: staff.id,
+    token,
+    request,
+  });
+
+  const staffData = {
+    id: staff.id,
+    name: staff.name,
+    email: staff.email,
+    number: staff.number,
+    phone: staff.phone || staff.number,
+    address: staff.address,
+    username: staff.username,
+    gradeId: staff.grade_id,
+    gradeName: staff.grade_name || null,
+    designation: staff.grade_name || 'Staff Member',
+    isTwoFactorEnabled: Boolean(staff.is_two_factor_enabled),
+    isActive: Boolean(staff.is_active),
+  };
+
+  return {
+    staff: staffData,
+    token,
+  };
+}
+
 const StaffMiddleware = {
   STAFF_COOKIE_NAME,
+  authenticateStaff,
   getStaffSession,
   getStaffUser,
   isStaff,

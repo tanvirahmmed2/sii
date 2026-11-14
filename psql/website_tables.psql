@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
+    phone VARCHAR(50),
     address TEXT,
     password VARCHAR(255) NOT NULL,
     recovery_token VARCHAR(255),
@@ -154,6 +155,9 @@ CREATE TABLE IF NOT EXISTS website_staffs (
     is_active BOOLEAN DEFAULT TRUE,
     is_registered BOOLEAN DEFAULT TRUE,
     is_two_factor_enabled BOOLEAN DEFAULT FALSE,
+    failed_login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
     grade_id BIGINT REFERENCES website_staff_pay_scale(id) ON DELETE SET NULL,
@@ -179,6 +183,27 @@ BEGIN
         SELECT 1 FROM pg_constraint WHERE conname = 'uq_website_staffs_web_number'
     ) THEN
         ALTER TABLE website_staffs ADD CONSTRAINT uq_website_staffs_web_number UNIQUE (website_id, number);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_staffs' AND column_name = 'phone'
+    ) THEN
+        ALTER TABLE website_staffs ADD COLUMN phone VARCHAR(50);
+        UPDATE website_staffs SET phone = number WHERE phone IS NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_staffs' AND column_name = 'failed_login_attempts'
+    ) THEN
+        ALTER TABLE website_staffs ADD COLUMN failed_login_attempts INT DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_staffs' AND column_name = 'locked_until'
+    ) THEN
+        ALTER TABLE website_staffs ADD COLUMN locked_until TIMESTAMPTZ;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_staffs' AND column_name = 'last_login_at'
+    ) THEN
+        ALTER TABLE website_staffs ADD COLUMN last_login_at TIMESTAMPTZ;
     END IF;
 END $$;
 
@@ -285,6 +310,23 @@ DROP TRIGGER IF EXISTS update_staff_sessions_updated_at ON staff_sessions;
 CREATE TRIGGER update_staff_sessions_updated_at
     BEFORE UPDATE ON staff_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 6B. WEBSITE STAFF LOGIN ACTIVITIES TABLE (Security Audit Trail for Staff Logins)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_staff_login_activities (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    staff_id BIGINT NOT NULL REFERENCES website_staffs(id) ON DELETE CASCADE,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'Success',
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_staff_login_activities_staff_id ON website_staff_login_activities(staff_id);
+CREATE INDEX IF NOT EXISTS idx_website_staff_login_activities_website_id ON website_staff_login_activities(website_id);
 
 -- ----------------------------------------------------------------------------
 -- 7. WEBSITE STAFF SALARIES TABLE (Staff Payroll Ledger)

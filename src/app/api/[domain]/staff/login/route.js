@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { authenticateStaff, setStaffSessionCookie } from 'src/lib/middleware/staff';
 import {
-  comparePassword,
-  generateToken,
-  createStaffSession,
-  setStaffSessionCookie,
-} from 'src/lib/middleware/staff';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+  getClientIp,
+  getUserAgent,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+} from 'src/lib/security/shield';
 
 export async function POST(request, context) {
   try {
@@ -21,131 +19,72 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { email, password } = body;
 
-    if (!email || !password) {
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
       return NextResponse.json(
-        { success: false, error: 'Staff email and password are required.' },
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
+    const userAgent = getUserAgent(request);
+    const identifier = String(body.identifier || body.email || body.phone || body.number || '').trim();
+    const password = body.password;
+    const twoFactorCode = String(body.twoFactorCode || body.code || '').trim();
+    const channel = String(body.channel || 'email').trim().toLowerCase();
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier,
+      action: 'staff_login',
+      maxAttempts: 5,
+      windowSeconds: 900,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: rateCheck.error,
+          rateLimited: true,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds || 900) } }
+      );
+    }
+
+    if (!identifier || !password) {
+      return NextResponse.json(
+        { success: false, error: 'Email or phone number and password are required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
-
-    const staffRes = await queryDb(
-      `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
-              ws.password, ws.is_active, ws.is_registered, ws.is_two_factor_enabled,
-              ws.grade_id, ws.username, ws.bio,
-              gp.name AS grade_name, gp.basic_salary, gp.allowance
-       FROM website_staffs ws
-       LEFT JOIN website_staff_pay_scale gp ON gp.id = ws.grade_id
-       WHERE ws.website_id = $1 AND LOWER(ws.email) = $2
-       LIMIT 1`,
-      [website.id, cleanEmail]
-    );
-
-    if (staffRes.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 }
-      );
-    }
-
-    const staff = staffRes.rows[0];
-
-    if (!staff.is_active) {
-      return NextResponse.json(
-        { success: false, error: 'Your staff account is currently deactivated. Please contact campus administration.' },
-        { status: 403 }
-      );
-    }
-
-    const isMatch = await comparePassword(password, staff.password);
-    if (!isMatch) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 }
-      );
-    }
-
-    if (staff.is_two_factor_enabled) {
-      const otpCode = crypto.randomInt(100000, 1000000).toString();
-
-      await queryDb(
-        `UPDATE website_staffs
-         SET two_factor_code = $1, two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes'
-         WHERE id = $2`,
-        [otpCode, staff.id]
-      );
-
-      try {
-        const html = buildStyledEmail({
-          title: 'Staff Security Verification',
-          subtitle: `${website.name} — Staff Operations Portal`,
-          recipientName: staff.name,
-          bodyParagraphs: [
-            'A login request to your staff portal was detected. Please use the verification code below to complete your authentication.',
-            'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
-          ],
-          code: otpCode,
-          codeLabel: 'Two-Factor Authentication Code',
-        });
-
-        await sendEmail({
-          to: staff.email,
-          toName: staff.name,
-          subject: `${website.name} - Staff Portal Login Verification Code`,
-          html,
-        });
-      } catch (mailErr) {
-        console.warn('Failed to dispatch 2FA email to staff:', mailErr.message);
-      }
-
-      return NextResponse.json({
-        success: true,
-        requires2FA: true,
-        message: 'Two-factor authentication code sent to your registered email address.',
-      });
-    }
-
-    const token = generateToken({
-      id: staff.id,
-      email: staff.email,
+    const result = await authenticateStaff({
       websiteId: website.id,
-      name: staff.name,
-    });
-
-    await createStaffSession({
-      websiteId: website.id,
-      staffId: staff.id,
-      token,
+      identifier,
+      password,
+      ip,
+      userAgent,
+      twoFactorCode,
+      channel,
       request,
+      website,
     });
-
-    const staffData = {
-      id: staff.id,
-      name: staff.name,
-      email: staff.email,
-      number: staff.number,
-      address: staff.address,
-      username: staff.username,
-      gradeId: staff.grade_id,
-      gradeName: staff.grade_name || null,
-      designation: staff.grade_name || 'Staff Member',
-      isTwoFactorEnabled: Boolean(staff.is_two_factor_enabled),
-      isActive: Boolean(staff.is_active),
-    };
 
     const response = NextResponse.json({
       success: true,
       message: 'Logged in successfully.',
-      token,
-      staff: staffData,
-      payload: { staff: staffData },
-      paylod: { staff: staffData },
+      token: result.token,
+      staff: result.staff,
+      payload: { staff: result.staff },
+      paylod: { staff: result.staff },
     });
 
-    await setStaffSessionCookie(response, token);
+    await setStaffSessionCookie(response, result.token);
 
     const tenantSlug = website.subdomain || website.slug || '';
     if (tenantSlug) {
@@ -155,10 +94,55 @@ export async function POST(request, context) {
 
     return response;
   } catch (error) {
-    console.error('Error during staff login:', error);
+    if (error.dispatchFailed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          dispatchFailed: true,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (error.twoFactorRequired || error.requires2FA) {
+      return NextResponse.json(
+        {
+          success: false,
+          twoFactorRequired: true,
+          requires2FA: true,
+          channel: error.channel || 'email',
+          hasPhone: Boolean(error.hasPhone),
+          hasEmail: Boolean(error.hasEmail),
+          email: error.email || undefined,
+          phone: error.phone || undefined,
+          rateLimited: Boolean(error.rateLimited),
+          remainingMinutes: error.remainingMinutes,
+          message: error.message || 'Two-factor verification code required.',
+        },
+        { status: error.rateLimited ? 429 : 200 }
+      );
+    }
+
+    if (error.locked) {
+      return NextResponse.json(
+        {
+          success: false,
+          locked: true,
+          remainingMinutes: error.remainingMinutes,
+          error: error.message,
+        },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error occurred during staff login.' },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || 'Authentication failed.',
+        deactivated: Boolean(error.deactivated),
+      },
+      { status: error.deactivated ? 403 : error.status || 401 }
     );
   }
 }

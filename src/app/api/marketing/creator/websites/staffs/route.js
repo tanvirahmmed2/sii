@@ -3,9 +3,16 @@ import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendSms } from 'src/lib/database/smsSender';
 import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
 import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
+import {
+  getClientIp,
+  getUserAgent,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+} from 'src/lib/security/shield';
 
 async function verifyWebsiteOwnership(websiteId, sessionCreator, creatorIdParam) {
   const cId = sessionCreator?.id || creatorIdParam;
@@ -46,8 +53,9 @@ export async function GET(request) {
     }
 
     const staffsRes = await queryDb(
-      `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
+      `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.phone, ws.address,
               ws.is_active, ws.is_registered, ws.is_two_factor_enabled, ws.grade_id,
+              ws.failed_login_attempts, ws.locked_until, ws.last_login_at,
               ws.date_of_birth, ws.gender, ws.nid_number, ws.bio, ws.username,
               ws.verification_token, ws.verification_token_expires,
               ws.created_at, ws.updated_at,
@@ -147,6 +155,15 @@ export async function POST(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
     const body = await request.json();
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
     const {
       websiteId,
       creatorId,
@@ -216,11 +233,12 @@ export async function POST(request) {
 
     const insertStaff = await queryDb(
       `INSERT INTO website_staffs (
-        website_id, name, email, number, address, password,
+        website_id, name, email, number, phone, address, password,
         grade_id, bio, username, is_active, is_registered,
+        failed_login_attempts, locked_until,
         verification_token, verification_token_expires
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, TRUE, $10, 0, NULL, $11, $12)
       RETURNING *`,
       [
         websiteId,
@@ -326,12 +344,28 @@ export async function POST(request) {
       emailError = err.message;
     }
 
+    let smsSent = false;
+    if (sendInvite && cleanNumber) {
+      try {
+        await sendSms({
+          to: cleanNumber,
+          message: `Welcome to ${website.name}. You have been registered as a staff member. Setup your account: ${setupUrl}`,
+          purpose: 'staff_invite',
+          userId: newStaff.id,
+          userType: 'staff',
+          websiteId,
+        });
+        smsSent = true;
+      } catch (_) {}
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}`,
+      message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}${smsSent ? ' Notification SMS sent.' : ''}`,
       staff: newStaff,
-      inviteSent: emailSent,
+      inviteSent: emailSent || smsSent,
       emailSent,
+      smsSent,
       setupUrl,
       verificationToken,
     });
@@ -345,6 +379,15 @@ export async function PUT(request) {
   try {
     const sessionCreator = await getCreatorSession(request);
     const body = await request.json();
+
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
+      return NextResponse.json(
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
     const { action = 'update_profile', staffId, websiteId, creatorId } = body;
 
     if (!staffId || !websiteId) {
@@ -522,7 +565,12 @@ export async function PUT(request) {
       }
       const hashed = await hashPassword(newPassword);
       await queryDb(
-        `UPDATE website_staffs SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`,
+        `UPDATE website_staffs 
+         SET password = $1, 
+             failed_login_attempts = 0,
+             locked_until = NULL,
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 AND website_id = $3`,
         [hashed, staffId, websiteId]
       );
       await revokeAllStaffSessions(staffId, websiteId);
@@ -575,6 +623,7 @@ export async function PUT(request) {
        SET name = COALESCE($1, name),
            email = COALESCE($2, email),
            number = COALESCE($3, number),
+           phone = COALESCE($3, phone),
            address = COALESCE($4, address),
            grade_id = $5,
            bio = COALESCE($6, bio),

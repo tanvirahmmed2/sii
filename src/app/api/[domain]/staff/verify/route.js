@@ -2,9 +2,30 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword } from 'src/lib/middleware/staff';
+import { inspectMalwareAndAttacks, checkRateLimit, extractClientIp } from 'src/lib/security/shield';
 
 export async function POST(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`staff_verify_token:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 30
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many verification attempts. Please wait.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -26,7 +47,7 @@ export async function POST(request, context) {
     const cleanToken = String(token).trim();
 
     const staffRes = await queryDb(
-      `SELECT ws.id, ws.name, ws.email, ws.number, ws.address,
+      `SELECT ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address,
               ws.is_registered, ws.is_active,
               ws.verification_token, ws.verification_token_expires,
               gp.name AS grade_name
@@ -64,7 +85,8 @@ export async function POST(request, context) {
       id: staff.id,
       name: staff.name,
       email: staff.email,
-      number: staff.number,
+      number: staff.phone || staff.number,
+      phone: staff.phone || staff.number,
       address: staff.address || '',
       designation: staff.grade_name || 'Staff Member',
       gradeName: staff.grade_name || null,
@@ -77,7 +99,6 @@ export async function POST(request, context) {
       paylod: { staff: staffPayload },
     });
   } catch (error) {
-    console.error('Error validating staff verification token:', error);
     return NextResponse.json(
       { success: false, error: 'Internal Server Error validating verification token.' },
       { status: 500 }
@@ -87,6 +108,26 @@ export async function POST(request, context) {
 
 export async function PUT(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`staff_verify_submit:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 15
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -155,6 +196,8 @@ export async function PUT(request, context) {
            is_registered = TRUE,
            verification_token = NULL,
            verification_token_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
       [hashedPassword, cleanAddress, staff.id]
@@ -165,7 +208,6 @@ export async function PUT(request, context) {
       message: 'Staff account setup completed successfully. You may now log in.',
     });
   } catch (error) {
-    console.error('Error completing staff setup:', error);
     return NextResponse.json(
       { success: false, error: 'Internal Server Error while completing account setup.' },
       { status: 500 }

@@ -5,6 +5,12 @@ import {
   comparePassword,
   hashPassword,
 } from 'src/lib/middleware/staff';
+import {
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  extractClientIp,
+} from 'src/lib/security/shield';
+import { checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
 
 export async function GET(request) {
   try {
@@ -51,6 +57,7 @@ export async function GET(request) {
 
     const fullStaffData = {
       ...staff,
+      phone: staff.phone || staff.number,
       payGrade,
       experiences: expRes.rows || [],
       activeSessions: sessionsRes.rows || [],
@@ -73,7 +80,6 @@ export async function GET(request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching staff profile in /api/staff/me:', error);
     return NextResponse.json(
       { success: false, error: 'Internal Server Error fetching staff profile.' },
       { status: 500 }
@@ -83,6 +89,26 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`staff_me_put:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 30
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
     const sessionData = await getStaffSession(request);
     if (!sessionData || !sessionData.staff) {
       return NextResponse.json(
@@ -124,6 +150,18 @@ export async function PUT(request) {
     if (data.number !== undefined || data.phone !== undefined) {
       const candidate = (data.number !== undefined ? data.number : data.phone) || '';
       newNumber = String(candidate).trim();
+      if (newNumber && (newNumber !== current.number && newNumber !== current.phone)) {
+        const phoneAvail = await checkInstitutionPhoneAvailability(staff.websiteId, newNumber, {
+          excludeRole: 'staff',
+          excludeId: staff.id,
+        });
+        if (!phoneAvail.available) {
+          return NextResponse.json(
+            { success: false, error: phoneAvail.message },
+            { status: 409 }
+          );
+        }
+      }
     }
 
     let newUsername = current.username;
@@ -193,6 +231,7 @@ export async function PUT(request) {
       `UPDATE website_staffs
        SET name = $1,
            number = $2,
+           phone = $2,
            address = $3,
            bio = $4,
            date_of_birth = $5,
@@ -206,7 +245,7 @@ export async function PUT(request) {
            image = $13,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $14
-       RETURNING id, website_id, name, email, number, address, bio,
+       RETURNING id, website_id, name, email, number, phone, address, bio,
                  date_of_birth, gender, blood_group, nationality, nid_number,
                  username, is_active, is_registered, is_two_factor_enabled, image, grade_id, updated_at`,
       [
@@ -262,12 +301,12 @@ export async function PUT(request) {
       staff: {
         ...staff,
         ...updatedStaffRow,
-        phone: updatedStaffRow.number,
+        phone: updatedStaffRow.phone || updatedStaffRow.number,
+        number: updatedStaffRow.phone || updatedStaffRow.number,
         isTwoFactorEnabled: Boolean(updatedStaffRow.is_two_factor_enabled),
       },
     });
   } catch (error) {
-    console.error('Error updating staff profile in /api/staff/me:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Internal Server Error updating profile.' },
       { status: 500 }

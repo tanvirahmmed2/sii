@@ -6,6 +6,13 @@ import {
   createStaffSession,
   setStaffSessionCookie,
 } from 'src/lib/middleware/staff';
+import {
+  getClientIp,
+  getUserAgent,
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  recordSuccessfulLogin,
+} from 'src/lib/security/shield';
 
 export async function POST(request, context) {
   try {
@@ -18,29 +25,63 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { email, code } = body;
 
-    if (!email || !code) {
+    const attackInspection = await inspectMalwareAndAttacks(request, body);
+    if (attackInspection.isBlocked) {
       return NextResponse.json(
-        { success: false, error: 'Staff email and 6-digit security code are required.' },
+        { success: false, error: attackInspection.error },
+        { status: attackInspection.status || 403 }
+      );
+    }
+
+    const ip = getClientIp(request);
+    const userAgent = getUserAgent(request);
+    const raw = String(body.identifier || body.email || body.phone || body.number || '').trim();
+    const code = String(body.code || body.twoFactorCode || '').trim();
+
+    if (!raw || !code) {
+      return NextResponse.json(
+        { success: false, error: 'Identifier and 6-digit security code are required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
-    const cleanCode = String(code).trim();
+    const cleanEmail = raw.toLowerCase();
+    const phoneDigits = raw.replace(/\D/g, '');
+
+    const rateCheck = await checkRateLimit({
+      ip,
+      identifier: cleanEmail || raw,
+      action: 'staff_2fa_verify',
+      maxAttempts: 5,
+      windowSeconds: 600,
+      blockDurationSeconds: 900,
+    });
+
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: rateCheck.error },
+        { status: 429 }
+      );
+    }
 
     const staffRes = await queryDb(
-      `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.address,
-              ws.is_active, ws.is_registered, ws.is_two_factor_enabled,
+      `SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, COALESCE(ws.phone, ws.number) AS phone,
+              ws.address, ws.is_active, ws.is_registered, ws.is_two_factor_enabled,
               ws.two_factor_code, ws.two_factor_expires,
               ws.grade_id, ws.username, ws.bio,
               gp.name AS grade_name
        FROM website_staffs ws
        LEFT JOIN website_staff_pay_scale gp ON gp.id = ws.grade_id
-       WHERE ws.website_id = $1 AND LOWER(ws.email) = $2
+       WHERE ws.website_id = $1 
+         AND (
+           LOWER(ws.email) = $2 
+           OR ws.number = $3 
+           OR ws.phone = $3 
+           OR (LENGTH($4) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(ws.phone, ws.number, ''), '\\D', '', 'g'), 10) = RIGHT($4, 10))
+         )
        LIMIT 1`,
-      [website.id, cleanEmail]
+      [website.id, cleanEmail, raw, phoneDigits]
     );
 
     if (staffRes.rows.length === 0) {
@@ -59,7 +100,7 @@ export async function POST(request, context) {
       );
     }
 
-    if (!staff.two_factor_code || staff.two_factor_code !== cleanCode) {
+    if (!staff.two_factor_code || staff.two_factor_code !== code) {
       return NextResponse.json(
         { success: false, error: 'Invalid security code. Please check and try again.' },
         { status: 400 }
@@ -75,10 +116,18 @@ export async function POST(request, context) {
 
     await queryDb(
       `UPDATE website_staffs
-       SET two_factor_code = NULL, two_factor_expires = NULL
+       SET two_factor_code = NULL, two_factor_expires = NULL, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
       [staff.id]
     );
+
+    await recordSuccessfulLogin({
+      table: 'website_staffs',
+      id: staff.id,
+      websiteId: website.id,
+      ip,
+      userAgent,
+    });
 
     const token = generateToken({
       id: staff.id,
@@ -99,6 +148,7 @@ export async function POST(request, context) {
       name: staff.name,
       email: staff.email,
       number: staff.number,
+      phone: staff.phone || staff.number,
       address: staff.address,
       username: staff.username,
       gradeId: staff.grade_id,
@@ -110,7 +160,7 @@ export async function POST(request, context) {
 
     const response = NextResponse.json({
       success: true,
-      message: 'Two-factor authentication successful.',
+      message: 'Two-factor verification successful.',
       token,
       staff: staffData,
       payload: { staff: staffData },
@@ -127,7 +177,7 @@ export async function POST(request, context) {
 
     return response;
   } catch (error) {
-    console.error('Error in staff verify-2fa:', error);
+    console.error('Error during staff 2FA verification:', error);
     return NextResponse.json(
       { success: false, error: 'Internal Server Error during 2FA verification.' },
       { status: 500 }

@@ -179,7 +179,7 @@ function StaffVerifyInner() {
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase block">Contact</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">{staff?.number || 'N/A'}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{staff?.phone || staff?.number || ''}</span>
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase block">Role</span>
@@ -212,7 +212,6 @@ function StaffVerifyInner() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={submitting}
-            placeholder="Minimum 6 characters"
             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
           />
         </div>
@@ -227,7 +226,6 @@ function StaffVerifyInner() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={submitting}
-            placeholder="Repeat password"
             className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
           />
         </div>
