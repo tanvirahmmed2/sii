@@ -412,25 +412,6 @@ CREATE TRIGGER update_website_staff_leaves_updated_at
     BEFORE UPDATE ON website_staff_leaves
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- ----------------------------------------------------------------------------
--- 11. WEBSITE STAFF APPLICATIONS TABLE (Internal Staff Requests)
--- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_staff_applications (
-    id BIGSERIAL PRIMARY KEY,
-    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    staff_id BIGINT REFERENCES website_staffs(id) ON DELETE CASCADE,
-    type VARCHAR(100) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    details TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TRIGGER IF EXISTS update_website_staff_applications_updated_at ON website_staff_applications;
-CREATE TRIGGER update_website_staff_applications_updated_at
-    BEFORE UPDATE ON website_staff_applications
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
 -- ============================================================================
@@ -547,12 +528,12 @@ CREATE TRIGGER update_website_sessions_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 13. WEBSITE CLASSES TABLE (Grades / Classes under Sessions & Departments)
+-- 13. WEBSITE CLASSES TABLE (Grades / Classes under Sessions & Optional Departments)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_classes (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) NOT NULL,
     max_seats INT DEFAULT 40,
@@ -568,6 +549,16 @@ DROP TRIGGER IF EXISTS update_website_classes_updated_at ON website_classes;
 CREATE TRIGGER update_website_classes_updated_at
     BEFORE UPDATE ON website_classes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_classes' AND column_name = 'department_id' AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE website_classes ALTER COLUMN department_id DROP NOT NULL;
+    END IF;
+END $$;
 
 -- ----------------------------------------------------------------------------
 -- 14. WEBSITE SECTIONS TABLE (Class Sections / Batches)
@@ -590,20 +581,37 @@ CREATE TRIGGER update_website_sections_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 15. WEBSITE SUBJECTS TABLE (Courses / Subjects Taught)
+-- 15. WEBSITE SUBJECTS TABLE (Courses / Subjects Taught under Classes)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_subjects (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) NOT NULL,
     type VARCHAR(50) DEFAULT 'Theory' CHECK (type IN ('Theory', 'Practical', 'Both', 'Optional')),
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, name),
-    UNIQUE(website_id, code)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_website_subjects_class ON website_subjects(class_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_subjects' AND column_name = 'class_id'
+    ) THEN
+        ALTER TABLE website_subjects ADD COLUMN class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_website_subjects_tenant_class_name 
+ON website_subjects (website_id, COALESCE(class_id, 0), LOWER(TRIM(name)));
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_website_subjects_tenant_class_code 
+ON website_subjects (website_id, COALESCE(class_id, 0), UPPER(TRIM(code)));
 
 DROP TRIGGER IF EXISTS update_website_subjects_updated_at ON website_subjects;
 CREATE TRIGGER update_website_subjects_updated_at
@@ -1272,7 +1280,6 @@ CREATE INDEX IF NOT EXISTS idx_ws_staffs_website ON website_staffs(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_staff_salaries_website ON website_staff_salaries(website_id, staff_id);
 CREATE INDEX IF NOT EXISTS idx_ws_staff_attendance_lookup ON website_staff_attendance(website_id, staff_id, date);
 CREATE INDEX IF NOT EXISTS idx_ws_staff_leaves_lookup ON website_staff_leaves(website_id, staff_id, status);
-CREATE INDEX IF NOT EXISTS idx_ws_staff_applications_lookup ON website_staff_applications(website_id, staff_id, status);
 
 -- Teacher Indexes
 CREATE INDEX IF NOT EXISTS idx_ws_designations_website ON website_designations(website_id);

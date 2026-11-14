@@ -1,35 +1,14 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
-import { getStaffSession } from 'src/lib/middleware/staff';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
 
-async function verifyStaffAccess(request, context) {
-  const website = await resolveWebsiteFromRequest(request, context);
-  if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
-  }
-  const staffSession = await getStaffSession(request);
-
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
-  }
-
-  const staffWebsiteId =
-    staffSession?.website_id ||
-    staffSession?.websiteId ||
-    staffSession?.staff?.websiteId ||
-    staffSession?.staff?.website_id;
-
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  return { website, staffSession };
+async function verifyStaffAccess(request, context, action = 'view') {
+  return verifyStaffModuleAccess(request, context, ['class-section', 'sections', 'class-setup'], action);
 }
 
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'view');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -73,14 +52,13 @@ export async function GET(request, context) {
       payload: { sections: result.rows, available_classes: classesResult.rows }
     });
   } catch (error) {
-    console.error('Error in GET sections:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
@@ -91,7 +69,7 @@ export async function POST(request, context) {
     }
 
     if (!name || !String(name).trim()) {
-      return NextResponse.json({ success: false, error: 'Section Name is required (e.g. Section A, Batch 1).' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Section Name is required.' }, { status: 400 });
     }
 
     const classCheck = await queryDb(
@@ -135,7 +113,6 @@ export async function POST(request, context) {
       message: 'Section created successfully.'
     });
   } catch (error) {
-    console.error('Error in POST section:', error);
     if (error.code === '23505') {
       return NextResponse.json({ success: false, error: 'A section with this name already exists in this class.' }, { status: 409 });
     }
@@ -145,7 +122,7 @@ export async function POST(request, context) {
 
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'edit');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
@@ -196,14 +173,13 @@ export async function PUT(request, context) {
       message: 'Section updated successfully.'
     });
   } catch (error) {
-    console.error('Error in PUT section:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const { searchParams } = new URL(request.url);
@@ -227,7 +203,6 @@ export async function DELETE(request, context) {
       message: `Section "${delRes.rows[0].name}" deleted successfully.`
     });
   } catch (error) {
-    console.error('Error in DELETE section:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

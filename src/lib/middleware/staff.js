@@ -292,25 +292,37 @@ export async function isStaff(request) {
   return Boolean(sessionData && sessionData.staff && sessionData.staff.isActive);
 }
 
-export function hasStaffModulePermission(staffOrSession, moduleSlug, action = 'view') {
-  if (!staffOrSession || !moduleSlug) return false;
+export function hasStaffModulePermission(staffOrSession, moduleSlugOrList, action = 'view') {
+  if (!staffOrSession || !moduleSlugOrList) return false;
   const staff = staffOrSession.staff || staffOrSession;
   const permissions = staff.permissions || {};
-  const modPerm = permissions[moduleSlug];
-  if (!modPerm) return false;
+  const slugs = Array.isArray(moduleSlugOrList) ? moduleSlugOrList : [moduleSlugOrList];
 
-  switch (action) {
-    case 'create':
-      return Boolean(modPerm.can_create);
-    case 'edit':
-    case 'update':
-      return Boolean(modPerm.can_edit);
-    case 'delete':
-      return Boolean(modPerm.can_delete);
-    case 'view':
-    default:
-      return Boolean(modPerm.can_view);
+  for (const slug of slugs) {
+    const modPerm = permissions[slug];
+    if (modPerm) {
+      let allowed = false;
+      switch (action) {
+        case 'create':
+          allowed = Boolean(modPerm.can_create);
+          break;
+        case 'edit':
+        case 'update':
+          allowed = Boolean(modPerm.can_edit);
+          break;
+        case 'delete':
+          allowed = Boolean(modPerm.can_delete);
+          break;
+        case 'view':
+        default:
+          allowed = Boolean(modPerm.can_view);
+          break;
+      }
+      if (allowed) return true;
+    }
   }
+
+  return false;
 }
 
 export async function createStaffSession({ websiteId, staffId, token, request, expiresAt }) {
@@ -393,17 +405,35 @@ export async function isStaffRole(request) {
   return Boolean(staff && (staff.isActive || staff.is_active));
 }
 
-export async function verifyStaffModuleAccess(request, context, moduleSlug, action = 'view') {
+export async function verifyStaffModuleAccess(request, context, moduleSlugOrList, action = 'view') {
   const { resolveWebsiteFromRequest, hasTenantModuleAllowance } = await import('./websiteResolver.js');
   const website = await resolveWebsiteFromRequest(request, context);
   if (!website) {
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
-  const hasAllowance = await hasTenantModuleAllowance(website, moduleSlug);
+  const { getCreatorSession } = await import('./creator.js');
+  const creatorSession = await getCreatorSession(request);
+  if (creatorSession && (String(creatorSession.id) === String(website.creator_id) || creatorSession.isDeveloper)) {
+    return {
+      website,
+      isCreator: true,
+      allowed: true,
+    };
+  }
+
+  const slugs = Array.isArray(moduleSlugOrList) ? moduleSlugOrList : [moduleSlugOrList];
+  let hasAllowance = false;
+  for (const slug of slugs) {
+    if (await hasTenantModuleAllowance(website, slug)) {
+      hasAllowance = true;
+      break;
+    }
+  }
+
   if (!hasAllowance) {
     return {
-      error: `The '${moduleSlug}' module is not included in this institution's subscription plan.`,
+      error: `The requested module is not included in this institution's subscription plan.`,
       status: 403,
       code: 'MODULE_NOT_SUBSCRIBED',
       website,
@@ -425,10 +455,10 @@ export async function verifyStaffModuleAccess(request, context, moduleSlug, acti
     return { error: 'Forbidden: Cross-tenant access denied.', status: 403, code: 'FORBIDDEN_CROSS_TENANT' };
   }
 
-  const hasPerm = hasStaffModulePermission(staffSession, moduleSlug, action);
+  const hasPerm = hasStaffModulePermission(staffSession, slugs, action);
   if (!hasPerm) {
     return {
-      error: `Access Denied: You do not have permission to ${action} records in the '${moduleSlug}' module.`,
+      error: `Access Denied: You do not have permission to ${action} records in this module.`,
       status: 403,
       code: 'PERMISSION_DENIED',
       website,

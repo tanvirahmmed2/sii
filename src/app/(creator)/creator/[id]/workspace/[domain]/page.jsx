@@ -163,6 +163,30 @@ export default function WebsiteManagePage() {
   });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  const [academicsSubTab, setAcademicsSubTab] = useState('departments');
+  const [academicDepts, setAcademicDepts] = useState([]);
+  const [academicClasses, setAcademicClasses] = useState([]);
+  const [academicSections, setAcademicSections] = useState([]);
+  const [academicSubjects, setAcademicSubjects] = useState([]);
+  const [loadingAcademics, setLoadingAcademics] = useState(false);
+  const [academicActionMsg, setAcademicActionMsg] = useState({ type: '', text: '' });
+
+  const [deptModal, setDeptModal] = useState({ open: false, editing: null });
+  const [deptForm, setDeptForm] = useState({ name: '', code: '', order_no: 0, description: '', is_active: true });
+
+  const [classModal, setClassModal] = useState({ open: false, editing: null });
+  const [classForm, setClassForm] = useState({ name: '', code: '', department_id: '', capacity: 40, display_order: 0 });
+
+  const [sectionModal, setSectionModal] = useState({ open: false, editing: null });
+  const [sectionForm, setSectionForm] = useState({ class_id: '', name: '', capacity: 40, room_number: '' });
+
+  const [subjectModal, setSubjectModal] = useState({ open: false, editing: null });
+  const [subjectForm, setSubjectForm] = useState({ class_id: '', name: '', code: '', type: 'Theory', description: '' });
+
+  const [academicDeleteTarget, setAcademicDeleteTarget] = useState(null);
+  const [deletingAcademic, setDeletingAcademic] = useState(false);
+  const [submittingAcademic, setSubmittingAcademic] = useState(false);
+
   const fetchStaffs = useCallback(async (siteId) => {
     if (!siteId) return;
     try {
@@ -1034,6 +1058,196 @@ export default function WebsiteManagePage() {
     }
   };
 
+  const fetchAcademics = useCallback(async () => {
+    if (!domainParam) return;
+    try {
+      setLoadingAcademics(true);
+      const [deptRes, classRes, secRes, subRes] = await Promise.all([
+        fetch(`/api/${domainParam}/staff/panel/departments`),
+        fetch(`/api/${domainParam}/staff/panel/classes`),
+        fetch(`/api/${domainParam}/staff/panel/sections`),
+        fetch(`/api/${domainParam}/staff/panel/subjects`),
+      ]);
+      const [deptData, classData, secData, subData] = await Promise.all([
+        deptRes.json(),
+        classRes.json(),
+        secRes.json(),
+        subRes.json(),
+      ]);
+      if (deptData?.success) setAcademicDepts(deptData.departments || []);
+      if (classData?.success) setAcademicClasses(classData.classes || []);
+      if (secData?.success) setAcademicSections(secData.sections || []);
+      if (subData?.success) setAcademicSubjects(subData.subjects || []);
+    } catch {
+      setAcademicActionMsg({ type: 'error', text: 'Failed to load institutional academic records.' });
+    } finally {
+      setLoadingAcademics(false);
+    }
+  }, [domainParam]);
+
+  const handleSaveDept = async (e) => {
+    e.preventDefault();
+    if (!deptForm.name.trim()) {
+      setAcademicActionMsg({ type: 'error', text: 'Department name is required.' });
+      return;
+    }
+    try {
+      setSubmittingAcademic(true);
+      setAcademicActionMsg({ type: '', text: '' });
+      const method = deptModal.editing ? 'PUT' : 'POST';
+      const body = deptModal.editing ? { ...deptForm, id: deptModal.editing.id } : deptForm;
+      const res = await fetch(`/api/${domainParam}/staff/panel/departments`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save department.');
+      setAcademicActionMsg({ type: 'success', text: data.message || 'Department saved successfully.' });
+      setDeptModal({ open: false, editing: null });
+      fetchAcademics();
+    } catch (err) {
+      setAcademicActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingAcademic(false);
+    }
+  };
+
+  const handleSaveClass = async (e) => {
+    e.preventDefault();
+    if (!classForm.name.trim()) {
+      setAcademicActionMsg({ type: 'error', text: 'Class name is required.' });
+      return;
+    }
+    try {
+      setSubmittingAcademic(true);
+      setAcademicActionMsg({ type: '', text: '' });
+      const method = classModal.editing ? 'PUT' : 'POST';
+      const body = {
+        name: classForm.name.trim(),
+        code: classForm.code.trim(),
+        department_id: classForm.department_id ? classForm.department_id : null,
+        capacity: Number(classForm.capacity) || 40,
+        display_order: Number(classForm.display_order) || 0,
+      };
+      if (classModal.editing) body.id = classModal.editing.id;
+      const res = await fetch(`/api/${domainParam}/staff/panel/classes`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save class.');
+      setAcademicActionMsg({ type: 'success', text: data.message || 'Class saved successfully.' });
+      setClassModal({ open: false, editing: null });
+      fetchAcademics();
+    } catch (err) {
+      setAcademicActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingAcademic(false);
+    }
+  };
+
+  const handleSaveSection = async (e) => {
+    e.preventDefault();
+    if (!sectionForm.class_id) {
+      setAcademicActionMsg({ type: 'error', text: 'Parent class selection is required.' });
+      return;
+    }
+    if (!sectionForm.name.trim()) {
+      setAcademicActionMsg({ type: 'error', text: 'Section name is required.' });
+      return;
+    }
+    try {
+      setSubmittingAcademic(true);
+      setAcademicActionMsg({ type: '', text: '' });
+      const method = sectionModal.editing ? 'PUT' : 'POST';
+      const body = {
+        class_id: sectionForm.class_id,
+        name: sectionForm.name.trim(),
+        capacity: Number(sectionForm.capacity) || 40,
+        room_number: sectionForm.room_number.trim(),
+      };
+      if (sectionModal.editing) body.id = sectionModal.editing.id;
+      const res = await fetch(`/api/${domainParam}/staff/panel/sections`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save section.');
+      setAcademicActionMsg({ type: 'success', text: data.message || 'Section saved successfully.' });
+      setSectionModal({ open: false, editing: null });
+      fetchAcademics();
+    } catch (err) {
+      setAcademicActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingAcademic(false);
+    }
+  };
+
+  const handleSaveSubject = async (e) => {
+    e.preventDefault();
+    if (!subjectForm.class_id) {
+      setAcademicActionMsg({ type: 'error', text: 'Parent class selection is required.' });
+      return;
+    }
+    if (!subjectForm.name.trim()) {
+      setAcademicActionMsg({ type: 'error', text: 'Subject name is required.' });
+      return;
+    }
+    try {
+      setSubmittingAcademic(true);
+      setAcademicActionMsg({ type: '', text: '' });
+      const method = subjectModal.editing ? 'PUT' : 'POST';
+      const body = {
+        class_id: subjectForm.class_id,
+        name: subjectForm.name.trim(),
+        code: subjectForm.code.trim(),
+        type: subjectForm.type || 'Theory',
+        description: subjectForm.description.trim(),
+      };
+      if (subjectModal.editing) body.id = subjectModal.editing.id;
+      const res = await fetch(`/api/${domainParam}/staff/panel/subjects`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to save subject.');
+      setAcademicActionMsg({ type: 'success', text: data.message || 'Subject saved successfully.' });
+      setSubjectModal({ open: false, editing: null });
+      fetchAcademics();
+    } catch (err) {
+      setAcademicActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setSubmittingAcademic(false);
+    }
+  };
+
+  const handleConfirmDeleteAcademic = async () => {
+    if (!academicDeleteTarget) return;
+    try {
+      setDeletingAcademic(true);
+      let endpoint = '';
+      if (academicDeleteTarget.type === 'department') endpoint = `/api/${domainParam}/staff/panel/departments?id=${academicDeleteTarget.id}`;
+      if (academicDeleteTarget.type === 'class') endpoint = `/api/${domainParam}/staff/panel/classes?id=${academicDeleteTarget.id}`;
+      if (academicDeleteTarget.type === 'section') endpoint = `/api/${domainParam}/staff/panel/sections?id=${academicDeleteTarget.id}`;
+      if (academicDeleteTarget.type === 'subject') endpoint = `/api/${domainParam}/staff/panel/subjects?id=${academicDeleteTarget.id}`;
+
+      const res = await fetch(endpoint, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to delete record.');
+      setAcademicActionMsg({ type: 'success', text: data.message || 'Record deleted successfully.' });
+      setAcademicDeleteTarget(null);
+      fetchAcademics();
+    } catch (err) {
+      setAcademicActionMsg({ type: 'error', text: err.message });
+    } finally {
+      setDeletingAcademic(false);
+    }
+  };
+
   const handleDeleteWebsite = async () => {
     if (!confirm(`Are you sure you want to permanently delete "${website.name}"? All student data, notices, and records will be deleted. This cannot be undone.`)) {
       return;
@@ -1165,6 +1379,7 @@ export default function WebsiteManagePage() {
           { id: 'domains', label: 'Domains & DNS' },
           { id: 'modules', label: 'Package & Modules' },
           { id: 'staffs', label: `Staff Members (${staffsList.length})` },
+          { id: 'academics', label: 'Academic Setup' },
           { id: 'general', label: 'Institutional Profile' },
           { id: 'branding', label: 'Appearance & Themes' },
           { id: 'portals', label: 'Direct Portals' },
@@ -1176,6 +1391,7 @@ export default function WebsiteManagePage() {
             onClick={() => {
               setActiveTab(tab.id);
               if (tab.id === 'staffs' && website?.id) fetchStaffs(website.id);
+              if (tab.id === 'academics') fetchAcademics();
             }}
             className={`px-3.5 py-2 font-medium text-xs border-b-2 whitespace-nowrap transition-colors cursor-pointer ${activeTab === tab.id
               ? 'border-slate-900 text-slate-900 bg-white font-semibold'
@@ -2875,6 +3091,941 @@ export default function WebsiteManagePage() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'academics' && (
+        <div className="space-y-4">
+          {academicActionMsg.text && (
+            <div
+              className={`p-3 rounded border text-xs font-medium flex items-center justify-between ${academicActionMsg.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}
+            >
+              <span>{academicActionMsg.text}</span>
+              <button
+                type="button"
+                onClick={() => setAcademicActionMsg({ type: '', text: '' })}
+                className="hover:underline cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <div className="bg-white border border-slate-200 rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Academic Architecture &amp; Curriculum Setup
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Structured hierarchy: Department (optional) &rarr; Class &rarr; Section, and Class &rarr; Subject.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => fetchAcademics()}
+                disabled={loadingAcademics}
+                className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs cursor-pointer disabled:opacity-50"
+              >
+                {loadingAcademics ? 'Refreshing...' : 'Refresh'}
+              </button>
+
+              {academicsSubTab === 'departments' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeptModal({ open: true, editing: null });
+                    setDeptForm({
+                      name: '',
+                      code: '',
+                      order_no: academicDepts.length + 1,
+                      description: '',
+                      is_active: true,
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer"
+                >
+                  + Add Department
+                </button>
+              )}
+
+              {academicsSubTab === 'classes' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClassModal({ open: true, editing: null });
+                    setClassForm({
+                      name: '',
+                      code: '',
+                      department_id: '',
+                      capacity: 40,
+                      display_order: academicClasses.length + 1,
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer"
+                >
+                  + Add Class
+                </button>
+              )}
+
+              {academicsSubTab === 'sections' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSectionModal({ open: true, editing: null });
+                    setSectionForm({
+                      class_id: academicClasses[0]?.id ? String(academicClasses[0].id) : '',
+                      name: '',
+                      capacity: 40,
+                      room_number: '',
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer"
+                >
+                  + Add Section
+                </button>
+              )}
+
+              {academicsSubTab === 'subjects' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubjectModal({ open: true, editing: null });
+                    setSubjectForm({
+                      class_id: academicClasses[0]?.id ? String(academicClasses[0].id) : '',
+                      name: '',
+                      code: '',
+                      type: 'Theory',
+                      description: '',
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer"
+                >
+                  + Add Subject
+                </button>
+              )}
+            </div>
+          </div>
+
+
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Departments</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicDepts.length}</span>
+              <span className="text-[10px] text-slate-500">Foundational tracks</span>
+            </div>
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Classes</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicClasses.length}</span>
+              <span className="text-[10px] text-slate-500">Enrolled levels</span>
+            </div>
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Sections</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicSections.length}</span>
+              <span className="text-[10px] text-slate-500">Under classes</span>
+            </div>
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Subjects</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicSubjects.length}</span>
+              <span className="text-[10px] text-slate-500">Under classes</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-2 pt-2 rounded-t">
+            {[
+              { id: 'departments', label: `Departments (${academicDepts.length})` },
+              { id: 'classes', label: `Classes (${academicClasses.length})` },
+              { id: 'sections', label: `Sections (${academicSections.length})` },
+              { id: 'subjects', label: `Subjects (${academicSubjects.length})` },
+            ].map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setAcademicsSubTab(sub.id)}
+                className={`px-3 py-1.5 font-medium text-xs border-b-2 transition-colors cursor-pointer ${academicsSubTab === sub.id
+                  ? 'border-slate-900 text-slate-900 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-b p-4 shadow-2xs">
+            {loadingAcademics ? (
+              <div className="py-12 flex justify-center items-center text-xs text-slate-500">
+                Loading academic structure...
+              </div>
+            ) : academicsSubTab === 'departments' ? (
+              academicDepts.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs text-slate-500">No departments configured yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeptModal({ open: true, editing: null });
+                      setDeptForm({
+                        name: '',
+                        code: '',
+                        order_no: 1,
+                        description: '',
+                        is_active: true,
+                      });
+                    }}
+                    className="text-xs text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Add first academic department
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3">Department Name</th>
+                        <th className="py-2.5 px-3">Code</th>
+                        <th className="py-2.5 px-3">Order</th>
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Classes</th>
+                        <th className="py-2.5 px-3">Description</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {academicDepts.map((d) => (
+                        <tr key={d.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{d.name}</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px]">{d.code || '—'}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-500">#{d.order_no}</td>
+                          <td className="py-2.5 px-3">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${d.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
+                              {d.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-medium text-slate-700">{d.class_count || 0}</td>
+                          <td className="py-2.5 px-3 text-slate-500 truncate max-w-xs">{d.description || '—'}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeptModal({ open: true, editing: d });
+                                  setDeptForm({
+                                    name: d.name,
+                                    code: d.code || '',
+                                    order_no: d.order_no ?? 0,
+                                    description: d.description || '',
+                                    is_active: Boolean(d.is_active),
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAcademicDeleteTarget({ type: 'department', id: d.id, name: d.name })}
+                                className="px-2 py-0.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : academicsSubTab === 'classes' ? (
+              academicClasses.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs text-slate-500">No classes configured yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClassModal({ open: true, editing: null });
+                      setClassForm({
+                        name: '',
+                        code: '',
+                        department_id: '',
+                        capacity: 40,
+                        display_order: 1,
+                      });
+                    }}
+                    className="text-xs text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Add first academic class
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3">Class Name</th>
+                        <th className="py-2.5 px-3">Code</th>
+                        <th className="py-2.5 px-3">Department (Optional)</th>
+                        <th className="py-2.5 px-3">Capacity</th>
+                        <th className="py-2.5 px-3">Sections</th>
+                        <th className="py-2.5 px-3">Order</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {academicClasses.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{c.name}</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px]">{c.code || '—'}</td>
+                          <td className="py-2.5 px-3">
+                            {c.department_name ? (
+                              <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-[10px]">
+                                {c.department_name}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">Independent / General</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-slate-700">{c.capacity} seats</td>
+                          <td className="py-2.5 px-3 font-medium text-slate-700">{c.section_count || 0}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-500">#{c.display_order}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setClassModal({ open: true, editing: c });
+                                  setClassForm({
+                                    name: c.name,
+                                    code: c.code || '',
+                                    department_id: c.department_id ? String(c.department_id) : '',
+                                    capacity: c.capacity ?? 40,
+                                    display_order: c.display_order ?? 0,
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAcademicDeleteTarget({ type: 'class', id: c.id, name: c.name })}
+                                className="px-2 py-0.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : academicsSubTab === 'sections' ? (
+              academicSections.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs text-slate-500">No sections configured yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSectionModal({ open: true, editing: null });
+                      setSectionForm({
+                        class_id: academicClasses[0]?.id ? String(academicClasses[0].id) : '',
+                        name: '',
+                        capacity: 40,
+                        room_number: '',
+                      });
+                    }}
+                    className="text-xs text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Add first class section
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3">Section Name</th>
+                        <th className="py-2.5 px-3">Parent Class</th>
+                        <th className="py-2.5 px-3">Department</th>
+                        <th className="py-2.5 px-3">Capacity</th>
+                        <th className="py-2.5 px-3">Room / Venue</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {academicSections.map((s) => (
+                        <tr key={s.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{s.name}</td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">{s.class_name}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{s.department_name || 'General'}</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-700">{s.capacity} seats</td>
+                          <td className="py-2.5 px-3 text-slate-600">{s.room_number || '—'}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSectionModal({ open: true, editing: s });
+                                  setSectionForm({
+                                    class_id: String(s.class_id),
+                                    name: s.name,
+                                    capacity: s.capacity ?? 40,
+                                    room_number: s.room_number || '',
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAcademicDeleteTarget({ type: 'section', id: s.id, name: s.name })}
+                                className="px-2 py-0.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            ) : (
+              academicSubjects.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs text-slate-500">No subjects configured yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubjectModal({ open: true, editing: null });
+                      setSubjectForm({
+                        class_id: academicClasses[0]?.id ? String(academicClasses[0].id) : '',
+                        name: '',
+                        code: '',
+                        type: 'Theory',
+                        description: '',
+                      });
+                    }}
+                    className="text-xs text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Add first subject
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
+                        <th className="py-2.5 px-3">Subject Name</th>
+                        <th className="py-2.5 px-3">Code</th>
+                        <th className="py-2.5 px-3">Parent Class (Class &gt; Subject)</th>
+                        <th className="py-2.5 px-3">Type</th>
+                        <th className="py-2.5 px-3">Description</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {academicSubjects.map((sub) => (
+                        <tr key={sub.id} className="hover:bg-slate-50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{sub.name}</td>
+                          <td className="py-2.5 px-3 font-mono text-[10px]">{sub.code || '—'}</td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                            {sub.class_name ? sub.class_name : <span className="text-slate-400 italic">Unassigned</span>}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${sub.type === 'Practical' ? 'bg-emerald-50 text-emerald-700' : sub.type === 'Both' ? 'bg-purple-50 text-purple-700' : sub.type === 'Optional' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>
+                              {sub.type}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500 truncate max-w-xs">{sub.description || '—'}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSubjectModal({ open: true, editing: sub });
+                                  setSubjectForm({
+                                    class_id: sub.class_id ? String(sub.class_id) : '',
+                                    name: sub.name,
+                                    code: sub.code || '',
+                                    type: sub.type || 'Theory',
+                                    description: sub.description || '',
+                                  });
+                                }}
+                                className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAcademicDeleteTarget({ type: 'subject', id: sub.id, name: sub.name })}
+                                className="px-2 py-0.5 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+          </div>
+
+          {deptModal.open && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {deptModal.editing ? 'Edit Department' : 'Create Department'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setDeptModal({ open: false, editing: null })}
+                    className="text-slate-400 hover:text-slate-700 text-sm cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleSaveDept} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Department Name *
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Department Name"
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Department Code
+                      </label>
+                      <input
+                        type="text"
+                        aria-label="Department Code"
+                        value={deptForm.code}
+                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Order Sequence
+                      </label>
+                      <input
+                        type="number"
+                        aria-label="Order Sequence"
+                        value={deptForm.order_no}
+                        onChange={(e) => setDeptForm({ ...deptForm, order_no: e.target.value })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      rows={2}
+                      aria-label="Department Description"
+                      value={deptForm.description}
+                      onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })}
+                      className="w-full text-xs p-2 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="deptIsActive"
+                      checked={deptForm.is_active}
+                      onChange={(e) => setDeptForm({ ...deptForm, is_active: e.target.checked })}
+                      className="rounded border-slate-300 cursor-pointer"
+                    />
+                    <label htmlFor="deptIsActive" className="text-xs text-slate-700 cursor-pointer">
+                      Operational / Active Department
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setDeptModal({ open: false, editing: null })}
+                      className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingAcademic}
+                      className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingAcademic ? 'Saving...' : deptModal.editing ? 'Update Department' : 'Create Department'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {classModal.open && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {classModal.editing ? 'Edit Class' : 'Create Class'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setClassModal({ open: false, editing: null })}
+                    className="text-slate-400 hover:text-slate-700 text-sm cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleSaveClass} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Class / Grade Title *
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Class Name"
+                      value={classForm.name}
+                      onChange={(e) => setClassForm({ ...classForm, name: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Department Track (Optional)
+                    </label>
+                    <select
+                      aria-label="Department Track"
+                      value={classForm.department_id}
+                      onChange={(e) => setClassForm({ ...classForm, department_id: e.target.value })}
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer"
+                    >
+                      <option value="">None / General (Independent Class)</option>
+                      {academicDepts.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} {d.code ? `(${d.code})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Class Code
+                      </label>
+                      <input
+                        type="text"
+                        aria-label="Class Code"
+                        value={classForm.code}
+                        onChange={(e) => setClassForm({ ...classForm, code: e.target.value.toUpperCase() })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Display Order
+                      </label>
+                      <input
+                        type="number"
+                        aria-label="Display Order"
+                        value={classForm.display_order}
+                        onChange={(e) => setClassForm({ ...classForm, display_order: e.target.value })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Max Student Capacity
+                    </label>
+                    <input
+                      type="number"
+                      aria-label="Max Student Capacity"
+                      value={classForm.capacity}
+                      onChange={(e) => setClassForm({ ...classForm, capacity: e.target.value })}
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setClassModal({ open: false, editing: null })}
+                      className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingAcademic}
+                      className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingAcademic ? 'Saving...' : classModal.editing ? 'Update Class' : 'Create Class'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {sectionModal.open && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {sectionModal.editing ? 'Edit Section' : 'Create Section'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setSectionModal({ open: false, editing: null })}
+                    className="text-slate-400 hover:text-slate-700 text-sm cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleSaveSection} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Parent Class *
+                    </label>
+                    <select
+                      aria-label="Parent Class"
+                      value={sectionForm.class_id}
+                      onChange={(e) => setSectionForm({ ...sectionForm, class_id: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer"
+                    >
+                      <option value="">Select Parent Class</option>
+                      {academicClasses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.department_name ? `(${c.department_name})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Section / Batch Name *
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Section Name"
+                      value={sectionForm.name}
+                      onChange={(e) => setSectionForm({ ...sectionForm, name: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Max Capacity
+                      </label>
+                      <input
+                        type="number"
+                        aria-label="Max Capacity"
+                        value={sectionForm.capacity}
+                        onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Room / Venue
+                      </label>
+                      <input
+                        type="text"
+                        aria-label="Room Number"
+                        value={sectionForm.room_number}
+                        onChange={(e) => setSectionForm({ ...sectionForm, room_number: e.target.value })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setSectionModal({ open: false, editing: null })}
+                      className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingAcademic}
+                      className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingAcademic ? 'Saving...' : sectionModal.editing ? 'Update Section' : 'Create Section'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {subjectModal.open && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {subjectModal.editing ? 'Edit Subject' : 'Create Subject'}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setSubjectModal({ open: false, editing: null })}
+                    className="text-slate-400 hover:text-slate-700 text-sm cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleSaveSubject} className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Parent Class * (Class &gt; Subject)
+                    </label>
+                    <select
+                      aria-label="Parent Class"
+                      value={subjectForm.class_id}
+                      onChange={(e) => setSubjectForm({ ...subjectForm, class_id: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer"
+                    >
+                      <option value="">Select Parent Class</option>
+                      {academicClasses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} {c.department_name ? `(${c.department_name})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Subject Name *
+                    </label>
+                    <input
+                      type="text"
+                      aria-label="Subject Name"
+                      value={subjectForm.name}
+                      onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
+                      required
+                      className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Subject Code
+                      </label>
+                      <input
+                        type="text"
+                        aria-label="Subject Code"
+                        value={subjectForm.code}
+                        onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value.toUpperCase() })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Course Type
+                      </label>
+                      <select
+                        aria-label="Course Type"
+                        value={subjectForm.type}
+                        onChange={(e) => setSubjectForm({ ...subjectForm, type: e.target.value })}
+                        className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer"
+                      >
+                        <option value="Theory">Theory</option>
+                        <option value="Practical">Practical</option>
+                        <option value="Both">Both (Theory &amp; Lab)</option>
+                        <option value="Optional">Optional</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                      Description / Overview
+                    </label>
+                    <textarea
+                      rows={2}
+                      aria-label="Subject Description"
+                      value={subjectForm.description}
+                      onChange={(e) => setSubjectForm({ ...subjectForm, description: e.target.value })}
+                      className="w-full text-xs p-2 rounded border border-slate-300 text-slate-900 focus:outline-hidden"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setSubjectModal({ open: false, editing: null })}
+                      className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingAcademic}
+                      className="px-3.5 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+                    >
+                      {submittingAcademic ? 'Saving...' : subjectModal.editing ? 'Update Subject' : 'Create Subject'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {academicDeleteTarget && (
+            <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white border border-slate-200 rounded-lg max-w-sm w-full p-4 shadow-xl space-y-3">
+                <h4 className="text-xs font-bold text-slate-900">
+                  Delete {academicDeleteTarget.type.toUpperCase()}?
+                </h4>
+                <p className="text-xs text-slate-600">
+                  Are you sure you want to remove &quot;{academicDeleteTarget.name}&quot;? Dependent records will be unassigned.
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAcademicDeleteTarget(null)}
+                    className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDeleteAcademic}
+                    disabled={deletingAcademic}
+                    className="px-3.5 py-1.5 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingAcademic ? 'Deleting...' : 'Confirm Delete'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

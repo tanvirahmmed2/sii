@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
 
 async function verifyStaffAccess(request, context, action = 'view') {
-  return verifyStaffModuleAccess(request, context, 'routine', action);
+  return verifyStaffModuleAccess(request, context, ['class-setup', 'classes', 'routine'], action);
 }
 
 export async function GET(request, context) {
@@ -28,19 +28,24 @@ export async function GET(request, context) {
              d.code AS department_code,
              d.slug AS department_slug,
              COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
+             COALESCE((SELECT COUNT(*) FROM website_subjects sub WHERE sub.class_id = c.id), 0)::int +
              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
       FROM website_classes c
-      JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
+      LEFT JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
       WHERE c.website_id = $1
     `;
     const params = [auth.website.id];
 
     if (departmentId && departmentId !== 'all') {
-      params.push(departmentId);
-      query += ` AND c.department_id = $${params.length}`;
+      if (departmentId === 'none' || departmentId === 'null') {
+        query += ` AND c.department_id IS NULL`;
+      } else {
+        params.push(departmentId);
+        query += ` AND c.department_id = $${params.length}`;
+      }
     }
 
-    query += ` ORDER BY d.name ASC, c.name ASC, c.id ASC`;
+    query += ` ORDER BY COALESCE(d.name, 'ZZZ') ASC, c.name ASC, c.id ASC`;
 
     const result = await queryDb(query, params);
 
@@ -55,7 +60,6 @@ export async function GET(request, context) {
       }
     });
   } catch (error) {
-    console.error('Error in GET classes:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
@@ -75,25 +79,25 @@ export async function POST(request, context) {
     } = body;
 
     if (!name || !String(name).trim()) {
-      return NextResponse.json({ success: false, error: 'Class name is required (e.g., Class 1, Grade 10).' }, { status: 400 });
-    }
-
-    if (!department_id) {
-      return NextResponse.json({ success: false, error: 'Department is required to create a class.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Class name is required.' }, { status: 400 });
     }
 
     const trimmedName = String(name).trim();
     const cleanCodePart = trimmedName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
-    const trimmedCode = code ? String(code).trim().toUpperCase() : `CLS-${cleanCodePart || '1'}`;
+    const trimmedCode = code && String(code).trim()
+      ? String(code).trim().toUpperCase()
+      : `CLS-${cleanCodePart || '1'}`;
 
-    const deptCheck = await queryDb(
-      `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2`,
-      [department_id, auth.website.id]
-    );
-    if (deptCheck.rowCount === 0) {
-      return NextResponse.json({ success: false, error: 'Selected department does not exist.' }, { status: 400 });
+    let validDeptId = null;
+    if (department_id && String(department_id) !== 'none' && String(department_id) !== 'null') {
+      const deptCheck = await queryDb(
+        `SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2`,
+        [department_id, auth.website.id]
+      );
+      if (deptCheck.rowCount > 0) {
+        validDeptId = parseInt(department_id, 10);
+      }
     }
-    const validDeptId = parseInt(department_id, 10);
 
     const insertRes = await queryDb(
       `INSERT INTO website_classes (website_id, department_id, name, code, max_seats, description)
@@ -119,7 +123,7 @@ export async function POST(request, context) {
               0::int AS section_count,
               0::int AS subject_count
        FROM website_classes c
-       JOIN website_departments d ON d.id = c.department_id
+       LEFT JOIN website_departments d ON d.id = c.department_id
        WHERE c.id = $1`,
       [savedClass.id]
     );
@@ -131,7 +135,6 @@ export async function POST(request, context) {
       message: 'Class created successfully.'
     });
   } catch (error) {
-    console.error('Error in POST class:', error);
     if (error.code === '23505') {
       return NextResponse.json({ success: false, error: 'A class with this name or code already exists.' }, { status: 409 });
     }
@@ -169,17 +172,19 @@ export async function PUT(request, context) {
 
     let targetDeptId = existing.department_id;
     if (department_id !== undefined) {
-      if (!department_id) {
-        return NextResponse.json({ success: false, error: 'Department is required for a class.' }, { status: 400 });
+      if (!department_id || String(department_id) === 'none' || String(department_id) === 'null') {
+        targetDeptId = null;
+      } else {
+        const deptCheck = await queryDb(
+          `SELECT id FROM website_departments WHERE id = $1 AND website_id = $2`,
+          [department_id, auth.website.id]
+        );
+        if (deptCheck.rowCount > 0) {
+          targetDeptId = parseInt(department_id, 10);
+        } else {
+          targetDeptId = null;
+        }
       }
-      const deptCheck = await queryDb(
-        `SELECT id FROM website_departments WHERE id = $1 AND website_id = $2`,
-        [department_id, auth.website.id]
-      );
-      if (deptCheck.rowCount === 0) {
-        return NextResponse.json({ success: false, error: 'Selected department does not exist.' }, { status: 400 });
-      }
-      targetDeptId = parseInt(department_id, 10);
     }
 
     const updatedName = name !== undefined ? (name ? String(name).trim() : existing.name) : existing.name;
@@ -214,9 +219,10 @@ export async function PUT(request, context) {
               d.code AS department_code,
               d.slug AS department_slug,
               COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
+              COALESCE((SELECT COUNT(*) FROM website_subjects sub WHERE sub.class_id = c.id), 0)::int +
               COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
        FROM website_classes c
-       JOIN website_departments d ON d.id = c.department_id
+       LEFT JOIN website_departments d ON d.id = c.department_id
        WHERE c.id = $1`,
       [id]
     );
@@ -228,7 +234,6 @@ export async function PUT(request, context) {
       message: 'Class updated successfully.'
     });
   } catch (error) {
-    console.error('Error in PUT class:', error);
     if (error.code === '23505') {
       return NextResponse.json({ success: false, error: 'A class with this name or code already exists.' }, { status: 409 });
     }
@@ -268,7 +273,6 @@ export async function DELETE(request, context) {
       deleted_id: delRes.rows[0].id
     });
   } catch (error) {
-    console.error('Error in DELETE class:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

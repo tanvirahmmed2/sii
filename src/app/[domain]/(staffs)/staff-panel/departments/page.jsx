@@ -326,14 +326,14 @@ export default function DepartmentsPage() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Department / Track Name <span className="text-rose-500">*</span>
                 </label>
-                <input type="text" required value={formName} onChange={e => setFormName(e.target.value)} placeholder="e.g. Science, Business Studies, Humanities, Primary" className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                <input type="text" required value={formName} onChange={e => setFormName(e.target.value)} aria-label="Department Name" className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Department Code
                 </label>
-                <input type="text" value={formCode} onChange={e => setFormCode(e.target.value)} placeholder="e.g. SCI, BIZ, HUM, PRI" className="w-full px-3.5 py-2.5 text-xs font-mono uppercase rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+                <input type="text" value={formCode} onChange={e => setFormCode(e.target.value)} aria-label="Department Code" className="w-full px-3.5 py-2.5 text-xs font-mono uppercase rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
               </div>
             </div>
 
@@ -365,7 +365,7 @@ export default function DepartmentsPage() {
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Department Overview / Remarks
               </label>
-              <textarea rows={2} value={formDescription} onChange={e => setFormDescription(e.target.value)} placeholder="Optional description of this academic department or curriculum discipline..." className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
+              <textarea rows={2} value={formDescription} onChange={e => setFormDescription(e.target.value)} aria-label="Department Overview" className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" />
             </div>
 
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
@@ -384,7 +384,7 @@ export default function DepartmentsPage() {
         <div className="flex flex-1 items-center gap-2.5 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-md">
             
-            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search by department name, code..." className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} aria-label="Search by department name, code" className="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
             {searchTerm && <button type="button" onClick={() => setSearchTerm('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
                 Close
               </button>}

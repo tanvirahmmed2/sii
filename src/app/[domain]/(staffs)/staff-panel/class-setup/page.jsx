@@ -73,8 +73,12 @@ export default function ClassSetupPage() {
 
   const filteredClasses = useMemo(() => {
     return classes.filter(c => {
-      if (selectedDepartmentFilter !== 'all' && String(c.department_id) !== String(selectedDepartmentFilter)) {
-        return false;
+      if (selectedDepartmentFilter !== 'all') {
+        if (selectedDepartmentFilter === 'none') {
+          if (c.department_id) return false;
+        } else if (String(c.department_id) !== String(selectedDepartmentFilter)) {
+          return false;
+        }
       }
       const q = searchTerm.toLowerCase();
       return (
@@ -98,7 +102,7 @@ export default function ClassSetupPage() {
     setFormData({
       name: '',
       code: `CLS-${classes.length + 1}`,
-      department_id: departments[0]?.id ? String(departments[0].id) : '',
+      department_id: '',
       max_seats: 40,
       description: ''
     });
@@ -143,10 +147,6 @@ export default function ClassSetupPage() {
     e.preventDefault();
     if (!formData.name.trim()) {
       setErrorMsg('Class Name is required.');
-      return;
-    }
-    if (!formData.department_id) {
-      setErrorMsg('Department is required to create a class.');
       return;
     }
 
@@ -219,83 +219,55 @@ export default function ClassSetupPage() {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Sections</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono">{totalSections}</span>
-            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400">Batches Active</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{totalSections}</span>
+            <span className="text-[10px] font-medium text-slate-500">Across All Classes</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Seat Capacity</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Capacity</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{totalSeats}</span>
-            <span className="text-[10px] font-medium text-emerald-600">Students Intake</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{totalSeats}</span>
+            <span className="text-[10px] font-medium text-slate-500">Seats Available</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Department Hierarchy</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Departments</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              Department-Centric
-            </span>
-            <span className="text-[10px] font-medium text-slate-400">Under Departments</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{departments.length}</span>
+            <span className="text-[10px] font-medium text-slate-500">Active Disciplines</span>
           </div>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-          <span className="flex items-center gap-1.5">{successMsg}</span>
-          <button onClick={() => setSuccessMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
-        </div>
-      )}
-      {errorMsg && (
-        <div className="p-3 rounded text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 flex items-center justify-between">
-          <span className="flex items-center gap-1.5">{errorMsg}</span>
-          <button onClick={() => setErrorMsg('')} className="text-[10px] font-mono cursor-pointer hover:underline">DISMISS</button>
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded text-xs text-emerald-800 dark:text-emerald-200 font-medium">
+          {successMsg}
         </div>
       )}
 
-      {deleteConfirmId && (
-        <div className="p-4 rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
-              Confirm deletion of Class &quot;{classes.find(c => c.id === deleteConfirmId)?.name}&quot;?
-            </p>
-            <p className="text-[11px] text-rose-600 dark:text-rose-400">
-              Warning: This will also remove any sections and classroom links assigned directly under this class.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setDeleteConfirmId(null)}
-              className="px-3 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleDelete(deleteConfirmId)}
-              disabled={deletingId === deleteConfirmId}
-              className="px-3 py-1 text-xs font-semibold rounded bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {deletingId === deleteConfirmId ? 'Deleting...' : 'Confirm Delete'}
-            </button>
-          </div>
+      {errorMsg && (
+        <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded text-xs text-rose-800 dark:text-rose-200 font-medium">
+          {errorMsg}
         </div>
       )}
 
       {isFormOpen && (
-        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+        <div ref={formSectionRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">Class Workstation</span>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {editingClass ? `Edit Class: ${editingClass.name}` : 'Setup New Academic Class / Grade'}
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {editingClass ? `Edit Class: ${editingClass.name}` : 'Create New Class'}
               </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Define class code, seat quota, and optional department assignment.
+              </p>
             </div>
             <button
+              type="button"
               onClick={closeForm}
-              className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
             >
               Close
             </button>
@@ -309,7 +281,6 @@ export default function ClassSetupPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Class 1, Grade 10, Standard 5"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -323,7 +294,6 @@ export default function ClassSetupPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. CLS-01, G-10"
                   value={formData.code}
                   onChange={e => setFormData({ ...formData, code: e.target.value })}
                   required
@@ -335,15 +305,14 @@ export default function ClassSetupPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Academic Department (Discipline) <span className="text-rose-500">*</span>
+                  Academic Department (Optional)
                 </label>
                 <select
                   value={formData.department_id}
                   onChange={e => setFormData({ ...formData, department_id: e.target.value })}
-                  required
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
                 >
-                  <option value="">-- Select Academic Department (Required) --</option>
+                  <option value="">None / General (Independent Class)</option>
                   {departments.map(d => (
                     <option key={d.id} value={d.id}>
                       {d.name} {d.code ? `(${d.code})` : ''}
@@ -351,7 +320,7 @@ export default function ClassSetupPage() {
                   ))}
                 </select>
                 <p className="text-[10px] text-slate-400 mt-0.5">
-                  Every class belongs directly to an academic department/faculty.
+                  Classes can optionally belong to a department or stand independently.
                 </p>
               </div>
 
@@ -379,7 +348,6 @@ export default function ClassSetupPage() {
               </label>
               <input
                 type="text"
-                placeholder="Optional notes or details about this academic grade..."
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                 className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
@@ -418,10 +386,9 @@ export default function ClassSetupPage() {
             <div className="relative flex-1 min-w-[160px]">
               <input
                 type="text"
-                placeholder="Search class or department..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900"
+                className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"
               />
             </div>
             {departments.length > 0 && (
@@ -432,6 +399,7 @@ export default function ClassSetupPage() {
                   className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer"
                 >
                   <option value="all">All Departments</option>
+                  <option value="none">General / No Department</option>
                   {departments.map(d => (
                     <option key={d.id} value={d.id}>
                       {d.name}
@@ -446,7 +414,6 @@ export default function ClassSetupPage() {
             <button
               onClick={() => fetchClasses(false)}
               className="px-2.5 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer"
-              title="Refresh"
             >
               Refresh
             </button>
@@ -476,7 +443,7 @@ export default function ClassSetupPage() {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-3">Class / Grade</th>
-                  <th className="py-2.5 px-3">Academic Department <span className="text-rose-500">*</span></th>
+                  <th className="py-2.5 px-3">Academic Department</th>
                   <th className="py-2.5 px-3">Class Code</th>
                   <th className="py-2.5 px-3">Max Seats</th>
                   <th className="py-2.5 px-3">Sections</th>
@@ -501,13 +468,19 @@ export default function ClassSetupPage() {
                       </div>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="font-semibold text-blue-600 dark:text-blue-400">
-                        {item.department_name || `Department #${item.department_id}`}
-                      </span>
-                      {item.department_code && (
-                        <span className="text-[10px] text-slate-400 block font-mono">
-                          {item.department_code}
-                        </span>
+                      {item.department_name ? (
+                        <div>
+                          <span className="font-semibold text-blue-600 dark:text-blue-400">
+                            {item.department_name}
+                          </span>
+                          {item.department_code && (
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              {item.department_code}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px] italic">General / Independent</span>
                       )}
                     </td>
                     <td className="py-3 px-3">
@@ -533,17 +506,33 @@ export default function ClassSetupPage() {
                         <button
                           onClick={() => openEditForm(item)}
                           className="px-2 py-1 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Edit"
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(item.id)}
-                          className="px-2 py-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                          title="Delete"
-                        >
-                          Delete
-                        </button>
+                        {deleteConfirmId === item.id ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              disabled={deletingId === item.id}
+                              className="px-2 py-1 rounded bg-rose-600 text-white text-[10px] font-semibold hover:bg-rose-700 cursor-pointer disabled:opacity-50"
+                            >
+                              {deletingId === item.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="px-1.5 py-1 rounded text-slate-400 hover:text-slate-600 text-[10px] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirmId(item.id)}
+                            className="px-2 py-1 rounded text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

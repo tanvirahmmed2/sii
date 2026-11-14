@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStaffSession } from 'src/lib/middleware/staff.js';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
 import slugify from 'slugify';
 
 function createSlug(text) {
@@ -9,32 +8,13 @@ function createSlug(text) {
   return slugify(String(text), { lower: true, strict: true, trim: true });
 }
 
-async function verifyStaffAccess(request, context) {
-  const website = await resolveWebsiteFromRequest(request, context);
-  if (!website) {
-    return { error: 'Educational institution portal not found.', status: 404 };
-  }
-  const staffSession = await getStaffSession(request);
-  if (!staffSession) {
-    return { error: 'Unauthorized: Staff access required.', status: 401 };
-  }
-
-  const staffWebsiteId =
-    staffSession?.website_id ||
-    staffSession?.websiteId ||
-    staffSession?.staff?.websiteId ||
-    staffSession?.staff?.website_id;
-
-  if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-    return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-  }
-
-  return { website, staffSession };
+async function verifyStaffAccess(request, context, action = 'view') {
+  return verifyStaffModuleAccess(request, context, ['departments', 'class-setup'], action);
 }
 
 export async function GET(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'view');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -77,14 +57,13 @@ export async function GET(request, context) {
       total: result.rowCount,
     });
   } catch (error) {
-    console.error('Error fetching departments:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'create');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -142,14 +121,13 @@ export async function POST(request, context) {
       department: enrichedResult.rows[0] || savedDept,
     });
   } catch (error) {
-    console.error('Error creating department:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function PUT(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'edit');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -220,14 +198,13 @@ export async function PUT(request, context) {
       department: updatedResult.rows[0],
     });
   } catch (error) {
-    console.error('Error updating department:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
 
 export async function DELETE(request, context) {
   try {
-    const auth = await verifyStaffAccess(request, context);
+    const auth = await verifyStaffAccess(request, context, 'delete');
     if (auth.error) {
       return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
     }
@@ -254,7 +231,6 @@ export async function DELETE(request, context) {
       deleted_id: deleteResult.rows[0].id,
     });
   } catch (error) {
-    console.error('Error deleting department:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
