@@ -203,7 +203,7 @@ export async function checkAccountLockout({ table, id, identifier, websiteId = n
   try {
     let res;
     if (id) {
-      if (websiteId && table === 'website_staffs') {
+      if (websiteId && (table === 'website_staffs' || table === 'website_teachers' || table === 'website_students')) {
         res = await queryDb(
           `SELECT id, failed_login_attempts, locked_until FROM ${table} WHERE id = $1 AND website_id = $2 LIMIT 1`,
           [id, websiteId]
@@ -218,7 +218,7 @@ export async function checkAccountLockout({ table, id, identifier, websiteId = n
       const cleanEmail = identifier.toLowerCase().trim();
       const raw = identifier.trim();
       const phoneDigits = raw.replace(/\D/g, '');
-      if (table === 'website_staffs') {
+      if (table === 'website_staffs' || table === 'website_teachers') {
         if (websiteId) {
           res = await queryDb(
             `SELECT id, failed_login_attempts, locked_until FROM ${table} 
@@ -237,6 +237,34 @@ export async function checkAccountLockout({ table, id, identifier, websiteId = n
              WHERE LOWER(email) = $1 
                 OR number = $2 
                 OR phone = $2 
+                OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(phone, number, ''), '\\D', '', 'g'), 10) = RIGHT($3, 10))
+             LIMIT 1`,
+            [cleanEmail, raw, phoneDigits]
+          );
+        }
+      } else if (table === 'website_students') {
+        if (websiteId) {
+          res = await queryDb(
+            `SELECT id, failed_login_attempts, locked_until FROM ${table} 
+             WHERE website_id = $4 AND (
+               LOWER(email) = $1 
+               OR number = $2 
+               OR phone = $2 
+               OR LOWER(registration_no) = $1
+               OR LOWER(student_unique_id) = $1
+               OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(phone, number, ''), '\\D', '', 'g'), 10) = RIGHT($3, 10))
+             )
+             LIMIT 1`,
+            [cleanEmail, raw, phoneDigits, websiteId]
+          );
+        } else {
+          res = await queryDb(
+            `SELECT id, failed_login_attempts, locked_until FROM ${table} 
+             WHERE LOWER(email) = $1 
+                OR number = $2 
+                OR phone = $2 
+                OR LOWER(registration_no) = $1
+                OR LOWER(student_unique_id) = $1
                 OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(phone, number, ''), '\\D', '', 'g'), 10) = RIGHT($3, 10))
              LIMIT 1`,
             [cleanEmail, raw, phoneDigits]
@@ -305,6 +333,12 @@ export async function recordFailedLogin({
     } else if (table === 'website_staffs') {
       activityTable = 'website_staff_login_activities';
       fkColumn = 'staff_id';
+    } else if (table === 'website_teachers') {
+      activityTable = 'website_teacher_login_activities';
+      fkColumn = 'teacher_id';
+    } else if (table === 'website_students') {
+      activityTable = 'website_student_login_activities';
+      fkColumn = 'student_id';
     }
 
     const updateRes = await queryDb(
@@ -324,9 +358,9 @@ export async function recordFailedLogin({
     const attempts = updateRes.rows[0]?.failed_login_attempts || 1;
     const isLockedNow = attempts >= maxFailedAttempts;
 
-    if (table === 'website_staffs' && websiteId) {
+    if (websiteId && (table === 'website_staffs' || table === 'website_teachers' || table === 'website_students')) {
       await queryDb(
-        `INSERT INTO website_staff_login_activities (website_id, staff_id, ip_address, user_agent, status, failure_reason)
+        `INSERT INTO ${activityTable} (website_id, ${fkColumn}, ip_address, user_agent, status, failure_reason)
          VALUES ($1, $2, $3, $4, 'Failed', $5)`,
         [websiteId, id, ip, userAgent, isLockedNow ? `Account locked (${lockoutMinutes} min) - ${reason}` : reason]
       );
@@ -373,20 +407,38 @@ export async function recordSuccessfulLogin({ table, id, websiteId = null, ip = 
     } else if (table === 'website_staffs') {
       activityTable = 'website_staff_login_activities';
       fkColumn = 'staff_id';
+    } else if (table === 'website_teachers') {
+      activityTable = 'website_teacher_login_activities';
+      fkColumn = 'teacher_id';
+    } else if (table === 'website_students') {
+      activityTable = 'website_student_login_activities';
+      fkColumn = 'student_id';
     }
 
-    await queryDb(
-      `UPDATE ${table} 
-       SET failed_login_attempts = 0, 
-           locked_until = NULL, 
-           last_login_at = CURRENT_TIMESTAMP 
-       WHERE id = $1`,
-      [id]
-    );
-
-    if (table === 'website_staffs' && websiteId) {
+    if (table === 'website_students') {
       await queryDb(
-        `INSERT INTO website_staff_login_activities (website_id, staff_id, ip_address, user_agent, status)
+        `UPDATE website_students 
+         SET failed_login_attempts = 0, 
+             locked_until = NULL, 
+             last_login_at = CURRENT_TIMESTAMP,
+             last_login = CURRENT_TIMESTAMP 
+         WHERE id = $1`,
+        [id]
+      );
+    } else {
+      await queryDb(
+        `UPDATE ${table} 
+         SET failed_login_attempts = 0, 
+             locked_until = NULL, 
+             last_login_at = CURRENT_TIMESTAMP 
+         WHERE id = $1`,
+        [id]
+      );
+    }
+
+    if (websiteId && (table === 'website_staffs' || table === 'website_teachers' || table === 'website_students')) {
+      await queryDb(
+        `INSERT INTO ${activityTable} (website_id, ${fkColumn}, ip_address, user_agent, status)
          VALUES ($1, $2, $3, $4, 'Success')`,
         [websiteId, id, ip, userAgent]
       );

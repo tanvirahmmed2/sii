@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword, revokeAllTeacherSessions } from 'src/lib/middleware/teacher.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendSms } from 'src/lib/database/smsSender.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';
+import {
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  checkOtpDispatchRateLimit,
+  recordOtpDispatch,
+  generateSecureOtp,
+  extractClientIp,
+} from 'src/lib/security/shield.js';
 
 function buildTeacherRecoveryUrl(website, token, request) {
   const origin = getWebsiteUrl(website, request);
@@ -13,6 +21,26 @@ function buildTeacherRecoveryUrl(website, token, request) {
 
 export async function POST(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`teacher_recovery_req:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 10,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many recovery requests. Please wait.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -22,30 +50,39 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { email } = body;
+    const identifier = body.identifier || body.email || body.phone || body.number;
+    const requestedChannel = String(body.channel || 'email').toLowerCase();
 
-    if (!email) {
+    if (!identifier) {
       return NextResponse.json(
-        { success: false, error: 'Teacher email address is required.' },
+        { success: false, error: 'Teacher email address or phone number is required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanId = String(identifier).trim();
+    const cleanEmail = cleanId.toLowerCase();
+    const raw = cleanId;
+    const digits = raw.replace(/\D/g, '');
 
     const teacherRes = await queryDb(
-      `SELECT id, name, email, is_active, recovery_token_expires
+      `SELECT id, name, email, number, COALESCE(phone, number) AS phone, is_active
        FROM website_teachers
-       WHERE website_id = $1 AND LOWER(email) = $2
+       WHERE website_id = $1 AND (
+         LOWER(email) = $2
+         OR number = $3
+         OR phone = $3
+         OR (LENGTH($4) >= 8 AND RIGHT(REGEXP_REPLACE(COALESCE(phone, number, ''), '\\D', '', 'g'), 10) = RIGHT($4, 10))
+       )
        LIMIT 1`,
-      [website.id, cleanEmail]
+      [website.id, cleanEmail, raw, digits]
     );
 
     if (teacherRes.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No faculty account found with this email on this campus.' },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: 'If an account matches these credentials, a recovery code has been dispatched.',
+      });
     }
 
     const teacher = teacherRes.rows[0];
@@ -57,62 +94,103 @@ export async function POST(request, context) {
       );
     }
 
-    if (teacher.recovery_token_expires) {
-      const remainingMs = new Date(teacher.recovery_token_expires).getTime() - Date.now();
-      if (remainingMs > 59 * 60 * 1000) {
-        return NextResponse.json({
-          success: false,
-          error: 'Please wait at least 60 seconds before requesting another recovery link.'
-        }, { status: 429 });
-      }
+    const targetPhone = teacher.phone || teacher.number;
+    const selectedChannel = requestedChannel === 'sms' && targetPhone ? 'sms' : 'email';
+
+    const dispatchLimitCheck = await checkOtpDispatchRateLimit({
+      identifier: teacher.email,
+      phone: targetPhone,
+      email: teacher.email,
+      ip: clientIp,
+    });
+
+    if (!dispatchLimitCheck.isAllowed) {
+      return NextResponse.json(
+        { success: false, error: dispatchLimitCheck.error },
+        { status: 429 }
+      );
     }
 
-    const recoveryToken = crypto.randomBytes(32).toString('hex');
+    const recoveryCode = generateSecureOtp(6);
 
     await queryDb(
       `UPDATE website_teachers
-       SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour'
+       SET recovery_token = $1, 
+           recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour',
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`,
-      [recoveryToken, teacher.id]
+      [recoveryCode, teacher.id]
     );
 
-    const recoveryUrl = buildTeacherRecoveryUrl(website, recoveryToken, request);
+    await recordOtpDispatch({
+      identifier: teacher.email,
+      phone: targetPhone,
+      email: teacher.email,
+      channel: selectedChannel,
+      purpose: 'teacher_recovery',
+      ip: clientIp,
+    });
 
-    try {
-      const html = buildStyledEmail({
-        title: 'Teacher Password Recovery',
-        subtitle: `${website.name} — Teacher Operations Portal`,
-        recipientName: teacher.name,
-        bodyParagraphs: [
-          'We received a request to reset the password for your faculty account.',
-          'Click the button below to establish a new password, or use the token code directly on the recovery page.',
-          'This password reset link is valid for 1 hour. If you did not make this request, you can safely ignore this email.',
-        ],
-        code: recoveryToken.substring(0, 8).toUpperCase(),
-        codeLabel: 'Security Reference',
-        actionUrl: recoveryUrl,
-        actionText: 'Reset Teacher Password →',
-      });
+    const recoveryUrl = buildTeacherRecoveryUrl(website, recoveryCode, request);
+    const institutionName = website.name || 'Institution Teacher Portal';
 
-      await sendEmail({
-        to: teacher.email,
-        toName: teacher.name,
-        subject: `${website.name} - Teacher Password Recovery Link`,
-        html,
-        websiteId: website.id,
-      });
-    } catch (mailErr) {
-      console.warn('Failed to dispatch recovery email to teacher:', mailErr.message);
+    if (selectedChannel === 'sms') {
+      try {
+        await sendSms({
+          to: targetPhone,
+          message: `Your ${institutionName} password recovery code is: ${recoveryCode}. Valid for 1 hour.`,
+          purpose: 'recovery',
+          userId: teacher.id,
+          userType: 'teacher',
+          ip: clientIp,
+          websiteId: website.id,
+        });
+      } catch (smsErr) {
+        return NextResponse.json(
+          { success: false, error: smsErr.message || 'Failed to dispatch recovery SMS.' },
+          { status: 500 }
+        );
+      }
+    } else {
+      try {
+        const html = buildStyledEmail({
+          title: 'Teacher Password Recovery',
+          subtitle: `${institutionName} — Faculty Operations Portal`,
+          recipientName: teacher.name,
+          bodyParagraphs: [
+            'We received a request to reset the password for your faculty account.',
+            'Click the button below to establish a new password, or use the 6-digit recovery code directly on the recovery page.',
+            'This security code is valid for 1 hour. If you did not make this request, you can safely ignore this email.',
+          ],
+          code: recoveryCode,
+          codeLabel: 'Recovery Passcode',
+          actionUrl: recoveryUrl,
+          actionText: 'Reset Teacher Password →',
+        });
+
+        await sendEmail({
+          to: teacher.email,
+          toName: teacher.name,
+          subject: `${institutionName} - Teacher Password Recovery Code`,
+          html,
+          websiteId: website.id,
+        });
+      } catch (mailErr) {
+        return NextResponse.json(
+          { success: false, error: mailErr.message || 'Failed to dispatch recovery email.' },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Password recovery link has been sent to your registered email address.',
+      message: `Password recovery code dispatched to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+      channel: selectedChannel,
     });
   } catch (error) {
-    console.error('Error during teacher recovery request:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error during password recovery request.' },
+      { success: false, error: 'Internal server error processing recovery request.' },
       { status: 500 }
     );
   }
@@ -120,6 +198,26 @@ export async function POST(request, context) {
 
 export async function PUT(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`teacher_recovery_reset:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 10,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -129,12 +227,12 @@ export async function PUT(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const token = body.token || body.recovery_token || body.recoveryToken;
+    const token = body.token || body.recovery_token || body.recoveryToken || body.code;
     const password = body.password || body.new_password || body.newPassword;
 
     if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Password recovery token is required.' },
+        { success: false, error: 'Password recovery verification code is required.' },
         { status: 400 }
       );
     }
@@ -158,7 +256,7 @@ export async function PUT(request, context) {
 
     if (teacherRes.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Invalid or unrecognized recovery token.' },
+        { success: false, error: 'Invalid or unrecognized recovery verification code.' },
         { status: 404 }
       );
     }
@@ -167,7 +265,7 @@ export async function PUT(request, context) {
 
     if (teacher.recovery_token_expires && new Date(teacher.recovery_token_expires) < new Date()) {
       return NextResponse.json(
-        { success: false, error: 'Password recovery token has expired. Please request a new link.' },
+        { success: false, error: 'Password recovery code has expired. Please request a new code.' },
         { status: 410 }
       );
     }
@@ -179,6 +277,8 @@ export async function PUT(request, context) {
        SET password = $1,
            recovery_token = NULL,
            recovery_token_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`,
       [hashedPassword, teacher.id]
@@ -188,12 +288,11 @@ export async function PUT(request, context) {
 
     return NextResponse.json({
       success: true,
-      message: 'Password reset successfully! You can now log in with your new password.',
+      message: 'Password updated successfully. You can now log into your teacher account.',
     });
   } catch (error) {
-    console.error('Error resetting teacher password:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error while resetting password.' },
+      { success: false, error: 'Internal server error resetting password.' },
       { status: 500 }
     );
   }

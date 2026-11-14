@@ -1,168 +1,109 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import {
-  comparePassword,
-  generateToken,
+  authenticateStudent,
   setStudentSessionCookie,
-  createStudentLoginSession,
 } from 'src/lib/middleware/students.js';
+import {
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  extractClientIp,
+} from 'src/lib/security/shield.js';
 
 export async function POST(request, context) {
   try {
-    const website = await resolveWebsiteFromRequest(request, context);
-    if (!website) {
-      return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
     }
 
-    const body = await request.json();
-    const identifier = (body.registration_number || body.registration_no || body.email || '').trim();
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`student_login_api:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 15,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
+    const website = await resolveWebsiteFromRequest(request, context);
+    if (!website) {
+      return NextResponse.json(
+        { success: false, error: 'Educational institution portal not found.' },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const identifier = body.identifier || body.registration_number || body.registration_no || body.email || body.phone || body.number;
     const password = body.password;
+    const channel = body.channel || 'email';
+    const twoFactorCode = body.code || body.twoFactorCode;
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { success: false, error: 'Registration number / Email and password are required.' },
+        { success: false, error: 'Registration number, email, or phone number and password are required.' },
         { status: 400 }
       );
     }
 
-    let res = await queryDb(
-      `SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
-              s.class_id, s.section_id, s.session_id, s.is_active,
-              s.password,
-              s.is_active,
-              COALESCE(s.is_verified, FALSE) AS is_verified,
-              COALESCE(i.is_registered, s.is_registered, TRUE) AS is_registered,
-              COALESCE(i.verification_status, s.verification_status, 'verified') AS verification_status,
-              COALESCE(s.name, i.data->>'name', 'Student') AS name,
-              COALESCE(s.email, i.data->>'email') AS email,
-              c.name AS class_name,
-              sec.name AS section_name,
-              ses.name AS session_name
-       FROM website_students s
-       LEFT JOIN website_student_info i ON s.id = i.student_id
-       LEFT JOIN website_classes c ON s.class_id = c.id
-       LEFT JOIN website_sections sec ON s.section_id = sec.id
-       LEFT JOIN website_sessions ses ON s.session_id = ses.id
-       WHERE s.website_id = $1 AND (
-         LOWER(s.registration_no) = LOWER($2) OR
-         LOWER(COALESCE(s.email, i.data->>'email')) = LOWER($2) OR
-         LOWER(s.student_unique_id) = LOWER($2)
-       )
-       LIMIT 1`,
-      [website.id, identifier]
-    );
-
-    if (res.rows.length === 0) {
-      res = await queryDb(
-        `SELECT id, name, email, registration_number AS registration_no,
-                password, is_active, is_registered,
-                TRUE AS is_verified, 'verified' AS verification_status,
-                website_id
-         FROM students
-         WHERE (website_id = $1 OR website_id IS NULL) AND (
-           LOWER(registration_number) = LOWER($2) OR
-           LOWER(email) = LOWER($2)
-         )
-         LIMIT 1`,
-        [website.id, identifier]
-      ).catch(() => ({ rows: [] }));
-    }
-
-    if (res.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid registration credentials. Please check your details.' },
-        { status: 401 }
-      );
-    }
-
-    const student = res.rows[0];
-
-    const passwordMatch = await comparePassword(password, student.password);
-    if (!passwordMatch) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid password. Please verify and try again.' },
-        { status: 401 }
-      );
-    }
-
-    if (!student.is_registered || student.verification_status === 'pending_setup') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Your account setup is incomplete. Please complete your registration profile first.',
-          verification_status: 'pending_setup',
-        },
-        { status: 403 }
-      );
-    }
-
-    if (student.verification_status === 'submitted' || !student.is_verified) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Your profile has been submitted and is currently awaiting staff verification. You will be able to log in once approved.',
-          verification_status: 'submitted',
-        },
-        { status: 403 }
-      );
-    }
-
-    if (student.verification_status === 'rejected') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Your profile verification was rejected: ${student.rejection_reason || student.verification_notes || 'Please contact school administration.'}`,
-          verification_status: 'rejected',
-        },
-        { status: 403 }
-      );
-    }
-
-    if (!student.is_active) {
-      return NextResponse.json(
-        { success: false, error: 'Your student account is currently deactivated. Please contact administration.' },
-        { status: 403 }
-      );
-    }
-
-    const token = generateToken({
-      id: student.id,
-      email: student.email,
-      name: student.name,
-      registration_no: student.registration_no,
-      website_id: student.website_id,
-      role: 'student',
+    const authResult = await authenticateStudent({
+      identifier,
+      password,
+      websiteId: website.id,
+      channel,
+      twoFactorCode,
+      request,
+      website,
     });
 
     const response = NextResponse.json({
       success: true,
-      message: 'Logged in successfully! Redirecting to student portal...',
-      payload: {
-        student: {
-          id: student.id,
-          name: student.name,
-          email: student.email,
-          registration_no: student.registration_no,
-          roll_no: student.roll_no,
-          student_unique_id: student.student_unique_id,
-          class_name: student.class_name,
-          section_name: student.section_name,
-          session_name: student.session_name,
-          verification_status: student.verification_status,
-          is_verified: student.is_verified,
-        },
-        token,
-      },
+      message: 'Logged into student portal successfully.',
+      student: authResult.student,
+      token: authResult.token,
     });
 
-    await setStudentSessionCookie(response, token);
-
-    await createStudentLoginSession(student.id, student.website_id, token, request);
+    await setStudentSessionCookie(response, authResult.token);
 
     return response;
   } catch (error) {
-    console.error('Error in student login:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error during authentication.' }, { status: 500 });
+    if (error.status === 429 && error.locked) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          locked: true,
+          remainingMinutes: error.remainingMinutes,
+          remainingSeconds: error.remainingSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    if (error.verification_status) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          verification_status: error.verification_status,
+        },
+        { status: error.status || 403 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Authentication failed. Please verify your student credentials.',
+      },
+      { status: error.status || 401 }
+    );
   }
 }

@@ -5,7 +5,8 @@ import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
-import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness.js';
+import { sendSms } from 'src/lib/database/smsSender.js';
 
 export async function GET(request, context) {
   try {
@@ -279,6 +280,14 @@ export async function POST(request, context) {
       }
     }
 
+    const cleanPhone = (body.phone || body.number || '').trim();
+    if (cleanPhone) {
+      const phoneAvail = await checkInstitutionPhoneAvailability(website.id, cleanPhone);
+      if (!phoneAvail.available) {
+        return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+      }
+    }
+
     const regNo = registration_no.trim().replace(/^REG-?/i, '');
     if (!regNo) {
       return NextResponse.json({ success: false, error: 'Registration number is required.' }, { status: 400 });
@@ -300,9 +309,10 @@ export async function POST(request, context) {
     const insertRes = await queryDb(
       `INSERT INTO website_students (
           website_id, department_id, session_id, class_id, section_id,
-          registration_no, roll_no, email, student_unique_id, is_active
+          registration_no, roll_no, email, phone, number, student_unique_id, is_active,
+          failed_login_attempts, locked_until
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, $10, FALSE, 0, NULL)
        RETURNING *`,
       [
         website.id,
@@ -313,6 +323,7 @@ export async function POST(request, context) {
         regNo,
         roll_no?.trim() || null,
         cleanEmail,
+        cleanPhone || null,
         studentUniqueId,
       ]
     );
@@ -415,6 +426,19 @@ export async function POST(request, context) {
       } catch (mailErr) {
         console.warn('Mail dispatch warning on registration:', mailErr.message);
       }
+    }
+
+    if (cleanPhone) {
+      try {
+        await sendSms({
+          to: cleanPhone,
+          message: `Welcome to ${website.name || 'Campus'}. Your Registration No is ${newStudent.registration_no}. Complete your portal account setup: ${setupUrl}`,
+          purpose: 'student_invite',
+          userId: newStudent.id,
+          userType: 'student',
+          websiteId: website.id,
+        });
+      } catch (_) {}
     }
 
     return NextResponse.json({
@@ -590,10 +614,37 @@ export async function PUT(request, context) {
             { status: 409 }
           );
         }
-
       }
       sFields.push(`email = $${sIdx++}`);
       sValues.push(cleanUpdateEmail);
+    }
+
+    if (body.number !== undefined || body.phone !== undefined) {
+      const cleanUpdatePhone = (body.number !== undefined ? body.number : body.phone)?.trim() || null;
+      if (cleanUpdatePhone) {
+        const phoneAvail = await checkInstitutionPhoneAvailability(website.id, cleanUpdatePhone, {
+          excludeRole: 'student',
+          excludeId: studentId
+        });
+        if (!phoneAvail.available) {
+          return NextResponse.json(
+            { success: false, error: phoneAvail.message },
+            { status: 409 }
+          );
+        }
+      }
+      sFields.push(`number = $${sIdx++}`);
+      sValues.push(cleanUpdatePhone);
+      sFields.push(`phone = $${sIdx++}`);
+      sValues.push(cleanUpdatePhone);
+    }
+
+    if (body.password && String(body.password).trim()) {
+      const hashed = await hashPassword(String(body.password).trim());
+      sFields.push(`password = $${sIdx++}`);
+      sValues.push(hashed);
+      sFields.push(`failed_login_attempts = 0`);
+      sFields.push(`locked_until = NULL`);
     }
 
     if (sFields.length > 0) {

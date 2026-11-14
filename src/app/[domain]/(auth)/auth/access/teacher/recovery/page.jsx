@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
@@ -9,27 +9,23 @@ import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 function TeacherRecoveryInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlToken = searchParams.get('token');
+  const urlToken = searchParams.get('token') || '';
   const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
 
-  const [step, setStep] = useState(urlToken ? 2 : 1);
-  const [email, setEmail] = useState('');
-  const [recoveryToken, setRecoveryToken] = useState(urlToken || '');
+  const [step, setStep] = useState(() => (urlToken ? 2 : 1));
+  const [identifier, setIdentifier] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState('email');
+  const [recoveryToken, setRecoveryToken] = useState(() => urlToken);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (urlToken) {
-      setRecoveryToken(urlToken);
-      setStep(2);
-    }
-  }, [urlToken]);
 
   const handleRequestToken = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
-      toast.error('Email is required.');
+    if (!identifier.trim()) {
+      toast.error('Email address or phone number is required.');
       return;
     }
 
@@ -39,16 +35,19 @@ function TeacherRecoveryInner() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          channel: selectedChannel,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || data.message || 'Failed to send recovery token.');
+        throw new Error(data.error || data.message || 'Failed to dispatch recovery code.');
       }
 
-      toast.success(data.message || 'Password recovery link has been sent to your email.');
+      toast.success(data.message || 'Recovery code dispatched successfully.');
       setStep(2);
     } catch (err) {
       toast.error(err.message);
@@ -114,10 +113,10 @@ function TeacherRecoveryInner() {
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           {step === 1
-            ? 'Enter your registered faculty email to receive a password reset link.'
+            ? 'Enter your registered faculty email or phone number to receive a security recovery code.'
             : urlToken
-            ? 'Reset link verified. Set your new password below.'
-            : `Enter the recovery token and your new password.`}
+            ? 'Security token verified. Establish your new faculty password.'
+            : 'Enter your recovery code and establish your new faculty password.'}
         </p>
       </div>
 
@@ -125,17 +124,46 @@ function TeacherRecoveryInner() {
         <form onSubmit={handleRequestToken} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-              Faculty Email Address *
+              Faculty Email Address or Phone Number *
             </label>
             <input
-              type="email"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               disabled={loading}
-              placeholder="teacher@institution.edu"
               className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              Recovery Channel *
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedChannel('email')}
+                className={`py-2 px-3 rounded border text-xs font-medium cursor-pointer transition-colors ${
+                  selectedChannel === 'email'
+                    ? 'border-primary bg-primary/10 text-primary font-semibold'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                Email Address
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedChannel('sms')}
+                className={`py-2 px-3 rounded border text-xs font-medium cursor-pointer transition-colors ${
+                  selectedChannel === 'sms'
+                    ? 'border-primary bg-primary/10 text-primary font-semibold'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                SMS Notification
+              </button>
+            </div>
           </div>
 
           <button
@@ -143,14 +171,14 @@ function TeacherRecoveryInner() {
             disabled={loading}
             className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center"
           >
-            {loading ? 'Sending Recovery Link...' : 'Request Password Reset Link →'}
+            {loading ? 'Dispatching Recovery Code...' : 'Request Recovery Code →'}
           </button>
         </form>
       ) : (
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-              Recovery Token *
+              Recovery Code or Token *
             </label>
             <input
               type="text"
@@ -158,7 +186,6 @@ function TeacherRecoveryInner() {
               value={recoveryToken}
               onChange={(e) => setRecoveryToken(e.target.value)}
               disabled={loading}
-              placeholder="Paste recovery token or security reference"
               className="w-full text-center px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm font-mono text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
             />
           </div>
@@ -167,30 +194,46 @@ function TeacherRecoveryInner() {
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
               New Password *
             </label>
-            <input
-              type="password"
-              required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              disabled={loading}
-              placeholder="Minimum 6 characters"
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={loading}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer select-none"
+              >
+                {showNewPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
               Confirm New Password *
             </label>
-            <input
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-              placeholder="Repeat new password"
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer select-none"
+              >
+                {showConfirmPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
           <button
@@ -210,7 +253,7 @@ function TeacherRecoveryInner() {
             disabled={loading}
             className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
           >
-            Request a new reset link
+            Request a new recovery code
           </button>
         </form>
       )}

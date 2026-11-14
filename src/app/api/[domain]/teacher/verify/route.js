@@ -2,9 +2,34 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { hashPassword } from 'src/lib/middleware/teacher.js';
+import {
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  extractClientIp,
+} from 'src/lib/security/shield.js';
 
 export async function POST(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`teacher_verify_req:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 30,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many verification attempts. Please wait.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -26,8 +51,8 @@ export async function POST(request, context) {
     const cleanToken = String(token).trim();
 
     const teacherRes = await queryDb(
-      `SELECT wt.id, wt.website_id, wt.name, wt.email, wt.number, wt.emergency_contact,
-              wt.gender, wt.blood_group, wt.date_of_birth, wt.religion, wt.address,
+      `SELECT wt.id, wt.website_id, wt.name, wt.email, wt.number, COALESCE(wt.phone, wt.number) AS phone,
+              wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion, wt.address,
               wt.permanent_address, wt.joining_date, wt.photo_url, wt.is_registered, wt.is_active,
               wt.verification_token, wt.verification_token_expires,
               wd.title AS designation_title
@@ -65,7 +90,8 @@ export async function POST(request, context) {
       id: teacher.id,
       name: teacher.name,
       email: teacher.email,
-      number: teacher.number,
+      number: teacher.phone || teacher.number,
+      phone: teacher.phone || teacher.number,
       emergencyContact: teacher.emergency_contact,
       designation: teacher.designation_title || 'Faculty Member',
       gender: teacher.gender,
@@ -84,7 +110,6 @@ export async function POST(request, context) {
       paylod: { teacher: teacherPayload },
     });
   } catch (error) {
-    console.error('Error validating teacher verification token:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error while validating token.' },
       { status: 500 }
@@ -94,6 +119,26 @@ export async function POST(request, context) {
 
 export async function PUT(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`teacher_verify_put:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 15,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -103,15 +148,7 @@ export async function PUT(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const {
-      token,
-      password,
-      address,
-      permanent_address,
-      emergency_contact,
-      blood_group,
-      religion,
-    } = body;
+    const { token, address, password } = body;
 
     if (!token) {
       return NextResponse.json(
@@ -148,58 +185,43 @@ export async function PUT(request, context) {
 
     if (teacher.is_registered) {
       return NextResponse.json(
-        { success: false, error: 'This teacher account has already been verified and configured.' },
+        { success: false, error: 'This teacher account has already been configured.' },
         { status: 400 }
       );
     }
 
     if (teacher.verification_token_expires && new Date(teacher.verification_token_expires) < new Date()) {
       return NextResponse.json(
-        { success: false, error: 'Verification link has expired. Please contact administration.' },
+        { success: false, error: 'Verification token has expired.' },
         { status: 410 }
       );
     }
 
-    const hashedPassword = await hashPassword(String(password).trim());
+    const hashedPassword = await hashPassword(password);
     const cleanAddress = address ? String(address).trim() : null;
-    const cleanPermanentAddress = permanent_address ? String(permanent_address).trim() : null;
-    const cleanEmergencyContact = emergency_contact ? String(emergency_contact).trim() : null;
-    const cleanBloodGroup = blood_group ? String(blood_group).trim() : null;
-    const cleanReligion = religion ? String(religion).trim() : null;
 
     await queryDb(
       `UPDATE website_teachers
        SET password = $1,
            address = COALESCE($2, address),
-           permanent_address = COALESCE($3, permanent_address),
-           emergency_contact = COALESCE($4, emergency_contact),
-           blood_group = COALESCE($5, blood_group),
-           religion = COALESCE($6, religion),
            is_registered = TRUE,
            is_active = TRUE,
            verification_token = NULL,
            verification_token_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7`,
-      [
-        hashedPassword,
-        cleanAddress,
-        cleanPermanentAddress,
-        cleanEmergencyContact,
-        cleanBloodGroup,
-        cleanReligion,
-        teacher.id,
-      ]
+       WHERE id = $3`,
+      [hashedPassword, cleanAddress, teacher.id]
     );
 
     return NextResponse.json({
       success: true,
-      message: 'Faculty account setup completed successfully! You may now login.',
+      message: 'Teacher account setup completed successfully. You may now log in.',
     });
   } catch (error) {
-    console.error('Error completing teacher verification setup:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error while finalizing teacher account.' },
+      { success: false, error: 'Internal server error while completing account setup.' },
       { status: 500 }
     );
   }

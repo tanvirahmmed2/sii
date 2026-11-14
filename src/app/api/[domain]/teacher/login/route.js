@@ -1,17 +1,37 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import {
-  comparePassword,
-  generateToken,
+  authenticateTeacher,
   setTeacherSessionCookie,
-  createTeacherSession,
 } from 'src/lib/middleware/teacher.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import {
+  inspectMalwareAndAttacks,
+  checkRateLimit,
+  extractClientIp,
+} from 'src/lib/security/shield.js';
 
 export async function POST(request, context) {
   try {
+    const attackCheck = inspectMalwareAndAttacks(request);
+    if (attackCheck.blocked) {
+      return NextResponse.json(
+        { success: false, error: 'Suspicious request payload detected.' },
+        { status: 403 }
+      );
+    }
+
+    const clientIp = extractClientIp(request);
+    const rateCheck = checkRateLimit(`teacher_login_api:${clientIp}`, {
+      windowMs: 60 * 1000,
+      max: 15,
+    });
+    if (rateCheck.limited) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please wait a moment.' },
+        { status: 429 }
+      );
+    }
+
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
       return NextResponse.json(
@@ -21,159 +41,77 @@ export async function POST(request, context) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { email, password } = body;
+    const identifier = body.identifier || body.email || body.phone || body.number;
+    const password = body.password;
+    const channel = body.channel || 'email';
+    const twoFactorCode = body.code || body.twoFactorCode;
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
-        { success: false, error: 'Teacher email and password are required.' },
+        { success: false, error: 'Teacher email or phone number and password are required.' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = String(email).trim().toLowerCase();
-
-    const teacherRes = await queryDb(
-      `SELECT wt.id, wt.website_id, wt.designation_id, wt.name, wt.email, wt.number,
-              wt.emergency_contact, wt.gender, wt.blood_group, wt.date_of_birth, wt.religion,
-              wt.address, wt.permanent_address, wt.joining_date, wt.salary, wt.photo_url,
-              wt.password, wt.is_active, wt.is_registered, wt.is_two_factor_enabled,
-              wd.title AS designation_title
-       FROM website_teachers wt
-       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
-       WHERE wt.website_id = $1 AND LOWER(wt.email) = $2
-       LIMIT 1`,
-      [website.id, cleanEmail]
-    );
-
-    if (teacherRes.rows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 }
-      );
-    }
-
-    const teacher = teacherRes.rows[0];
-
-    if (!teacher.is_active) {
-      return NextResponse.json(
-        { success: false, error: 'Your teacher account is deactivated. Please contact campus administration.' },
-        { status: 403 }
-      );
-    }
-
-    if (!teacher.is_registered) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Your account is pending verification. Please check your email for the invitation link to set your password.',
-          pendingVerification: true,
-        },
-        { status: 403 }
-      );
-    }
-
-    const isMatch = await comparePassword(password, teacher.password);
-    if (!isMatch) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password.' },
-        { status: 401 }
-      );
-    }
-
-    if (teacher.is_two_factor_enabled) {
-      const otpCode = crypto.randomInt(100000, 1000000).toString();
-
-      await queryDb(
-        `UPDATE website_teachers
-         SET two_factor_code = $1, two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes'
-         WHERE id = $2`,
-        [otpCode, teacher.id]
-      );
-
-      try {
-        const html = buildStyledEmail({
-          title: 'Teacher Security Verification',
-          subtitle: `${website.name} — Teacher Operations Portal`,
-          recipientName: teacher.name,
-          bodyParagraphs: [
-            'A login request to your teacher dashboard was detected.',
-            'Please use the 6-digit security code below to complete your authentication. This code expires in 10 minutes.',
-            'If you did not initiate this login attempt, please notify your administrator.',
-          ],
-          code: otpCode,
-          codeLabel: 'Two-Factor Authentication Code',
-        });
-
-        await sendEmail({
-          to: teacher.email,
-          toName: teacher.name,
-          subject: `${website.name} - Teacher Portal Login Verification Code`,
-          html,
-          websiteId: website.id,
-        });
-      } catch (mailErr) {
-        console.warn('Failed to dispatch 2FA email to teacher:', mailErr.message);
-      }
-
-      return NextResponse.json({
-        success: true,
-        requires2FA: true,
-        message: 'Security verification code has been dispatched to your email.',
-      });
-    }
-
-    const token = generateToken({
-      id: teacher.id,
-      email: teacher.email,
+    const authResult = await authenticateTeacher({
+      identifier,
+      password,
       websiteId: website.id,
-      name: teacher.name,
-      role: 'teacher',
-    });
-
-    await createTeacherSession({
-      websiteId: website.id,
-      teacherId: teacher.id,
-      token,
+      channel,
+      twoFactorCode,
       request,
+      website,
     });
-
-    const teacherPayload = {
-      id: teacher.id,
-      websiteId: teacher.website_id,
-      name: teacher.name,
-      email: teacher.email,
-      number: teacher.number,
-      address: teacher.address,
-      designation: teacher.designation_title || 'Teacher',
-      designationId: teacher.designation_id,
-      photoUrl: teacher.photo_url,
-      isActive: Boolean(teacher.is_active),
-      isRegistered: Boolean(teacher.is_registered),
-    };
 
     const response = NextResponse.json({
       success: true,
-      message: 'Logged in successfully.',
-      token,
-      teacher: teacherPayload,
-      payload: { teacher: teacherPayload },
-      paylod: { teacher: teacherPayload },
+      message: 'Logged into teacher portal successfully.',
+      teacher: authResult.teacher,
+      token: authResult.token,
     });
 
-    await setTeacherSessionCookie(response, token);
-
-    const tenantSlug = website.subdomain || website.slug || '';
-    if (tenantSlug) {
-      response.cookies.set('x-website-domain', tenantSlug, { path: '/', maxAge: 7 * 86400 });
-      response.cookies.set('x-domain', tenantSlug, { path: '/', maxAge: 7 * 86400 });
-    }
+    await setTeacherSessionCookie(response, authResult.token);
 
     return response;
   } catch (error) {
-    console.error('Error during teacher login:', error);
+    if (error.status === 429 && error.locked) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          locked: true,
+          remainingMinutes: error.remainingMinutes,
+          remainingSeconds: error.remainingSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    if (error.requires2FA || error.twoFactorRequired) {
+      return NextResponse.json(
+        {
+          success: true,
+          requires2FA: true,
+          twoFactorRequired: true,
+          channel: error.channel || 'email',
+          email: error.email,
+          phone: error.phone,
+          hasPhone: Boolean(error.hasPhone),
+          hasEmail: Boolean(error.hasEmail),
+          message: error.message,
+        },
+        { status: 200 }
+      );
+    }
+
     return NextResponse.json(
-      { success: false, error: 'Internal Server Error during teacher login.' },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || 'Authentication failed. Please verify your credentials.',
+        deactivated: Boolean(error.deactivated),
+        pendingVerification: Boolean(error.pendingVerification),
+      },
+      { status: error.status || 401 }
     );
   }
 }

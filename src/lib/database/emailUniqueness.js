@@ -180,7 +180,7 @@ export async function checkInstitutionPhoneAvailability(websiteId, phone, option
   if (excludeRole !== 'staff') {
     const res = await queryDb(
       `SELECT id, name FROM website_staffs
-       WHERE website_id = $1 AND TRIM(number) = $2 LIMIT 1`,
+       WHERE website_id = $1 AND (TRIM(number) = $2 OR TRIM(COALESCE(phone, '')) = $2) LIMIT 1`,
       [wId, cleanPhone]
     );
     if (res.rows.length > 0) {
@@ -193,7 +193,7 @@ export async function checkInstitutionPhoneAvailability(websiteId, phone, option
   } else if (exId) {
     const res = await queryDb(
       `SELECT id FROM website_staffs
-       WHERE website_id = $1 AND TRIM(number) = $2 AND id != $3 LIMIT 1`,
+       WHERE website_id = $1 AND (TRIM(number) = $2 OR TRIM(COALESCE(phone, '')) = $2) AND id != $3 LIMIT 1`,
       [wId, cleanPhone, exId]
     );
     if (res.rows.length > 0) {
@@ -208,7 +208,7 @@ export async function checkInstitutionPhoneAvailability(websiteId, phone, option
   if (excludeRole !== 'teacher') {
     const res = await queryDb(
       `SELECT id, name FROM website_teachers
-       WHERE website_id = $1 AND TRIM(number) = $2 LIMIT 1`,
+       WHERE website_id = $1 AND (TRIM(number) = $2 OR TRIM(COALESCE(phone, '')) = $2) LIMIT 1`,
       [wId, cleanPhone]
     );
     if (res.rows.length > 0) {
@@ -221,7 +221,7 @@ export async function checkInstitutionPhoneAvailability(websiteId, phone, option
   } else if (exId) {
     const res = await queryDb(
       `SELECT id FROM website_teachers
-       WHERE website_id = $1 AND TRIM(number) = $2 AND id != $3 LIMIT 1`,
+       WHERE website_id = $1 AND (TRIM(number) = $2 OR TRIM(COALESCE(phone, '')) = $2) AND id != $3 LIMIT 1`,
       [wId, cleanPhone, exId]
     );
     if (res.rows.length > 0) {
@@ -229,6 +229,34 @@ export async function checkInstitutionPhoneAvailability(websiteId, phone, option
         available: false,
         role: 'teacher',
         message: 'This phone number is already registered to another teacher in this institution.'
+      };
+    }
+  }
+
+  if (excludeRole !== 'student') {
+    const res = await queryDb(
+      `SELECT id, registration_no FROM website_students
+       WHERE website_id = $1 AND (TRIM(COALESCE(phone, '')) = $2 OR TRIM(COALESCE(number, '')) = $2) LIMIT 1`,
+      [wId, cleanPhone]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'student',
+        message: 'This phone number is already registered to a student in this institution.'
+      };
+    }
+  } else if (exId) {
+    const res = await queryDb(
+      `SELECT id FROM website_students
+       WHERE website_id = $1 AND (TRIM(COALESCE(phone, '')) = $2 OR TRIM(COALESCE(number, '')) = $2) AND id != $3 LIMIT 1`,
+      [wId, cleanPhone, exId]
+    );
+    if (res.rows.length > 0) {
+      return {
+        available: false,
+        role: 'student',
+        message: 'This phone number is already registered to another student in this institution.'
       };
     }
   }

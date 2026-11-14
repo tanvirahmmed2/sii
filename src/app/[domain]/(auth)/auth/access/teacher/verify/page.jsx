@@ -12,31 +12,32 @@ function TeacherVerifyInner() {
   const token = searchParams.get('token');
   const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
 
-  const [status, setStatus] = useState('loading');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [status, setStatus] = useState(() => (token ? 'loading' : 'invalid'));
+  const [errorMessage, setErrorMessage] = useState(() => (token ? '' : 'No verification token found in URL. Please click the link sent to your email.'));
   const [teacher, setTeacher] = useState(null);
 
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setStatus('invalid');
-      setErrorMessage('No verification token found in URL. Please click the link sent to your email.');
-      return;
-    }
+    if (!token) return;
 
+    let isMounted = true;
     const validateToken = async () => {
       try {
         const endpoint = getApiEndpoint('teacher/verify');
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
+          body: JSON.stringify({ token }),
         });
         const data = await response.json();
+
+        if (!isMounted) return;
 
         if (response.status === 410) {
           setStatus('expired');
@@ -61,12 +62,17 @@ function TeacherVerifyInner() {
         if (t.address) setAddress(t.address);
         setStatus('valid');
       } catch {
-        setStatus('invalid');
-        setErrorMessage('An unexpected error occurred while validating the invitation.');
+        if (isMounted) {
+          setStatus('invalid');
+          setErrorMessage('An unexpected error occurred while validating the invitation.');
+        }
       }
     };
 
     validateToken();
+    return () => {
+      isMounted = false;
+    };
   }, [token, getApiEndpoint]);
 
   const handleCompleteSetup = async (e) => {
@@ -90,8 +96,8 @@ function TeacherVerifyInner() {
         body: JSON.stringify({
           token,
           address: address.trim(),
-          password
-        })
+          password,
+        }),
       });
 
       const data = await response.json();
@@ -186,7 +192,7 @@ function TeacherVerifyInner() {
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase block">Contact</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">{teacher?.number || 'N/A'}</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{teacher?.phone || teacher?.number || 'N/A'}</span>
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase block">Designation</span>
@@ -213,30 +219,46 @@ function TeacherVerifyInner() {
           <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
             Create Password *
           </label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={submitting}
-            placeholder="Minimum 6 characters"
-            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={submitting}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer select-none"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
         </div>
 
         <div>
           <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
             Confirm Password *
           </label>
-          <input
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={submitting}
-            placeholder="Repeat password"
-            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary"
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={submitting}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-slate-900 dark:text-white outline-none focus:border-primary pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer select-none"
+            >
+              {showConfirmPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
         </div>
 
         <button
@@ -257,9 +279,10 @@ export default function TeacherVerifyPage() {
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-6 sm:p-8 shadow-xs space-y-6">
-        
         <div className="text-center space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-5">
-          
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 inline-block">
+            {website?.name || 'Faculty Onboarding'}
+          </span>
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
             Teacher Profile Verification
           </h1>
@@ -284,7 +307,6 @@ export default function TeacherVerifyPage() {
             Go to Teacher Login
           </Link>
         </div>
-
       </div>
     </div>
   );

@@ -966,6 +966,10 @@ CREATE TABLE IF NOT EXISTS website_teachers (
     is_active BOOLEAN DEFAULT FALSE,
     is_registered BOOLEAN DEFAULT FALSE,
     is_two_factor_enabled BOOLEAN DEFAULT FALSE,
+    phone VARCHAR(50),
+    failed_login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
     verification_token VARCHAR(255),
     verification_token_expires TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -982,6 +986,31 @@ BEGIN
     ) THEN
         ALTER TABLE website_teachers ADD CONSTRAINT uq_website_teachers_web_number UNIQUE (website_id, number);
     END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_teachers' AND column_name = 'phone'
+    ) THEN
+        ALTER TABLE website_teachers ADD COLUMN phone VARCHAR(50);
+        UPDATE website_teachers SET phone = number WHERE phone IS NULL AND number IS NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_teachers' AND column_name = 'failed_login_attempts'
+    ) THEN
+        ALTER TABLE website_teachers ADD COLUMN failed_login_attempts INT DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_teachers' AND column_name = 'locked_until'
+    ) THEN
+        ALTER TABLE website_teachers ADD COLUMN locked_until TIMESTAMPTZ;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_teachers' AND column_name = 'last_login_at'
+    ) THEN
+        ALTER TABLE website_teachers ADD COLUMN last_login_at TIMESTAMPTZ;
+    END IF;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_website_teachers_dept ON website_teachers(department_id);
@@ -991,6 +1020,24 @@ DROP TRIGGER IF EXISTS update_website_teachers_updated_at ON website_teachers;
 CREATE TRIGGER update_website_teachers_updated_at
     BEFORE UPDATE ON website_teachers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 30b. WEBSITE TEACHER LOGIN ACTIVITIES TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_teacher_login_activities (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    status VARCHAR(50) NOT NULL,
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_teacher_login_activities_teacher ON website_teacher_login_activities(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_login_activities_web ON website_teacher_login_activities(website_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_login_activities_created ON website_teacher_login_activities(created_at);
 
 -- ----------------------------------------------------------------------------
 -- 31. WEBSITE TEACHER LOGIN SESSIONS
@@ -1313,12 +1360,68 @@ CREATE TABLE IF NOT EXISTS website_students (
     verified_at TIMESTAMPTZ,
     verified_by_staff_id BIGINT REFERENCES website_staffs(id) ON DELETE SET NULL,
     last_login TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
+    failed_login_attempts INT DEFAULT 0,
+    locked_until TIMESTAMPTZ,
     admission_applicant_id BIGINT REFERENCES website_admission_applicants(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(website_id, registration_no),
     UNIQUE(website_id, student_unique_id)
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_students' AND column_name = 'failed_login_attempts'
+    ) THEN
+        ALTER TABLE website_students ADD COLUMN failed_login_attempts INT DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_students' AND column_name = 'locked_until'
+    ) THEN
+        ALTER TABLE website_students ADD COLUMN locked_until TIMESTAMPTZ;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_students' AND column_name = 'last_login_at'
+    ) THEN
+        ALTER TABLE website_students ADD COLUMN last_login_at TIMESTAMPTZ;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_students' AND column_name = 'phone'
+    ) THEN
+        ALTER TABLE website_students ADD COLUMN phone VARCHAR(50);
+        UPDATE website_students SET phone = number WHERE phone IS NULL AND number IS NOT NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_name = 'website_students' AND column_name = 'number'
+    ) THEN
+        ALTER TABLE website_students ADD COLUMN number VARCHAR(50);
+        UPDATE website_students SET number = phone WHERE number IS NULL AND phone IS NOT NULL;
+    END IF;
+END $$;
+
+-- ----------------------------------------------------------------------------
+-- 38a1. WEBSITE STUDENT LOGIN ACTIVITIES TABLE
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_student_login_activities (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    status VARCHAR(50) NOT NULL,
+    failure_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_student_login_activities_student ON website_student_login_activities(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_login_activities_web ON website_student_login_activities(website_id);
+CREATE INDEX IF NOT EXISTS idx_student_login_activities_created ON website_student_login_activities(created_at);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_website_students_unique_lower_email ON website_students(website_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_website_students_unique_lower_reg_no ON website_students(website_id, LOWER(TRIM(registration_no)));

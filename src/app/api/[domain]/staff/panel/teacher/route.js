@@ -351,14 +351,16 @@ export async function POST(request, context) {
 
     const insertRes = await queryDb(
       `INSERT INTO website_teachers (
-         website_id, department_id, designation_id, name, email, number, emergency_contact,
+         website_id, department_id, designation_id, name, email, number, phone, emergency_contact,
          gender, blood_group, date_of_birth, religion, address, permanent_address,
          joining_date, salary, photo_url, photo_id, password, is_active, is_registered,
+         failed_login_attempts, locked_until,
          verification_token, verification_token_expires
        ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7,
+         $1, $2, $3, $4, $5, $6, $6, $7,
          $8, $9, $10, $11, $12, $13,
          COALESCE($14::date, CURRENT_DATE), $15, $16, $17, $18, FALSE, FALSE,
+         0, NULL,
          $19, CURRENT_TIMESTAMP + INTERVAL '7 days'
        ) RETURNING *`,
       [
@@ -662,6 +664,7 @@ export async function PUT(request, context) {
        SET name = COALESCE($1, name),
            email = COALESCE($2, email),
            number = COALESCE($3, number),
+           phone = COALESCE($3, phone),
            emergency_contact = $4,
            gender = COALESCE($5, gender),
            blood_group = $6,
