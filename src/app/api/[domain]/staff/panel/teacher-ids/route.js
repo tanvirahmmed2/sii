@@ -29,18 +29,18 @@ export async function GET(request, context) {
              tid.card_status, tid.issued_by_staff_id, tid.custom_data,
              tid.created_at, tid.updated_at,
              t.name AS teacher_name,
-             COALESCE(t.code, CONCAT('FAC-', t.id)) AS employee_id,
+             CONCAT('FAC-', t.id) AS employee_id,
              COALESCE(t.phone, t.number) AS phone,
              t.email, t.blood_group,
-             COALESCE(t.image, t.photo_url) AS teacher_photo_url,
+             t.photo_url AS teacher_photo_url,
              dept.name AS department_name,
-             desig.name AS designation_name,
+             desig.title AS designation_name,
              st.name AS issued_by_staff_name,
              tpl.name AS template_name
       FROM website_teacher_ids tid
       JOIN website_teachers t ON tid.teacher_id = t.id
       LEFT JOIN website_departments dept ON tid.department_id = dept.id OR (tid.department_id IS NULL AND t.department_id = dept.id)
-      LEFT JOIN website_designations desig ON tid.designation_id = desig.id OR (tid.designation_id IS NULL AND t.designation_id = desig.id)
+      LEFT JOIN website_teacher_designation desig ON tid.designation_id = desig.id OR (tid.designation_id IS NULL AND t.designation_id = desig.id)
       LEFT JOIN website_staffs st ON tid.issued_by_staff_id = st.id
       LEFT JOIN website_teacher_id_templates tpl ON tid.template_id = tpl.id
     `;
@@ -78,7 +78,6 @@ export async function GET(request, context) {
     if (search) {
       conditions.push(`(
         t.name ILIKE $${pIdx} OR
-        t.code ILIKE $${pIdx} OR
         t.email ILIKE $${pIdx} OR
         tid.card_number ILIKE $${pIdx}
       )`);
@@ -156,7 +155,7 @@ export async function POST(request, context) {
     }
 
     const teachersRes = await queryDb(
-      `SELECT t.id, t.code, t.name, t.department_id, t.designation_id
+      `SELECT t.id, t.name, t.department_id, t.designation_id
        FROM website_teachers t
        WHERE t.website_id = $1 AND t.id = ANY($2::bigint[])`,
       [website.id, targetTeacherIds]
@@ -175,8 +174,8 @@ export async function POST(request, context) {
     const issuedCards = [];
 
     for (const t of teachersRes.rows) {
-      const cardNumber = `FAC-${t.code || t.id}`;
-      const barcodeData = t.code || cardNumber;
+      const cardNumber = `FAC-${t.id}`;
+      const barcodeData = cardNumber;
 
       const insertRes = await queryDb(
         `INSERT INTO website_teacher_ids (

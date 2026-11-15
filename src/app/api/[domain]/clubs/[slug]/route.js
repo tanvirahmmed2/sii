@@ -35,7 +35,7 @@ export async function GET(request, context) {
               COALESCE((SELECT COUNT(*) FROM website_student_club_members scm WHERE scm.club_id = c.id AND scm.status = 'active'), 0)::int AS member_count
        FROM website_clubs c
        LEFT JOIN website_teachers t ON t.id = c.moderator_teacher_id
-       LEFT JOIN website_designations des ON des.id = t.designation_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
        WHERE c.website_id = $1 AND (c.id::text = $2 OR LOWER(c.name) = LOWER($2) OR LOWER(REPLACE(c.name, ' ', '-')) = LOWER($2))
        LIMIT 1`,
       [website.id, slug]

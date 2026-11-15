@@ -54,6 +54,8 @@ function TeacherAssignContent() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState(null);
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
 
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
@@ -153,10 +155,28 @@ function TeacherAssignContent() {
   }, [domain, showToast]);
 
   useEffect(() => {
-    if (selectedTeacherId) {
-      fetchTeacherAssignments(selectedTeacherId);
+    let active = true;
+    if (selectedTeacherId && domain) {
+      fetch(`/api/${domain}/staff/panel/teacher/assign?teacher_id=${selectedTeacherId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!active) return;
+          if (data.success) {
+            setAssignedSubjects(data.subjects || []);
+            setAssignedPeriods(data.periods || []);
+          }
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.error(err);
+          setLoading(false);
+        });
     }
-  }, [selectedTeacherId, fetchTeacherAssignments]);
+    return () => {
+      active = false;
+    };
+  }, [domain, selectedTeacherId]);
 
   const handleAssignSubject = async (e) => {
     e.preventDefault();
@@ -233,16 +253,19 @@ function TeacherAssignContent() {
     }
   };
 
-  const handleRemoveAssignment = async (type, id) => {
-    if (!confirm(`Are you sure you want to remove this ${type} assignment?`)) return;
+  const handleRemoveAssignment = async () => {
+    if (!assignmentToDelete) return;
+    const { type, id } = assignmentToDelete;
     try {
+      setDeletingAssignment(true);
       const res = await fetch(`/api/${domain}/staff/panel/teacher/assign?type=${type}&id=${id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
 
       if (data.success) {
-        showToast(`Assignment removed successfully.`);
+        showToast('Assignment removed successfully.');
+        setAssignmentToDelete(null);
         fetchTeacherAssignments(selectedTeacherId);
       } else {
         showToast(data.error || 'Failed to remove assignment.', true);
@@ -250,6 +273,8 @@ function TeacherAssignContent() {
     } catch (err) {
       console.error(err);
       showToast('Error connecting to server.', true);
+    } finally {
+      setDeletingAssignment(false);
     }
   };
 
@@ -452,8 +477,8 @@ function TeacherAssignContent() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         <button
-                          onClick={() => handleRemoveAssignment('subject', row.id)}
-                          className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                          onClick={() => setAssignmentToDelete({ type: 'subject', id: row.id, label: row.subject_name })}
+                          className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
                           title="Remove assignment"
                         >
                           <FiTrash2 className="w-3.5 h-3.5" />
@@ -521,8 +546,8 @@ function TeacherAssignContent() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         <button
-                          onClick={() => handleRemoveAssignment('period', row.id)}
-                          className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                          onClick={() => setAssignmentToDelete({ type: 'period', id: row.id, label: row.period_name })}
+                          className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
                           title="Remove period routine"
                         >
                           <FiTrash2 className="w-3.5 h-3.5" />
@@ -725,6 +750,34 @@ function TeacherAssignContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {assignmentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Remove Assignment</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Are you sure you want to remove this {assignmentToDelete.type} assignment ({assignmentToDelete.label}) from the selected teacher?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAssignmentToDelete(null)}
+                className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAssignment}
+                onClick={handleRemoveAssignment}
+                className="px-3 py-1.5 rounded text-xs bg-rose-600 hover:bg-rose-500 text-white font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {deletingAssignment ? 'Removing...' : 'Delete Assignment'}
+              </button>
+            </div>
           </div>
         </div>
       )}

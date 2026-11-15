@@ -1,5 +1,6 @@
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from './websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission } from './staff.js';
+import { getCreatorSession } from './creator.js';
 
 export async function verifyTeacherStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -7,14 +8,26 @@ export async function verifyTeacherStaffAccess(request, context, action = 'view'
     return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
   }
 
+  const creatorSession = await getCreatorSession(request);
+  if (creatorSession && (String(creatorSession.id) === String(website.creator_id) || creatorSession.isDeveloper)) {
+    return {
+      website,
+      isCreator: true,
+      allowed: true,
+    };
+  }
+
   const hasAllowance =
     (await hasTenantModuleAllowance(website, 'routine')) ||
     (await hasTenantModuleAllowance(website, 'sis')) ||
-    (await hasTenantModuleAllowance(website, 'staff-payroll'));
+    (await hasTenantModuleAllowance(website, 'staff-payroll')) ||
+    (await hasTenantModuleAllowance(website, 'teachers')) ||
+    (await hasTenantModuleAllowance(website, 'teacher-management')) ||
+    (await hasTenantModuleAllowance(website, 'all'));
 
   if (!hasAllowance) {
     return {
-      error: "The required module ('routine', 'sis', or 'staff-payroll') is not included in this institution's subscription plan.",
+      error: "The required module is not included in this institution's subscription plan.",
       status: 403,
       code: 'MODULE_NOT_SUBSCRIBED',
       website,
@@ -39,7 +52,10 @@ export async function verifyTeacherStaffAccess(request, context, action = 'view'
   const hasStaffPerm =
     hasStaffModulePermission(staffSession, 'routine', action) ||
     hasStaffModulePermission(staffSession, 'staff-payroll', action) ||
-    hasStaffModulePermission(staffSession, 'sis', action);
+    hasStaffModulePermission(staffSession, 'sis', action) ||
+    hasStaffModulePermission(staffSession, 'teachers', action) ||
+    hasStaffModulePermission(staffSession, 'teacher-management', action) ||
+    hasStaffModulePermission(staffSession, 'all', action);
 
   if (!hasStaffPerm) {
     return {

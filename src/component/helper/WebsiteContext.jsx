@@ -299,10 +299,6 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
     (path = '') => {
       const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-      if (cleanPath === '/staff-panel' || cleanPath.startsWith('/staff-panel/')) {
-        return cleanPath;
-      }
-
       if (typeof window !== 'undefined') {
         const host = window.location.host.toLowerCase().split(':')[0];
 
@@ -314,11 +310,10 @@ export function TenantWebsiteProvider({ children, initialWebsite = null, slug: p
           return cleanPath;
         }
 
-        const isExplicitPathMode =
-          (host === 'localhost' || host === '127.0.0.1') &&
-          window.location.pathname.startsWith(`/${activeSlug}/`);
-
-        if (isExplicitPathMode && activeSlug) {
+        if ((host === 'localhost' || host === '127.0.0.1') && activeSlug) {
+          if (cleanPath.startsWith(`/${activeSlug}/`) || cleanPath === `/${activeSlug}`) {
+            return cleanPath;
+          }
           if (cleanPath === '/') return `/${activeSlug}`;
           return `/${activeSlug}${cleanPath}`;
         }

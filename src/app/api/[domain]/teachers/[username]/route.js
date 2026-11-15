@@ -40,7 +40,7 @@ export async function GET(request, context) {
               COALESCE(split_part(t.email, '@', 1), t.id::text) AS username
        FROM website_teachers t
        LEFT JOIN website_departments dept ON dept.id = t.department_id AND dept.website_id = t.website_id
-       LEFT JOIN website_designations des ON des.id = t.designation_id AND des.website_id = t.website_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id AND des.website_id = t.website_id
        WHERE t.website_id = $1
          AND (t.id::text = $2 OR LOWER(split_part(t.email, '@', 1)) = LOWER($2) OR LOWER(t.email) = LOWER($2))
        LIMIT 1`,

@@ -121,22 +121,40 @@ export function proxy(request) {
       request.cookies.get('x-website-domain')?.value ||
       request.cookies.get('x-domain')?.value;
 
+    let candidateTenant =
+      activeTenantCookie ||
+      request.cookies.get('website_slug')?.value;
+
+    if (!candidateTenant) {
+      const referer = request.headers.get('referer');
+      if (referer) {
+        try {
+          const refUrl = new URL(referer);
+          const first = refUrl.pathname.split('/').filter(Boolean)[0]?.toLowerCase();
+          if (first && !PLATFORM_RESERVED.has(first)) {
+            candidateTenant = first;
+          }
+        } catch {}
+      }
+    }
+
     if (
-      activeTenantCookie &&
+      candidateTenant &&
       (pathname === '/staff-panel' || pathname.startsWith('/staff-panel/') ||
        pathname === '/student' || pathname.startsWith('/student/') ||
        pathname === '/student-verify' || pathname.startsWith('/student-verify/') ||
        pathname === '/teacher' || pathname.startsWith('/teacher/') ||
        pathname === '/officer' || pathname.startsWith('/officer/') ||
-       pathname === '/officer-panel' || pathname.startsWith('/officer-panel/'))
+       pathname === '/officer-panel' || pathname.startsWith('/officer-panel/') ||
+       pathname === '/auth' || pathname.startsWith('/auth/'))
     ) {
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set('x-website-domain', activeTenantCookie);
-      requestHeaders.set('x-domain', activeTenantCookie);
+      requestHeaders.set('x-website-domain', candidateTenant);
+      requestHeaders.set('x-domain', candidateTenant);
       const targetPath = pathname.startsWith('/officer-panel')
         ? pathname.replace('/officer-panel', '/officer')
         : (pathname.startsWith('/student-verify') ? `/staff-panel/student-verify` : pathname);
-      url.pathname = `/${activeTenantCookie}${targetPath}`;
+      url.pathname = `/${candidateTenant}${targetPath}`;
       return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
     }
 

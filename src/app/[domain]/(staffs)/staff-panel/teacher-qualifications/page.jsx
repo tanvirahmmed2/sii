@@ -99,10 +99,27 @@ function TeacherQualificationsContent() {
   }, [domain, showToast]);
 
   useEffect(() => {
-    if (selectedTeacherId) {
-      fetchQualifications(selectedTeacherId);
+    let active = true;
+    if (domain && selectedTeacherId) {
+      fetch(`/api/${domain}/staff/panel/teacher/qualifications?teacher_id=${selectedTeacherId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!active) return;
+          if (data.success) {
+            setQualifications(data.qualifications || []);
+          }
+          setLoading(false);
+        })
+        .catch((err) => {
+          if (!active) return;
+          console.error(err);
+          setLoading(false);
+        });
     }
-  }, [selectedTeacherId, fetchQualifications]);
+    return () => {
+      active = false;
+    };
+  }, [domain, selectedTeacherId]);
 
   const handleOpenCreate = () => {
     if (!selectedTeacherId) {
@@ -399,10 +416,10 @@ function TeacherQualificationsContent() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. M.Sc in Computer Science, B.Ed, HSC"
+                  aria-label="Degree or Certificate"
                   value={formData.degree}
                   onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -413,10 +430,10 @@ function TeacherQualificationsContent() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. University of Dhaka"
+                  aria-label="Institute or University"
                   value={formData.institute}
                   onChange={(e) => setFormData({ ...formData, institute: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -427,10 +444,10 @@ function TeacherQualificationsContent() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Science"
+                    aria-label="Board or Department"
                     value={formData.board}
                     onChange={(e) => setFormData({ ...formData, board: e.target.value })}
-                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                   />
                 </div>
 
@@ -442,10 +459,10 @@ function TeacherQualificationsContent() {
                     type="number"
                     min="1950"
                     max="2035"
-                    placeholder="e.g. 2019"
+                    aria-label="Passing Year"
                     value={formData.passing_year}
                     onChange={(e) => setFormData({ ...formData, passing_year: e.target.value })}
-                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                   />
                 </div>
               </div>
@@ -456,10 +473,10 @@ function TeacherQualificationsContent() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. CGPA 3.82 or 1st Class"
+                  aria-label="Result or GPA"
                   value={formData.result}
                   onChange={(e) => setFormData({ ...formData, result: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 

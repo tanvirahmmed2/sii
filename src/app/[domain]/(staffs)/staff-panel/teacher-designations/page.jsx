@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import {
   FiAward,
   FiPlus,
@@ -19,7 +21,9 @@ import {
 
 export default function TeacherDesignationsPage() {
   const params = useParams();
-  const domain = params?.domain || '';
+  const { tenantUrl, slug } = useTenantWebsite();
+  const domain = params?.domain || slug || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
 
   const [designations, setDesignations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +59,9 @@ export default function TeacherDesignationsPage() {
   }, []);
 
   const fetchDesignations = useCallback(async () => {
-    if (!domain) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher/designations`);
+      const res = await fetch(`${apiBase}/staff/panel/teacher/designations`);
       const data = await res.json();
       if (data.success) {
         setDesignations(data.designations || []);
@@ -71,11 +74,28 @@ export default function TeacherDesignationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [domain, showToast]);
+  }, [apiBase, showToast]);
 
   useEffect(() => {
-    fetchDesignations();
-  }, [fetchDesignations]);
+    let active = true;
+    fetch(`${apiBase}/staff/panel/teacher/designations`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (data.success) {
+          setDesignations(data.designations || []);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error(err);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [apiBase]);
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -110,7 +130,7 @@ export default function TeacherDesignationsPage() {
 
     try {
       setSaving(true);
-      const url = `/api/${domain}/staff/panel/teacher/designations`;
+      const url = `${apiBase}/staff/panel/teacher/designations`;
       const method = modalMode === 'create' ? 'POST' : 'PUT';
       const payload = modalMode === 'create'
         ? formData
@@ -147,7 +167,7 @@ export default function TeacherDesignationsPage() {
     if (!itemToDelete) return;
     try {
       setDeleting(true);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher/designations?id=${itemToDelete.id}`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher/designations?id=${itemToDelete.id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -252,10 +272,10 @@ export default function TeacherDesignationsPage() {
               <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
               <input
                 type="text"
-                placeholder="Search designations by title or description..."
+                aria-label="Search designations by title or description"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
+                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
               />
             </div>
           </div>
@@ -398,10 +418,10 @@ export default function TeacherDesignationsPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Senior Lecturer, Assistant Professor, Head Teacher"
+                  aria-label="Designation Title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -411,10 +431,10 @@ export default function TeacherDesignationsPage() {
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Brief role responsibilities or qualifications description..."
+                  aria-label="Description / Responsibilities"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
                 />
               </div>
 
@@ -490,8 +510,8 @@ export default function TeacherDesignationsPage() {
             </div>
 
             {itemToDelete.teacher_count > 0 && (
-              <div className="p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs">
-                ⚠️ Notice: <strong>{itemToDelete.teacher_count}</strong> teacher(s) are currently assigned to this designation. Their designation will be set to unassigned upon deletion.
+              <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs">
+                Action blocked: <strong>{itemToDelete.teacher_count}</strong> teacher(s) are currently assigned to this mandatory designation. Please reassign them before deleting this designation.
               </div>
             )}
 
@@ -506,7 +526,7 @@ export default function TeacherDesignationsPage() {
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleting}
+                disabled={deleting || itemToDelete.teacher_count > 0}
                 className="px-4 py-1.5 rounded text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 transition"
               >
                 {deleting ? 'Deleting...' : 'Confirm Delete'}

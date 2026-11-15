@@ -2328,7 +2328,9 @@ export default function WebsiteManagePage() {
                             href={
                               website?.custom_domain && website.custom_domain_verified
                                 ? `https://${website.custom_domain}${mod.path || '/staff-panel'}`
-                                : `http://${cleanSub}.${baseDomain}${mod.path || '/staff-panel'}`
+                                : (baseDomain.includes('localhost') || baseDomain.includes('127.0.0.1')
+                                    ? `/${cleanSub}${mod.path || '/staff-panel'}`
+                                    : `http://${cleanSub}.${baseDomain}${mod.path || '/staff-panel'}`)
                             }
                             target="_blank"
                             rel="noopener noreferrer"

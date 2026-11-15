@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import { exportElementAsJpeg, exportElementAsPdf, exportMultipleCardsAsPdf } from 'src/lib/export/documentExporter';
@@ -25,6 +26,8 @@ export default function TeacherIdCardDownloadPage() {
   const [archiveStatus, setArchiveStatus] = useState('all');
 
   const [cardSideView, setCardSideView] = useState('both'); 
+  const [cardToDelete, setCardToDelete] = useState(null);
+  const [deletingCard, setDeletingCard] = useState(false);
   const cardFrontRefs = useRef({});
   const cardBackRefs = useRef({});
 
@@ -77,10 +80,32 @@ export default function TeacherIdCardDownloadPage() {
   }, [archiveSearch, archiveStatus, getApiEndpoint]);
 
   useEffect(() => {
+    let active = true;
     if (activeTab === 'archive') {
-      fetchIssuedArchive();
+      const params = new URLSearchParams();
+      if (archiveSearch.trim()) params.set('search', archiveSearch.trim());
+      if (archiveStatus !== 'all') params.set('status', archiveStatus);
+
+      fetch(getApiEndpoint(`staff/panel/teacher-ids?${params.toString()}`))
+        .then((res) => res.json())
+        .then((data) => {
+          if (!active) return;
+          if (data.success) {
+            setIssuedCards(data.payload?.id_cards || []);
+          } else {
+            toast.error(data.error || 'Failed to fetch issued faculty cards.');
+          }
+        })
+        .catch(() => {
+          if (active) {
+            toast.error('Network error loading faculty cards.');
+          }
+        });
     }
-  }, [activeTab, fetchIssuedArchive]);
+    return () => {
+      active = false;
+    };
+  }, [activeTab, archiveSearch, archiveStatus, getApiEndpoint]);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredTeachers.length) {
@@ -146,7 +171,7 @@ export default function TeacherIdCardDownloadPage() {
       '{{code}}': teacher.code || teacher.employee_id || `FAC-${teacher.id}`,
       '{{teacher_id}}': teacher.employee_id || teacher.code || `FAC-${teacher.id}`,
       '{{joining_date}}': teacher.joining_date ? new Date(teacher.joining_date).toLocaleDateString() : '—',
-      '{{card_number}}': `TCH-${teacher.id}-${Date.now().toString().slice(-4)}`,
+      '{{card_number}}': teacher.card_number || `FAC-${teacher.id}`,
       '{{valid_upto}}': '31 Dec 2028',
       '{{barcode}}': `*TCH${teacher.id}*`,
       '{{qr_code}}': website?.domain ? `https://${website.domain}/verify/TCH-${teacher.id}` : `https://alpha.edu/verify/TCH-${teacher.id}`,
@@ -259,7 +284,7 @@ export default function TeacherIdCardDownloadPage() {
     try {
       await exportMultipleCardsAsPdf(
         targetElements,
-        `Faculty_ID_Cards_${cardSideView}_Batch_${Date.now()}`,
+        `Faculty_ID_Cards_${cardSideView}_Batch`,
         {
           widthMm: activeTemplate?.dimension_width || 86,
           heightMm: activeTemplate?.dimension_height || 54,
@@ -273,21 +298,25 @@ export default function TeacherIdCardDownloadPage() {
     }
   };
 
-  const handleDeleteIssuedFacultyCard = async (cardId) => {
-    if (!window.confirm('Are you sure you want to delete this faculty ID card record?')) return;
+  const handleDeleteIssuedFacultyCard = async () => {
+    if (!cardToDelete) return;
     try {
-      const res = await fetch(getApiEndpoint(`staff/panel/teacher-ids?id=${cardId}`), {
+      setDeletingCard(true);
+      const res = await fetch(getApiEndpoint(`staff/panel/teacher-ids?id=${cardToDelete.id}`), {
         method: 'DELETE',
       });
       const data = await res.json();
       if (res.ok && data.success) {
         toast.success('Faculty card record deleted.');
-        setIssuedCards((prev) => prev.filter((c) => c.id !== cardId));
+        setIssuedCards((prev) => prev.filter((c) => c.id !== cardToDelete.id));
+        setCardToDelete(null);
       } else {
         toast.error(data.error || 'Failed to delete card.');
       }
     } catch {
       toast.error('Error deleting faculty card.');
+    } finally {
+      setDeletingCard(false);
     }
   };
 
@@ -336,12 +365,12 @@ export default function TeacherIdCardDownloadPage() {
             </button>
           </div>
 
-          <a
+          <Link
             href="/staff-panel/teacher-id-card-templates"
             className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
           >
             Change Template
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -367,7 +396,7 @@ export default function TeacherIdCardDownloadPage() {
               <div className="relative w-full sm:w-64">
                 <input
                   type="text"
-                  placeholder="Search by Card #, Teacher name..."
+                  aria-label="Search by Card #, Teacher name"
                   value={archiveSearch}
                   onChange={(e) => setArchiveSearch(e.target.value)}
                   className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
@@ -444,7 +473,7 @@ export default function TeacherIdCardDownloadPage() {
                         <td className="px-3.5 py-2.5 text-right">
                           <button
                             type="button"
-                            onClick={() => handleDeleteIssuedFacultyCard(card.id)}
+                            onClick={() => setCardToDelete(card)}
                             className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
                             title="Delete Card Record"
                           >
@@ -465,7 +494,7 @@ export default function TeacherIdCardDownloadPage() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Search faculty..."
+                aria-label="Search faculty"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white w-48 sm:w-64"
@@ -642,6 +671,34 @@ export default function TeacherIdCardDownloadPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {cardToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Delete Faculty ID Card</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Are you sure you want to delete the issued ID card record #{cardToDelete.card_number} for {cardToDelete.teacher_name}?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setCardToDelete(null)}
+                className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingCard}
+                onClick={handleDeleteIssuedFacultyCard}
+                className="px-3 py-1.5 rounded text-xs bg-rose-600 hover:bg-rose-500 text-white font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {deletingCard ? 'Deleting...' : 'Delete Card'}
+              </button>
+            </div>
           </div>
         </div>
       )}

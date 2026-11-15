@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import {
   FiUserPlus,
   FiUser,
@@ -21,7 +22,9 @@ import {
   FiCheckCircle,
   FiLock,
   FiMapPin,
-  FiLayers
+  FiLayers,
+  FiCopy,
+  FiExternalLink
 } from 'react-icons/fi';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -34,7 +37,9 @@ const GENDERS = [
 export default function TeacherRegistrationPage() {
   const params = useParams();
   const router = useRouter();
-  const domain = params?.domain || '';
+  const { tenantUrl, slug } = useTenantWebsite();
+  const domain = params?.domain || slug || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
 
   const fileInputRef = useRef(null);
 
@@ -63,7 +68,7 @@ export default function TeacherRegistrationPage() {
     photo_url: '',
     photo_id: '',
     password: '',
-    is_active: false
+    is_active: true
   });
 
   const [qualifications, setQualifications] = useState([
@@ -78,6 +83,14 @@ export default function TeacherRegistrationPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [toastError, setToastError] = useState(null);
 
+  const [quickDesigModal, setQuickDesigModal] = useState(false);
+  const [newDesigTitle, setNewDesigTitle] = useState('');
+  const [newDesigDesc, setNewDesigDesc] = useState('');
+  const [creatingDesig, setCreatingDesig] = useState(false);
+
+  const [createdResult, setCreatedResult] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
   const showToast = useCallback((msg, isErr = false) => {
     if (isErr) {
       setToastError(msg);
@@ -88,65 +101,103 @@ export default function TeacherRegistrationPage() {
     }
   }, []);
 
+  const loadDesignations = useCallback(async () => {
+    try {
+      setLoadingDesignations(true);
+      const res = await fetch(`${apiBase}/staff/panel/teacher/designations`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.designations)) {
+        setDesignations(data.designations);
+        if (data.designations.length > 0) {
+          setFormData((prev) => {
+            if (!prev.designation_id || !data.designations.some((d) => String(d.id) === String(prev.designation_id))) {
+              return { ...prev, designation_id: String(data.designations[0].id) };
+            }
+            return prev;
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDesignations(false);
+    }
+  }, [apiBase]);
+
+  const loadDepartments = useCallback(async () => {
+    try {
+      setLoadingDepartments(true);
+      const res = await fetch(`${apiBase}/staff/panel/departments`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.departments)) {
+        setDepartments(data.departments);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  }, [apiBase]);
+
+  const loadPayrolls = useCallback(async () => {
+    try {
+      setLoadingPayrolls(true);
+      const res = await fetch(`${apiBase}/staff/panel/teacher-payrolls`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.payrolls)) {
+        setPayrolls(data.payrolls.filter((p) => p.is_active));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingPayrolls(false);
+    }
+  }, [apiBase]);
+
   useEffect(() => {
-    async function loadDesignations() {
-      if (!domain) return;
-      try {
-        setLoadingDesignations(true);
-        const res = await fetch(`/api/${domain}/staff/panel/teacher/designations`);
-        const data = await res.json();
+    let active = true;
+    fetch(`${apiBase}/staff/panel/teacher/designations`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
         if (data.success && Array.isArray(data.designations)) {
           setDesignations(data.designations);
           if (data.designations.length > 0) {
-            setFormData((prev) => ({ ...prev, designation_id: String(data.designations[0].id) }));
+            setFormData((prev) => {
+              if (!prev.designation_id || !data.designations.some((d) => String(d.id) === String(prev.designation_id))) {
+                return { ...prev, designation_id: String(data.designations[0].id) };
+              }
+              return prev;
+            });
           }
         }
-      } catch (err) {
-        console.error('Failed to load designations:', err);
-      } finally {
-        setLoadingDesignations(false);
-      }
-    }
+      })
+      .catch((err) => console.error(err));
 
-    async function loadDepartments() {
-      if (!domain) return;
-      try {
-        setLoadingDepartments(true);
-        const res = await fetch(`/api/${domain}/staff/panel/departments`);
-        const data = await res.json();
+    fetch(`${apiBase}/staff/panel/departments`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
         if (data.success && Array.isArray(data.departments)) {
           setDepartments(data.departments);
-          if (data.departments.length > 0) {
-            setFormData((prev) => ({ ...prev, department_id: String(data.departments[0].id) }));
-          }
         }
-      } catch (err) {
-        console.error('Failed to load departments:', err);
-      } finally {
-        setLoadingDepartments(false);
-      }
-    }
+      })
+      .catch((err) => console.error(err));
 
-    async function loadPayrolls() {
-      if (!domain) return;
-      try {
-        setLoadingPayrolls(true);
-        const res = await fetch(`/api/${domain}/staff/panel/teacher-payrolls`);
-        const data = await res.json();
+    fetch(`${apiBase}/staff/panel/teacher-payrolls`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
         if (data.success && Array.isArray(data.payrolls)) {
           setPayrolls(data.payrolls.filter((p) => p.is_active));
         }
-      } catch (err) {
-        console.error('Failed to load payroll scales:', err);
-      } finally {
-        setLoadingPayrolls(false);
-      }
-    }
+      })
+      .catch((err) => console.error(err));
 
-    loadDesignations();
-    loadDepartments();
-    loadPayrolls();
-  }, [domain]);
+    return () => {
+      active = false;
+    };
+  }, [apiBase]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -214,6 +265,83 @@ export default function TeacherRegistrationPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleQuickCreateDesignation = async (e) => {
+    e.preventDefault();
+    if (!newDesigTitle.trim()) {
+      showToast('Designation title is required.', true);
+      return;
+    }
+
+    try {
+      setCreatingDesig(true);
+      const res = await fetch(`${apiBase}/staff/panel/teacher/designations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newDesigTitle.trim(),
+          description: newDesigDesc.trim() || null,
+          display_order: designations.length + 1,
+          is_active: true
+        })
+      });
+      const data = await res.json();
+
+      if (data.success && data.designation?.id) {
+        const created = data.designation;
+        setDesignations((prev) => [...prev, created]);
+        setFormData((prev) => ({ ...prev, designation_id: String(created.id) }));
+        setNewDesigTitle('');
+        setNewDesigDesc('');
+        setQuickDesigModal(false);
+        showToast(`Designation "${created.title}" created successfully.`);
+      } else {
+        showToast(data.error || 'Failed to create designation.', true);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error while creating designation.', true);
+    } finally {
+      setCreatingDesig(false);
+    }
+  };
+
+  const handleCopyActivationLink = (url) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    showToast('Activation link copied to clipboard!');
+    setTimeout(() => setLinkCopied(false), 3000);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      number: '',
+      emergency_contact: '',
+      gender: 'male',
+      blood_group: 'O+',
+      date_of_birth: '',
+      religion: 'Islam',
+      address: '',
+      permanent_address: '',
+      joining_date: new Date().toISOString().split('T')[0],
+      payroll_id: '',
+      department_id: '',
+      designation_id: designations.length > 0 ? String(designations[0].id) : '',
+      photo_url: '',
+      photo_id: '',
+      password: '',
+      is_active: true
+    });
+    setQualifications([
+      { degree: '', institute: '', board: '', passing_year: '', result: '' }
+    ]);
+    setSelectedPhotoFile(null);
+    setPhotoPreview('');
+    setCreatedResult(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -230,8 +358,8 @@ export default function TeacherRegistrationPage() {
       return;
     }
 
-    if (!formData.department_id) {
-      showToast('Department is required. Every teacher must belong to an academic department.', true);
+    if (!formData.designation_id || !Number(formData.designation_id)) {
+      showToast('Teacher designation is required. Please assign a designation to the teacher.', true);
       return;
     }
 
@@ -244,13 +372,24 @@ export default function TeacherRegistrationPage() {
 
       const postData = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (key === 'department_id') postData.append('department_id', Number(formData.department_id));
-        else if (key === 'designation_id') postData.append('designation_id', formData.designation_id ? Number(formData.designation_id) : '');
-        else if (key === 'payroll_id') {
-          if (formData.payroll_id) postData.append('payroll_id', Number(formData.payroll_id));
+        if (key === 'department_id') {
+          if (formData.department_id && Number(formData.department_id)) {
+            postData.append('department_id', Number(formData.department_id));
+          }
+        } else if (key === 'designation_id') {
+          postData.append('designation_id', Number(formData.designation_id));
+        } else if (key === 'payroll_id') {
+          if (formData.payroll_id && Number(formData.payroll_id)) {
+            postData.append('payroll_id', Number(formData.payroll_id));
+          }
+        } else if (key === 'photo_url') {
+          if (formData.photo_url && !formData.photo_url.startsWith('blob:')) {
+            postData.append('photo_url', formData.photo_url);
+          }
+        } else if (key === 'salary') {
+        } else if (formData[key] !== null && formData[key] !== undefined) {
+          postData.append(key, formData[key]);
         }
-        else if (key === 'salary') {  }
-        else if (formData[key] !== null && formData[key] !== undefined) postData.append(key, formData[key]);
       });
       postData.append('qualifications', JSON.stringify(validQuals));
 
@@ -258,7 +397,7 @@ export default function TeacherRegistrationPage() {
         postData.append('photo', selectedPhotoFile);
       }
 
-      const res = await fetch(`/api/${domain}/staff/panel/teacher`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher`, {
         method: 'POST',
         body: postData
       });
@@ -269,10 +408,13 @@ export default function TeacherRegistrationPage() {
         return;
       }
 
-      showToast(data.message || `Teacher "${formData.name}" registered successfully! Verification email dispatched.`);
-      setTimeout(() => {
-        router.push(`/${domain}/staff-panel/teacher-list`);
-      }, 1500);
+      setCreatedResult({
+        teacher: data.teacher,
+        verificationUrl: data.verificationUrl,
+        emailSent: Boolean(data.emailSent),
+        message: data.message
+      });
+      showToast(data.message || `Teacher "${formData.name}" registered successfully.`);
     } catch (err) {
       console.error(err);
       showToast('Network error while registering teacher.', true);
@@ -296,10 +438,79 @@ export default function TeacherRegistrationPage() {
         </div>
       )}
 
+      {createdResult && (
+        <div className="p-4 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+              <FiCheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div>
+                <h3 className="text-sm font-bold">Faculty Member Successfully Registered</h3>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  {createdResult.teacher.name} ({createdResult.teacher.email})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-3 py-1.5 rounded text-xs font-medium border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-100/60 transition"
+              >
+                Register Another Teacher
+              </button>
+              <Link
+                href={tenantUrl('/staff-panel/teacher-list')}
+                className="px-3.5 py-1.5 rounded text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition flex items-center gap-1"
+              >
+                <span>Teacher Directory</span>
+                <FiArrowLeft className="w-3.5 h-3.5 rotate-180" />
+              </Link>
+            </div>
+          </div>
+
+          {createdResult.verificationUrl && (
+            <div className="p-2.5 rounded bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/80 text-xs space-y-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-semibold text-slate-800 dark:text-slate-200 text-[11px]">
+                  Account Activation & Password Setup Link:
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyActivationLink(createdResult.verificationUrl)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition"
+                  >
+                    <FiCopy className="w-3 h-3" />
+                    <span>{linkCopied ? 'Copied' : 'Copy Link'}</span>
+                  </button>
+                  <a
+                    href={createdResult.verificationUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium text-blue-600 hover:underline"
+                  >
+                    <span>Open</span>
+                    <FiExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+              <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 break-all bg-slate-50 dark:bg-slate-800/60 p-2 rounded border border-slate-200 dark:border-slate-700">
+                {createdResult.verificationUrl}
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {createdResult.emailSent
+                  ? 'This invitation link was also dispatched to the teacher email address.'
+                  : 'Email sending skipped or offline. Provide this direct link to the faculty member to complete their profile setup.'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link href={`/${domain}/staff-panel/teacher-list`} className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+            <Link href={tenantUrl('/staff-panel/teacher-list')} className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
               <FiArrowLeft className="w-3.5 h-3.5" />
               <span>Teacher Directory</span>
             </Link>
@@ -317,14 +528,14 @@ export default function TeacherRegistrationPage() {
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/${domain}/staff-panel/teacher-designations`}
+            href={tenantUrl('/staff-panel/teacher-designations')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <FiAward className="w-3.5 h-3.5" />
             <span>Manage Designations</span>
           </Link>
           <Link
-            href={`/${domain}/staff-panel/teacher-list`}
+            href={tenantUrl('/staff-panel/teacher-list')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition"
           >
             <FiList className="w-3.5 h-3.5" />
@@ -368,7 +579,7 @@ export default function TeacherRegistrationPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp,image/gif"
                 onChange={handlePhotoSelect}
                 className="hidden"
               />
@@ -396,10 +607,10 @@ export default function TeacherRegistrationPage() {
                   type="text"
                   required
                   name="name"
-                  placeholder="e.g. Dr. Mohammad Rahaman"
+                  aria-label="Teacher Full Name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -411,10 +622,10 @@ export default function TeacherRegistrationPage() {
                   type="email"
                   required
                   name="email"
-                  placeholder="e.g. m.rahaman@school.edu"
+                  aria-label="Teacher Email Address"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -426,10 +637,10 @@ export default function TeacherRegistrationPage() {
                   type="text"
                   required
                   name="number"
-                  placeholder="e.g. +880 1712 345678"
+                  aria-label="Teacher Phone Number"
                   value={formData.number}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -440,10 +651,10 @@ export default function TeacherRegistrationPage() {
                 <input
                   type="text"
                   name="emergency_contact"
-                  placeholder="Spouse or Guardian phone"
+                  aria-label="Emergency Contact Number"
                   value={formData.emergency_contact}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
               </div>
 
@@ -453,6 +664,7 @@ export default function TeacherRegistrationPage() {
                 </label>
                 <select
                   name="gender"
+                  aria-label="Gender"
                   value={formData.gender}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
@@ -469,6 +681,7 @@ export default function TeacherRegistrationPage() {
                 </label>
                 <select
                   name="blood_group"
+                  aria-label="Blood Group"
                   value={formData.blood_group}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
@@ -487,6 +700,7 @@ export default function TeacherRegistrationPage() {
                 <input
                   type="date"
                   name="date_of_birth"
+                  aria-label="Date of Birth"
                   value={formData.date_of_birth}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
@@ -500,7 +714,7 @@ export default function TeacherRegistrationPage() {
                 <input
                   type="text"
                   name="religion"
-                  placeholder="e.g. Islam, Hinduism, Christianity"
+                  aria-label="Religion"
                   value={formData.religion}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
@@ -514,13 +728,13 @@ export default function TeacherRegistrationPage() {
                 <input
                   type="password"
                   name="password"
-                  placeholder="Leave blank for auto-generated demo password"
+                  aria-label="Initial Demo Password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  A verification link will be emailed to the teacher to confirm their profile and set their personal password.
+                  Leave blank to auto-generate a secure random initial password.
                 </p>
               </div>
             </div>
@@ -535,10 +749,10 @@ export default function TeacherRegistrationPage() {
               <textarea
                 rows={2}
                 name="address"
-                placeholder="House, Road, Area, City..."
+                aria-label="Present Address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
               />
             </div>
 
@@ -550,10 +764,10 @@ export default function TeacherRegistrationPage() {
               <textarea
                 rows={2}
                 name="permanent_address"
-                placeholder="Village / Town, Post Office, Upazila / District..."
+                aria-label="Permanent Address"
                 value={formData.permanent_address}
                 onChange={handleInputChange}
-                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
+                className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
               />
             </div>
           </div>
@@ -567,18 +781,26 @@ export default function TeacherRegistrationPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                <FiLayers className="w-3.5 h-3.5 text-blue-600" />
-                <span>Department <span className="text-rose-500">*</span></span>
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <FiLayers className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Department (Optional)</span>
+                </span>
+                <Link
+                  href={tenantUrl('/staff-panel/departments')}
+                  className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Manage
+                </Link>
               </label>
               <select
                 name="department_id"
-                required
+                aria-label="Department"
                 value={formData.department_id}
                 onChange={handleInputChange}
                 className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
               >
-                <option value="">-- Choose Department --</option>
+                <option value="">-- None / Unassigned --</option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name} {d.code ? `(${d.code})` : ''}
@@ -588,20 +810,31 @@ export default function TeacherRegistrationPage() {
               {departments.length === 0 && !loadingDepartments && (
                 <p className="text-[10px] text-amber-600 mt-1">
                   No departments found.{' '}
-                  <Link href={`/${domain}/staff-panel/departments`} className="underline font-semibold">
-                    Create a department first
+                  <Link href={tenantUrl('/staff-panel/departments')} className="underline font-semibold">
+                    Create a department
                   </Link>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                <FiAward className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Designation / Rank <span className="text-rose-500">*</span></span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <FiAward className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Designation <span className="text-rose-500">*</span></span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setQuickDesigModal(true)}
+                  className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+                >
+                  <FiPlus className="w-2.5 h-2.5" />
+                  <span>Quick Add</span>
+                </button>
+              </div>
               <select
                 name="designation_id"
+                aria-label="Designation"
                 required
                 value={formData.designation_id}
                 onChange={handleInputChange}
@@ -615,12 +848,16 @@ export default function TeacherRegistrationPage() {
                 ))}
               </select>
               {designations.length === 0 && !loadingDesignations && (
-                <p className="text-[10px] text-amber-600 mt-1">
-                  No designations found.{' '}
-                  <Link href={`/${domain}/staff-panel/teacher-designations`} className="underline">
-                    Create one first
-                  </Link>
-                </p>
+                <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600">
+                  <span>No designations found.</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuickDesigModal(true)}
+                    className="underline font-semibold text-emerald-700 dark:text-emerald-400"
+                  >
+                    Add one now
+                  </button>
+                </div>
               )}
             </div>
 
@@ -631,6 +868,7 @@ export default function TeacherRegistrationPage() {
               <input
                 type="date"
                 name="joining_date"
+                aria-label="Joining Date"
                 value={formData.joining_date}
                 onChange={handleInputChange}
                 className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
@@ -644,15 +882,16 @@ export default function TeacherRegistrationPage() {
                   <span>Payroll Scale / Grade</span>
                 </span>
                 <Link
-                  href={`/${domain}/staff-panel/teacher-payrolls`}
+                  href={tenantUrl('/staff-panel/teacher-payrolls')}
                   target="_blank"
                   className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  Manage Scales
+                  Manage
                 </Link>
               </label>
               <select
                 name="payroll_id"
+                aria-label="Payroll Scale"
                 value={formData.payroll_id}
                 onChange={handleInputChange}
                 className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
@@ -667,7 +906,7 @@ export default function TeacherRegistrationPage() {
               {payrolls.length === 0 && !loadingPayrolls && (
                 <p className="text-[10px] text-amber-600 mt-1">
                   No payroll scales found.{' '}
-                  <Link href={`/${domain}/staff-panel/teacher-payrolls`} className="underline font-semibold">
+                  <Link href={tenantUrl('/staff-panel/teacher-payrolls')} className="underline font-semibold">
                     Create in Payroll
                   </Link>
                 </p>
@@ -675,12 +914,20 @@ export default function TeacherRegistrationPage() {
             </div>
 
             <div className="flex flex-col justify-center pt-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span className="text-xs font-semibold text-slate-900 dark:text-white">Status: Inactive (Pending)</span>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                Verification link is emailed on creation. Account automatically activates once verified.
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={formData.is_active}
+                  onChange={handleInputChange}
+                  className="rounded border-slate-300 text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-slate-900 dark:text-white">Activate Immediately</span>
+              </label>
+              <p className="text-[10px] text-slate-400 mt-0.5 ml-6">
+                {formData.is_active
+                  ? 'Faculty account activates immediately upon creation.'
+                  : 'Faculty will be inactive pending email link verification.'}
               </p>
             </div>
           </div>
@@ -758,7 +1005,7 @@ export default function TeacherRegistrationPage() {
             <button
               type="button"
               onClick={addQualificationRow}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               <FiPlus className="w-3 h-3" />
               <span>Add Degree</span>
@@ -777,10 +1024,10 @@ export default function TeacherRegistrationPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. M.Sc in Mathematics"
+                    aria-label="Degree or Certificate"
                     value={qual.degree}
                     onChange={(e) => handleQualChange(idx, 'degree', e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden"
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -790,10 +1037,10 @@ export default function TeacherRegistrationPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Dhaka University"
+                    aria-label="Institute or University"
                     value={qual.institute}
                     onChange={(e) => handleQualChange(idx, 'institute', e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden"
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -803,10 +1050,10 @@ export default function TeacherRegistrationPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Science"
+                    aria-label="Board or Department"
                     value={qual.board}
                     onChange={(e) => handleQualChange(idx, 'board', e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden"
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -818,10 +1065,10 @@ export default function TeacherRegistrationPage() {
                     type="number"
                     min="1950"
                     max="2035"
-                    placeholder="e.g. 2018"
+                    aria-label="Passing Year"
                     value={qual.passing_year}
                     onChange={(e) => handleQualChange(idx, 'passing_year', e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden"
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -831,10 +1078,10 @@ export default function TeacherRegistrationPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="3.85"
+                    aria-label="GPA or Result"
                     value={qual.result}
                     onChange={(e) => handleQualChange(idx, 'result', e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden"
+                    className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"
                   />
                 </div>
 
@@ -843,7 +1090,7 @@ export default function TeacherRegistrationPage() {
                     <button
                       type="button"
                       onClick={() => removeQualificationRow(idx)}
-                      className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition"
+                      className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
                       title="Remove Degree"
                     >
                       <FiTrash2 className="w-4 h-4" />
@@ -857,7 +1104,7 @@ export default function TeacherRegistrationPage() {
 
         <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
           <Link
-            href={`/${domain}/staff-panel/teacher-list`}
+            href={tenantUrl('/staff-panel/teacher-list')}
             className="px-4 py-2 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             Cancel
@@ -872,6 +1119,73 @@ export default function TeacherRegistrationPage() {
           </button>
         </div>
       </form>
+
+      {quickDesigModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <FiAward className="w-4 h-4 text-emerald-600" />
+                <span>Quick Add Designation</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQuickDesigModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickCreateDesignation} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Designation Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  aria-label="New Designation Title"
+                  value={newDesigTitle}
+                  onChange={(e) => setNewDesigTitle(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Description (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  aria-label="New Designation Description"
+                  value={newDesigDesc}
+                  onChange={(e) => setNewDesigDesc(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setQuickDesigModal(false)}
+                  className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingDesig}
+                  className="px-4 py-1.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition cursor-pointer"
+                >
+                  {creatingDesig ? 'Creating...' : 'Create & Select'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

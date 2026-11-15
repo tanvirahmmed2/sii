@@ -57,7 +57,7 @@ export async function POST(request, context) {
               wt.verification_token, wt.verification_token_expires,
               wd.title AS designation_title
        FROM website_teachers wt
-       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
        WHERE wt.website_id = $1 AND wt.verification_token = $2
        LIMIT 1`,
       [website.id, cleanToken]

@@ -20,7 +20,7 @@ export async function GET(request, context) {
               is_active,
               created_at,
               updated_at
-       FROM website_designations
+       FROM website_teacher_designation
        WHERE website_id = $1 AND is_active = true
        ORDER BY display_order ASC, title ASC`,
       [website.id]

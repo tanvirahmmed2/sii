@@ -1,28 +1,51 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getStaffSession } from 'src/lib/middleware/staff';
+import { getCreatorSession } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver';
 import Navbar from 'src/component/website/bars/admin/Navbar';
 import Sidebar from 'src/component/website/bars/admin/Sidebar';
 import StaffModuleRouteGuard from 'src/component/staff/StaffModuleRouteGuard';
 
 export const dynamic = 'force-dynamic';
 
-const StaffPanelLayout = async ({ children }) => {
+const StaffPanelLayout = async ({ children, params }) => {
+  const resolvedParams = await params;
+  const domain = resolvedParams?.domain;
   const staffSession = await getStaffSession();
+  let isCreatorAdmin = false;
+  let creatorSession = null;
 
   if (!staffSession) {
-    redirect('/auth/access/staff/login');
+    creatorSession = await getCreatorSession();
+    if (creatorSession) {
+      const website = await resolveWebsiteFromRequest(null, { params: resolvedParams });
+      if (website && (String(creatorSession.id) === String(website.creator_id) || creatorSession.isDeveloper)) {
+        isCreatorAdmin = true;
+      }
+    }
   }
 
-  const allowedModules = staffSession?.allowedModules || [];
-  const staffUser = staffSession?.staff || staffSession?.user || staffSession;
+  if (!staffSession && !isCreatorAdmin) {
+    const loginTarget = domain ? `/${domain}/auth/access/staff` : '/auth/access/staff';
+    redirect(loginTarget);
+  }
+
+  const allowedModules = isCreatorAdmin ? ['all'] : (staffSession?.allowedModules || []);
+  const staffUser = staffSession?.staff || staffSession?.user || staffSession || (isCreatorAdmin ? {
+    id: creatorSession?.id,
+    name: creatorSession?.name || 'Administrator',
+    email: creatorSession?.email,
+    designation: 'Creator / System Owner',
+    isActive: true,
+  } : null);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       <Navbar staffUser={staffUser} />
 
       <div className="flex flex-1 pt-14 min-h-[calc(100vh-3.5rem)]">
-        <Sidebar allowedModules={allowedModules} isDevAdmin={false} />
+        <Sidebar allowedModules={allowedModules} isDevAdmin={isCreatorAdmin} />
 
         <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8 transition-all duration-200">
           <StaffModuleRouteGuard allowedModules={allowedModules}>

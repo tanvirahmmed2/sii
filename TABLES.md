@@ -78,7 +78,7 @@
 32. website_award_images
 33. website_news
 34. website_news_images
-35. website_designations
+35. website_teacher_designation
 36. website_teachers
 37. website_teacher_login_sessions
 38. website_teacher_qualifications
@@ -357,7 +357,7 @@
 103. website_department_information
 104. website_departments
 105. website_dept_heads
-106. website_designations
+106. website_teacher_designation
 107. website_domains
 108. website_education_fee_payments
 109. website_education_fees

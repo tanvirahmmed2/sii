@@ -67,7 +67,7 @@ export async function GET(request, context) {
          (tp.provident_fund + tp.tax_deduction + tp.other_deductions)) AS net_salary
       FROM website_teacher_salary_payments tsp
       JOIN website_teachers wt ON wt.id = tsp.teacher_id
-      LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+      LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
       LEFT JOIN website_teacher_salaries ts ON ts.id = tsp.salary_id
       LEFT JOIN website_teacher_payrolls tp ON tp.id = ts.payroll_id
       WHERE ${whereConditions.join(' AND ')}

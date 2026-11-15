@@ -3,9 +3,9 @@ import { sendWebsiteEmail, getWebsiteBrevoConfig } from './websiteBrevo.js';
 
 export { sendWebsiteEmail, getWebsiteBrevoConfig };
 
-export const sendEmail = async ({ to, toName, subject, html, websiteId }) => {
+export const sendEmail = async ({ to, toName, subject, html, text, websiteId, recipientType = 'student', type = 'general', recipientId = null }) => {
   if (websiteId) {
-    return await sendWebsiteEmail(websiteId, { to, toName, subject, html });
+    return await sendWebsiteEmail(websiteId, { to, toName, subject, html, text, recipientType, type, recipientId });
   }
 
   const senderName = BREVO_SENDER_NAME || 'Campus Administration';

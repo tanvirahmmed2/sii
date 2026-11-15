@@ -49,7 +49,8 @@ const TeacherLayout = async ({ children, params }) => {
   const authenticated = await isTeacher();
 
   if (!authenticated) {
-    redirect('/auth/access/teacher/login');
+    const domain = resolvedParams?.domain;
+    redirect(domain ? `/${domain}/auth/access/teacher` : '/auth/access/teacher');
   }
 
   return (

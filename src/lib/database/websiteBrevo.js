@@ -1,6 +1,7 @@
 import { queryDb } from './db.js';
 import { BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME } from './secret.js';
 import { checkAndIncrementMailUsage, getWebsiteMonthlyUsageAndLimits } from './usageLimiter.js';
+import { recordSentMail } from '../redis/redisClient.js';
 
 export function maskApiKey(key) {
   if (!key) return '';
@@ -34,15 +35,7 @@ export async function getWebsiteBrevoConfig(websiteId) {
   };
 }
 
-export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text }) {
-  if (!BREVO_API_KEY) {
-    throw new Error('Main platform BREVO_API_KEY is not configured in environment secrets.');
-  }
-
-  if (websiteId) {
-    await checkAndIncrementMailUsage(websiteId, 1);
-  }
-
+export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, text, recipientType = 'student', recipientId = null, type = 'general' }) {
   let senderName = BREVO_SENDER_NAME || 'Campus Administration';
   if (websiteId) {
     try {
@@ -51,6 +44,37 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
         senderName = siteRes.rows[0].name;
       }
     } catch (_) {}
+  }
+
+  const snippet = text || (html ? String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500) : null);
+
+  if (!BREVO_API_KEY) {
+    if (websiteId) {
+      await recordSentMail({
+        websiteId,
+        recipientType,
+        recipientId,
+        recipientIdentifier: to,
+        recipientName: toName || to,
+        type,
+        subject: subject || 'Institutional Notification',
+        content: snippet,
+        status: 'Simulated',
+        provider: 'brevo',
+      });
+    }
+
+    return {
+      messageId: `sim_mail_${Date.now()}`,
+      mailerType: 'simulated',
+      senderEmail: BREVO_SENDER_EMAIL || 'noreply@campus.edu',
+      senderName,
+      status: 'DELIVERED_SIMULATED',
+    };
+  }
+
+  if (websiteId) {
+    await checkAndIncrementMailUsage(websiteId, 1);
   }
 
   const payload = {
@@ -85,8 +109,38 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
   const data = await response.json();
 
   if (!response.ok) {
+    if (websiteId) {
+      await recordSentMail({
+        websiteId,
+        recipientType,
+        recipientId,
+        recipientIdentifier: to,
+        recipientName: toName || to,
+        type,
+        subject: subject || 'Institutional Notification',
+        content: snippet,
+        status: 'Failed',
+        failureReason: data.message || 'Brevo SMTP API dispatch failure',
+        provider: 'brevo',
+      });
+    }
     console.error('[MainBrevo] Email dispatch failed via main platform mailer:', data);
     throw new Error(data.message || 'Failed to dispatch email via main Brevo SMTP API.');
+  }
+
+  if (websiteId) {
+    await recordSentMail({
+      websiteId,
+      recipientType,
+      recipientId,
+      recipientIdentifier: to,
+      recipientName: toName || to,
+      type,
+      subject: subject || 'Institutional Notification',
+      content: snippet,
+      status: 'Sent',
+      provider: 'brevo',
+    });
   }
 
   return {
@@ -97,7 +151,9 @@ export async function sendWebsiteEmail(websiteId, { to, toName, subject, html, t
   };
 }
 
-export default {
+const WebsiteBrevo = {
   getWebsiteBrevoConfig,
   sendWebsiteEmail,
 };
+
+export default WebsiteBrevo;

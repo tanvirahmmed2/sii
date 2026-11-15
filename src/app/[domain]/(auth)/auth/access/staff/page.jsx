@@ -1,5 +1,1 @@
-import { redirect } from 'next/navigation';
-
-export default function StaffRedirect() {
-  redirect('/auth/access/staff/login');
-}
+export { default } from './login/page';

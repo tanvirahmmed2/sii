@@ -958,6 +958,16 @@ export const staffNavData = [
     "module": "communications",
     "children": [
       {
+        "title": "SMS Balance",
+        "module": "communications",
+        "path": "/sms-balance"
+      },
+      {
+        "title": "Mail Balance",
+        "module": "communications",
+        "path": "/mail-balance"
+      },
+      {
         "title": "Contacts",
         "module": "communications",
         "path": "/contacts"

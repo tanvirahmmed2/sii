@@ -199,7 +199,7 @@ export async function authenticateTeacher({
             wd.title AS designation_title,
             dept.name AS department_name
      FROM website_teachers wt
-     LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+     LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
      LEFT JOIN website_departments dept ON dept.id = wt.department_id
      WHERE wt.website_id = $1 AND (
        LOWER(wt.email) = $2 
@@ -470,7 +470,7 @@ export async function getTeacherSession(request) {
               COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
               (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
        FROM website_teachers wt
-       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
        LEFT JOIN website_departments dept ON dept.id = wt.department_id
        LEFT JOIN websites w ON w.id = wt.website_id
        WHERE wt.id = $1 LIMIT 1`,

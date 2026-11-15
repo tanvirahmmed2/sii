@@ -66,8 +66,29 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
   }, [apiEndpoint, searchTerm]);
 
   useEffect(() => {
-    fetchPayrolls();
-  }, [fetchPayrolls]);
+    let active = true;
+    const url = `${apiEndpoint}${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (data.success) {
+          setPayrolls(data.payrolls || []);
+        } else {
+          setFeedback({ type: 'error', message: data.message || 'Failed to load payroll scales.' });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error(err);
+        setFeedback({ type: 'error', message: 'Network error loading payroll scales.' });
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [apiEndpoint, searchTerm]);
 
   const calculatedValues = useMemo(() => {
     const basic = Math.max(0, parseFloat(formData.basic_salary) || 0);
@@ -324,7 +345,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. Senior Lecturer Grade 9"
+                aria-label="Scale Title"
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 text-slate-900 dark:text-white text-xs"
               />
               <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
@@ -347,7 +368,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                   required
                   value={formData.basic_salary}
                   onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
-                  placeholder="0.00"
+                  aria-label="Basic Monthly Salary"
                   className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded pl-7 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 text-slate-900 dark:text-white font-mono font-bold text-sm"
                 />
               </div>
@@ -370,7 +391,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.house_rent}
                     onChange={(e) => setFormData({ ...formData, house_rent: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="House Rent"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -381,7 +402,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.medical_allowance}
                     onChange={(e) => setFormData({ ...formData, medical_allowance: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Medical"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -392,7 +413,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.transport_allowance}
                     onChange={(e) => setFormData({ ...formData, transport_allowance: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Transport"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -403,7 +424,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.other_allowance}
                     onChange={(e) => setFormData({ ...formData, other_allowance: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Other Allowance"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -429,7 +450,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.provident_fund}
                     onChange={(e) => setFormData({ ...formData, provident_fund: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Provident Fund"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -440,7 +461,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.tax_deduction}
                     onChange={(e) => setFormData({ ...formData, tax_deduction: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Tax Deduction"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -451,7 +472,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                     step="0.01"
                     value={formData.other_deductions}
                     onChange={(e) => setFormData({ ...formData, other_deductions: e.target.value })}
-                    placeholder="0.00"
+                    aria-label="Other Deductions"
                     className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs font-mono"
                   />
                 </div>
@@ -488,7 +509,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
                   rows={2}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Optional details regarding qualifications, grade step, or eligibility..."
+                  aria-label="Notes / Description"
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 text-slate-900 dark:text-white text-xs"
                 />
               </div>
@@ -542,7 +563,7 @@ export default function PayrollsScaleManager({ roleType = 'teacher', title, subt
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by scale title or grade code..."
+            aria-label="Search by scale title or grade code"
             className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2.5 py-1.5 focus:outline-none focus:border-slate-400 text-slate-900 dark:text-white"
           />
           {searchTerm && (

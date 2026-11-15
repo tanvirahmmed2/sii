@@ -21,7 +21,7 @@ export async function GET(request, context) {
                 wt.name AS teacher_name, wd.title AS designation_title
          FROM website_teacher_attendance wta
          JOIN website_teachers wt ON wt.id = wta.teacher_id
-         LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+         LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
          WHERE wta.website_id = $1 AND wta.teacher_id = $2 AND TO_CHAR(wta.date, 'YYYY-MM') = $3
          ORDER BY wta.date ASC`,
         [website.id, teacherId, month]
@@ -37,7 +37,7 @@ export async function GET(request, context) {
               wta.in_time, wta.out_time, wta.remark, wta.id AS attendance_id,
               $2::date AS date
        FROM website_teachers wt
-       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
        LEFT JOIN website_teacher_attendance wta ON wta.teacher_id = wt.id AND wta.date = $2::date AND wta.website_id = $1
        WHERE wt.website_id = $1 AND wt.is_active = TRUE
        ORDER BY wd.display_order ASC NULLS LAST, wt.name ASC`,

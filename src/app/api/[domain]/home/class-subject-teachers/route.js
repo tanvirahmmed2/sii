@@ -20,7 +20,7 @@ export async function GET(request, context) {
               COALESCE(split_part(t.email, '@', 1), t.id::text) AS username
        FROM website_teacher_subjects ts
        JOIN website_teachers t ON t.id = ts.teacher_id AND t.website_id = ts.website_id
-       LEFT JOIN website_designations des ON des.id = t.designation_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
        WHERE ts.website_id = $1 AND t.is_active = true
        ORDER BY t.name ASC`,
       [website.id]

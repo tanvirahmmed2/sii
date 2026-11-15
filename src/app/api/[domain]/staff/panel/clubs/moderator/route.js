@@ -30,7 +30,7 @@ export async function GET(request, context) {
               COALESCE((SELECT COUNT(*) FROM website_student_club_members scm WHERE scm.club_id = c.id AND scm.can_access_chat = true AND scm.status = 'active'), 0)::int AS chat_access_count
        FROM website_clubs c
        LEFT JOIN website_teachers t ON t.id = c.moderator_teacher_id
-       LEFT JOIN website_designations des ON des.id = t.designation_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
        LEFT JOIN website_club_chats ch ON ch.club_id = c.id
        WHERE c.website_id = $1
        ORDER BY c.name ASC`,
@@ -40,7 +40,7 @@ export async function GET(request, context) {
     const teachersRes = await queryDb(
       `SELECT t.id, t.name, t.email, t.number, t.photo_url, des.title AS designation
        FROM website_teachers t
-       LEFT JOIN website_designations des ON des.id = t.designation_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
        WHERE t.website_id = $1 AND t.is_active = true
        ORDER BY t.name ASC`,
       [website.id]

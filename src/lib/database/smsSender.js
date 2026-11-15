@@ -1,6 +1,7 @@
 import { queryDb } from './db.js';
 import { checkAndIncrementSmsUsage, getWebsiteMonthlyUsageAndLimits } from './usageLimiter.js';
 import { BULKSMSBD_API_KEY, BULKSMSBD_SENDER_ID, BULKSMSBD_URL } from './secret.js';
+import { recordSentSms } from '../redis/redisClient.js';
 
 export const SUPPORTED_SMS_PROVIDERS = [
   {
@@ -164,6 +165,21 @@ export async function sendSms({
       ip
     });
 
+    if (websiteId) {
+      await recordSentSms({
+        websiteId,
+        recipientType: userType || 'student',
+        recipientId: userId,
+        recipientIdentifier: recipient,
+        recipientName: null,
+        type: purpose || 'general',
+        message: cleanMsg,
+        status: 'Simulated',
+        provider: 'bulksmsbd',
+        partsCount: 1,
+      });
+    }
+
     return {
       success: true,
       simulated: true,
@@ -212,6 +228,21 @@ export async function sendSms({
         ip
       });
 
+      if (websiteId) {
+        await recordSentSms({
+          websiteId,
+          recipientType: userType || 'student',
+          recipientId: userId,
+          recipientIdentifier: recipient,
+          recipientName: null,
+          type: purpose || 'general',
+          message: cleanMsg,
+          status: 'Sent',
+          provider: 'bulksmsbd',
+          partsCount: 1,
+        });
+      }
+
       return {
         success: true,
         messageId: data.message_id || `sms_${Date.now()}`,
@@ -237,6 +268,23 @@ export async function sendSms({
         responseBody: data,
         ip
       });
+
+      if (websiteId) {
+        await recordSentSms({
+          websiteId,
+          recipientType: userType || 'student',
+          recipientId: userId,
+          recipientIdentifier: recipient,
+          recipientName: null,
+          type: purpose || 'general',
+          message: cleanMsg,
+          status: 'Failed',
+          failureReason: errMsg,
+          provider: 'bulksmsbd',
+          partsCount: 1,
+        });
+      }
+
       throw new Error(errMsg);
     }
   } catch (err) {
@@ -254,6 +302,23 @@ export async function sendSms({
       responseBody: { error: err.message },
       ip
     });
+
+    if (websiteId) {
+      await recordSentSms({
+        websiteId,
+        recipientType: userType || 'student',
+        recipientId: userId,
+        recipientIdentifier: recipient,
+        recipientName: null,
+        type: purpose || 'general',
+        message: cleanMsg,
+        status: 'Failed',
+        failureReason: err.message,
+        provider: 'bulksmsbd',
+        partsCount: 1,
+      });
+    }
+
     throw err;
   }
 }
@@ -287,7 +352,7 @@ export async function sendWebsiteSms(websiteId, { to, message, senderId = null, 
   });
 }
 
-export default {
+const SmsSender = {
   SUPPORTED_SMS_PROVIDERS,
   maskSmsApiKey,
   maskPhoneNumber,
@@ -297,3 +362,5 @@ export default {
   getWebsiteSmsConfig,
   sendWebsiteSms
 };
+
+export default SmsSender;

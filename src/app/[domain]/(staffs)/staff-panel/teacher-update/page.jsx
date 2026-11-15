@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import {
   FiEdit2,
   FiUser,
@@ -34,7 +35,9 @@ function TeacherUpdateContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const domain = params?.domain || '';
+  const { tenantUrl, slug } = useTenantWebsite();
+  const domain = params?.domain || slug || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
   const initialTeacherId = searchParams.get('id') || '';
 
   const fileInputRef = useRef(null);
@@ -94,9 +97,9 @@ function TeacherUpdateContent() {
       try {
         setLoadingPayrolls(true);
         const [desRes, deptRes, payRes] = await Promise.all([
-          fetch(`/api/${domain}/staff/panel/teacher/designations`),
-          fetch(`/api/${domain}/staff/panel/departments`),
-          fetch(`/api/${domain}/staff/panel/teacher-payrolls`)
+          fetch(`${apiBase}/staff/panel/teacher/designations`),
+          fetch(`${apiBase}/staff/panel/departments`),
+          fetch(`${apiBase}/staff/panel/teacher-payrolls`)
         ]);
         const desData = await desRes.json();
         const deptData = await deptRes.json();
@@ -117,73 +120,74 @@ function TeacherUpdateContent() {
       }
     }
     loadData();
-  }, [domain]);
+  }, [domain, apiBase]);
 
   useEffect(() => {
-    async function loadTeachers() {
-      if (!domain) return;
-      try {
-        const res = await fetch(`/api/${domain}/staff/panel/teacher?limit=100`);
-        const data = await res.json();
+    let active = true;
+    if (!domain) return;
+    fetch(`${apiBase}/staff/panel/teacher?limit=100`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
         if (data.success) {
           setAllTeachers(data.teachers || []);
           if (!selectedTeacherId && data.teachers && data.teachers.length > 0) {
             setSelectedTeacherId(String(data.teachers[0].id));
           }
         }
-      } catch (err) {
+      })
+      .catch((err) => {
+        if (!active) return;
         console.error(err);
-      }
-    }
-    loadTeachers();
-  }, [domain, selectedTeacherId]);
-
-  const loadTeacherDetails = useCallback(async (tId) => {
-    if (!domain || !tId) return;
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher?id=${tId}`);
-      const data = await res.json();
-      if (data.success && data.teacher) {
-        const t = data.teacher;
-        setFormData({
-          id: t.id,
-          name: t.name || '',
-          email: t.email || '',
-          number: t.number || '',
-          emergency_contact: t.emergency_contact || '',
-          gender: t.gender || 'male',
-          blood_group: t.blood_group || '',
-          date_of_birth: t.date_of_birth ? t.date_of_birth.split('T')[0] : '',
-          religion: t.religion || '',
-          address: t.address || '',
-          permanent_address: t.permanent_address || '',
-          joining_date: t.joining_date ? t.joining_date.split('T')[0] : '',
-          payroll_id: t.payroll_id ? String(t.payroll_id) : '',
-          department_id: t.department_id ? String(t.department_id) : '',
-          designation_id: t.designation_id ? String(t.designation_id) : '',
-          photo_url: t.photo_url || '',
-          photo_id: t.photo_id || '',
-          password: '',
-          is_active: Boolean(t.is_active),
-          is_registered: Boolean(t.is_registered)
-        });
-      } else {
-        showToast(data.error || 'Failed to load teacher profile.', true);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('Error fetching teacher profile.', true);
-    } finally {
-      setLoading(false);
-    }
-  }, [domain, showToast]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [domain, selectedTeacherId, apiBase]);
 
   useEffect(() => {
-    if (selectedTeacherId) {
-      loadTeacherDetails(selectedTeacherId);
-    }
-  }, [selectedTeacherId, loadTeacherDetails]);
+    let active = true;
+    if (!domain || !selectedTeacherId) return;
+    fetch(`${apiBase}/staff/panel/teacher?id=${selectedTeacherId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (data.success && data.teacher) {
+          const t = data.teacher;
+          setFormData({
+            id: t.id,
+            name: t.name || '',
+            email: t.email || '',
+            number: t.number || '',
+            emergency_contact: t.emergency_contact || '',
+            gender: t.gender || 'male',
+            blood_group: t.blood_group || '',
+            date_of_birth: t.date_of_birth ? t.date_of_birth.split('T')[0] : '',
+            religion: t.religion || '',
+            address: t.address || '',
+            permanent_address: t.permanent_address || '',
+            joining_date: t.joining_date ? t.joining_date.split('T')[0] : '',
+            payroll_id: t.payroll_id ? String(t.payroll_id) : '',
+            department_id: t.department_id ? String(t.department_id) : '',
+            designation_id: t.designation_id ? String(t.designation_id) : '',
+            photo_url: t.photo_url || '',
+            photo_id: t.photo_id || '',
+            password: '',
+            is_active: Boolean(t.is_active),
+            is_registered: Boolean(t.is_registered)
+          });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error(err);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [domain, selectedTeacherId, apiBase]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -226,7 +230,7 @@ function TeacherUpdateContent() {
     if (!formData.id || !domain) return;
     try {
       setResendingVerification(true);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher/resend-verification`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teacherId: formData.id })
@@ -260,8 +264,8 @@ function TeacherUpdateContent() {
       showToast('Phone number is required.', true);
       return;
     }
-    if (!formData.department_id) {
-      showToast('Department is required. Every teacher must belong to a department.', true);
+    if (!formData.designation_id) {
+      showToast('Teacher designation is required.', true);
       return;
     }
 
@@ -269,20 +273,23 @@ function TeacherUpdateContent() {
       setSubmitting(true);
       const putData = new FormData();
       Object.keys(formData).forEach((key) => {
-        if (key === 'department_id') putData.append('department_id', Number(formData.department_id));
-        else if (key === 'designation_id') putData.append('designation_id', formData.designation_id ? Number(formData.designation_id) : '');
-        else if (key === 'payroll_id') {
+        if (key === 'department_id') {
+          putData.append('department_id', formData.department_id ? Number(formData.department_id) : '');
+        } else if (key === 'designation_id') {
+          putData.append('designation_id', Number(formData.designation_id));
+        } else if (key === 'payroll_id') {
           putData.append('payroll_id', formData.payroll_id ? Number(formData.payroll_id) : '');
+        } else if (key === 'salary') {
+        } else if (formData[key] !== null && formData[key] !== undefined) {
+          putData.append(key, formData[key]);
         }
-        else if (key === 'salary') {  }
-        else if (formData[key] !== null && formData[key] !== undefined) putData.append(key, formData[key]);
       });
 
       if (selectedPhotoFile) {
         putData.append('photo', selectedPhotoFile);
       }
 
-      const res = await fetch(`/api/${domain}/staff/panel/teacher`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher`, {
         method: 'PUT',
         body: putData
       });
@@ -321,7 +328,7 @@ function TeacherUpdateContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link href={`/${domain}/staff-panel/teacher-list`} className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+            <Link href={tenantUrl('/staff-panel/teacher-list')} className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
               <FiArrowLeft className="w-3.5 h-3.5" />
               <span>Teacher Directory</span>
             </Link>
@@ -343,7 +350,7 @@ function TeacherUpdateContent() {
               value={selectedTeacherId}
               onChange={(e) => {
                 setSelectedTeacherId(e.target.value);
-                router.push(`/${domain}/staff-panel/teacher-update?id=${e.target.value}`);
+                router.push(tenantUrl(`/staff-panel/teacher-update?id=${e.target.value}`));
               }}
               className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer"
             >
@@ -356,7 +363,7 @@ function TeacherUpdateContent() {
           )}
 
           <Link
-            href={`/${domain}/staff-panel/teacher-qualifications?teacher_id=${selectedTeacherId}`}
+            href={tenantUrl(`/staff-panel/teacher-qualifications?teacher_id=${selectedTeacherId}`)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <FiAward className="w-3.5 h-3.5" />
@@ -364,7 +371,7 @@ function TeacherUpdateContent() {
           </Link>
 
           <Link
-            href={`/${domain}/staff-panel/teacher-assign?teacher_id=${selectedTeacherId}`}
+            href={tenantUrl(`/staff-panel/teacher-assign?teacher_id=${selectedTeacherId}`)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <FiBookOpen className="w-3.5 h-3.5" />
@@ -436,7 +443,7 @@ function TeacherUpdateContent() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
                   onChange={handlePhotoSelect}
                   className="hidden"
                 />
@@ -574,10 +581,10 @@ function TeacherUpdateContent() {
                   <input
                     type="password"
                     name="password"
-                    placeholder="Leave blank to keep current"
+                    aria-label="Reset Portal Password (leave blank to keep current)"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
+                    className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                   />
                 </div>
               </div>
@@ -624,16 +631,15 @@ function TeacherUpdateContent() {
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                   <FiLayers className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Department <span className="text-rose-500">*</span></span>
+                  <span>Department (Optional)</span>
                 </label>
                 <select
                   name="department_id"
-                  required
                   value={formData.department_id}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
                 >
-                  <option value="">-- Choose Department --</option>
+                  <option value="">-- None / Unassigned --</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name} {d.code ? `(${d.code})` : ''}
@@ -645,15 +651,16 @@ function TeacherUpdateContent() {
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                   <FiAward className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Designation / Rank</span>
+                  <span>Designation / Rank <span className="text-rose-500">*</span></span>
                 </label>
                 <select
                   name="designation_id"
+                  required
                   value={formData.designation_id}
                   onChange={handleInputChange}
                   className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer"
                 >
-                  <option value="">-- No Designation (Unassigned) --</option>
+                  <option value="">-- Choose Designation --</option>
                   {designations.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.title} {d.display_order ? `(#${d.display_order})` : ''}
@@ -682,7 +689,7 @@ function TeacherUpdateContent() {
                     <span>Payroll Scale / Grade</span>
                   </span>
                   <Link
-                    href={`/${domain}/staff-panel/teacher-payrolls`}
+                    href={tenantUrl('/staff-panel/teacher-payrolls')}
                     target="_blank"
                     className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
                   >
@@ -705,7 +712,7 @@ function TeacherUpdateContent() {
                 {payrolls.length === 0 && !loadingPayrolls && (
                   <p className="text-[10px] text-amber-600 mt-1">
                     No payroll scales found.{' '}
-                    <Link href={`/${domain}/staff-panel/teacher-payrolls`} className="underline font-semibold">
+                    <Link href={tenantUrl('/staff-panel/teacher-payrolls')} className="underline font-semibold">
                       Create in Payroll
                     </Link>
                   </p>
@@ -792,7 +799,7 @@ function TeacherUpdateContent() {
 
           <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
             <Link
-              href={`/${domain}/staff-panel/teacher-list`}
+              href={tenantUrl('/staff-panel/teacher-list')}
               className="px-4 py-2 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancel

@@ -726,6 +726,66 @@ CREATE INDEX IF NOT EXISTS idx_ws_monthly_usages_lookup
     ON website_monthly_usages (website_id, year_month);
 
 -- ----------------------------------------------------------------------------
+-- 20A. WEBSITE SENT SMS TABLE (SMS Delivery Logs & Cost Accounting)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_sent_sms (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    recipient_type VARCHAR(50) NOT NULL DEFAULT 'other',
+    recipient_id BIGINT,
+    recipient_identifier VARCHAR(100) NOT NULL,
+    recipient_name VARCHAR(255),
+    type VARCHAR(50) NOT NULL DEFAULT 'notification',
+    message TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'Sent',
+    failure_reason TEXT,
+    provider VARCHAR(50) DEFAULT 'bulksmsbd',
+    parts_count INT DEFAULT 1,
+    year_month VARCHAR(7) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_sent_sms_lookup ON website_sent_sms(website_id, year_month);
+CREATE INDEX IF NOT EXISTS idx_ws_sent_sms_recipient ON website_sent_sms(website_id, recipient_type);
+CREATE INDEX IF NOT EXISTS idx_ws_sent_sms_created ON website_sent_sms(website_id, created_at DESC);
+
+DROP TRIGGER IF EXISTS update_website_sent_sms_updated_at ON website_sent_sms;
+CREATE TRIGGER update_website_sent_sms_updated_at
+    BEFORE UPDATE ON website_sent_sms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 20B. WEBSITE SENT MAILS TABLE (Email Delivery Logs & Cost Accounting)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_sent_mails (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    recipient_type VARCHAR(50) NOT NULL DEFAULT 'other',
+    recipient_id BIGINT,
+    recipient_identifier VARCHAR(255) NOT NULL,
+    recipient_name VARCHAR(255),
+    type VARCHAR(50) NOT NULL DEFAULT 'notification',
+    subject VARCHAR(500) NOT NULL,
+    content TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'Sent',
+    failure_reason TEXT,
+    provider VARCHAR(50) DEFAULT 'brevo',
+    year_month VARCHAR(7) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ws_sent_mails_lookup ON website_sent_mails(website_id, year_month);
+CREATE INDEX IF NOT EXISTS idx_ws_sent_mails_recipient ON website_sent_mails(website_id, recipient_type);
+CREATE INDEX IF NOT EXISTS idx_ws_sent_mails_created ON website_sent_mails(website_id, created_at DESC);
+
+DROP TRIGGER IF EXISTS update_website_sent_mails_updated_at ON website_sent_mails;
+CREATE TRIGGER update_website_sent_mails_updated_at
+    BEFORE UPDATE ON website_sent_mails
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
 -- 21. WEBSITE META TABLE (Facebook, Instagram & WhatsApp Integration Keys)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_meta (
@@ -925,9 +985,22 @@ CREATE TRIGGER update_website_news_images_updated_at
 
 
 -- ----------------------------------------------------------------------------
--- 29. WEBSITE DESIGNATIONS
+-- 29. WEBSITE TEACHER DESIGNATION
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS website_designations (
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'website_designations' AND table_type = 'BASE TABLE'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_name = 'website_teacher_designation'
+    ) THEN
+        ALTER TABLE website_designations RENAME TO website_teacher_designation;
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS website_teacher_designation (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -939,10 +1012,12 @@ CREATE TABLE IF NOT EXISTS website_designations (
     UNIQUE(website_id, title)
 );
 
-DROP TRIGGER IF EXISTS update_website_designations_updated_at ON website_designations;
-CREATE TRIGGER update_website_designations_updated_at
-    BEFORE UPDATE ON website_designations
+DROP TRIGGER IF EXISTS update_website_teacher_designation_updated_at ON website_teacher_designation;
+CREATE TRIGGER update_website_teacher_designation_updated_at
+    BEFORE UPDATE ON website_teacher_designation
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE OR REPLACE VIEW website_designations AS SELECT * FROM website_teacher_designation;
 
 -- ----------------------------------------------------------------------------
 -- 30. WEBSITE TEACHERS (connected with designation by id)
@@ -950,8 +1025,8 @@ CREATE TRIGGER update_website_designations_updated_at
 CREATE TABLE IF NOT EXISTS website_teachers (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    department_id BIGINT NOT NULL REFERENCES website_departments(id) ON DELETE CASCADE,
-    designation_id BIGINT REFERENCES website_designations(id) ON DELETE SET NULL,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
+    designation_id BIGINT NOT NULL REFERENCES website_teacher_designation(id) ON DELETE RESTRICT,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
@@ -963,7 +1038,6 @@ CREATE TABLE IF NOT EXISTS website_teachers (
     address TEXT,
     permanent_address TEXT,
     joining_date DATE DEFAULT CURRENT_DATE,
-    salary NUMERIC(12, 2) DEFAULT 0.00,
     photo_url TEXT,
     photo_id VARCHAR(255),
     password VARCHAR(255) NOT NULL,
@@ -1018,6 +1092,31 @@ BEGIN
         SELECT 1 FROM information_schema.columns WHERE table_name = 'website_teachers' AND column_name = 'last_login_at'
     ) THEN
         ALTER TABLE website_teachers ADD COLUMN last_login_at TIMESTAMPTZ;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_teachers' AND column_name = 'department_id' AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE website_teachers ALTER COLUMN department_id DROP NOT NULL;
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_teachers' AND column_name = 'designation_id' AND is_nullable = 'YES'
+    ) THEN
+        INSERT INTO website_teacher_designation (website_id, title, description, display_order, is_active)
+        SELECT DISTINCT wt.website_id, 'Lecturer', 'Default Designation', 1, TRUE
+        FROM website_teachers wt
+        WHERE wt.designation_id IS NULL
+        ON CONFLICT (website_id, title) DO NOTHING;
+
+        UPDATE website_teachers wt
+        SET designation_id = wd.id
+        FROM website_teacher_designation wd
+        WHERE wt.designation_id IS NULL AND wd.website_id = wt.website_id;
+
+        ALTER TABLE website_teachers ALTER COLUMN designation_id SET NOT NULL;
     END IF;
 END $$;
 
@@ -1146,6 +1245,27 @@ CREATE TABLE IF NOT EXISTS website_teacher_class_periods (
 DROP TRIGGER IF EXISTS update_website_teacher_cp_updated_at ON website_teacher_class_periods;
 CREATE TRIGGER update_website_teacher_cp_updated_at
     BEFORE UPDATE ON website_teacher_class_periods
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS website_teacher_settings (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    require_verification BOOLEAN DEFAULT TRUE,
+    enable_two_factor BOOLEAN DEFAULT FALSE,
+    allow_password_recovery BOOLEAN DEFAULT TRUE,
+    max_daily_periods INT DEFAULT 6,
+    check_in_grace_minutes INT DEFAULT 15,
+    default_probation_months INT DEFAULT 6,
+    id_card_prefix VARCHAR(50) DEFAULT 'FAC-',
+    custom_rules JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id)
+);
+
+DROP TRIGGER IF EXISTS update_website_teacher_settings_updated_at ON website_teacher_settings;
+CREATE TRIGGER update_website_teacher_settings_updated_at
+    BEFORE UPDATE ON website_teacher_settings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
@@ -1282,7 +1402,7 @@ CREATE INDEX IF NOT EXISTS idx_ws_staff_attendance_lookup ON website_staff_atten
 CREATE INDEX IF NOT EXISTS idx_ws_staff_leaves_lookup ON website_staff_leaves(website_id, staff_id, status);
 
 -- Teacher Indexes
-CREATE INDEX IF NOT EXISTS idx_ws_designations_website ON website_designations(website_id);
+CREATE INDEX IF NOT EXISTS idx_ws_teacher_designation_website ON website_teacher_designation(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_teachers_website ON website_teachers(website_id);
 CREATE INDEX IF NOT EXISTS idx_ws_teachers_designation ON website_teachers(website_id, designation_id);
 CREATE INDEX IF NOT EXISTS idx_ws_teachers_email ON website_teachers(website_id, email);
@@ -4272,7 +4392,7 @@ CREATE TABLE IF NOT EXISTS website_teacher_ids (
     card_number VARCHAR(100) NOT NULL,
     template_id BIGINT REFERENCES website_teacher_id_templates(id) ON DELETE SET NULL,
     department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
-    designation_id BIGINT REFERENCES website_designations(id) ON DELETE SET NULL,
+    designation_id BIGINT REFERENCES website_teacher_designation(id) ON DELETE SET NULL,
     issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
     expiry_date DATE,
     valid_upto VARCHAR(50),

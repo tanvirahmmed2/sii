@@ -127,6 +127,20 @@ export async function PUT(request, context) {
       return NextResponse.json({ success: false, error: 'Qualification ID is required.' }, { status: 400 });
     }
 
+    const checkRes = await queryDb(
+      `SELECT * FROM website_teacher_qualifications WHERE id = $1 AND website_id = $2 LIMIT 1`,
+      [id, website.id]
+    );
+
+    if (checkRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Qualification record not found or access denied.' }, { status: 404 });
+    }
+
+    const currentQual = checkRes.rows[0];
+    const finalBoard = board !== undefined ? (board?.trim() || null) : currentQual.board;
+    const finalPassingYear = passing_year !== undefined ? (passing_year ? parseInt(passing_year, 10) : null) : currentQual.passing_year;
+    const finalResult = result !== undefined ? (result?.trim() || null) : currentQual.result;
+
     const updateRes = await queryDb(
       `UPDATE website_teacher_qualifications
        SET degree = COALESCE($1, degree),
@@ -142,9 +156,9 @@ export async function PUT(request, context) {
       [
         degree?.trim() || null,
         institute?.trim() || null,
-        board !== undefined ? (board?.trim() || null) : null,
-        passing_year ? parseInt(passing_year, 10) : null,
-        result !== undefined ? (result?.trim() || null) : null,
+        finalBoard,
+        finalPassingYear,
+        finalResult,
         certificate_url !== undefined ? (certificate_url?.trim() || null) : null,
         certificate_id !== undefined ? (certificate_id?.trim() || null) : null,
         id,

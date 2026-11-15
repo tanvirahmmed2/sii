@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 import {
   FiUsers,
   FiUserPlus,
@@ -25,7 +26,9 @@ import {
 export default function TeacherListPage() {
   const params = useParams();
   const router = useRouter();
-  const domain = params?.domain || '';
+  const { tenantUrl, slug } = useTenantWebsite();
+  const domain = params?.domain || slug || '';
+  const apiBase = domain ? `/api/${domain}` : '/api';
 
   const [teachers, setTeachers] = useState([]);
   const [designations, setDesignations] = useState([]);
@@ -73,8 +76,8 @@ export default function TeacherListPage() {
       if (!domain) return;
       try {
         const [desRes, deptRes] = await Promise.all([
-          fetch(`/api/${domain}/staff/panel/teacher/designations`),
-          fetch(`/api/${domain}/staff/panel/departments`)
+          fetch(`${apiBase}/staff/panel/teacher/designations`),
+          fetch(`${apiBase}/staff/panel/departments`)
         ]);
         const desData = await desRes.json();
         const deptData = await deptRes.json();
@@ -89,7 +92,7 @@ export default function TeacherListPage() {
       }
     }
     loadFilterOptions();
-  }, [domain]);
+  }, [domain, apiBase]);
 
   const fetchTeachers = useCallback(async () => {
     if (!domain) return;
@@ -104,7 +107,7 @@ export default function TeacherListPage() {
       if (selectedDepartment !== 'all') queryParams.set('department_id', selectedDepartment);
       if (selectedStatus !== 'all') queryParams.set('status', selectedStatus);
 
-      const res = await fetch(`/api/${domain}/staff/panel/teacher?${queryParams.toString()}`);
+      const res = await fetch(`${apiBase}/staff/panel/teacher?${queryParams.toString()}`);
       const data = await res.json();
 
       if (data.success) {
@@ -120,17 +123,46 @@ export default function TeacherListPage() {
     } finally {
       setLoading(false);
     }
-  }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, showToast]);
+  }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, showToast, apiBase]);
 
   useEffect(() => {
-    fetchTeachers();
-  }, [fetchTeachers]);
+    let active = true;
+    if (!domain) return;
+    const queryParams = new URLSearchParams({
+      page: String(page),
+      limit: '50',
+    });
+    if (searchTerm.trim()) queryParams.set('search', searchTerm.trim());
+    if (selectedDesignation !== 'all') queryParams.set('designation_id', selectedDesignation);
+    if (selectedDepartment !== 'all') queryParams.set('department_id', selectedDepartment);
+    if (selectedStatus !== 'all') queryParams.set('status', selectedStatus);
+
+    fetch(`${apiBase}/staff/panel/teacher?${queryParams.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active) return;
+        if (data.success) {
+          setTeachers(data.teachers || []);
+          if (data.pagination) setPagination(data.pagination);
+          if (data.stats) setStats(data.stats);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error(err);
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, apiBase]);
 
   const handleOpenView = async (teacher) => {
     setViewModalOpen(true);
     setLoadingDetails(true);
     try {
-      const res = await fetch(`/api/${domain}/staff/panel/teacher?id=${teacher.id}`);
+      const res = await fetch(`${apiBase}/staff/panel/teacher?id=${teacher.id}`);
       const data = await res.json();
       if (data.success && data.teacher) {
         setSelectedTeacher(data.teacher);
@@ -153,7 +185,7 @@ export default function TeacherListPage() {
     if (!teacherToDelete) return;
     try {
       setDeleting(true);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher?id=${teacherToDelete.id}`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher?id=${teacherToDelete.id}`, {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -174,10 +206,10 @@ export default function TeacherListPage() {
   };
 
   const handleResendVerification = async (teacherId) => {
-    if (!teacherId || !domain) return;
+    if (!teacherId) return;
     try {
       setResendingId(teacherId);
-      const res = await fetch(`/api/${domain}/staff/panel/teacher/resend-verification`, {
+      const res = await fetch(`${apiBase}/staff/panel/teacher/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teacherId })
@@ -264,13 +296,13 @@ export default function TeacherListPage() {
               <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
               <input
                 type="text"
-                placeholder="Search teachers by name, email, or phone..."
+                aria-label="Search teachers by name, email, or phone"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
                   setPage(1);
                 }}
-                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
+                className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"
               />
             </div>
           </div>
@@ -328,7 +360,7 @@ export default function TeacherListPage() {
             </button>
 
             <Link
-              href={`/${domain}/staff-panel/teacher-registration`}
+              href={tenantUrl('/staff-panel/teacher-registration')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition"
             >
               <FiUserPlus className="w-3.5 h-3.5" />
@@ -496,7 +528,7 @@ export default function TeacherListPage() {
                         <FiEye className="w-3.5 h-3.5" />
                       </button>
                       <Link
-                        href={`/${domain}/staff-panel/teacher-update?id=${teacher.id}`}
+                        href={tenantUrl(`/staff-panel/teacher-update?id=${teacher.id}`)}
                         className="p-1 inline-flex rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                         title="Edit Teacher"
                       >
@@ -679,7 +711,7 @@ export default function TeacherListPage() {
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <Link
-                href={`/${domain}/staff-panel/teacher-update?id=${selectedTeacher.id}`}
+                href={tenantUrl(`/staff-panel/teacher-update?id=${selectedTeacher.id}`)}
                 className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 transition flex items-center gap-1"
               >
                 <FiEdit2 className="w-3 h-3" />

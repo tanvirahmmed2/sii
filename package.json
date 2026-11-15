@@ -19,6 +19,7 @@
     "fabric": "^5.5.2",
     "framer-motion": "^14.0.0",
     "html2canvas": "^1.4.1",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "next": "16.2.6",

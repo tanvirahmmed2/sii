@@ -10,11 +10,13 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-export default async function OfficerLayout({ children }) {
+export default async function OfficerLayout({ children, params }) {
+  const resolvedParams = await params;
+  const domain = resolvedParams?.domain;
   const authenticated = await isOfficer();
 
   if (!authenticated) {
-    redirect('/auth/access/officer/login');
+    redirect(domain ? `/${domain}/auth/access/officer` : '/auth/access/officer');
   }
 
   return <OfficerShell>{children}</OfficerShell>;

@@ -66,7 +66,7 @@ export async function POST(request, context) {
               wt.department_id, wt.designation_id, wt.photo_url, wt.photo_id,
               wd.title AS designation_title, dept.name AS department_name
        FROM website_teachers wt
-       LEFT JOIN website_designations wd ON wd.id = wt.designation_id
+       LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
        LEFT JOIN website_departments dept ON dept.id = wt.department_id
        WHERE wt.website_id = $1 AND (
          LOWER(wt.email) = $2

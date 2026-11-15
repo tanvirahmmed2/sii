@@ -79,7 +79,7 @@ export async function GET(request, context) {
               des.title AS designation_title,
               COALESCE(split_part(t.email, '@', 1), t.id::text) AS username
        FROM website_teachers t
-       LEFT JOIN website_designations des ON des.id = t.designation_id
+       LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
        WHERE t.website_id = $1 AND (t.department_id = $2 OR t.department_id IS NULL) AND t.is_active = true
        ORDER BY des.display_order ASC NULLS LAST, t.name ASC`,
       [website.id, classData.department_id]
