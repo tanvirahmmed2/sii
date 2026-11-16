@@ -25,6 +25,8 @@ export function getClientIp(request) {
   return '127.0.0.1';
 }
 
+export const extractClientIp = getClientIp;
+
 export function getUserAgent(request) {
   if (!request) return 'Unknown';
   return String(request.headers?.get?.('user-agent') || 'Unknown').slice(0, 500);
