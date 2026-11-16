@@ -18,7 +18,7 @@ export async function GET(request, context) {
         [auth.website.id]
       ),
       queryDb(
-        `SELECT id, name, is_current 
+        `SELECT id, name, (status = 'active') AS is_current 
          FROM website_sessions 
          WHERE website_id = $1 
          ORDER BY id DESC`,

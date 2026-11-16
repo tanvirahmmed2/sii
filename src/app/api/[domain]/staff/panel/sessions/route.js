@@ -28,7 +28,7 @@ export async function GET(request, context) {
       query += ` AND s.name ILIKE $${params.length}`;
     }
 
-    query += ` ORDER BY s.is_current DESC, s.id DESC`;
+    query += ` ORDER BY s.name ASC, s.id DESC`;
 
     const result = await queryDb(query, params);
 
@@ -49,7 +49,7 @@ export async function POST(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { name, is_current = false, status = 'active' } = body;
+    const { name, status = 'active' } = body;
 
     if (!name || !String(name).trim()) {
       return NextResponse.json({ success: false, error: 'Session Name is required (e.g., 2026-2027).' }, { status: 400 });
@@ -57,21 +57,13 @@ export async function POST(request, context) {
 
     const trimmedName = String(name).trim();
 
-    if (is_current) {
-      await queryDb(
-        `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1`,
-        [auth.website.id]
-      );
-    }
-
     const insertRes = await queryDb(
-      `INSERT INTO website_sessions (website_id, name, is_current, status)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO website_sessions (website_id, name, status)
+       VALUES ($1, $2, $3)
        RETURNING *`,
       [
         auth.website.id,
         trimmedName,
-        Boolean(is_current),
         status || 'active'
       ]
     );
@@ -98,30 +90,21 @@ export async function PUT(request, context) {
     if (auth.error) return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
 
     const body = await request.json().catch(() => ({}));
-    const { id, name, is_current, status } = body;
+    const { id, name, status } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Session ID is required.' }, { status: 400 });
     }
 
-    if (is_current) {
-      await queryDb(
-        `UPDATE website_sessions SET is_current = FALSE WHERE website_id = $1 AND id != $2`,
-        [auth.website.id, id]
-      );
-    }
-
     const updateRes = await queryDb(
       `UPDATE website_sessions
        SET name = COALESCE($1, name),
-           is_current = COALESCE($2, is_current),
-           status = COALESCE($3, status),
+           status = COALESCE($2, status),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4 AND website_id = $5
+       WHERE id = $3 AND website_id = $4
        RETURNING *`,
       [
         name ? String(name).trim() : null,
-        is_current !== undefined ? Boolean(is_current) : null,
         status || null,
         id,
         auth.website.id

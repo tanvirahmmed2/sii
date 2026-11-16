@@ -18,10 +18,10 @@ export async function GET(request, context) {
         [auth.website.id]
       ),
       query(
-        `SELECT id, name AS session_name, is_current
+        `SELECT id, name AS session_name, (status = 'active') AS is_current
          FROM website_sessions
          WHERE website_id = $1
-         ORDER BY is_current DESC, name DESC`,
+         ORDER BY name DESC`,
         [auth.website.id]
       )
     ]);

@@ -76,7 +76,7 @@ export async function GET(request, context) {
     const [departmentsRes, classesRes, sessionsRes] = await Promise.all([
       queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1 ORDER BY order_no ASC, name ASC`, [websiteId]),
       queryDb(`SELECT id, name, department_id, max_seats FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
-      queryDb(`SELECT id, name, is_current FROM website_sessions WHERE website_id = $1 ORDER BY id DESC`, [websiteId])
+      queryDb(`SELECT id, name, (status = 'active') AS is_current FROM website_sessions WHERE website_id = $1 ORDER BY id DESC`, [websiteId])
     ]);
 
     return NextResponse.json({

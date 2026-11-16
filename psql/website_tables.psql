@@ -515,7 +515,6 @@ CREATE TABLE IF NOT EXISTS website_sessions (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
-    is_current BOOLEAN DEFAULT FALSE,
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived', 'upcoming')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -525,6 +524,50 @@ CREATE TABLE IF NOT EXISTS website_sessions (
 DROP TRIGGER IF EXISTS update_website_sessions_updated_at ON website_sessions;
 CREATE TRIGGER update_website_sessions_updated_at
     BEFORE UPDATE ON website_sessions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_sessions' AND column_name = 'is_current'
+    ) THEN
+        ALTER TABLE website_sessions DROP COLUMN is_current;
+    END IF;
+END $$;
+
+-- ----------------------------------------------------------------------------
+-- 12D. WEBSITE ACADEMIC CONFIGS TABLE (Hierarchy Presets & Modular Setup)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_academic_configs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL UNIQUE REFERENCES websites(id) ON DELETE CASCADE,
+    hierarchy_type VARCHAR(50) NOT NULL DEFAULT 'CLASS_SEC'
+        CHECK (hierarchy_type IN ('DEPT_SESSION_SEC', 'CLASS_SEC', 'DEPT_CLASS_SEC', 'CUSTOM')),
+    use_department BOOLEAN NOT NULL DEFAULT FALSE,
+    use_session BOOLEAN NOT NULL DEFAULT TRUE,
+    use_class BOOLEAN NOT NULL DEFAULT TRUE,
+    use_section BOOLEAN NOT NULL DEFAULT TRUE,
+    require_department BOOLEAN NOT NULL DEFAULT FALSE,
+    require_session BOOLEAN NOT NULL DEFAULT TRUE,
+    require_class BOOLEAN NOT NULL DEFAULT TRUE,
+    require_section BOOLEAN NOT NULL DEFAULT FALSE,
+    labels JSONB NOT NULL DEFAULT '{
+        "department": "Department",
+        "session": "Academic Year",
+        "class": "Class",
+        "section": "Section"
+    }'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_website_academic_configs_web 
+ON website_academic_configs(website_id);
+
+DROP TRIGGER IF EXISTS update_website_academic_configs_updated_at ON website_academic_configs;
+CREATE TRIGGER update_website_academic_configs_updated_at
+    BEFORE UPDATE ON website_academic_configs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
@@ -566,19 +609,43 @@ END $$;
 CREATE TABLE IF NOT EXISTS website_sections (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_id BIGINT NOT NULL REFERENCES website_classes(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
+    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     capacity INT DEFAULT 40,
     room_number VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(website_id, class_id, name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_ws_sections_hierarchy ON website_sections(website_id, department_id, session_id, class_id);
 
 DROP TRIGGER IF EXISTS update_website_sections_updated_at ON website_sections;
 CREATE TRIGGER update_website_sections_updated_at
     BEFORE UPDATE ON website_sections
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_sections' AND column_name = 'class_id' AND is_nullable = 'NO'
+    ) THEN
+        ALTER TABLE website_sections ALTER COLUMN class_id DROP NOT NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_sections' AND column_name = 'department_id'
+    ) THEN
+        ALTER TABLE website_sections ADD COLUMN department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'website_sections' AND column_name = 'session_id'
+    ) THEN
+        ALTER TABLE website_sections ADD COLUMN session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- ----------------------------------------------------------------------------
 -- 15. WEBSITE SUBJECTS TABLE (Courses / Subjects Taught under Classes)

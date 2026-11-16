@@ -1235,6 +1235,11 @@ export const staffNavData = [
     "module": "settings",
     "children": [
       {
+        "title": "System Architecture",
+        "module": "settings",
+        "path": "/system"
+      },
+      {
         "title": "Payments",
         "module": "settings",
         "path": "/configure-payments"
@@ -1245,6 +1250,11 @@ export const staffNavData = [
         "path": "/configure-meta"
       }
     ]
+  },
+  {
+    "title": "System Architecture",
+    "module": "settings",
+    "path": "/system"
   },
   {
     "title": "Modules Directory",
