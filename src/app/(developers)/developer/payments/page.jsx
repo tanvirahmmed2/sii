@@ -208,7 +208,7 @@ export default function AdminPaymentsPage() {
             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Monitor central EPS transactions, collect developer manual payments, and manage instant subscription provisioning.
+            Monitor EPS transactions, collect developer manual payments, and manage instant subscription provisioning.
           </p>
         </div>
 

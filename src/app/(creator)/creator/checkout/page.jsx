@@ -183,7 +183,7 @@ function CheckoutContent() {
           <span>Back to Packages</span>
         </Link>
         <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
-          EPS Central Checkout
+          EPS Checkout
         </span>
       </div>
 

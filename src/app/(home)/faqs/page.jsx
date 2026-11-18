@@ -17,7 +17,7 @@ export default function FaqsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [openIndex, setOpenIndex] = useState(0); 
+  const [openIndex, setOpenIndex] = useState(0);
 
   const fetchPublishedFaqs = async () => {
     setLoading(true);
@@ -79,7 +79,7 @@ export default function FaqsPage() {
     <main className="min-h-screen bg-slate-50/60 pb-24">
       <section className="relative overflow-hidden bg-primary text-white pt-20 pb-20 px-4 lg:px-8 border-b border-white/10">
         <div className="absolute inset-0 bg-linear-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-6xl mx-auto text-center relative z-10 space-y-4">
+        <div className="w-full text-center relative z-10 space-y-4">
           <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-3xl mx-auto leading-tight">
             Frequently Asked Questions
           </h1>
@@ -175,17 +175,16 @@ export default function FaqsPage() {
             )}
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto space-y-4 pt-8">
+          <div className="w-full space-y-4 pt-8">
             {filteredFaqs.map((faq, index) => {
               const isOpen = openIndex === index;
               return (
                 <div
                   key={faq.id}
-                  className={`bg-white border rounded-2xl transition-all duration-200 overflow-hidden shadow-xs ${
-                    isOpen
-                      ? 'border-secondary/40 ring-1 ring-secondary/20 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`bg-white border rounded-2xl transition-all duration-200 overflow-hidden shadow-xs ${isOpen
+                    ? 'border-secondary/40 ring-1 ring-secondary/20 shadow-md'
+                    : 'border-slate-200 hover:border-slate-300'
+                    }`}
                 >
                   <button
                     type="button"
@@ -197,11 +196,10 @@ export default function FaqsPage() {
                       {faq.question}
                     </span>
                     <span
-                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 ${
-                        isOpen
-                          ? 'bg-secondary text-white rotate-180'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-transform duration-200 ${isOpen
+                        ? 'bg-secondary text-white rotate-180'
+                        : 'bg-slate-100 text-slate-500'
+                        }`}
                     >
                       <BiChevronDown className="text-xl" />
                     </span>

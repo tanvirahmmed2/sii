@@ -6,7 +6,7 @@ import Footer from 'src/component/marketing/home/bar/Footer';
 
 export const metadata = {
   title: `${SITE_NAME} - Build Your Identity`,
-  description: `Portfolio wesite builder ${SITE_NAME}`,
+  description: `Academy website builder ${SITE_NAME}`,
 };
 
 export default function HomeLayout({ children }) {

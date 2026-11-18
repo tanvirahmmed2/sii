@@ -55,6 +55,12 @@ export default function HomeNavbar() {
             >
               Updates
             </Link>
+            <Link
+              href="/faqs"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
+            >
+              FAQ
+            </Link>
           </div>
         </div>
 

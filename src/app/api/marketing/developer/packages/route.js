@@ -248,15 +248,6 @@ export async function POST(request) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : 3;
     const sortOrder = Number(data.sort_order) || 0;
-    const monthlyMail = data.monthly_mail !== undefined ? Math.max(0, Number(data.monthly_mail)) : 1000;
-    const monthlySms = data.monthly_sms !== undefined ? Math.max(0, Number(data.monthly_sms)) : 200;
-
-    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : 'subscription_only';
-    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : 'percentage';
-    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : 0;
-    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : 0;
-    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : 0;
-    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : 30;
 
     const features = Array.isArray(data.features)
       ? JSON.stringify(data.features)
@@ -297,18 +288,14 @@ export async function POST(request) {
         monthly_price, yearly_price, discount_percentage,
         max_students, max_teachers, max_staff, max_storage_mb,
         is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
-        features, is_popular, is_public, is_active, grace_period, sort_order,
-        monthly_mail, monthly_sms,
-        charge_model, per_tx_fee_type, per_tx_fee_value, per_student_fee_usd, per_student_fee_bdt, student_fee_cycle_days
+        features, is_popular, is_public, is_active, grace_period, sort_order
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9,
         $10, $11, $12,
         $13, $14, $15, $16,
         $17, $18, $19,
-        $20::jsonb, $21, $22, $23, $24, $25,
-        $26, $27,
-        $28, $29, $30, $31, $32, $33
+        $20::jsonb, $21, $22, $23, $24, $25
       )
       RETURNING *`,
       [
@@ -317,9 +304,7 @@ export async function POST(request) {
         monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
         maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
-        features, isPopular, isPublic, isActive, gracePeriod, sortOrder,
-        monthlyMail, monthlySms,
-        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays
+        features, isPopular, isPublic, isActive, gracePeriod, sortOrder
       ]
     );
 
@@ -449,19 +434,6 @@ export async function PUT(request) {
     const isActive = data.is_active !== undefined ? Boolean(data.is_active) : Boolean(current.is_active);
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
-    const monthlyMail = data.monthly_mail !== undefined
-      ? Math.max(0, Number(data.monthly_mail))
-      : (current.monthly_mail !== undefined ? Number(current.monthly_mail) : 1000);
-    const monthlySms = data.monthly_sms !== undefined
-      ? Math.max(0, Number(data.monthly_sms))
-      : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
-
-    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : (current.charge_model || 'subscription_only');
-    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : (current.per_tx_fee_type || 'percentage');
-    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : Number(current.per_tx_fee_value || 0);
-    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : Number(current.per_student_fee_usd || 0);
-    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : Number(current.per_student_fee_bdt || 0);
-    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : Number(current.student_fee_cycle_days || 30);
 
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
@@ -497,16 +469,8 @@ export async function PUT(request) {
            is_active = $23,
            grace_period = $24,
            sort_order = $25,
-           monthly_mail = $26,
-           monthly_sms = $27,
-           charge_model = $28,
-           per_tx_fee_type = $29,
-           per_tx_fee_value = $30,
-           per_student_fee_usd = $31,
-           per_student_fee_bdt = $32,
-           student_fee_cycle_days = $33,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $34`,
+       WHERE id = $26`,
       [
         name, slug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
@@ -514,8 +478,6 @@ export async function PUT(request) {
         maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
-        monthlyMail, monthlySms,
-        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays,
         Number(id)
       ]
     );

@@ -49,18 +49,6 @@ function buildInitialFormData(initialData) {
     max_teachers: initialData?.max_teachers ?? 30,
     max_staff: initialData?.max_staff ?? 20,
     max_storage_mb: initialData?.max_storage_mb ?? 5120,
-    monthly_mail: initialData?.monthly_mail ?? 1000,
-    monthly_sms: initialData?.monthly_sms ?? 200,
-    charge_model: initialData?.charge_model || 'subscription_only',
-    per_tx_fee_type: initialData?.per_tx_fee_type || 'percentage',
-    per_tx_fee_value:
-      initialData?.per_tx_fee_value !== undefined ? String(initialData.per_tx_fee_value) : '0',
-    per_student_fee_usd:
-      initialData?.per_student_fee_usd !== undefined ? String(initialData.per_student_fee_usd) : '0',
-    per_student_fee_bdt:
-      initialData?.per_student_fee_bdt !== undefined ? String(initialData.per_student_fee_bdt) : '0',
-    student_fee_cycle_days:
-      initialData?.student_fee_cycle_days !== undefined ? Number(initialData.student_fee_cycle_days) : 30,
     is_available_student_panel: initialData?.is_available_student_panel !== false,
     is_available_teacher_panel: initialData?.is_available_teacher_panel !== false,
     is_available_custom_domain: Boolean(initialData?.is_available_custom_domain),
@@ -272,14 +260,6 @@ export default function PackageForm({
       max_teachers: Math.max(1, parseInt(formData.max_teachers, 10) || 30),
       max_staff: Math.max(1, parseInt(formData.max_staff, 10) || 20),
       max_storage_mb: maxStorageMb,
-      monthly_mail: Math.max(0, parseInt(formData.monthly_mail, 10) || 0),
-      monthly_sms: Math.max(0, parseInt(formData.monthly_sms, 10) || 0),
-      charge_model: formData.charge_model,
-      per_tx_fee_type: formData.per_tx_fee_type,
-      per_tx_fee_value: Math.max(0, parseFloat(formData.per_tx_fee_value) || 0),
-      per_student_fee_usd: Math.max(0, parseFloat(formData.per_student_fee_usd) || 0),
-      per_student_fee_bdt: Math.max(0, parseFloat(formData.per_student_fee_bdt) || 0),
-      student_fee_cycle_days: Math.max(1, parseInt(formData.student_fee_cycle_days, 10) || 30),
       features: formData.features,
       is_available_student_panel: Boolean(formData.is_available_student_panel),
       is_available_teacher_panel: Boolean(formData.is_available_teacher_panel),
@@ -526,112 +506,6 @@ export default function PackageForm({
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-              Monetization &amp; Transaction Fee Models
-            </h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Control platform commission policies, transaction surcharges, and per-student billing cycles.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Platform Charge Model
-              </label>
-              <select
-                value={formData.charge_model}
-                onChange={(e) => setFormData({ ...formData, charge_model: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200"
-              >
-                <option value="subscription_only">Subscription Only (Flat monthly/yearly fee)</option>
-                <option value="per_transaction">Per-Transaction Fee (Fee on collected payments)</option>
-                <option value="per_student">Per-Student Billing (Charged by active students)</option>
-                <option value="hybrid">Hybrid (Subscription fee + Transaction fee)</option>
-              </select>
-            </div>
-
-            {(formData.charge_model === 'per_transaction' || formData.charge_model === 'hybrid') && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Transaction Fee Type
-                  </label>
-                  <select
-                    value={formData.per_tx_fee_type}
-                    onChange={(e) => setFormData({ ...formData, per_tx_fee_type: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200"
-                  >
-                    <option value="percentage">Percentage Rate (%)</option>
-                    <option value="fixed">Fixed Amount per Transaction</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Fee Value {formData.per_tx_fee_type === 'percentage' ? '(%)' : '(Amount)'}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.per_tx_fee_value}
-                    onChange={(e) => setFormData({ ...formData, per_tx_fee_value: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-              </>
-            )}
-
-            {(formData.charge_model === 'per_student' || formData.charge_model === 'hybrid') && (
-              <>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Per-Student USD Fee ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.per_student_fee_usd}
-                    onChange={(e) => setFormData({ ...formData, per_student_fee_usd: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Per-Student BDT Fee (৳)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.per_student_fee_bdt}
-                    onChange={(e) => setFormData({ ...formData, per_student_fee_bdt: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Student Fee Billing Cycle (Days)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.student_fee_cycle_days}
-                    onChange={(e) => setFormData({ ...formData, student_fee_cycle_days: e.target.value })}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
-          <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
-            <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
               School Capacity Quotas &amp; Limit Allocations
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -639,7 +513,7 @@ export default function PackageForm({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Max Students
@@ -683,36 +557,6 @@ export default function PackageForm({
                 className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">Admin personnel</span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Monthly Email
-              </label>
-              <input
-                type="number"
-                min={0}
-                required
-                value={formData.monthly_mail}
-                onChange={(e) => setFormData({ ...formData, monthly_mail: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Outbound emails</span>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Monthly SMS
-              </label>
-              <input
-                type="number"
-                min={0}
-                required
-                value={formData.monthly_sms}
-                onChange={(e) => setFormData({ ...formData, monthly_sms: e.target.value })}
-                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Broadcast SMS</span>
             </div>
 
             <div>

@@ -17,8 +17,6 @@ const SEED_PACKAGES = [
     max_teachers: 30,
     max_staff: 15,
     max_storage_mb: 5120,
-    monthly_mail: 1000,
-    monthly_sms: 200,
     is_available_student_panel: true,
     is_available_teacher_panel: true,
     is_available_custom_domain: false,
@@ -46,8 +44,6 @@ const SEED_PACKAGES = [
     max_teachers: 100,
     max_staff: 50,
     max_storage_mb: 20480,
-    monthly_mail: 5000,
-    monthly_sms: 1000,
     is_available_student_panel: true,
     is_available_teacher_panel: true,
     is_available_custom_domain: true,
@@ -75,8 +71,6 @@ const SEED_PACKAGES = [
     max_teachers: 500,
     max_staff: 200,
     max_storage_mb: 102400,
-    monthly_mail: 25000,
-    monthly_sms: 5000,
     is_available_student_panel: true,
     is_available_teacher_panel: true,
     is_available_custom_domain: true,
@@ -116,7 +110,7 @@ async function seedPackages() {
          max_students, max_teachers, max_staff, max_storage_mb,
          is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
          grace_period, sort_order, is_popular, is_public, is_active,
-         monthly_mail, monthly_sms, updated_at
+         updated_at
        ) VALUES (
          $1, $2, $3, $4,
          $5, $6, $7, $8,
@@ -124,7 +118,7 @@ async function seedPackages() {
          $12, $13, $14, $15,
          $16, $17, $18,
          $19, $20, $21, $22, $23,
-         $24, $25, CURRENT_TIMESTAMP
+         CURRENT_TIMESTAMP
        )
        ON CONFLICT (slug) DO UPDATE SET
          name = EXCLUDED.name,
@@ -149,8 +143,6 @@ async function seedPackages() {
          is_popular = EXCLUDED.is_popular,
          is_public = EXCLUDED.is_public,
          is_active = EXCLUDED.is_active,
-         monthly_mail = EXCLUDED.monthly_mail,
-         monthly_sms = EXCLUDED.monthly_sms,
          updated_at = CURRENT_TIMESTAMP
        RETURNING id, name, slug`,
       [
@@ -159,8 +151,7 @@ async function seedPackages() {
         pkg.monthly_price, pkg.yearly_price, pkg.discount_percentage,
         pkg.max_students, pkg.max_teachers, pkg.max_staff, pkg.max_storage_mb,
         pkg.is_available_student_panel, pkg.is_available_teacher_panel, pkg.is_available_custom_domain,
-        pkg.grace_period, pkg.sort_order, pkg.is_popular, pkg.is_public, pkg.is_active,
-        pkg.monthly_mail, pkg.monthly_sms
+        pkg.grace_period, pkg.sort_order, pkg.is_popular, pkg.is_public, pkg.is_active
       ]
     );
 

@@ -1938,7 +1938,7 @@ export default function WebsiteManagePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
                 <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
                   Students
@@ -1979,26 +1979,6 @@ export default function WebsiteManagePage() {
                 <div className="text-[10px] text-slate-500">
                   {website?.package?.max_storage_mb ? `${Number(website.package.max_storage_mb).toLocaleString()} MB cloud` : '5,120 MB cloud'}
                 </div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
-                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-                  Monthly Email
-                </div>
-                <div className="text-base font-bold text-slate-900">
-                  {website?.package?.monthly_mail ? Number(website.package.monthly_mail).toLocaleString() : '1,000'}
-                </div>
-                <div className="text-[10px] text-slate-500">Emails per month</div>
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 rounded p-3 space-y-1">
-                <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-                  Monthly SMS
-                </div>
-                <div className="text-base font-bold text-slate-900">
-                  {website?.package?.monthly_sms ? Number(website.package.monthly_sms).toLocaleString() : '200'}
-                </div>
-                <div className="text-[10px] text-slate-500">SMS per month</div>
               </div>
             </div>
 

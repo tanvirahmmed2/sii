@@ -263,7 +263,7 @@ export default function PaymentGatewayCheckout({
               </span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Secure Central Payment for Sky International Institute Platform
+              Secure Payment for Sky International Institute Platform
             </div>
           </div>
         </div>

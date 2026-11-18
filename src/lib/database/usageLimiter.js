@@ -32,9 +32,7 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
 
   try {
     const pkgRes = await queryDb(`
-      SELECT p.id AS package_id, p.name AS package_name,
-             COALESCE(p.monthly_mail, 1000)::int AS monthly_mail,
-             COALESCE(p.monthly_sms, 200)::int AS monthly_sms
+      SELECT p.id AS package_id, p.name AS package_name
       FROM websites w
       LEFT JOIN subscriptions s ON s.website_id = w.id AND s.status = 'active'
       LEFT JOIN packages p ON p.id = s.package_id
@@ -44,14 +42,10 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
     `, [websiteId]);
 
     if (pkgRes.rows.length > 0 && pkgRes.rows[0].package_id) {
-      monthlyMail = pkgRes.rows[0].monthly_mail ?? 1000;
-      monthlySms = pkgRes.rows[0].monthly_sms ?? 200;
       packageName = pkgRes.rows[0].package_name || packageName;
     } else {
       const creatorSubRes = await queryDb(`
-        SELECT p.id AS package_id, p.name AS package_name,
-               COALESCE(p.monthly_mail, 1000)::int AS monthly_mail,
-               COALESCE(p.monthly_sms, 200)::int AS monthly_sms
+        SELECT p.id AS package_id, p.name AS package_name
         FROM websites w
         JOIN subscriptions s ON s.creator_id = w.creator_id AND s.status = 'active'
         JOIN packages p ON p.id = s.package_id
@@ -61,8 +55,6 @@ export async function getWebsiteMonthlyUsageAndLimits(websiteId) {
       `, [websiteId]);
 
       if (creatorSubRes.rows.length > 0) {
-        monthlyMail = creatorSubRes.rows[0].monthly_mail ?? 1000;
-        monthlySms = creatorSubRes.rows[0].monthly_sms ?? 200;
         packageName = creatorSubRes.rows[0].package_name || packageName;
       }
     }

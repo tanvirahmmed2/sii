@@ -64,7 +64,7 @@ export default function ExamFeesPayPage() {
               href="/pay"
               className="text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
             >
-              &larr; Central Pay Portal
+              &larr; Fee Payment Portal
             </Link>
             <span className="text-slate-300 dark:text-slate-600">/</span>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 uppercase tracking-wider">

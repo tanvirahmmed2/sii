@@ -27,8 +27,6 @@ export async function GET(request, context) {
                 p.max_teachers AS package_max_teachers,
                 p.max_staff AS package_max_staff,
                 p.max_storage_mb AS package_max_storage_mb,
-                p.monthly_mail AS package_monthly_mail,
-                p.monthly_sms AS package_monthly_sms,
                 p.is_available_student_panel,
                 p.is_available_teacher_panel,
                 p.is_available_custom_domain,

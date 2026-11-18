@@ -223,21 +223,6 @@ export async function PUT(request, { params }) {
     const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : (current.grace_period !== undefined ? Number(current.grace_period) : 3);
     const sortOrder = data.sort_order !== undefined ? Number(data.sort_order) || 0 : (current.sort_order || 0);
 
-    const monthlyMail = data.monthly_mail !== undefined
-      ? Math.max(0, Number(data.monthly_mail))
-      : (current.monthly_mail !== undefined ? Number(current.monthly_mail) : 1000);
-
-    const monthlySms = data.monthly_sms !== undefined
-      ? Math.max(0, Number(data.monthly_sms))
-      : (current.monthly_sms !== undefined ? Number(current.monthly_sms) : 200);
-
-    const chargeModel = data.charge_model !== undefined ? String(data.charge_model).trim() : (current.charge_model || 'subscription_only');
-    const perTxFeeType = data.per_tx_fee_type !== undefined ? String(data.per_tx_fee_type).trim() : (current.per_tx_fee_type || 'percentage');
-    const perTxFeeValue = data.per_tx_fee_value !== undefined ? Math.max(0, Number(data.per_tx_fee_value) || 0) : Number(current.per_tx_fee_value || 0);
-    const perStudentFeeUsd = data.per_student_fee_usd !== undefined ? Math.max(0, Number(data.per_student_fee_usd) || 0) : Number(current.per_student_fee_usd || 0);
-    const perStudentFeeBdt = data.per_student_fee_bdt !== undefined ? Math.max(0, Number(data.per_student_fee_bdt) || 0) : Number(current.per_student_fee_bdt || 0);
-    const studentFeeCycleDays = data.student_fee_cycle_days !== undefined ? Math.max(1, Number(data.student_fee_cycle_days) || 30) : Number(current.student_fee_cycle_days || 30);
-
     let featuresJson = current.features ? JSON.stringify(current.features) : '[]';
     if (data.features !== undefined) {
       featuresJson = Array.isArray(data.features)
@@ -272,16 +257,8 @@ export async function PUT(request, { params }) {
            is_active = $23,
            grace_period = $24,
            sort_order = $25,
-           monthly_mail = $26,
-           monthly_sms = $27,
-           charge_model = $28,
-           per_tx_fee_type = $29,
-           per_tx_fee_value = $30,
-           per_student_fee_usd = $31,
-           per_student_fee_bdt = $32,
-           student_fee_cycle_days = $33,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $34`,
+       WHERE id = $26`,
       [
         name, newSlug, shortDescription, tagline, description,
         monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
@@ -289,8 +266,6 @@ export async function PUT(request, { params }) {
         maxStudents, maxTeachers, maxStaff, maxStorageMb,
         isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
         featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
-        monthlyMail, monthlySms,
-        chargeModel, perTxFeeType, perTxFeeValue, perStudentFeeUsd, perStudentFeeBdt, studentFeeCycleDays,
         current.id
       ]
     );

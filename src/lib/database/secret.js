@@ -238,5 +238,4 @@ export const EPS_API_URL = process.env.EPS_API_URL || '';
 export const EPS_RETURN_URL = process.env.EPS_RETURN_URL || '';
 export const EPS_CANCEL_URL = process.env.EPS_CANCEL_URL || '';
 
-export const CRON_SECRET = process.env.CRON_SECRET || '';
 export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');
