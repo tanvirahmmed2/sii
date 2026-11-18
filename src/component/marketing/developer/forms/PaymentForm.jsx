@@ -5,13 +5,14 @@ import { generateToken } from 'src/lib/utils/random';
 
 export default function PaymentForm({ onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
-    creator_id: 101,
-    package_id: 1,
-    subscription_id: '',
-    amount_in_cents: 2900,
+    creator_id: '1',
+    package_id: '1',
+    billing_cycle: 'monthly',
+    amount: '2900',
     currency: 'BDT',
-    payment_method: 'surjopay',
+    payment_method: 'manual_cash',
     transaction_id: '',
+    manual_payment_notes: '',
     status: 'COMPLETED',
   });
   const [loading, setLoading] = useState(false);
@@ -22,61 +23,67 @@ export default function PaymentForm({ onSuccess, onCancel }) {
     setLoading(true);
     setError('');
 
-    const transaction_id = formData.transaction_id || generateToken(12);
+    const transaction_id = formData.transaction_id || `MAN-${generateToken(10).toUpperCase()}`;
 
     try {
       const res = await fetch('/api/marketing/developer/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create_record',
+          action: 'manual_payment',
           data: {
-            ...formData,
             creator_id: Number(formData.creator_id),
             package_id: Number(formData.package_id),
-            subscription_id: formData.subscription_id ? Number(formData.subscription_id) : null,
-            amount_in_cents: Number(formData.amount_in_cents),
+            billing_cycle: formData.billing_cycle,
+            amount: Number(formData.amount),
+            currency: formData.currency,
+            payment_method: formData.payment_method,
             transaction_id,
+            manual_payment_notes: formData.manual_payment_notes || 'Manual developer billing settlement',
+            status: formData.status,
+            is_manual: true,
           },
         }),
       });
+
       const data = await res.json();
       if (data.success) {
         setFormData({
-          creator_id: 101,
-          package_id: 1,
-          subscription_id: '',
-          amount_in_cents: 2900,
+          creator_id: '1',
+          package_id: '1',
+          billing_cycle: 'monthly',
+          amount: '2900',
           currency: 'BDT',
-          payment_method: 'surjopay',
+          payment_method: 'manual_cash',
           transaction_id: '',
+          manual_payment_notes: '',
           status: 'COMPLETED',
         });
         if (onSuccess) onSuccess(data.record);
       } else {
-        setError(data.error || 'Failed to record payment');
+        setError(data.error || 'Failed to record manual payment');
       }
     } catch (err) {
-      setError(err.message || 'Network error');
+      setError(err.message || 'Network error recording payment');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-4 mb-4">
+    <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 mb-4 shadow-sm">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Record Platform Payment</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Record Manual Platform Payment</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Log an incoming payment transaction, refund, or manual credit adjustment.
+            Collect manual cash, bank transfer, or direct MFS settlement and activate creator subscription.
           </p>
         </div>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-2.5 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-medium rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
+            className="px-2.5 py-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer"
           >
             Close
           </button>
@@ -84,115 +91,126 @@ export default function PaymentForm({ onSuccess, onCancel }) {
       </div>
 
       {error && (
-        <div className="p-3 rounded border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
+        <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-medium">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 text-xs">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Creator ID</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Creator Account ID</label>
             <input
               type="number"
               required
-              placeholder="e.g. 101"
               value={formData.creator_id}
               onChange={(e) => setFormData({ ...formData, creator_id: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Package ID</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Package Plan ID</label>
             <input
               type="number"
               required
-              placeholder="e.g. 1"
               value={formData.package_id}
               onChange={(e) => setFormData({ ...formData, package_id: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Linked Subscription ID</label>
-            <input
-              type="number"
-              placeholder="Optional"
-              value={formData.subscription_id}
-              onChange={(e) => setFormData({ ...formData, subscription_id: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-            />
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Billing Interval</label>
+            <select
+              value={formData.billing_cycle}
+              onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
+            >
+              <option value="monthly">Monthly Plan (30 Days)</option>
+              <option value="yearly">Yearly Plan (365 Days)</option>
+            </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Amount (Base Unit/Cents)</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Amount</label>
             <input
               type="number"
+              step="0.01"
               required
-              placeholder="2900"
-              value={formData.amount_in_cents}
-              onChange={(e) => setFormData({ ...formData, amount_in_cents: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono font-bold text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Currency</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Currency</label>
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
             >
-              <option value="USD">USD ($)</option>
-              <option value="BDT">BDT (৳)</option>
+              <option value="BDT">BDT (৳ Taka)</option>
+              <option value="USD">USD ($ Dollar)</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Method / Gateway</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Manual Method</label>
             <select
               value={formData.payment_method}
-              onChange={(e) => {
-                const nextMethod = e.target.value;
-                const nextCurr = nextMethod === 'surjopay' ? 'BDT' : 'USD';
-                setFormData({ ...formData, payment_method: nextMethod, currency: nextCurr });
-              }}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
             >
-              <option value="surjopay">shurjoPay (BDT)</option>
-              <option value="paypal">PayPal (USD)</option>
-              <option value="paddle">Paddle Billing (USD)</option>
+              <option value="manual_cash">Cash Payment</option>
+              <option value="manual_bank_transfer">Bank Wire / Transfer</option>
+              <option value="manual_bkash_agent">Direct bKash Agent/Merchant</option>
+              <option value="manual_nagad_agent">Direct Nagad Agent/Merchant</option>
+              <option value="manual_cheque">Bank Cheque / Draft</option>
+              <option value="eps_gateway_manual">EPS Gateway Manual Settlement</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Payment Status</label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600 font-medium"
             >
-              <option value="COMPLETED">Completed</option>
-              <option value="PENDING">Pending</option>
-              <option value="REFUNDED">Refunded</option>
-              <option value="FAILED">Failed</option>
+              <option value="COMPLETED">Paid &amp; Activate Subscription</option>
+              <option value="PENDING">Pending (Awaiting Deposit Verification)</option>
             </select>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Transaction Gateway ID</label>
-          <input
-            type="text"
-            placeholder="e.g. 123D148B92"
-            value={formData.transaction_id}
-            onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Transaction ID / Cheque Reference (Optional)
+            </label>
+            <input
+              type="text"
+              value={formData.transaction_id}
+              onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 font-mono text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
+            />
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Developer Notes &amp; Verification Details
+            </label>
+            <input
+              type="text"
+              value={formData.manual_payment_notes}
+              onChange={(e) => setFormData({ ...formData, manual_payment_notes: e.target.value })}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-indigo-600"
+            />
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -200,7 +218,7 @@ export default function PaymentForm({ onSuccess, onCancel }) {
             <button
               type="button"
               onClick={onCancel}
-              className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               Cancel
             </button>
@@ -208,9 +226,9 @@ export default function PaymentForm({ onSuccess, onCancel }) {
           <button
             type="submit"
             disabled={loading}
-            className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold disabled:opacity-50 transition cursor-pointer shadow-sm"
           >
-            {loading ? 'Logging...' : 'Save Payment Record'}
+            {loading ? 'Recording Payment...' : 'Record Payment & Activate Subscription'}
           </button>
         </div>
       </form>

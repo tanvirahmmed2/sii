@@ -102,7 +102,7 @@ export default function SubscriptionDetailsPage({ params }) {
       if (json.success) {
         setData(json);
         const subCurr = json.subscription?.payment_currency || (Number(json.subscription?.total_amount) > 500 ? 'BDT' : 'BDT');
-        const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'PADDLE';
+        const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'EPS';
         setRenewForm((prev) => ({
           ...prev,
           package_id: json.subscription?.package_id || '',
@@ -148,7 +148,7 @@ export default function SubscriptionDetailsPage({ params }) {
           if (json.success) {
             setData(json);
             const subCurr = json.subscription?.payment_currency || (Number(json.subscription?.total_amount) > 500 ? 'BDT' : 'BDT');
-            const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'PADDLE';
+            const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'EPS';
             setRenewForm((prev) => ({
               ...prev,
               package_id: json.subscription?.package_id || '',
@@ -282,7 +282,6 @@ export default function SubscriptionDetailsPage({ params }) {
   };
 
   const handleUpdateStatus = async (newStatus) => {
-    if (!confirm(`Are you sure you want to change subscription status to "${newStatus}"?`)) return;
     try {
       const res = await fetch(`/api/marketing/developer/subscriptions/${subId}`, {
         method: 'POST',
@@ -305,7 +304,6 @@ export default function SubscriptionDetailsPage({ params }) {
   };
 
   const handleSettlePayment = async (paymentId) => {
-    if (!confirm('Mark this pending payment as PAID and activate the subscription term?')) return;
     try {
       const res = await fetch(`/api/marketing/developer/subscriptions/${subId}`, {
         method: 'POST',
@@ -825,7 +823,6 @@ export default function SubscriptionDetailsPage({ params }) {
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. campus.edu.bd"
                           value={websiteForm.custom_domain}
                           onChange={(e) => setWebsiteForm({ ...websiteForm, custom_domain: e.target.value })}
                           className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
@@ -1485,7 +1482,7 @@ export default function SubscriptionDetailsPage({ params }) {
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
                     >
                       <option value="BKASH">bKash (BDT)</option>
-                      <option value="PADDLE">Paddle (USD)</option>
+                      <option value="EPS">EPS Global (USD)</option>
                     </select>
                   </div>
                 </div>
@@ -1497,7 +1494,7 @@ export default function SubscriptionDetailsPage({ params }) {
                       value={renewForm.currency}
                       onChange={(e) => {
                         const nextCurr = e.target.value;
-                        const nextMethod = nextCurr === 'BDT' ? 'BKASH' : 'PADDLE';
+                        const nextMethod = nextCurr === 'BDT' ? 'BKASH' : 'EPS';
                         setRenewForm((prev) => {
                           const pkg = data?.available_packages?.find((p) => p.id === Number(prev.package_id)) || data?.package;
                           let nextAmount = prev.amount;
@@ -1534,7 +1531,6 @@ export default function SubscriptionDetailsPage({ params }) {
                     <input
                       type="number"
                       step="0.01"
-                      placeholder={`Est: ${preview.estimatedCost}`}
                       value={renewForm.amount}
                       onChange={(e) => setRenewForm({ ...renewForm, amount: e.target.value })}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
@@ -1547,7 +1543,6 @@ export default function SubscriptionDetailsPage({ params }) {
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. TXN9872134 (or auto)"
                       value={renewForm.transaction_id}
                       onChange={(e) => setRenewForm({ ...renewForm, transaction_id: e.target.value })}
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
@@ -1562,7 +1557,6 @@ export default function SubscriptionDetailsPage({ params }) {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Annual renewal granted with 10% educational loyalty grant"
                   value={renewForm.notes}
                   onChange={(e) => setRenewForm({ ...renewForm, notes: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"

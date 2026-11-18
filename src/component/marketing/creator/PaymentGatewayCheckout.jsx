@@ -7,46 +7,34 @@ import LoadingScreen from 'src/component/common/LoadingScreen';
 export default function PaymentGatewayCheckout({
   creatorId,
   paymentId,
-  initialGateway,
+  initialGateway = 'eps',
   onSuccess,
 }) {
   const [payment, setPayment] = useState(null);
+  const [epsMode, setEpsMode] = useState('sandbox');
   const [loading, setLoading] = useState(() => Boolean(creatorId && paymentId));
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [confirmedTxnId, setConfirmedTxnId] = useState('');
 
-  const [gateway, setGateway] = useState(() => {
-    const init = String(initialGateway || '').toLowerCase();
-    if (init === 'paypal') return 'paypal';
-    if (init === 'paddle' || init === 'stripe_connect' || init === 'stripe') return 'paddle';
-    return 'surjopay';
-  });
+  const [activeTab, setActiveTab] = useState('BDT');
+  const [bdtType, setBdtType] = useState('MFS');
+  const [mfsProvider, setMfsProvider] = useState('bkash');
+  const [bankProvider, setBankProvider] = useState('city_touch');
+  const [foreignCurrency, setForeignCurrency] = useState('USD');
 
-  const [bdtSubMethod, setBdtSubMethod] = useState(() => {
-    const init = String(initialGateway || '').toLowerCase();
-    if (init === 'nagad') return 'nagad';
-    if (init === 'rocket') return 'rocket';
-    if (init === 'card') return 'card';
-    return 'bkash';
-  });
+  const [mfsPhone, setMfsPhone] = useState('');
+  const [mfsTrxId, setMfsTrxId] = useState('');
 
-  const [formData, setFormData] = useState({
-    bkashNumber: '',
-    nagadNumber: '',
-    rocketNumber: '',
-    trxId: '',
-    cardName: '',
-    cardNumber: '',
-    cardExpiry: '',
-    cardCvc: '',
-    paypalEmail: '',
-    paypalRef: '',
-    paddleEmail: '',
-    paddleCountry: '',
-    paddleRef: '',
-  });
+  const [bankAccountNo, setBankAccountNo] = useState('');
+  const [bankBranch, setBankBranch] = useState('');
+  const [bankTrxRef, setBankTrxRef] = useState('');
+
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -60,6 +48,10 @@ export default function PaymentGatewayCheckout({
         if (!isMounted) return;
         if (data.success && data.payment) {
           setPayment(data.payment);
+          if (data.epsMode) setEpsMode(data.epsMode);
+          if (data.payment.currency === 'USD') {
+            setActiveTab('FOREIGN');
+          }
           if (data.payment.status === 'successful' || data.payment.status === 'COMPLETED') {
             setPaymentSuccess(true);
             setConfirmedTxnId(data.payment.transaction_id || '');
@@ -82,13 +74,6 @@ export default function PaymentGatewayCheckout({
     };
   }, [creatorId, paymentId, onSuccess]);
 
-  const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const isYearly = String(payment?.billing_interval || '').toUpperCase() === 'YEARLY';
   const bdtPrice = isYearly
     ? Number(payment?.yearly_price_bdt ?? payment?.amount ?? 0)
@@ -97,10 +82,40 @@ export default function PaymentGatewayCheckout({
     ? Number(payment?.yearly_price_usd ?? payment?.amount ?? 0)
     : Number(payment?.monthly_price_usd ?? payment?.amount ?? 0);
 
-  const isBdt = gateway === 'surjopay';
-  const activeAmount = isBdt ? bdtPrice : usdPrice;
-  const activeCurrency = isBdt ? 'BDT' : 'USD';
-  const formattedDisplay = isBdt ? `৳${bdtPrice.toFixed(2)} BDT` : `$${usdPrice.toFixed(2)} USD`;
+  const isBdtTab = activeTab === 'BDT';
+  const activeAmount = isBdtTab ? bdtPrice : usdPrice;
+  const activeCurrency = isBdtTab ? 'BDT' : foreignCurrency;
+
+  const handleFillSandboxData = (type) => {
+    setError('');
+    if (type === 'bkash') {
+      setActiveTab('BDT');
+      setBdtType('MFS');
+      setMfsProvider('bkash');
+      setMfsPhone('01711000111');
+      setMfsTrxId(`BKASH-${Date.now().toString().slice(-6)}`);
+    } else if (type === 'nagad') {
+      setActiveTab('BDT');
+      setBdtType('MFS');
+      setMfsProvider('nagad');
+      setMfsPhone('01811000222');
+      setMfsTrxId(`NAGAD-${Date.now().toString().slice(-6)}`);
+    } else if (type === 'bank') {
+      setActiveTab('BDT');
+      setBdtType('BANK');
+      setBankProvider('city_touch');
+      setBankAccountNo('1102938475001');
+      setBankBranch('Gulshan Branch, Dhaka');
+      setBankTrxRef(`IB-CITY-${Date.now().toString().slice(-6)}`);
+    } else if (type === 'card') {
+      setActiveTab('FOREIGN');
+      setForeignCurrency('USD');
+      setCardHolder('Global Institute Owner');
+      setCardNumber('4000 1234 5678 9010');
+      setCardExpiry('12/28');
+      setCardCvv('789');
+    }
+  };
 
   const handleConfirmPayment = async (e) => {
     e.preventDefault();
@@ -109,31 +124,24 @@ export default function PaymentGatewayCheckout({
     setError('');
 
     try {
-      let resolvedMethod = gateway;
-      let accountNumber = '';
-      let txReference = '';
+      let resolvedSubMethod = 'eps';
+      let accountRef = '';
+      let gatewayTrxId = '';
 
-      if (gateway === 'surjopay') {
-        resolvedMethod = bdtSubMethod;
-        if (bdtSubMethod === 'bkash') {
-          accountNumber = formData.bkashNumber;
-          txReference = formData.trxId;
-        } else if (bdtSubMethod === 'nagad') {
-          accountNumber = formData.nagadNumber;
-          txReference = formData.trxId;
-        } else if (bdtSubMethod === 'rocket') {
-          accountNumber = formData.rocketNumber;
-          txReference = formData.trxId;
-        } else if (bdtSubMethod === 'card') {
-          accountNumber = formData.cardNumber ? formData.cardNumber.slice(-4) : 'Card';
-          txReference = formData.cardName;
+      if (isBdtTab) {
+        if (bdtType === 'MFS') {
+          resolvedSubMethod = `eps_mfs_${mfsProvider}`;
+          accountRef = mfsPhone || '01700000000';
+          gatewayTrxId = mfsTrxId || `EPS-MFS-${Date.now()}`;
+        } else {
+          resolvedSubMethod = `eps_bank_${bankProvider}`;
+          accountRef = bankAccountNo || 'Bank Direct';
+          gatewayTrxId = bankTrxRef || `EPS-BANK-${Date.now()}`;
         }
-      } else if (gateway === 'paypal') {
-        accountNumber = formData.paypalEmail;
-        txReference = formData.paypalRef;
-      } else if (gateway === 'paddle') {
-        accountNumber = formData.paddleEmail;
-        txReference = formData.paddleRef;
+      } else {
+        resolvedSubMethod = 'eps_global_card';
+        accountRef = cardNumber ? `Card ****${cardNumber.replace(/\s+/g, '').slice(-4)}` : 'Foreign Card';
+        gatewayTrxId = `EPS-INTL-${Date.now()}`;
       }
 
       const res = await fetch('/api/marketing/creator/payments', {
@@ -143,25 +151,27 @@ export default function PaymentGatewayCheckout({
           action: 'confirm_payment',
           paymentId: payment.id,
           creatorId: payment.creator_id || creatorId,
-          gatewayCode: resolvedMethod,
-          accountNumber: accountNumber || 'Online Payment',
-          gatewayOrderId: txReference || '',
+          gatewayCode: resolvedSubMethod,
+          currency: activeCurrency,
+          accountNumber: accountRef,
+          gatewayOrderId: gatewayTrxId,
+          transactionId: gatewayTrxId,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
         setPaymentSuccess(true);
-        setConfirmedTxnId(data.transactionId || '');
+        setConfirmedTxnId(data.transactionId || gatewayTrxId);
         if (onSuccess) {
           onSuccess({
             ...payment,
             status: 'successful',
-            transaction_id: data.transactionId,
+            transaction_id: data.transactionId || gatewayTrxId,
           });
         }
       } else {
-        setError(data.error || 'Failed to verify and confirm payment.');
+        setError(data.error || 'Failed to verify and confirm payment with EPS.');
       }
     } catch {
       setError('Network communication error while confirming payment.');
@@ -171,58 +181,60 @@ export default function PaymentGatewayCheckout({
   };
 
   if (loading) {
-    return <LoadingScreen fullScreen={false} label="Loading payment gateway details..." />;
+    return <LoadingScreen fullScreen={false} label="Connecting to EPS Payment Gateway..." />;
   }
 
   if (paymentSuccess) {
     return (
-      <div className="w-full max-w-xl mx-auto p-4 sm:p-6 my-6 text-xs text-slate-800">
-        <div className="bg-white border border-emerald-300 rounded-lg shadow-sm p-6 space-y-5 text-center">
-          <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-xl font-bold">
+      <div className="w-full max-w-xl mx-auto p-4 sm:p-6 my-8 text-xs text-slate-800 dark:text-slate-200">
+        <div className="bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 rounded-3xl shadow-lg p-6 sm:p-8 space-y-6 text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl font-black">
             ✓
           </div>
-          <div className="space-y-1">
-            <h2 className="text-base font-bold text-slate-900">Payment Completed Successfully!</h2>
-            <p className="text-slate-600">
-              Your subscription for {payment?.package_name || 'selected plan'} is now active and ready.
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Payment Completed Successfully!</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-xs">
+              Your subscription for {payment?.package_name || 'selected plan'} is now active and ready in your workspace.
             </p>
           </div>
 
-          <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 text-left space-y-2 font-mono text-[11px]">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 text-left space-y-2.5 font-mono text-xs">
             <div className="flex justify-between">
-              <span className="text-slate-500 font-sans">Invoice ID:</span>
-              <span className="font-semibold text-slate-900 font-mono">#{payment?.id || paymentId}</span>
+              <span className="text-slate-500 font-sans">Payment Invoice:</span>
+              <span className="font-bold text-slate-900 dark:text-white">#{payment?.id || paymentId}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500 font-sans">Transaction Reference:</span>
-              <span className="font-semibold text-emerald-700 font-mono">{confirmedTxnId || 'VERIFIED'}</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{confirmedTxnId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-sans">Amount Paid:</span>
-              <span className="font-semibold text-slate-900 font-mono">{formattedDisplay}</span>
+              <span className="text-slate-500 font-sans">Gateway Service:</span>
+              <span className="font-bold text-slate-900 dark:text-white font-sans">Easy Payment System (EPS)</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 font-sans">Billing Interval:</span>
-              <span className="capitalize text-slate-900 font-sans">{isYearly ? 'Annual (365 Days)' : 'Monthly (30 Days)'}</span>
+              <span className="text-slate-500 font-sans">Gateway Mode:</span>
+              <span className="font-bold uppercase text-indigo-600 dark:text-indigo-400 font-sans">{epsMode}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 font-sans">Subscription Status:</span>
-              <span className="inline-block px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-sans font-semibold">Active</span>
+            <div className="flex justify-between border-t border-slate-200 dark:border-slate-700 pt-2 font-bold text-slate-900 dark:text-white">
+              <span className="font-sans">Settled Amount:</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                {activeCurrency === 'BDT' ? `৳${activeAmount.toFixed(2)} BDT` : `$${activeAmount.toFixed(2)} USD`}
+              </span>
             </div>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row gap-2">
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href={`/creator/${creatorId}/payments/${payment?.id || paymentId}`}
-              className="flex-1 py-2.5 px-3 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-center transition"
+              href="/workspace"
+              className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-md shadow-emerald-600/20 cursor-pointer text-center"
             >
-              View Official Receipt
+              Go to Creator Workspace &rarr;
             </Link>
             <Link
-              href={`/creator/${creatorId}/workspace`}
-              className="flex-1 py-2.5 px-3 rounded border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium text-center transition"
+              href={`/creator/${payment?.creator_id || creatorId}/payments`}
+              className="py-3 px-5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition cursor-pointer text-center"
             >
-              Go to Workspace
+              View Billing History
             </Link>
           </div>
         </div>
@@ -231,348 +243,384 @@ export default function PaymentGatewayCheckout({
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4 sm:p-6 my-6 text-xs text-slate-800">
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-          <div>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
-              Invoice #{payment?.id || paymentId}
-            </span>
-            <h2 className="text-base font-semibold text-slate-900 mt-0.5">
-              {payment?.package_name || 'Package Subscription'}
-            </h2>
+    <div className="w-full max-w-3xl mx-auto my-8 px-4 sm:px-6 space-y-6 text-xs text-slate-800 dark:text-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm tracking-wider shadow-md">
+            EPS
           </div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-slate-900 font-mono">{formattedDisplay}</div>
-            <div className="text-[11px] text-slate-500 capitalize">{isYearly ? 'Annual Billing' : 'Monthly Billing'}</div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-slate-900 dark:text-white">EPS Payment Gateway</h1>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  epsMode === 'sandbox'
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800'
+                    : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800'
+                }`}
+              >
+                {epsMode === 'sandbox' ? 'Sandbox Mode' : 'Live Gateway'}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Secure Central Payment for Sky International Institute Platform
+            </div>
+          </div>
+        </div>
+        <div className="text-right sm:text-right">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Invoice Reference</span>
+          <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">#{payment?.id || paymentId}</span>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+          <div>
+            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+              Package Subscription Plan
+            </span>
+            <div className="text-base font-bold text-slate-900 dark:text-white mt-0.5">
+              {payment?.package_name || 'Standard Subscription'}
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              Billing Interval: <span className="font-semibold capitalize text-slate-700 dark:text-slate-300">{payment?.billing_interval || 'Monthly'}</span>
+            </div>
+          </div>
+          <div className="text-left sm:text-right">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Payable Amount</span>
+            <div className="text-xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+              {isBdtTab ? `৳${bdtPrice.toFixed(2)} BDT` : `$${usdPrice.toFixed(2)} USD`}
+            </div>
           </div>
         </div>
 
         {error && (
-          <div className="m-4 p-3 rounded bg-rose-50 border border-rose-200 text-rose-700 font-medium">
+          <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 font-medium">
             {error}
           </div>
         )}
 
-        <div className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Select Payment Platform
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setGateway('surjopay')}
-                className={`p-3 rounded-lg border text-left cursor-pointer transition ${
-                  gateway === 'surjopay'
-                    ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 font-semibold text-slate-900'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <div className="font-semibold text-emerald-700">shurjoPay</div>
-                <div className="text-[10px] text-slate-500">bKash, Nagad, Cards</div>
-                <div className="text-[11px] font-mono text-slate-800 mt-1">৳{bdtPrice.toFixed(2)} BDT</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setGateway('paypal')}
-                className={`p-3 rounded-lg border text-left cursor-pointer transition ${
-                  gateway === 'paypal'
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-500 font-semibold text-slate-900'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <div className="font-semibold text-blue-700">PayPal</div>
-                <div className="text-[10px] text-slate-500">Global USD Wallet</div>
-                <div className="text-[11px] font-mono text-slate-800 mt-1">${usdPrice.toFixed(2)} USD</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setGateway('paddle')}
-                className={`p-3 rounded-lg border text-left cursor-pointer transition ${
-                  gateway === 'paddle'
-                    ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500 font-semibold text-slate-900'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <div className="font-semibold text-indigo-700">Paddle Billing</div>
-                <div className="text-[10px] text-slate-500">Global Cards & Pay</div>
-                <div className="text-[11px] font-mono text-slate-800 mt-1">${usdPrice.toFixed(2)} USD</div>
-              </button>
-            </div>
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            Select Currency & Rail
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab('BDT')}
+              className={`py-3 px-4 rounded-2xl border text-center font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 ${
+                isBdtTab
+                  ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/30 shadow-xs'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>🇧🇩 Bangladeshi Currency (BDT)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('FOREIGN')}
+              className={`py-3 px-4 rounded-2xl border text-center font-bold text-xs transition cursor-pointer flex items-center justify-center gap-2 ${
+                !isBdtTab
+                  ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/30 shadow-xs'
+                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>🌐 Foreign Currencies (USD / Cards)</span>
+            </button>
           </div>
+        </div>
 
-          {gateway === 'surjopay' && (
-            <div className="space-y-3 pt-2 border-t border-slate-100">
-              <label className="block text-xs font-semibold text-slate-700">
-                Choose Local Payment Method
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBdtSubMethod('bkash')}
-                  className={`py-2 px-2.5 rounded border text-center cursor-pointer transition ${
-                    bdtSubMethod === 'bkash'
-                      ? 'border-pink-600 bg-pink-50 text-pink-700 font-bold ring-1 ring-pink-500'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  bKash
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBdtSubMethod('nagad')}
-                  className={`py-2 px-2.5 rounded border text-center cursor-pointer transition ${
-                    bdtSubMethod === 'nagad'
-                      ? 'border-orange-600 bg-orange-50 text-orange-700 font-bold ring-1 ring-orange-500'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Nagad
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBdtSubMethod('rocket')}
-                  className={`py-2 px-2.5 rounded border text-center cursor-pointer transition ${
-                    bdtSubMethod === 'rocket'
-                      ? 'border-purple-600 bg-purple-50 text-purple-700 font-bold ring-1 ring-purple-500'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Rocket
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBdtSubMethod('card')}
-                  className={`py-2 px-2.5 rounded border text-center cursor-pointer transition ${
-                    bdtSubMethod === 'card'
-                      ? 'border-slate-800 bg-slate-100 text-slate-900 font-bold ring-1 ring-slate-800'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Cards
-                </button>
-              </div>
+        {isBdtTab ? (
+          <div className="space-y-4 pt-1">
+            <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4">
+              <button
+                type="button"
+                onClick={() => setBdtType('MFS')}
+                className={`pb-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                  bdtType === 'MFS'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Mobile Financial Services (MFS)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBdtType('BANK')}
+                className={`pb-2 text-xs font-bold border-b-2 transition cursor-pointer ${
+                  bdtType === 'BANK'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                Bank Accounts & Internet Banking
+              </button>
             </div>
-          )}
 
-          <form onSubmit={handleConfirmPayment} className="space-y-4 pt-2">
-            {gateway === 'surjopay' && bdtSubMethod === 'bkash' && (
-              <div className="p-3.5 rounded-lg border border-pink-200 bg-pink-50/30 space-y-3">
-                <div className="text-[11px] text-pink-900 font-medium">
-                  Send ৳{bdtPrice.toFixed(2)} BDT to Merchant Wallet Number 01700-000000 or pay via the bKash App, then submit your mobile number and Transaction ID below.
-                </div>
+            {bdtType === 'MFS' ? (
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Your bKash Mobile Number
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Choose MFS Provider
                   </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.bkashNumber}
-                    onChange={(e) => handleInputChange('bkashNumber', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-pink-500"
-                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { id: 'bkash', label: 'bKash', color: 'border-pink-500 text-pink-600 bg-pink-50/40 dark:bg-pink-950/30' },
+                      { id: 'nagad', label: 'Nagad', color: 'border-orange-500 text-orange-600 bg-orange-50/40 dark:bg-orange-950/30' },
+                      { id: 'rocket', label: 'Rocket', color: 'border-purple-500 text-purple-600 bg-purple-50/40 dark:bg-purple-950/30' },
+                      { id: 'upay', label: 'Upay', color: 'border-blue-500 text-blue-600 bg-blue-50/40 dark:bg-blue-950/30' },
+                    ].map((mfs) => (
+                      <button
+                        key={mfs.id}
+                        type="button"
+                        onClick={() => setMfsProvider(mfs.id)}
+                        className={`p-3 rounded-2xl border text-center font-bold text-xs transition cursor-pointer ${
+                          mfsProvider === mfs.id
+                            ? `${mfs.color} ring-2 ring-indigo-500/20 shadow-xs font-black`
+                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {mfs.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    bKash Transaction ID (TrxID)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.trxId}
-                    onChange={(e) => handleInputChange('trxId', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-pink-500 uppercase"
-                  />
-                </div>
-              </div>
-            )}
 
-            {gateway === 'surjopay' && bdtSubMethod === 'nagad' && (
-              <div className="p-3.5 rounded-lg border border-orange-200 bg-orange-50/30 space-y-3">
-                <div className="text-[11px] text-orange-900 font-medium">
-                  Transfer ৳{bdtPrice.toFixed(2)} BDT to Nagad Merchant Wallet 01700-000000, then provide your Nagad number and Transaction ID below.
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Your Nagad Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.nagadNumber}
-                    onChange={(e) => handleInputChange('nagadNumber', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Nagad Transaction ID (TrxID)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.trxId}
-                    onChange={(e) => handleInputChange('trxId', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-orange-500 uppercase"
-                  />
-                </div>
-              </div>
-            )}
-
-            {gateway === 'surjopay' && bdtSubMethod === 'rocket' && (
-              <div className="p-3.5 rounded-lg border border-purple-200 bg-purple-50/30 space-y-3">
-                <div className="text-[11px] text-purple-900 font-medium">
-                  Send ৳{bdtPrice.toFixed(2)} BDT via Rocket to Biller / Merchant ID 01700-000000-8, then enter your 12-digit Rocket mobile number and TrxID.
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Your Rocket Mobile Number (12 digits)
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.rocketNumber}
-                    onChange={(e) => handleInputChange('rocketNumber', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Rocket Transaction ID (TrxID)
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.trxId}
-                    onChange={(e) => handleInputChange('trxId', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 uppercase"
-                  />
-                </div>
-              </div>
-            )}
-
-            {((gateway === 'surjopay' && bdtSubMethod === 'card') || gateway === 'paddle') && (
-              <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3">
-                <div className="text-[11px] text-slate-600 font-medium">
-                  Enter your card credentials to complete the {formattedDisplay} payment securely.
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Name on Card
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.cardName}
-                    onChange={(e) => handleInputChange('cardName', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Card Number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={19}
-                    value={formData.cardNumber}
-                    onChange={(e) => handleInputChange('cardNumber', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-800"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                      Expiration (MM/YY)
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      {mfsProvider.toUpperCase()} Account Phone Number
                     </label>
                     <input
                       type="text"
                       required
-                      maxLength={5}
-                      value={formData.cardExpiry}
-                      onChange={(e) => handleInputChange('cardExpiry', e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-800 text-center"
+                      value={mfsPhone}
+                      onChange={(e) => setMfsPhone(e.target.value)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Transaction ID / Payment OTP
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={mfsTrxId}
+                      onChange={(e) => setMfsTrxId(e.target.value)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                    Select Participating Bank
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { id: 'city_touch', label: 'City Touch' },
+                      { id: 'islami_bank', label: 'Islami Bank' },
+                      { id: 'dbbl_nexus', label: 'DBBL Nexus' },
+                      { id: 'brac_bank', label: 'BRAC Bank' },
+                    ].map((bank) => (
+                      <button
+                        key={bank.id}
+                        type="button"
+                        onClick={() => setBankProvider(bank.id)}
+                        className={`p-3 rounded-2xl border text-center font-bold text-xs transition cursor-pointer ${
+                          bankProvider === bank.id
+                            ? 'border-indigo-600 bg-indigo-50/60 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20 font-black'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {bank.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Account / Card Number
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={bankAccountNo}
+                      onChange={(e) => setBankAccountNo(e.target.value)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                      Security Code (CVC)
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Branch / District
                     </label>
                     <input
-                      type="password"
+                      type="text"
                       required
-                      maxLength={4}
-                      value={formData.cardCvc}
-                      onChange={(e) => handleInputChange('cardCvc', e.target.value)}
-                      className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-slate-800 text-center"
+                      value={bankBranch}
+                      onChange={(e) => setBankBranch(e.target.value)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Deposit / Transfer Reference
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={bankTrxRef}
+                      onChange={(e) => setBankTrxRef(e.target.value)}
+                      className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                     />
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        ) : (
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <span className="font-bold text-xs text-slate-900 dark:text-white">
+                EPS Global Dual Currency Rails
+              </span>
+              <div className="flex gap-2">
+                {['USD', 'EUR', 'GBP'].map((curr) => (
+                  <button
+                    key={curr}
+                    type="button"
+                    onClick={() => setForeignCurrency(curr)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      foreignCurrency === curr
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {curr}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {gateway === 'paypal' && (
-              <div className="p-3.5 rounded-lg border border-blue-200 bg-blue-50/30 space-y-3">
-                <div className="text-[11px] text-blue-900 font-medium">
-                  Connect your verified PayPal account to approve this ${usdPrice.toFixed(2)} USD subscription payment.
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Cardholder Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  International Card Number (Visa / MasterCard / Amex)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    PayPal Account Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.paypalEmail}
-                    onChange={(e) => handleInputChange('paypalEmail', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    PayPal Transaction / Order Reference (Optional)
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Expiration Date (MM/YY)
                   </label>
                   <input
                     type="text"
-                    value={formData.paypalRef}
-                    onChange={(e) => handleInputChange('paypalRef', e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-slate-300 bg-white text-slate-900 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    required
+                    value={cardExpiry}
+                    onChange={(e) => setCardExpiry(e.target.value)}
+                    className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Security Code (CVV / CVC)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    maxLength={4}
+                    value={cardCvv}
+                    onChange={(e) => setCardCvv(e.target.value)}
+                    className="w-full py-2.5 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                   />
                 </div>
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            <button
-              type="submit"
-              disabled={paying}
-              className="w-full py-2.5 px-4 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium cursor-pointer disabled:opacity-50 transition flex items-center justify-center gap-2"
-            >
-              {paying ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Verifying Payment...</span>
-                </>
-              ) : (
-                <span>Confirm & Pay {formattedDisplay}</span>
-              )}
-            </button>
-          </form>
-        </div>
+        {epsMode === 'sandbox' && (
+          <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                Sandbox Test Simulator Tools
+              </span>
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">Auto-fill mock data</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => handleFillSandboxData('bkash')}
+                className="py-1.5 px-2.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-white dark:bg-slate-900 hover:bg-amber-100/50 text-[11px] font-semibold cursor-pointer text-center"
+              >
+                bKash Mock
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillSandboxData('nagad')}
+                className="py-1.5 px-2.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-white dark:bg-slate-900 hover:bg-amber-100/50 text-[11px] font-semibold cursor-pointer text-center"
+              >
+                Nagad Mock
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillSandboxData('bank')}
+                className="py-1.5 px-2.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-white dark:bg-slate-900 hover:bg-amber-100/50 text-[11px] font-semibold cursor-pointer text-center"
+              >
+                Bank Mock
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillSandboxData('card')}
+                className="py-1.5 px-2.5 rounded-lg border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 bg-white dark:bg-slate-900 hover:bg-amber-100/50 text-[11px] font-semibold cursor-pointer text-center"
+              >
+                USD Card Mock
+              </button>
+            </div>
+          </div>
+        )}
 
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-          <span>Encrypted 256-bit TLS Gateway Session</span>
-          <Link
-            href={`/creator/${creatorId}/payments`}
-            className="text-slate-600 hover:text-slate-900 font-medium"
-          >
-            Cancel & Return
-          </Link>
-        </div>
+        <button
+          type="button"
+          onClick={handleConfirmPayment}
+          disabled={paying}
+          className="w-full py-4 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm tracking-wide transition shadow-lg shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {paying ? (
+            <span>Processing Payment via EPS...</span>
+          ) : (
+            <span>
+              Pay {isBdtTab ? `৳${bdtPrice.toFixed(2)} BDT` : `$${usdPrice.toFixed(2)} USD`} via EPS Gateway &rarr;
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );

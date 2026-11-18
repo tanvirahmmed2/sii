@@ -199,6 +199,7 @@ function resolveControlMetadata(slug, panelType = 'staff') {
     'tenant-quotas': 'Monitor domain routing (*.edu.bd), cloud storage quotas, and feature flags',
     'lms-courses': 'Design structured learning courses with modules, lessons, and video streams',
     'modules': 'Comprehensive catalog of public home modules and administrative control workstations',
+    'system': 'Institutional profile, domain routing, academic hierarchy presets, appearance, and direct portals',
   };
 
   const name = toTitleCase(slug);

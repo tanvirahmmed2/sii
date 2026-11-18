@@ -152,7 +152,7 @@ export default function PlatformOverviewPage() {
         { label: 'Features Catalog', path: '/developer/features', desc: 'Modular service entitlement definitions' },
         { label: 'Subscriptions', path: '/developer/subscriptions', desc: 'Recurring creator memberships and renewals' },
         { label: 'Purchases Log', path: '/developer/purchases', desc: 'One-time package purchases and addons' },
-        { label: 'Payments Ledger', path: '/developer/payments', desc: 'Settled bKash & Paddle transactions' },
+        { label: 'Payments Ledger', path: '/developer/payments', desc: 'Settled EPS & manual payment transactions' },
       ],
     },
     {

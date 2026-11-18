@@ -93,7 +93,7 @@ export async function handlePurchasesAction(body, sessionCreator) {
 
   if (action === 'create_order' || !action) {
     const packageId = Number(body.packageId);
-    const paymentMethod = String(body.paymentMethod || 'surjopay').toLowerCase();
+    const paymentMethod = String(body.paymentMethod || 'eps').toLowerCase();
     const billingCycle = (body.billingInterval || body.billingCycle || 'monthly').toLowerCase();
     const subdomain = (body.subdomain || '').trim().toLowerCase();
     const websiteName = (body.websiteName || '').trim();
@@ -111,10 +111,10 @@ export async function handlePurchasesAction(body, sessionCreator) {
 
     const isYearly = billingCycle === 'yearly';
     let baseAmount = 0;
-    let currency = 'USD';
+    let currency = 'BDT';
 
-    const cleanMethod = String(paymentMethod || 'surjopay').toLowerCase();
-    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(cleanMethod);
+    const cleanMethod = String(paymentMethod || 'eps').toLowerCase();
+    const isBdt = !cleanMethod.includes('usd') && !cleanMethod.includes('global') && String(body.currency || '').toUpperCase() !== 'USD';
 
     if (isBdt) {
       currency = 'BDT';

@@ -123,7 +123,8 @@ export default function PackagesPage() {
         setWishlistToast(data.message || (data.isWishlisted ? 'Package saved to wishlist!' : 'Removed from wishlist.'));
         setTimeout(() => setWishlistToast(''), 3500);
       } else {
-        alert(data.error || 'Failed to update wishlist');
+        setWishlistToast(data.error || 'Failed to update wishlist');
+        setTimeout(() => setWishlistToast(''), 3500);
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);
@@ -584,7 +585,6 @@ ${inquiryMessage}`,
                       required
                       value={inquiryName}
                       onChange={(e) => setInquiryName(e.target.value)}
-                      placeholder="e.g. Dr. Tanvir"
                       className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                     />
                   </div>
@@ -598,7 +598,6 @@ ${inquiryMessage}`,
                       required
                       value={inquiryEmail}
                       onChange={(e) => setInquiryEmail(e.target.value)}
-                      placeholder="contact@school.edu"
                       className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                     />
                   </div>
@@ -613,7 +612,6 @@ ${inquiryMessage}`,
                       type="text"
                       value={inquirySchool}
                       onChange={(e) => setInquirySchool(e.target.value)}
-                      placeholder="e.g. Oxford Grammar School"
                       className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                     />
                   </div>
@@ -626,7 +624,6 @@ ${inquiryMessage}`,
                       type="text"
                       value={inquiryStudents}
                       onChange={(e) => setInquiryStudents(e.target.value)}
-                      placeholder="e.g. 2,500+"
                       className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary"
                     />
                   </div>
@@ -641,7 +638,6 @@ ${inquiryMessage}`,
                     required
                     value={inquiryMessage}
                     onChange={(e) => setInquiryMessage(e.target.value)}
-                    placeholder="Describe desired modules (SIS, LMS, biometric attendance, custom domain, SMS gateway, dedicated VPS, etc.)..."
                     className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-secondary resize-none"
                   />
                 </div>

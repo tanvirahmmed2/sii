@@ -19,7 +19,7 @@ export default function CreatorPurchasesPage() {
 
   const [renewalModalOpen, setRenewalModalOpen] = useState(false);
   const [renewalCycle, setRenewalCycle] = useState('monthly');
-  const [renewalGateway, setRenewalGateway] = useState('surjopay');
+  const [renewalGateway, setRenewalGateway] = useState('eps');
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [activePaymentId, setActivePaymentId] = useState(null);
   const [renewalError, setRenewalError] = useState('');
@@ -306,7 +306,7 @@ export default function CreatorPurchasesPage() {
                           : `$${Number(p.payment_amount || p.total_amount || 0).toFixed(2)} USD`}
                       </td>
                       <td className="py-2.5 text-slate-600">
-                        {p.payment_method || 'Paddle'}
+                        {p.payment_method || 'EPS'}
                       </td>
                       <td className="py-2.5">
                         <span
@@ -413,53 +413,21 @@ export default function CreatorPurchasesPage() {
                 <label className="block text-[11px] font-medium text-slate-700 mb-1.5">
                   Select Payment Gateway
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <button
                     type="button"
-                    onClick={() => setRenewalGateway('surjopay')}
-                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                      renewalGateway === 'surjopay'
-                        ? 'border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-500 font-semibold text-slate-900'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+                    onClick={() => setRenewalGateway('eps')}
+                    className="p-3 rounded-xl border border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500 font-semibold text-slate-900 text-left cursor-pointer"
                   >
-                    <span className="block text-xs font-semibold text-emerald-700">shurjoPay</span>
-                    <span className="block text-[10px] text-slate-500">bKash, Nagad, Cards</span>
-                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
-                      ৳{pkgBdtPrice.toLocaleString()} BDT
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRenewalGateway('paypal')}
-                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                      renewalGateway === 'paypal'
-                        ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-500 font-semibold text-slate-900'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="block text-xs font-semibold text-blue-700">PayPal</span>
-                    <span className="block text-[10px] text-slate-500">Global USD Wallet</span>
-                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
-                      ${pkgUsdPrice.toFixed(2)} USD
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRenewalGateway('paddle')}
-                    className={`p-2.5 rounded border text-left cursor-pointer transition-colors ${
-                      renewalGateway === 'paddle'
-                        ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500 font-semibold text-slate-900'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="block text-xs font-semibold text-indigo-700">Paddle Billing</span>
-                    <span className="block text-[10px] text-slate-500">Global Cards & Pay</span>
-                    <span className="block font-mono text-xs text-slate-900 mt-0.5">
-                      ${pkgUsdPrice.toFixed(2)} USD
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="block text-xs font-bold text-indigo-700">Easy Payment System (EPS)</span>
+                        <span className="block text-[10px] text-slate-500">Bangladeshi MFS (bKash, Nagad), Bank Accounts, &amp; Foreign Cards</span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-slate-900">
+                        ৳{pkgBdtPrice.toLocaleString()} BDT / ${pkgUsdPrice.toFixed(2)} USD
+                      </span>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -476,7 +444,7 @@ export default function CreatorPurchasesPage() {
                 <div className="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
                   <span>Payable Total:</span>
                   <span>
-                    {renewalGateway === 'surjopay' ? `৳${pkgBdtPrice.toLocaleString()} BDT` : `$${pkgUsdPrice.toFixed(2)} USD`}
+                    ৳{pkgBdtPrice.toLocaleString()} BDT (${pkgUsdPrice.toFixed(2)} USD)
                   </span>
                 </div>
               </div>

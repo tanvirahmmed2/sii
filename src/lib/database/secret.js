@@ -230,22 +230,15 @@ export const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID || '';
 export const META_WABA_ID = process.env.META_WABA_ID || '';
 export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'sii_meta_secure_verify_token_2026';
 
-export const SHURJOPAY_ENGINE_URL = process.env.SHURJOPAY_ENGINE_URL || 'https://engine.shurjopayment.com';
-export const SHURJOPAY_USERNAME = process.env.SHURJOPAY_USERNAME || '';
-export const SHURJOPAY_PASSWORD = process.env.SHURJOPAY_PASSWORD || '';
-export const SHURJOPAY_PREFIX = process.env.SHURJOPAY_PREFIX || 'SII';
-export const SHURJOPAY_RETURN_URL = process.env.SHURJOPAY_RETURN_URL || '';
-export const SHURJOPAY_CANCEL_URL = process.env.SHURJOPAY_CANCEL_URL || '';
-
-export const PAYPAL_API_URL = process.env.PAYPAL_API_URL || 'https://api-m.paypal.com';
-export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
-export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
-export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
-
-export const PADDLE_API_KEY = process.env.PADDLE_API_KEY || '';
-export const PADDLE_ENVIRONMENT = process.env.PADDLE_ENVIRONMENT || 'sandbox';
-export const PADDLE_CLIENT_TOKEN = process.env.PADDLE_CLIENT_TOKEN || '';
-export const PADDLE_WEBHOOK_SECRET = process.env.PADDLE_WEBHOOK_SECRET || '';
+export const EPS_MODE = process.env.EPS_MODE || 'sandbox';
+export const EPS_MERCHANT_ID = process.env.EPS_MERCHANT_ID || '';
+export const EPS_STORE_ID = process.env.EPS_STORE_ID || '';
+export const EPS_USERNAME = process.env.EPS_USERNAME || '';
+export const EPS_PASSWORD = process.env.EPS_PASSWORD || '';
+export const EPS_HASH_KEY = process.env.EPS_HASH_KEY || '';
+export const EPS_API_URL = process.env.EPS_API_URL || '';
+export const EPS_RETURN_URL = process.env.EPS_RETURN_URL || '';
+export const EPS_CANCEL_URL = process.env.EPS_CANCEL_URL || '';
 
 export const CRON_SECRET = process.env.CRON_SECRET || '';
 export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');

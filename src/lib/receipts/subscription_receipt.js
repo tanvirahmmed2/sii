@@ -110,7 +110,7 @@ export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, pack
       })
     : 'Renews periodically';
 
-  const currency = (payment.currency || (String(payment.payment_method).toLowerCase() === 'surjopay' ? 'BDT' : 'USD')).toUpperCase();
+  const currency = (payment.currency || 'BDT').toUpperCase();
   const amountNumber = Number(payment.amount || 0);
   const amountFormatted = currency === 'BDT' ? `৳${amountNumber.toLocaleString()}` : `$${amountNumber.toFixed(2)}`;
   const amountWords = numberToWords(amountNumber, currency);

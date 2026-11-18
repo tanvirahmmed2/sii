@@ -8,24 +8,18 @@ if (idx !== -1) {
   env = env.substring(0, idx).trimEnd() + '\n\n';
 }
 
-const newGatewayConfig = `SHURJOPAY_ENGINE_URL="https://engine.shurjopayment.com"
-SHURJOPAY_USERNAME="sp_live_username"
-SHURJOPAY_PASSWORD="sp_live_password"
-SHURJOPAY_PREFIX="SII"
-SHURJOPAY_RETURN_URL="http://localhost:3000/api/webhooks/central-payment?gateway=surjopay"
-SHURJOPAY_CANCEL_URL="http://localhost:3000/payment/cancel"
-PAYPAL_API_URL="https://api-m.paypal.com"
-PAYPAL_CLIENT_ID="your_paypal_client_id"
-PAYPAL_CLIENT_SECRET="your_paypal_client_secret"
-PAYPAL_PARTNER_ATTRIBUTION_ID="your_bn_code_optional"
-PAYPAL_WEBHOOK_ID="your_paypal_webhook_id"
-PADDLE_API_KEY="padd_live_..."
-PADDLE_ENVIRONMENT="sandbox"
-PADDLE_CLIENT_TOKEN=""
-PADDLE_WEBHOOK_SECRET="padd_wsec_..."
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-CRON_SECRET="super_secret_cron_token_for_per_student_deductions"
+const epsConfig = `EPS_MODE="sandbox"
+EPS_MERCHANT_ID="EPS_MERCHANT_TEST_001"
+EPS_STORE_ID="EPS_STORE_MAIN_01"
+EPS_USERNAME="eps_test_user"
+EPS_PASSWORD="eps_test_password_2026"
+EPS_HASH_KEY="eps_secret_hash_key_super_secure_987654"
+EPS_API_URL="https://sandbox.eps.com.bd"
+EPS_RETURN_URL="http://localhost:3000/api/webhooks/eps-ipn"
+EPS_CANCEL_URL="http://localhost:3000/creator"
 `;
 
-env += newGatewayConfig;
-fs.writeFileSync('.env', env, 'utf8');
+if (!env.includes('EPS_MODE')) {
+  env += '\n' + epsConfig;
+  fs.writeFileSync('.env', env, 'utf8');
+}

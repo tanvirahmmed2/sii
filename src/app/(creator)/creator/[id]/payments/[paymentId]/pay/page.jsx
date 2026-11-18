@@ -16,7 +16,7 @@ function PayContent({ params }) {
     <PaymentGatewayCheckout
       creatorId={creatorId}
       paymentId={paymentId}
-      initialGateway={gatewayParam || 'bkash'}
+      initialGateway={gatewayParam || 'eps'}
     />
   );
 }

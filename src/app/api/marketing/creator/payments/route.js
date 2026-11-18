@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
-import {
-  createShurjoPaySession,
-  createPayPalOrder,
-  createPaddleCheckoutSession,
-} from 'src/lib/database/centralGateways';
-import { generateToken } from 'src/lib/utils/random';
+import { initiateEpsPayment, verifyEpsPayment, getEpsConfig } from 'src/lib/eps/gateway';
 
 export async function GET(request) {
   try {
@@ -63,7 +58,13 @@ export async function GET(request) {
         return NextResponse.json({ success: false, error: 'Payment record not found' }, { status: 404 });
       }
 
-      return NextResponse.json({ success: true, payment: singleRes.rows[0] });
+      const epsConfig = getEpsConfig();
+
+      return NextResponse.json({
+        success: true,
+        payment: singleRes.rows[0],
+        epsMode: epsConfig.mode,
+      });
     }
 
     const listRes = await queryDb(
@@ -100,10 +101,7 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
 
   if (action === 'pay_invoice' || action === 'pay' || action === 'initiate_payment') {
     const paymentId = Number(body.paymentId);
-    let gatewayCode = String(body.gatewayCode || body.paymentMethod || 'surjopay').toLowerCase();
-    
-    if (gatewayCode === 'paddle' || gatewayCode === 'payoneer') gatewayCode = 'paypal';
-    if (gatewayCode === 'bkash' || gatewayCode === 'nagad' || gatewayCode === 'rocket') gatewayCode = 'surjopay';
+    let gatewayCode = String(body.gatewayCode || body.paymentMethod || 'eps').toLowerCase();
 
     if (!paymentId) {
       return NextResponse.json({ success: false, error: 'Payment ID is required' }, { status: 400 });
@@ -154,59 +152,33 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
       ? Number(payment.yearly_price_usd || 0)
       : Number(payment.monthly_price_usd || 0);
 
-    const isBdt = gatewayCode === 'surjopay';
+    const isBdt = body.currency === 'BDT' || (payment.currency === 'BDT' && body.currency !== 'USD') || gatewayCode.includes('mfs') || gatewayCode.includes('bdt');
     const finalAmount = isBdt ? packageBdtPrice : packageUsdPrice;
     const finalCurrency = isBdt ? 'BDT' : 'USD';
 
-    let checkoutUrl = '';
-    let gatewayOrderId = '';
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
+    const proto = request.headers.get('x-forwarded-proto') || 'http';
+    const origin = request.headers.get('origin') || `${proto}://${host}`;
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || origin).replace(/\/$/, '');
 
-    if (gatewayCode === 'surjopay') {
-      const sp = await createShurjoPaySession({
-        amount: finalAmount,
-        currency: 'BDT',
-        orderId: `TIER1-PKG-${payment.id}-${Date.now()}`,
-        customerName: payment.creator_name || 'Creator Client',
-        customerEmail: payment.creator_email || 'creator@platform.local',
-        customerPhone: payment.creator_phone || '01700000000',
-        customerAddress: payment.creator_address || 'Dhaka',
-        customerCity: payment.creator_city || 'Dhaka',
-        meta: {
-          tier: 'TIER_1',
-          paymentId: payment.id,
-          creatorId,
-        },
-      });
-      checkoutUrl = sp.checkoutUrl;
-      gatewayOrderId = sp.spOrderId;
-    } else if (gatewayCode === 'paypal') {
-      const pp = await createPayPalOrder({
-        amountUsd: finalAmount,
-        currency: 'USD',
-        description: `Sky International Institute - ${payment.package_name || 'Package Subscription'}`,
-        customId: JSON.stringify({ tier: 'TIER_1', paymentId: payment.id, creatorId }),
-      });
-      checkoutUrl = pp.approveUrl;
-      gatewayOrderId = pp.paypalOrderId;
-    } else if (gatewayCode === 'paddle' || gatewayCode === 'stripe_connect') {
-      const pad = await createPaddleCheckoutSession({
-        amount: finalAmount,
-        currency: 'USD',
-        orderId: `TIER1-PKG-${payment.id}-${Date.now()}`,
-        description: `Sky International Institute - ${payment.package_name || 'Package Subscription'}`,
-        customerEmail: payment.creator_email,
-        customerName: payment.creator_name,
-        meta: {
-          tier: 'TIER_1',
-          paymentId: String(payment.id),
-          creatorId: String(creatorId),
-        },
-      });
-      checkoutUrl = pad.checkoutUrl;
-      gatewayOrderId = pad.gatewayOrderId;
-    } else {
-      return NextResponse.json({ success: false, error: `Unsupported gateway: ${gatewayCode}` }, { status: 400 });
-    }
+    const epsSession = await initiateEpsPayment({
+      paymentId: payment.id,
+      purchaseId: payment.purchase_id,
+      creatorId,
+      amount: finalAmount,
+      currency: finalCurrency,
+      paymentMethod: gatewayCode,
+      subMethod: body.subMethod || 'bkash',
+      customerName: payment.creator_name || 'Creator Client',
+      customerEmail: payment.creator_email || 'creator@platform.local',
+      customerPhone: payment.creator_phone || '01700000000',
+      description: `Platform Subscription - ${payment.package_name || 'Package'}`,
+      redirectUrl: `${appUrl}/api/webhooks/eps-ipn?paymentId=${payment.id}&creatorId=${creatorId}`,
+      cancelUrl: `${appUrl}/creator/${creatorId}/payments/${payment.id}/pay?status=cancelled`,
+    });
+
+    const checkoutUrl = epsSession.redirectUrl;
+    const gatewayOrderId = epsSession.gatewayOrderId;
 
     await queryDb(
       `UPDATE payments 
@@ -267,15 +239,28 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
     }
 
     const isYearly = String(payment.billing_cycle || '').toLowerCase() === 'yearly';
-    const gatewayCode = body.gatewayCode || body.gateway || payment.payment_method || 'surjopay';
-    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(String(gatewayCode).toLowerCase());
+    const gatewayCode = body.gatewayCode || body.gateway || payment.payment_method || 'eps';
+    const isBdt = body.currency === 'BDT' || (payment.currency === 'BDT' && body.currency !== 'USD') || ['bkash', 'nagad', 'rocket', 'upay', 'eps_mfs', 'eps_bank'].includes(String(gatewayCode).toLowerCase());
     const finalCurrency = isBdt ? 'BDT' : 'USD';
     const finalAmount = isYearly
       ? Number(isBdt ? (payment.yearly_price_bdt || payment.amount || 0) : (payment.yearly_price_usd || payment.amount || 0))
       : Number(isBdt ? (payment.monthly_price_bdt || payment.amount || 0) : (payment.monthly_price_usd || payment.amount || 0));
 
     const durationDays = isYearly ? 365 : 30;
-    const txnId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const txnId = body.transactionId || `EPS-TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const verificationResult = await verifyEpsPayment({
+      transactionRef: txnId,
+      paymentId: payment.id,
+      gatewayOrderId: body.gatewayOrderId || txnId,
+      rawQuery: {
+        status: 'SUCCESS',
+        amount: finalAmount,
+        currency: finalCurrency,
+        paymentMethod: gatewayCode,
+        accountNumber: body.accountNumber,
+      },
+    });
 
     await queryDb('BEGIN');
     try {
@@ -285,22 +270,33 @@ export async function handlePaymentsAction(body, sessionCreator, request) {
              amount = $1,
              currency = $2,
              payment_method = $3,
-             payment_gateway = $3,
+             payment_gateway = 'eps',
              transaction_id = $4,
              gateway_order_id = $5,
+             gateway_response = $6,
              payment_date = CURRENT_TIMESTAMP,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $6`,
-        [finalAmount, finalCurrency, gatewayCode, txnId, body.accountNumber || body.gatewayOrderId || txnId, payment.id]
+         WHERE id = $7`,
+        [
+          finalAmount,
+          finalCurrency,
+          gatewayCode,
+          txnId,
+          body.accountNumber || body.gatewayOrderId || txnId,
+          JSON.stringify(verificationResult?.raw || { confirmedAt: new Date().toISOString() }),
+          payment.id,
+        ]
       );
 
       await queryDb(
         `UPDATE purchases
          SET status = 'completed',
              total_amount = $1,
+             period_start = CURRENT_TIMESTAMP,
+             period_end = CURRENT_TIMESTAMP + ($2 || ' days')::interval,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2`,
-        [finalAmount, payment.purchase_id]
+         WHERE id = $3`,
+        [finalAmount, durationDays, payment.purchase_id]
       );
 
       const existingSubRes = await queryDb(

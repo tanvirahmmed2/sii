@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/database/db";
-import {
-  createShurjoPaySession,
-  createPayPalOrder,
-  createPaddleCheckoutSession,
-} from "@/lib/database/centralGateways";
+import { initiateEpsPayment } from "@/lib/eps/gateway";
 
 export async function POST(request) {
   const client = await pool.connect();
@@ -15,7 +11,8 @@ export async function POST(request) {
       websiteId,
       packageId,
       billingCycle = "monthly",
-      gatewayCode = "surjopay",
+      gatewayCode = "eps",
+      subMethod = "bkash",
       currency,
     } = body;
 
@@ -44,19 +41,24 @@ export async function POST(request) {
     const creator = creatorRes.rows[0];
 
     const isYearly = String(billingCycle).toLowerCase() === "yearly";
-    const cleanGateway = String(gatewayCode || "surjopay").toLowerCase();
-    const isBdt =
-      ["surjopay", "bkash", "nagad", "rocket"].includes(cleanGateway) ||
-      String(currency || "").toUpperCase() === "BDT";
+    const cleanGateway = String(gatewayCode || "eps").toLowerCase();
 
-    const finalCurrency = isBdt ? "BDT" : "USD";
+    let finalCurrency = String(currency || "").toUpperCase();
+    if (!finalCurrency) {
+      if (cleanGateway.includes("usd") || cleanGateway.includes("global")) {
+        finalCurrency = "USD";
+      } else {
+        finalCurrency = "BDT";
+      }
+    }
+
+    const isBdt = finalCurrency === "BDT";
     const baseAmount = isYearly
-      ? Number(isBdt ? pkg.yearly_price_bdt : (pkg.yearly_price_usd || pkg.yearly_price || 0))
-      : Number(isBdt ? pkg.monthly_price_bdt : (pkg.monthly_price_usd || pkg.monthly_price || 0));
+      ? Number(isBdt ? (pkg.yearly_price_bdt || 0) : (pkg.yearly_price_usd || pkg.yearly_price || 0))
+      : Number(isBdt ? (pkg.monthly_price_bdt || 0) : (pkg.monthly_price_usd || pkg.monthly_price || 0));
 
     const discountAmount = 0.0;
     const totalAmount = Number(baseAmount.toFixed(2));
-
     const purchaseCode = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const periodDays = isYearly ? 365 : 30;
 
@@ -89,7 +91,7 @@ export async function POST(request) {
       `INSERT INTO payments (
          purchase_id, creator_id, transaction_id, amount, currency,
          payment_method, payment_gateway, status, payer_email, payer_phone
-       ) VALUES ($1, $2, $3, $4, $5, $6, $6, 'pending', $7, $8)
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'eps', 'pending', $7, $8)
        RETURNING id`,
       [
         purchaseId,
@@ -111,60 +113,23 @@ export async function POST(request) {
     const proto = request.headers.get("x-forwarded-proto") || "http";
     const origin = request.headers.get("origin") || `${proto}://${host}`;
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || origin).replace(/\/$/, "");
-    const callbackBase = `${appUrl}/api/webhooks/central-payment`;
     const cancelUrl = `${appUrl}/creator/${creatorId}/payments?status=cancelled`;
-    let session = null;
 
-    if (["surjopay", "bkash", "nagad", "rocket"].includes(cleanGateway)) {
-      session = await createShurjoPaySession({
-        amount: totalAmount,
-        currency: finalCurrency,
-        orderId: purchaseCode,
-        customerName: creator.name,
-        customerPhone: creator.phone,
-        customerAddress: creator.address || "Bangladesh",
-        customerCity: creator.city || "Dhaka",
-        returnUrl: `${callbackBase}?gateway=surjopay&tier=TIER_1&paymentId=${paymentRowId}&order_id=${purchaseCode}`,
-        cancelUrl,
-        meta: {
-          tier: "TIER_1",
-          websiteId: websiteId || 0,
-          internalTxId: paymentRowId,
-          purpose: "package_purchase",
-        },
-      });
-    } else if (cleanGateway === "paypal") {
-      session = await createPayPalOrder({
-        amount: totalAmount,
-        currency: finalCurrency,
-        orderId: purchaseCode,
-        description: `${pkg.name} (${billingCycle}) SaaS Subscription`,
-        returnUrl: `${callbackBase}?gateway=paypal&tier=TIER_1&paymentId=${paymentRowId}&order_id=${purchaseCode}`,
-        cancelUrl,
-        meta: {
-          tier: "TIER_1",
-          websiteId: websiteId || 0,
-          internalTxId: paymentRowId,
-        },
-      });
-    } else if (cleanGateway === "paddle" || cleanGateway === "stripe_connect") {
-      session = await createPaddleCheckoutSession({
-        amount: totalAmount,
-        currency: finalCurrency,
-        orderId: purchaseCode,
-        description: `${pkg.name} (${billingCycle}) SaaS Subscription`,
-        customerEmail: creator.email,
-        customerName: creator.name,
-        returnUrl: `${callbackBase}?gateway=paddle&tier=TIER_1&order_id=${purchaseCode}&paymentId=${paymentRowId}`,
-        cancelUrl,
-        meta: {
-          tier: "TIER_1",
-          websiteId: websiteId || 0,
-          internalTxId: paymentRowId,
-          purpose: "package_purchase",
-        },
-      });
-    }
+    const session = await initiateEpsPayment({
+      paymentId: paymentRowId,
+      purchaseId,
+      creatorId,
+      amount: totalAmount,
+      currency: finalCurrency,
+      paymentMethod: cleanGateway,
+      subMethod,
+      customerName: creator.name,
+      customerEmail: creator.email,
+      customerPhone: creator.phone,
+      description: `${pkg.name} (${billingCycle}) SaaS Subscription`,
+      redirectUrl: `${appUrl}/api/webhooks/eps-ipn?paymentId=${paymentRowId}&creatorId=${creatorId}`,
+      cancelUrl,
+    });
 
     if (session?.gatewayOrderId) {
       await client.query(
@@ -179,11 +144,13 @@ export async function POST(request) {
       success: true,
       purchaseId,
       paymentId: paymentRowId,
-      gateway: cleanGateway,
+      creatorId,
+      gateway: "eps",
       gatewayOrderId: session?.gatewayOrderId || "",
-      checkoutUrl: session?.checkoutUrl || "",
+      checkoutUrl: session?.redirectUrl || session?.checkoutUrl || "",
       amount: totalAmount,
       currency: finalCurrency,
+      mode: session?.mode || "sandbox",
     });
   } catch (error) {
     await client.query("ROLLBACK");

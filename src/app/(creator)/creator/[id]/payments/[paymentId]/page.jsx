@@ -233,7 +233,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
               </div>
               <div className="flex justify-between">
                 <span>Payment Gateway:</span>
-                <strong className="text-slate-800 font-mono uppercase">{payment.payment_method || 'Paddle'}</strong>
+                <strong className="text-slate-800 font-mono uppercase">{payment.payment_method || 'EPS'}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Transaction Ref:</span>

@@ -133,7 +133,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
 
   if (action === 'purchase_subscription' || action === 'purchase') {
     const packageId = Number(body.packageId);
-    const paymentMethod = body.paymentMethod || 'Paddle';
+    const paymentMethod = body.paymentMethod || 'EPS';
 
     if (!packageId) {
       return NextResponse.json({ success: false, error: 'Package ID is required.' }, { status: 400 });
@@ -220,7 +220,7 @@ export async function handleSubscriptionsAction(body, sessionCreator) {
     const billingCycle = isYearly ? 'yearly' : 'monthly';
     const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
     const cleanMethod = String(body.paymentMethod || '').toLowerCase();
-    const isBdt = ['surjopay', 'bkash', 'nagad', 'rocket'].includes(cleanMethod) || String(body.currency || '').toUpperCase() === 'BDT';
+    const isBdt = !cleanMethod.includes('usd') && !cleanMethod.includes('global') && String(body.currency || '').toUpperCase() !== 'USD';
     const currency = isBdt ? 'BDT' : 'USD';
     const baseAmount = isYearly
       ? Number(isBdt ? (sub.yearly_price_bdt || 0) : (sub.yearly_price_usd || sub.yearly_price || 0))

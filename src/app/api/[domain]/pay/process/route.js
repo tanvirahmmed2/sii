@@ -3,9 +3,6 @@ import pool from "@/lib/database/db";
 import {
   resolveTenantGatewayAccount,
   calculatePlatformSplit,
-  createShurjoPaySession,
-  createPayPalOrder,
-  createPaddleCheckoutSession,
 } from "@/lib/database/centralGateways";
 
 export async function POST(request, { params }) {
@@ -30,21 +27,18 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: "Valid payment amount is required." }, { status: 400 });
     }
 
+    const grossAmount = Number(Number(amount).toFixed(2));
+
     await client.query("BEGIN");
 
     const webRes = await client.query(
-      `SELECT w.id, w.name, w.currency,
-              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS subdomain,
-              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS domain
-       FROM websites w 
-       WHERE LOWER(w.slug) = LOWER($1) 
-          OR EXISTS (SELECT 1 FROM website_domains wd WHERE wd.website_id = w.id AND LOWER(wd.domain) = LOWER($1))
-       LIMIT 1`,
+      `SELECT id, name, currency, creator_id FROM websites WHERE domain = $1 LIMIT 1`,
       [domain]
     );
-    if (webRes.rows.length === 0) throw new Error("Institution website not found.");
+    if (webRes.rows.length === 0) {
+      throw new Error("Target educational institution not found.");
+    }
     const website = webRes.rows[0];
-    const feeCurrency = (website.currency || "BDT").toUpperCase();
 
     const routeAccount = await resolveTenantGatewayAccount(client, {
       websiteId: website.id,
@@ -53,113 +47,69 @@ export async function POST(request, { params }) {
       preferredGateway,
     });
 
-    const gatewayCode = routeAccount.gateway_code; 
+    const gatewayCode = routeAccount.gateway_code;
+    const feeCurrency = routeAccount.account_currency || website.currency || "BDT";
     const payoutDetails = routeAccount.payout_details || {};
 
     const splitInfo = await calculatePlatformSplit(client, {
       websiteId: website.id,
-      grossAmount: Number(amount),
+      grossAmount,
       currency: feeCurrency,
     });
 
-    const grossAmount = Number(Number(amount).toFixed(2));
     const platformCommission = splitInfo.platformCommission;
     const estimatedNet = Number((grossAmount - platformCommission).toFixed(2));
+    const internalOrderRef = `TX2-${website.id}-${Date.now().toString(36)}-${Math.floor(100 + Math.random() * 900)}`;
 
-    const internalOrderRef = `WSTX-${website.id}-${Date.now()}`;
     const txInsert = await client.query(
       `INSERT INTO website_payment_transactions (
-         website_id, gateway_account_id, gateway_code, purpose, invoice_ref,
-         student_id, payer_name, payer_email, payer_phone,
-         amount, gross_amount, platform_commission_amount, merchant_net_amount,
-         currency, settled_currency, charge_model_applied, status, split_status
+         website_id,
+         gateway_account_id,
+         invoice_ref,
+         student_id,
+         purpose,
+         gateway_code,
+         payer_name,
+         payer_email,
+         payer_phone,
+         gross_amount,
+         platform_commission_amount,
+         merchant_net_amount,
+         currency,
+         payout_currency,
+         split_model,
+         status,
+         split_status
        ) VALUES (
-         $1, $2, $3, $4, $5,
-         $6, $7, $8, $9,
-         $10, $10, $11, $12,
-         $13, $14, $15, 'initiated', 'pending'
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'pending', 'pending_checkout'
        ) RETURNING id`,
       [
         website.id,
         routeAccount.gateway_account_id,
-        gatewayCode,
-        purpose,
         invoiceRef || internalOrderRef,
         studentId,
-        payerName || "Student/Applicant",
+        purpose,
+        gatewayCode,
+        payerName,
         payerEmail || null,
         payerPhone || null,
         grossAmount,
         platformCommission,
         estimatedNet,
         feeCurrency,
-        gatewayCode === "surjopay" ? "BDT" : feeCurrency,
+        feeCurrency,
         splitInfo.chargeModel,
       ]
     );
     const txRowId = txInsert.rows[0].id;
 
-    const callbackBase = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/central-payment`;
-    let session;
-
-    if (gatewayCode === "surjopay") {
-      session = await createShurjoPaySession({
-        amount: grossAmount,
-        currency: feeCurrency === "BDT" ? "BDT" : "USD",
-        orderId: internalOrderRef,
-        customerName: payerName,
-        customerPhone: payerPhone,
-        returnUrl: `${callbackBase}?gateway=surjopay&tier=TIER_2`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${domain}/pay?status=cancelled`,
-        meta: {
-          tier: "TIER_2",
-          websiteId: website.id,
-          internalTxId: txRowId,
-          purpose,
-          gatewayAccountId: routeAccount.gateway_account_id,
-        },
-      });
-    } else if (gatewayCode === "paypal") {
-      session = await createPayPalOrder({
-        amount: grossAmount,
-        currency: feeCurrency === "BDT" ? "USD" : feeCurrency,
-        orderId: internalOrderRef,
-        description: `${website.name} - ${purpose.replace("_", " ")} (${invoiceRef || internalOrderRef})`,
-        returnUrl: `${callbackBase}?gateway=paypal&tier=TIER_2`,
-        cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/${domain}/pay?status=cancelled`,
-        payeeEmail: payoutDetails.paypal_email || null,
-        payeeMerchantId: payoutDetails.paypal_merchant_id || null,
-        platformCommission,
-        meta: {
-          tier: "TIER_2",
-          websiteId: website.id,
-          internalTxId: txRowId,
-          purpose,
-        },
-      });
-    } else if (gatewayCode === "paddle" || gatewayCode === "stripe_connect") {
-      session = await createPaddleCheckoutSession({
-        amount: grossAmount,
-        currency: feeCurrency === "BDT" ? "USD" : feeCurrency,
-        orderId: internalOrderRef,
-        description: `${website.name} - ${purpose.replace("_", " ")} (${invoiceRef || internalOrderRef})`,
-        customerEmail: payerEmail,
-        customerName: payerName,
-        returnUrl: `${callbackBase}?gateway=paddle&tier=TIER_2&order_id=${internalOrderRef}&internalTxId=${txRowId}`,
-        meta: {
-          tier: "TIER_2",
-          websiteId: website.id,
-          internalTxId: txRowId,
-          purpose,
-        },
-      });
-    }
+    const checkoutUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/${domain}/pay?tx=${txRowId}&status=simulated_ready`;
 
     await client.query(
       `UPDATE website_payment_transactions
        SET transaction_id = $1, gateway_reference = $2
        WHERE id = $3`,
-      [internalOrderRef, session.gatewayOrderId, txRowId]
+      [internalOrderRef, `GW-REF-${txRowId}`, txRowId]
     );
 
     await client.query("COMMIT");
@@ -172,11 +122,11 @@ export async function POST(request, { params }) {
       grossAmount,
       platformCommission,
       merchantNetAmount: estimatedNet,
-      checkoutUrl: session.checkoutUrl,
+      checkoutUrl,
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   } finally {
     client.release();
   }

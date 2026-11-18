@@ -23,11 +23,14 @@ export async function GET(request) {
                 pu.status AS subscription_status,
                 pu.period_end AS current_period_end,
                 pu.status AS purchase_status,
-                pu.notes AS purchase_notes
+                pu.notes AS purchase_notes,
+                d.name AS developer_name,
+                d.email AS developer_email
          FROM payments pay
          LEFT JOIN creators c ON pay.creator_id = c.id
          LEFT JOIN purchases pu ON pay.purchase_id = pu.id
          LEFT JOIN packages p ON pu.package_id = p.id
+         LEFT JOIN developers d ON pay.processed_by_developer_id = d.id
          WHERE pay.id = $1
          LIMIT 1`,
         [Number(id)]
@@ -49,11 +52,14 @@ export async function GET(request) {
               pu.billing_cycle AS billing_interval,
               pu.status AS subscription_status,
               pu.period_end AS current_period_end,
-              pu.status AS purchase_status
+              pu.status AS purchase_status,
+              d.name AS developer_name,
+              d.email AS developer_email
        FROM payments pay
        LEFT JOIN creators c ON pay.creator_id = c.id
        LEFT JOIN purchases pu ON pay.purchase_id = pu.id
        LEFT JOIN packages p ON pu.package_id = p.id
+       LEFT JOIN developers d ON pay.processed_by_developer_id = d.id
        ORDER BY pay.id DESC`
     ).catch(() => ({ rows: [] }));
 
@@ -69,9 +75,146 @@ export async function POST(request) {
     if (!auth.success) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
+
+    const developerId = auth.developer?.id || auth.user?.id || null;
     const body = await request.json();
+    const action = body.action || '';
     const data = body.data || body;
-    const keys = Object.keys(data).filter((k) => k !== 'id' && k !== 'action' && k !== 'creator_name' && k !== 'package_name');
+
+    if (action === 'manual_payment' || data.is_manual) {
+      const creatorId = Number(data.creator_id);
+      const packageId = Number(data.package_id);
+      const billingCycle = String(data.billing_cycle || 'monthly').toLowerCase();
+      const amount = Number(data.amount || 0);
+      const currency = String(data.currency || 'BDT').toUpperCase();
+      const paymentMethod = String(data.payment_method || 'manual_cash');
+      const transactionId = data.transaction_id || `MANUAL-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const manualNotes = data.manual_payment_notes || data.notes || 'Manual payment taken by developer';
+      const isPaid = String(data.status || 'successful').toLowerCase() === 'successful' || String(data.status || '').toLowerCase() === 'completed';
+
+      if (!creatorId || !packageId) {
+        return NextResponse.json({ success: false, error: 'creator_id and package_id are required' }, { status: 400 });
+      }
+
+      const isYearly = billingCycle === 'yearly';
+      const durationDays = isYearly ? 365 : 30;
+      const purchaseCode = `MAN-PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      await queryDb('BEGIN');
+      try {
+        let purchaseId = data.purchase_id ? Number(data.purchase_id) : null;
+        if (!purchaseId) {
+          const purInsert = await queryDb(
+            `INSERT INTO purchases (
+               creator_id, package_id, purchase_code, billing_cycle,
+               base_amount, discount_amount, tax_amount, total_amount, status,
+               period_start, period_end, notes
+             ) VALUES (
+               $1, $2, $3, $4,
+               $5, 0.00, 0.00, $5, $6,
+               CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($7 || ' days')::interval, $8
+             ) RETURNING id`,
+            [
+              creatorId,
+              packageId,
+              purchaseCode,
+              billingCycle,
+              amount,
+              isPaid ? 'completed' : 'pending',
+              durationDays,
+              manualNotes,
+            ]
+          );
+          purchaseId = purInsert.rows[0].id;
+        } else if (isPaid) {
+          await queryDb(
+            `UPDATE purchases
+             SET status = 'completed',
+                 period_start = CURRENT_TIMESTAMP,
+                 period_end = CURRENT_TIMESTAMP + ($1 || ' days')::interval,
+                 total_amount = $2,
+                 notes = $3,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $4`,
+            [durationDays, amount, manualNotes, purchaseId]
+          );
+        }
+
+        const payInsert = await queryDb(
+          `INSERT INTO payments (
+             purchase_id, creator_id, transaction_id, amount, currency,
+             payment_method, payment_gateway, status, processed_by_developer_id,
+             manual_payment_notes, payment_date
+           ) VALUES (
+             $1, $2, $3, $4, $5,
+             $6, 'manual', $7, $8,
+             $9, CURRENT_TIMESTAMP
+           ) RETURNING *`,
+          [
+            purchaseId,
+            creatorId,
+            transactionId,
+            amount,
+            currency,
+            paymentMethod,
+            isPaid ? 'successful' : 'pending',
+            developerId,
+            manualNotes,
+          ]
+        );
+
+        if (isPaid) {
+          const existingSub = await queryDb(
+            `SELECT id FROM subscriptions WHERE creator_id = $1 AND package_id = $2 ORDER BY id DESC LIMIT 1`,
+            [creatorId, packageId]
+          );
+
+          if (existingSub.rows.length > 0) {
+            await queryDb(
+              `UPDATE subscriptions 
+               SET status = 'active',
+                   billing_cycle = $1,
+                   purchase_id = $2,
+                   current_period_start = CURRENT_TIMESTAMP,
+                   current_period_end = CURRENT_TIMESTAMP + ($3 || ' days')::interval,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = $4`,
+              [billingCycle, purchaseId, durationDays, existingSub.rows[0].id]
+            );
+          } else {
+            await queryDb(
+              `INSERT INTO subscriptions (
+                 creator_id, package_id, purchase_id, status,
+                 billing_cycle, current_period_start, current_period_end
+               ) VALUES (
+                 $1, $2, $3, 'active',
+                 $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($5 || ' days')::interval
+               )`,
+              [creatorId, packageId, purchaseId, billingCycle, durationDays]
+            );
+          }
+        }
+
+        await queryDb('COMMIT');
+
+        return NextResponse.json({
+          success: true,
+          message: 'Manual payment recorded successfully and subscription activated.',
+          record: payInsert.rows[0],
+        });
+      } catch (err) {
+        await queryDb('ROLLBACK');
+        throw err;
+      }
+    }
+
+    const keys = Object.keys(data).filter(
+      (k) => k !== 'id' && k !== 'action' && k !== 'creator_name' && k !== 'package_name' && k !== 'developer_name' && k !== 'developer_email'
+    );
+    if (!data.processed_by_developer_id && developerId) {
+      keys.push('processed_by_developer_id');
+      data.processed_by_developer_id = developerId;
+    }
     const values = keys.map((k) => (typeof data[k] === 'object' && data[k] !== null ? JSON.stringify(data[k]) : data[k]));
     const placeholders = keys.map((_, i) => '$' + (i + 1));
     const res = await queryDb(
@@ -91,6 +234,7 @@ export async function PUT(request) {
       return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
     }
 
+    const developerId = auth.developer?.id || auth.user?.id || null;
     const body = await request.json();
     const id = Number(body.id || body.data?.id);
     if (!id) return NextResponse.json({ success: false, error: 'Payment ID is required' }, { status: 400 });
@@ -107,58 +251,107 @@ export async function PUT(request) {
     let completedPurchase = null;
     const isBecomingPaid = (requestedStatus === 'successful' || requestedStatus === 'completed' || requestedStatus === 'paid') && existing.status !== 'successful';
 
-    if (isBecomingPaid && existing.purchase_id) {
-      const puRes = await queryDb('SELECT * FROM purchases WHERE id = $1', [existing.purchase_id]);
-      const pu = puRes.rows[0];
-      const isYearly = String(pu?.billing_cycle || '').toLowerCase() === 'yearly';
-      const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
+    await queryDb('BEGIN');
+    try {
+      if (isBecomingPaid && existing.purchase_id) {
+        const puRes = await queryDb('SELECT * FROM purchases WHERE id = $1', [existing.purchase_id]);
+        const pu = puRes.rows[0];
+        const isYearly = String(pu?.billing_cycle || '').toLowerCase() === 'yearly';
+        const durationDays = isYearly ? 365 : 30;
 
-      const updatedPuRes = await queryDb(
-        `UPDATE purchases 
-         SET status = 'completed', 
-             period_start = CURRENT_TIMESTAMP, 
-             period_end = CURRENT_TIMESTAMP + ${durationInterval}, 
-             updated_at = CURRENT_TIMESTAMP 
-         WHERE id = $1 
-         RETURNING *`,
-        [existing.purchase_id]
+        const updatedPuRes = await queryDb(
+          `UPDATE purchases 
+           SET status = 'completed', 
+               period_start = CURRENT_TIMESTAMP, 
+               period_end = CURRENT_TIMESTAMP + ($1 || ' days')::interval, 
+               updated_at = CURRENT_TIMESTAMP 
+           WHERE id = $2 
+           RETURNING *`,
+          [durationDays, existing.purchase_id]
+        );
+        completedPurchase = updatedPuRes.rows[0];
+
+        if (pu?.package_id && existing.creator_id) {
+          const subRes = await queryDb(
+            `SELECT id FROM subscriptions WHERE creator_id = $1 AND package_id = $2 ORDER BY id DESC LIMIT 1`,
+            [existing.creator_id, pu.package_id]
+          );
+
+          if (subRes.rows.length > 0) {
+            await queryDb(
+              `UPDATE subscriptions 
+               SET status = 'active',
+                   billing_cycle = $1,
+                   purchase_id = $2,
+                   current_period_start = CURRENT_TIMESTAMP,
+                   current_period_end = CURRENT_TIMESTAMP + ($3 || ' days')::interval,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = $4`,
+              [pu.billing_cycle || 'monthly', existing.purchase_id, durationDays, subRes.rows[0].id]
+            );
+          } else {
+            await queryDb(
+              `INSERT INTO subscriptions (
+                 creator_id, package_id, purchase_id, status,
+                 billing_cycle, current_period_start, current_period_end
+               ) VALUES (
+                 $1, $2, $3, 'active',
+                 $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($5 || ' days')::interval
+               )`,
+              [existing.creator_id, pu.package_id, existing.purchase_id, pu.billing_cycle || 'monthly', durationDays]
+            );
+          }
+        }
+      }
+
+      const updateData = { ...data };
+      delete updateData.id;
+      delete updateData.action;
+      delete updateData.creator_name;
+      delete updateData.package_name;
+      delete updateData.amount_in_cents;
+      delete updateData.developer_name;
+      delete updateData.developer_email;
+
+      if (isBecomingPaid) {
+        updateData.status = 'successful';
+        if (developerId) updateData.processed_by_developer_id = developerId;
+        if (!updateData.payment_date) updateData.payment_date = new Date().toISOString();
+      }
+
+      if (body.manual_payment_notes) {
+        updateData.manual_payment_notes = body.manual_payment_notes;
+      }
+
+      const keys = Object.keys(updateData);
+      if (keys.length === 0) {
+        await queryDb('COMMIT');
+        return NextResponse.json({ success: true, record: existing, purchase: completedPurchase });
+      }
+
+      const values = keys.map((k) =>
+        typeof updateData[k] === 'object' && updateData[k] !== null ? JSON.stringify(updateData[k]) : updateData[k]
       );
-      completedPurchase = updatedPuRes.rows[0];
+      const setClauses = keys.map((k, i) => `"${k}" = $${i + 1}`);
+      values.push(id);
+
+      const res = await queryDb(
+        `UPDATE payments SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length} RETURNING *`,
+        values
+      );
+
+      await queryDb('COMMIT');
+
+      return NextResponse.json({
+        success: true,
+        message: isBecomingPaid ? 'Payment marked as successful and subscription activated!' : 'Payment updated successfully.',
+        record: res.rows[0],
+        purchase: completedPurchase,
+      });
+    } catch (err) {
+      await queryDb('ROLLBACK');
+      throw err;
     }
-
-    const updateData = { ...data };
-    delete updateData.id;
-    delete updateData.action;
-    delete updateData.creator_name;
-    delete updateData.package_name;
-    delete updateData.amount_in_cents;
-
-    if (isBecomingPaid) {
-      updateData.status = 'successful';
-    }
-
-    const keys = Object.keys(updateData);
-    if (keys.length === 0) {
-      return NextResponse.json({ success: true, record: existing, purchase: completedPurchase });
-    }
-
-    const values = keys.map((k) =>
-      typeof updateData[k] === 'object' && updateData[k] !== null ? JSON.stringify(updateData[k]) : updateData[k]
-    );
-    const setClauses = keys.map((k, i) => `"${k}" = $${i + 1}`);
-    values.push(id);
-
-    const res = await queryDb(
-      `UPDATE payments SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length} RETURNING *`,
-      values
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: isBecomingPaid ? 'Payment marked as successful and purchase activated!' : 'Payment updated successfully.',
-      record: res.rows[0],
-      purchase: completedPurchase,
-    });
   } catch (error) {
     console.error('Developer payment update error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });

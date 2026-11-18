@@ -192,7 +192,7 @@ export default function Package({
 
       <div className="pt-7">
         <Link
-          href={`/creator/checkout?packageId=${pkg.id}&currency=${currency}&interval=${billingCycle.toLowerCase()}`}
+          href={`/creator/checkout?${pkg.id}`}
           className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
             isPopular
               ? 'bg-secondary hover:bg-secondary-dark text-white shadow-secondary/25 ring-2 ring-secondary/30'

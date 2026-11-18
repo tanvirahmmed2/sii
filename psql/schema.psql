@@ -357,6 +357,32 @@ CREATE TABLE IF NOT EXISTS package_control_modules (
 CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_pkg ON package_control_modules(package_id);
 CREATE INDEX IF NOT EXISTS idx_pkg_ctrl_mods_mod ON package_control_modules(control_module_id);
 
+INSERT INTO website_control_modules (name, slug, path, category, description, icon, is_active, display_order)
+VALUES (
+    'System & Architecture',
+    'system',
+    '/staff-panel/system',
+    'Staff & System Settings',
+    'Institutional profile, domain routing, academic hierarchy presets, appearance, and direct portals',
+    'BiServer',
+    TRUE,
+    204
+)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    path = EXCLUDED.path,
+    category = EXCLUDED.category,
+    description = EXCLUDED.description,
+    icon = EXCLUDED.icon,
+    is_active = TRUE;
+
+INSERT INTO package_control_modules (package_id, control_module_id)
+SELECT p.id, cm.id
+FROM packages p
+CROSS JOIN website_control_modules cm
+WHERE cm.slug = 'system'
+ON CONFLICT (package_id, control_module_id) DO NOTHING;
+
 -- ----------------------------------------------------------------------------
 -- 11. CREATORS TABLE (Clients / Educational Institution Owners / Customers)
 -- ----------------------------------------------------------------------------
@@ -652,6 +678,8 @@ CREATE TABLE IF NOT EXISTS payments (
     gateway_fee DECIMAL(10, 2) DEFAULT 0.00 CHECK (gateway_fee >= 0.00),
     net_amount NUMERIC(12, 2),
     gateway_response JSONB,
+    processed_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    manual_payment_notes TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'successful', 'failed', 'refunded', 'cancelled')),
     payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
