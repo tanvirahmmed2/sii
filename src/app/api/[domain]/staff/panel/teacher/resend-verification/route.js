@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { buildTeacherVerificationUrl } from '../route.js';
 
 export async function POST(request, context) {

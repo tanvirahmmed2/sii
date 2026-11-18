@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
-import { buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendWebsiteEmail, buildStyledEmail } from 'src/lib/database/mailer.js';
 
 export async function POST(request, context) {
   try {
@@ -163,7 +162,7 @@ export async function POST(request, context) {
       });
       emailDispatched = true;
     } catch (mailErr) {
-      console.warn(`[StudentSetup] Brevo email dispatch warning for ${cleanEmail}:`, mailErr.message);
+      console.warn(`[StudentSetup] Email dispatch warning for ${cleanEmail}:`, mailErr.message);
       dispatchError = mailErr.message;
     }
 

@@ -622,7 +622,7 @@ export default function SmsBalancePage() {
 
             <div>
               <span className="text-slate-400 block text-[11px]">Gateway Provider</span>
-              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'bulksmsbd'}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'zendsms'}</span>
               <div className="text-slate-500">{new Date(activeLog.created_at).toLocaleString()}</div>
             </div>
           </div>

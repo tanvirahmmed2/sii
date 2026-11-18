@@ -169,8 +169,6 @@ export default function ContactsWorkstation() {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete inquiry from "${name}"?`)) return;
-
     try {
       const res = await fetch(`${baseApi}?id=${contactId}`, { method: 'DELETE' });
       const data = await res.json();
@@ -254,7 +252,7 @@ export default function ContactsWorkstation() {
             Website Contacts & Inquiries
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Incoming messages from portal visitors, send replies via website Brevo mailer, and maintain full communication logs.
+            Incoming messages from portal visitors, send replies via official mailer, and maintain full communication logs.
           </p>
         </div>
         {selectedContact && (
@@ -330,7 +328,6 @@ export default function ContactsWorkstation() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search inquiries..."
                 className="w-full sm:w-44 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2.5 py-1 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <span className="text-[11px] text-slate-500 font-mono whitespace-nowrap">
@@ -594,7 +591,7 @@ export default function ContactsWorkstation() {
                           ✓ Website Mailer: {mailerConfig.senderName} &lt;{mailerConfig.senderEmail}&gt;
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title="Configure custom Brevo credentials in Staff Panel > Configuration > Mailer">
+                        <span className="px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title="Platform Mailer Service">
                           ⚠ Using Platform Mailer Fallback ({mailerConfig.senderEmail || 'Default'})
                         </span>
                       )}
@@ -624,7 +621,6 @@ export default function ContactsWorkstation() {
                     required
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
-                    placeholder="Type your official response to this visitor inquiry..."
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
                   />
                 </div>

@@ -485,7 +485,7 @@ CREATE TABLE IF NOT EXISTS sms_logs (
     user_id BIGINT,
     purpose VARCHAR(50) NOT NULL,
     channel VARCHAR(20) DEFAULT 'sms',
-    provider VARCHAR(50) DEFAULT 'bulksmsbd',
+    provider VARCHAR(50) DEFAULT 'zendsms',
     sender_id VARCHAR(50),
     message TEXT NOT NULL,
     status VARCHAR(50) NOT NULL,
@@ -496,6 +496,30 @@ CREATE TABLE IF NOT EXISTS sms_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_sms_logs_recipient ON sms_logs(recipient);
 CREATE INDEX IF NOT EXISTS idx_sms_logs_created ON sms_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS email_logs (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    recipient VARCHAR(255) NOT NULL,
+    recipient_name VARCHAR(255),
+    user_type VARCHAR(50) DEFAULT 'system',
+    user_id BIGINT,
+    purpose VARCHAR(100) NOT NULL,
+    subject VARCHAR(500) NOT NULL,
+    content TEXT,
+    channel VARCHAR(20) DEFAULT 'email',
+    provider VARCHAR(50) DEFAULT 'resend',
+    sender_email VARCHAR(255),
+    sender_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'Sent',
+    message_id VARCHAR(255),
+    failure_reason TEXT,
+    ip_address VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_email_logs_recipient ON email_logs(recipient);
+CREATE INDEX IF NOT EXISTS idx_email_logs_created ON email_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_email_logs_website ON email_logs(website_id);
 
 CREATE TABLE IF NOT EXISTS otp_dispatch_logs (
     id BIGSERIAL PRIMARY KEY,

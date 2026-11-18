@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, checkStaffContactsPermission } from 'src/lib/middleware/staff.js';
-import { sendWebsiteEmail, getWebsiteBrevoConfig } from 'src/lib/database/websiteBrevo.js';
-import { buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendWebsiteEmail, getWebsiteMailerConfig, buildStyledEmail } from 'src/lib/database/mailer.js';
 
 async function verifyContactsStaffAccess(request, context, action = 'view') {
   const website = await resolveWebsiteFromRequest(request, context);
@@ -71,18 +70,18 @@ export async function GET(request, context) {
       [contactId, website.id]
     );
 
-    const brevoConfig = await getWebsiteBrevoConfig(website.id);
+    const mailerConfig = await getWebsiteMailerConfig(website.id);
 
     return NextResponse.json({
       success: true,
       replies: repliesRes.rows,
       canReply,
       mailerConfig: {
-        configured: Boolean(brevoConfig.configured),
-        isCustomMailer: Boolean(brevoConfig.isCustom),
-        senderEmail: brevoConfig.senderEmail,
-        senderName: brevoConfig.senderName,
-        isActive: Boolean(brevoConfig.isActive),
+        configured: Boolean(mailerConfig.configured),
+        isCustomMailer: Boolean(mailerConfig.isCustom),
+        senderEmail: mailerConfig.senderEmail,
+        senderName: mailerConfig.senderName,
+        isActive: Boolean(mailerConfig.isActive),
       },
     });
   } catch (error) {
@@ -128,9 +127,9 @@ export async function POST(request, context) {
     const staffId = staffSession?.staff?.id || staffSession?.staff_id || null;
     const staffName = staffSession?.staff?.name || staffSession?.user?.name || 'Staff Desk';
 
-    const brevoConfig = await getWebsiteBrevoConfig(website.id);
-    let effectiveMailerType = brevoConfig.isCustom ? 'website' : 'main';
-    let effectiveSenderEmail = brevoConfig.senderEmail || 'mailer@sii.edu';
+    const mailerConfig = await getWebsiteMailerConfig(website.id);
+    let effectiveMailerType = mailerConfig.isCustom ? 'website' : 'main';
+    let effectiveSenderEmail = mailerConfig.senderEmail || 'onboarding@resend.dev';
 
     const htmlEmail = buildStyledEmail({
       title: finalSubject,

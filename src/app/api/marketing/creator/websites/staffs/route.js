@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { sendSms } from 'src/lib/database/smsSender';
 import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';

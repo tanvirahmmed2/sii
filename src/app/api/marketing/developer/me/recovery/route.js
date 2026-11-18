@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword } from 'src/lib/middleware/developer';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { sendSms } from 'src/lib/database/smsSender';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import {

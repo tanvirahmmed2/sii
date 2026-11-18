@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { buildStudentPortalUrl, buildStudentSetupUrl } from 'src/lib/student/urls.js';
 
 export async function GET(request, context) {
@@ -249,7 +249,7 @@ export async function PUT(request, context) {
             websiteId: website.id,
           });
         } catch (err) {
-          console.warn('Failed to send student approval email via Brevo:', err.message);
+          console.warn('Failed to send student approval email:', err.message);
         }
       }
 
@@ -315,7 +315,7 @@ export async function PUT(request, context) {
             websiteId: website.id,
           });
         } catch (err) {
-          console.warn('Failed to send student rejection notice email via Brevo:', err.message);
+          console.warn('Failed to send student rejection notice email:', err.message);
         }
       }
 

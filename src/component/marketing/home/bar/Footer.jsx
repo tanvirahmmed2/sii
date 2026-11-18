@@ -3,8 +3,6 @@
 import { useContext } from 'react';
 import Link from 'next/link';
 import {
-  COMPANY_NAME,
-  COMPANY_URL,
   SITE_ADDRESS,
   SITE_CONTACT,
   SITE_MAIL,
@@ -19,7 +17,7 @@ const Footer = () => {
 
   return (
     <footer className="w-full bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
-      <div className="w-full max-w-7xl mx-auto flex flex-col space-y-10">
+      <div className="w-full flex flex-col space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pb-8 border-b border-slate-800">
           <div className="lg:col-span-7 space-y-2">
             <div className="space-y-1">
@@ -35,7 +33,7 @@ const Footer = () => {
             </div>
 
             <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed font-normal">
-              The all-in-one portfolio website and multi-tenant commerce engine designed for educational institutions,
+              The all-in-one academic website engine designed for educational institutions,
               creators, and modern academic academies. Intuitive visual studio with enterprise backend infrastructure.
             </p>
           </div>
@@ -112,32 +110,6 @@ const Footer = () => {
                   Company Policies
                 </Link>
               </li>
-              {creator?.id ? (
-                <li>
-                  <Link
-                    href={`/creator/${creator.id}`}
-                    className="hover:text-white transition-colors text-emerald-400 font-medium"
-                  >
-                    Creator Studio Panel →
-                  </Link>
-                </li>
-              ) : (
-                <>
-                  <li>
-                    <Link
-                      href="/creator/login"
-                      className="hover:text-white transition-colors text-emerald-400 font-medium"
-                    >
-                      Creator Login →
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/creator/register" className="hover:text-white transition-colors">
-                      Start Building Free
-                    </Link>
-                  </li>
-                </>
-              )}
             </ul>
           </div>
 
@@ -213,16 +185,6 @@ const Footer = () => {
               </button>
             </div>
           </div>
-
-          <p className="order-3 text-center md:text-right font-normal">
-            A Product of{' '}
-            <Link
-              href={`${COMPANY_URL}`}
-              className="text-slate-200 hover:text-white font-medium underline transition-colors"
-            >
-              {COMPANY_NAME}
-            </Link>
-          </p>
         </div>
       </div>
     </footer>

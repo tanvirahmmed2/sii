@@ -186,7 +186,7 @@ function EnrollmentContent() {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           
-          <input type="text" placeholder="Search candidate by name, application no, email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500" />
+          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500" />
         </div>
 
         <div className="flex items-center gap-2">
@@ -296,7 +296,6 @@ function EnrollmentContent() {
                 <input
                   type="text"
                   required
-                  placeholder={`e.g. ${new Date().getFullYear()}-1001`}
                   value={enrollForm.registration_no}
                   onChange={e => setEnrollForm({
                     ...enrollForm,
@@ -317,7 +316,7 @@ function EnrollmentContent() {
               </div>
 
               <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300">
-                <strong>Notice:</strong> An official student identity record will be created in <code>website_students</code> with this email. When the candidate accesses the setup portal, their email will be strictly verified via the institutional Brevo web mailer before they can set a password.
+                <strong>Notice:</strong> An official student identity record will be created in <code>website_students</code> with this email. When the candidate accesses the setup portal, their email will be strictly verified via the institutional email service before they can set a password.
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -376,7 +375,7 @@ function EnrollmentContent() {
                 </button>
               </div>
               <p className="text-[10px] text-slate-500">
-                The student must verify their email address (<code>{enrolledSuccessData.email}</code>) via Brevo OTP upon visiting this link.
+                The student must verify their email address (<code>{enrolledSuccessData.email}</code>) via email OTP upon visiting this link.
               </p>
             </div>
 

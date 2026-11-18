@@ -4,7 +4,7 @@ import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest, hasTenantModuleAllowance } from 'src/lib/middleware/websiteResolver.js';
 import { getStaffSession, hasStaffModulePermission, hashPassword } from 'src/lib/middleware/staff.js';
 import { revokeAllOfficerSessions } from 'src/lib/middleware/officer.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';

@@ -625,7 +625,7 @@ export default function MailBalancePage() {
 
             <div>
               <span className="text-slate-400 block text-[11px]">Mailer Provider</span>
-              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'brevo'}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'resend'}</span>
               <div className="text-slate-500">{new Date(activeLog.created_at).toLocaleString()}</div>
             </div>
           </div>
@@ -640,7 +640,7 @@ export default function MailBalancePage() {
           <div>
             <span className="text-slate-400 block text-[11px] mb-1">Email Body Snippet</span>
             <div className="p-3 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-sans text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
-              {activeLog.content || 'Content payload recorded via Brevo SMTP.'}
+              {activeLog.content || 'Content payload recorded via Resend mailer.'}
             </div>
           </div>
 

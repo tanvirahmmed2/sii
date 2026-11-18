@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { SITE_NAME } from 'src/lib/database/secret';
 import { uploadImage } from 'src/lib/database/cloudinary';
 

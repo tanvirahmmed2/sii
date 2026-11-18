@@ -3,17 +3,14 @@ import {
   SITE_MAIL,
   SITE_CONTACT,
   SITE_ADDRESS,
-  COMPANY_NAME,
-  COMPANY_URL,
+  getBaseUrl,
 } from '../database/secret.js';
 
 export const PLATFORM_INFO = {
-  SITE_NAME: SITE_NAME || 'Hiesci',
-  SITE_MAIL: SITE_MAIL || 'support@hiesci.io',
-  SITE_CONTACT: SITE_CONTACT || '+1 (800) 555-0199',
-  SITE_ADDRESS: SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400',
-  COMPANY_NAME: COMPANY_NAME || 'Sky International Institute',
-  COMPANY_URL: COMPANY_URL || 'http://localhost:3000',
+  SITE_NAME: SITE_NAME || 'Disibin',
+  SITE_MAIL: SITE_MAIL || 'support@disibin.com',
+  SITE_CONTACT: SITE_CONTACT || '+880 180 500 3886',
+  SITE_ADDRESS: SITE_ADDRESS || 'Mymensingh, Bangladesh',
 };
 
 export function numberToWords(num, currency = 'USD') {
@@ -69,12 +66,12 @@ export function numberToWords(num, currency = 'USD') {
 }
 
 export function generateSubscriptionReceiptHTML(payment = {}, creator = {}, packageInfo = {}, purchase = {}) {
-  const platformName = COMPANY_NAME || 'Sky International Institute';
-  const brandName = SITE_NAME || 'Hiesci';
-  const siteAddress = SITE_ADDRESS || 'Tech Innovation District, 100 Enterprise Way, Suite 400';
-  const siteContact = SITE_CONTACT || '+1 (800) 555-0199';
-  const siteEmail = SITE_MAIL || 'support@hiesci.io';
-  const siteWebsite = COMPANY_URL || 'http://localhost:3000';
+  const platformName = SITE_NAME || 'Disibin';
+  const brandName = SITE_NAME || 'Disibin';
+  const siteAddress = SITE_ADDRESS || 'Mymensingh, Bangladesh';
+  const siteContact = SITE_CONTACT || '+880 180 500 3886';
+  const siteEmail = SITE_MAIL || 'support@disibin.com';
+  const siteWebsite = getBaseUrl();
 
   const receiptNo = payment.transaction_id || (payment.id ? `REC-PAY-${payment.id}` : 'REC-OFFICIAL');
   const purchaseCode = purchase.purchase_code || payment.purchase_code || payment.order_code || 'N/A';

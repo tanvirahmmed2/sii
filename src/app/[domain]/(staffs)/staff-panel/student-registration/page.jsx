@@ -204,11 +204,10 @@ export default function StudentRegistrationPage() {
       return;
     }
 
-    const invalidCount = bulkRows.filter((r) => !r.isValid).length;
-    if (invalidCount > 0) {
-      if (!confirm(`${invalidCount} row(s) have missing registration numbers or classes and will fail. Proceed anyway?`)) {
-        return;
-      }
+    const validCount = bulkRows.filter((r) => r.isValid).length;
+    if (validCount === 0) {
+      toast.error('All rows have invalid or missing required data. Please review the file.');
+      return;
     }
 
     setUploadingBulk(true);
@@ -442,7 +441,6 @@ export default function StudentRegistrationPage() {
                   required
                   value={singleRegNo}
                   onChange={(e) => setSingleRegNo(e.target.value.replace(/^REG-?/i, ''))}
-                  placeholder="e.g. 2026-1001"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">Unique student institutional registration code</span>
@@ -456,7 +454,6 @@ export default function StudentRegistrationPage() {
                   type="text"
                   value={singleRollNo}
                   onChange={(e) => setSingleRollNo(e.target.value)}
-                  placeholder="e.g. 01"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">Class roster sequence</span>
@@ -464,17 +461,16 @@ export default function StudentRegistrationPage() {
 
               <div className="sm:col-span-2 lg:col-span-3">
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Student Email Address (Required for Brevo OTP Setup Verification)
+                  Student Email Address (Required for OTP Setup Verification)
                 </label>
                 <input
                   type="email"
                   value={singleEmail}
                   onChange={(e) => setSingleEmail(e.target.value)}
-                  placeholder="e.g. student@institution.edu"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-xs text-slate-900 dark:text-white outline-none focus:border-primary font-mono"
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  The student will enter this email on <code>/auth/student/setup</code> to receive their Brevo OTP code.
+                  The student will enter this email on <code>/auth/student/setup</code> to receive their OTP verification code.
                 </span>
               </div>
             </div>
@@ -513,7 +509,7 @@ export default function StudentRegistrationPage() {
               onClick={handleDownloadTemplate}
               className="text-xs text-primary hover:underline font-medium cursor-pointer self-start sm:self-auto"
             >
-              📥 Download Sample Spreadsheet
+              Download Sample Spreadsheet
             </button>
           </div>
 

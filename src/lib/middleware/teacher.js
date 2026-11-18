@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query, queryDb } from '../database/db.js';
 import { JWT_SECRET, TEACHER_TOKEN } from '../database/secret.js';
-import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendEmail, buildStyledEmail } from '../database/mailer.js';
 import { sendSms } from '../database/smsSender.js';
 import {
   checkAccountLockout,

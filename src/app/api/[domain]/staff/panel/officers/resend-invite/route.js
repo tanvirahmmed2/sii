@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 import { getStaffSession, isGeneralStaff } from 'src/lib/middleware/staff.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';
 
 function buildOfficerVerificationUrl(website, token, request) {

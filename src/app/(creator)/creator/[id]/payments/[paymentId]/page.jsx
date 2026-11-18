@@ -168,12 +168,10 @@ export default function CreatorPaymentInvoicePage({ params }) {
               <span className="w-3 h-3 rounded-full bg-blue-600 inline-block" />
               <span className="text-xl font-bold tracking-tight text-slate-900">{PLATFORM_INFO.SITE_NAME}</span>
             </div>
-            <p className="text-xs font-semibold text-slate-600">{PLATFORM_INFO.COMPANY_NAME}</p>
             <p className="text-[11px] text-slate-500 mt-1 max-w-sm">{PLATFORM_INFO.SITE_ADDRESS}</p>
             <div className="mt-2 text-[11px] text-slate-500 space-y-0.5">
               <div>Phone: <span className="text-slate-700 font-mono">{PLATFORM_INFO.SITE_CONTACT}</span></div>
               <div>Email: <span className="text-slate-700">{PLATFORM_INFO.SITE_MAIL}</span></div>
-              <div>Website: <a href={PLATFORM_INFO.COMPANY_URL} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">{PLATFORM_INFO.COMPANY_URL}</a></div>
             </div>
           </div>
 
@@ -325,7 +323,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
 
             <div className="text-[11px] text-slate-500 space-y-1">
               <p className="font-medium text-slate-700">Digital Receipt Notice:</p>
-              <p>This is a certified electronic receipt issued by {PLATFORM_INFO.COMPANY_NAME}. All websites created under this subscription inherit the provisioned package capabilities.</p>
+              <p>This is a certified electronic receipt issued by {PLATFORM_INFO.SITE_NAME}. All websites created under this subscription inherit the provisioned package capabilities.</p>
               <p className="font-mono text-[10px] text-slate-400">Checksum / Token: {payment.transaction_id || payment.id}</p>
             </div>
           </div>
@@ -353,7 +351,7 @@ export default function CreatorPaymentInvoicePage({ params }) {
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-[11px] text-slate-400 text-center sm:text-left">
             <div>Support inquiries: {PLATFORM_INFO.SITE_MAIL} | Helpline: {PLATFORM_INFO.SITE_CONTACT}</div>
-            <div className="font-mono text-[10px] mt-0.5">&copy; {new Date().getFullYear()} {PLATFORM_INFO.COMPANY_NAME}. All rights reserved.</div>
+            <div className="font-mono text-[10px] mt-0.5">&copy; {new Date().getFullYear()} {PLATFORM_INFO.SITE_NAME}. All rights reserved.</div>
           </div>
 
           <div className="p-3 rounded-lg border border-slate-200 bg-white text-center shadow-xs">

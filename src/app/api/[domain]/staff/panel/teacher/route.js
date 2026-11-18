@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyTeacherStaffAccess } from 'src/lib/middleware/teacher-auth.js';
 import { hashPassword } from 'src/lib/middleware/staff.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
 import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';

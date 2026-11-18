@@ -51,32 +51,32 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16">
       <div className="w-full flex flex-col gap-7">
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-semibold">
-          We are here to assist your creator journey
+          We are here to assist your academic journey
         </h1>
         <p className="text-sm sm:text-base md:text-lg lg:text-xl">
-          Have questions about website provisioning, custom enterprise domains, or package upgrades? Send us a message and our team will get back to you within 24 hours.
+          Have questions about website provisioning, custom enterprise services, or package upgrades? Send us a message and our team will get back to you within 24 hours.
         </p>
       </div>
 
 
       <div className='w-full flex flex-col gap-4 text-lg text-balance md:text-xl '>
-            <div className='w-full flex flex-row items-center gap-4'>
-              <MdMail />
-              <p>{SITE_MAIL}</p>
-            </div>
-            <div className='w-full flex flex-row items-center gap-4'>
-              <BiGlobe />
-              <p>{SITE_ADDRESS}</p>
-            </div>
-            <div className='w-full flex flex-row items-center gap-4'>
-              <IoCall />
-              <p>{SITE_CONTACT}</p>
-            </div>
-          </div>
+        <div className='w-full flex flex-row items-center gap-4'>
+          <MdMail />
+          <p>{SITE_MAIL}</p>
+        </div>
+        <div className='w-full flex flex-row items-center gap-4'>
+          <BiGlobe />
+          <p>{SITE_ADDRESS}</p>
+        </div>
+        <div className='w-full flex flex-row items-center gap-4'>
+          <IoCall />
+          <p>{SITE_CONTACT}</p>
+        </div>
+      </div>
       <div className="w-full flex flex-col">
         {submitted ? (
           <div className="text-center py-12 space-y-4">
@@ -108,7 +108,6 @@ export default function ContactPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Liam Johnson"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="input-style bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
@@ -118,7 +117,6 @@ export default function ContactPage() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. liam@agency.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input-style bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
@@ -130,7 +128,6 @@ export default function ContactPage() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Enterprise Reverse Proxy Custom Domain Inquiry"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="input-style bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
@@ -141,7 +138,6 @@ export default function ContactPage() {
               <textarea
                 rows={5}
                 required
-                placeholder="Describe your technical requirements, collaboration needs, or feedback..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 className="input-style bg-transparent text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500" />
@@ -161,7 +157,7 @@ export default function ContactPage() {
 
 
         <div className="w-full flex flex-col md:flex-row items-center justify-center gap-6">
-          
+
 
           <div className="p-4 rounded-xl text-light bg-primary w-full">
             <h4 className="font-semibold  text-sm">Need Instant Assistance?</h4>
@@ -169,7 +165,7 @@ export default function ContactPage() {
               If you have already purchased a website subscription, you can submit priority tickets directly through the Creator Dashboard or inspect active solutions in the Admin Center.
             </p>
             <Link
-              href="/dashboard"
+              href="/creator/login"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-light transition-colors"
             >
               <span>Go to Creator Workspace</span>

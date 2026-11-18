@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword, hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 
 import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
@@ -98,7 +98,7 @@ async function handleCreateAdmin(d, request) {
       text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nPlease click the link below to verify your email and activate your account:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
     });
   } catch (mailErr) {
-    console.warn('Brevo email sending notice during developer creation:', mailErr.message);
+    console.warn('Resend email sending notice during developer creation:', mailErr.message);
   }
 
   return newAdmin;

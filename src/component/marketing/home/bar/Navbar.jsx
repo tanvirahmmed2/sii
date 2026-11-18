@@ -43,6 +43,18 @@ export default function HomeNavbar() {
             >
               Reviews
             </Link>
+            <Link
+              href="/blogs"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
+            >
+              Blogs
+            </Link>
+            <Link
+              href="/updates"
+              className="text-xs xl:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-secondary dark:hover:text-secondary-light px-3 py-2 rounded-xl transition-colors"
+            >
+              Updates
+            </Link>
           </div>
         </div>
 
@@ -85,7 +97,7 @@ export default function HomeNavbar() {
             )}
           </div>
 
-          
+
 
           <button
             type="button"

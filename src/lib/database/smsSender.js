@@ -1,52 +1,7 @@
 import { queryDb } from './db.js';
 import { checkAndIncrementSmsUsage, getWebsiteMonthlyUsageAndLimits } from './usageLimiter.js';
-import { BULKSMSBD_API_KEY, BULKSMSBD_SENDER_ID, BULKSMSBD_URL } from './secret.js';
+import { ZENDSMS_API_KEY, ZENDSMS_SENDER_ID, ZENDSMS_URL } from './secret.js';
 import { recordSentSms } from '../redis/redisClient.js';
-
-export const SUPPORTED_SMS_PROVIDERS = [
-  {
-    code: 'bulksmsbd',
-    name: 'BulkSMSBD Gateway',
-    defaultEndpoint: 'http://bulksmsbd.net/api/smsapi',
-    requiresClientId: false,
-    supportsMasking: true
-  },
-  {
-    code: 'mimsms',
-    name: 'MiMSMS (Bangladesh / Operator Direct)',
-    defaultEndpoint: 'https://api.mimsms.com/api/v3/send-sms',
-    requiresClientId: false,
-    supportsMasking: true
-  },
-  {
-    code: 'greenweb',
-    name: 'Greenweb SMS Gateway',
-    defaultEndpoint: 'https://api.greenweb.com.bd/api.php',
-    requiresClientId: false,
-    supportsMasking: true
-  },
-  {
-    code: 'onnorokom',
-    name: 'Onnorokom SMS Gateway',
-    defaultEndpoint: 'https://api2.onnorokomsms.com/HttpSendSms.ashx',
-    requiresClientId: true,
-    supportsMasking: true
-  },
-  {
-    code: 'twilio',
-    name: 'Twilio Global SMS',
-    defaultEndpoint: 'https://api.twilio.com/2010-04-01',
-    requiresClientId: true,
-    supportsMasking: false
-  },
-  {
-    code: 'custom',
-    name: 'Custom HTTP GET / POST Endpoint',
-    defaultEndpoint: '',
-    requiresClientId: false,
-    supportsMasking: true
-  }
-];
 
 export function maskSmsApiKey(val) {
   if (!val) return '';
@@ -86,7 +41,7 @@ export async function logSmsAttempt({
   userId = null,
   purpose = 'general',
   channel = 'sms',
-  provider = 'bulksmsbd',
+  provider = 'zendsms',
   senderId = null,
   message,
   status,
@@ -144,23 +99,23 @@ export async function sendSms({
     await checkAndIncrementSmsUsage(websiteId, 1);
   }
 
-  const apiKey = BULKSMSBD_API_KEY || process.env.SMS_API_KEY || '';
-  const finalSenderId = senderId || BULKSMSBD_SENDER_ID || process.env.SMS_SENDER_ID || '8809617614488';
-  const targetUrl = BULKSMSBD_URL || 'http://bulksmsbd.net/api/smsapi';
+  const apiKey = ZENDSMS_API_KEY || process.env.ZENDSMS_API_KEY || process.env.SMS_API_KEY || '';
+  const finalSenderId = senderId || ZENDSMS_SENDER_ID || process.env.ZENDSMS_SENDER_ID || 'ZendSMS';
+  const targetUrl = ZENDSMS_URL || process.env.ZENDSMS_URL || 'https://api.zendsms.com/api/v1/send-sms';
 
   if (!apiKey) {
-    const simulatedId = `sim_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const simulatedId = `sim_zend_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     await logSmsAttempt({
       recipient,
       userType,
       userId,
       purpose,
       channel: 'sms',
-      provider: 'bulksmsbd',
+      provider: 'zendsms',
       senderId: finalSenderId,
       message: cleanMsg,
       status: 'simulated',
-      responseCode: '202',
+      responseCode: '200',
       responseBody: { simulated: true, messageId: simulatedId },
       ip
     });
@@ -175,7 +130,7 @@ export async function sendSms({
         type: purpose || 'general',
         message: cleanMsg,
         status: 'Simulated',
-        provider: 'bulksmsbd',
+        provider: 'zendsms',
         partsCount: 1,
       });
     }
@@ -184,7 +139,7 @@ export async function sendSms({
       success: true,
       simulated: true,
       messageId: simulatedId,
-      provider: 'bulksmsbd',
+      provider: 'zendsms',
       recipient,
       senderId: finalSenderId,
       status: 'DELIVERED_SIMULATED',
@@ -194,36 +149,37 @@ export async function sendSms({
 
   try {
     const payload = {
-      api_key: apiKey,
-      type: 'text',
-      number: recipient,
-      senderid: finalSenderId,
-      message: cleanMsg
+      recipient,
+      sender_id: finalSenderId,
+      message: cleanMsg,
+      client_ref: `sms_${Date.now()}`
     };
 
     const res = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload)
     });
 
     const data = await res.json().catch(() => ({}));
+    const isSuccess = res.ok && (data.success === true || data.code === 200 || data.data?.message_id);
 
-    if (String(data.response_code) === '202') {
+    if (isSuccess) {
       await logSmsAttempt({
         recipient,
         userType,
         userId,
         purpose,
         channel: 'sms',
-        provider: 'bulksmsbd',
+        provider: 'zendsms',
         senderId: finalSenderId,
         message: cleanMsg,
         status: 'sent',
-        responseCode: data.response_code,
+        responseCode: String(data.code || res.status || 200),
         responseBody: data,
         ip
       });
@@ -238,33 +194,33 @@ export async function sendSms({
           type: purpose || 'general',
           message: cleanMsg,
           status: 'Sent',
-          provider: 'bulksmsbd',
-          partsCount: 1,
+          provider: 'zendsms',
+          partsCount: Number(data.data?.sms_count) || 1,
         });
       }
 
       return {
         success: true,
-        messageId: data.message_id || `sms_${Date.now()}`,
-        provider: 'bulksmsbd',
+        messageId: data.data?.message_id || data.message_id || `sms_${Date.now()}`,
+        provider: 'zendsms',
         recipient,
         senderId: finalSenderId,
         response: data,
         dispatchedAt: new Date().toISOString()
       };
     } else {
-      const errMsg = data.error_message || data.message || `BulkSMSBD error code ${data.response_code}`;
+      const errMsg = data.message || data.error || `ZendSMS error status ${res.status}`;
       await logSmsAttempt({
         recipient,
         userType,
         userId,
         purpose,
         channel: 'sms',
-        provider: 'bulksmsbd',
+        provider: 'zendsms',
         senderId: finalSenderId,
         message: cleanMsg,
         status: 'failed',
-        responseCode: data.response_code,
+        responseCode: String(data.code || res.status || 500),
         responseBody: data,
         ip
       });
@@ -280,7 +236,7 @@ export async function sendSms({
           message: cleanMsg,
           status: 'Failed',
           failureReason: errMsg,
-          provider: 'bulksmsbd',
+          provider: 'zendsms',
           partsCount: 1,
         });
       }
@@ -294,7 +250,7 @@ export async function sendSms({
       userId,
       purpose,
       channel: 'sms',
-      provider: 'bulksmsbd',
+      provider: 'zendsms',
       senderId: finalSenderId,
       message: cleanMsg,
       status: 'failed',
@@ -314,7 +270,7 @@ export async function sendSms({
         message: cleanMsg,
         status: 'Failed',
         failureReason: err.message,
-        provider: 'bulksmsbd',
+        provider: 'zendsms',
         partsCount: 1,
       });
     }
@@ -325,18 +281,18 @@ export async function sendSms({
 
 export async function getWebsiteSmsConfig(websiteId) {
   const usageLimits = websiteId ? await getWebsiteMonthlyUsageAndLimits(websiteId) : null;
-  const mainApiKey = BULKSMSBD_API_KEY || process.env.SMS_API_KEY || '';
-  const mainSenderId = BULKSMSBD_SENDER_ID || process.env.SMS_SENDER_ID || '8809617614488';
+  const mainApiKey = ZENDSMS_API_KEY || process.env.ZENDSMS_API_KEY || '';
+  const mainSenderId = ZENDSMS_SENDER_ID || process.env.ZENDSMS_SENDER_ID || 'ZendSMS';
 
   return {
-    configured: Boolean(mainApiKey || true),
+    configured: Boolean(mainApiKey),
     useMainSender: true,
     isCustom: false,
-    provider: 'bulksmsbd',
+    provider: 'zendsms',
     senderId: mainSenderId,
     senderType: 'masking',
     apiKey: maskSmsApiKey(mainApiKey),
-    isActive: true,
+    isActive: Boolean(mainApiKey),
     usage: usageLimits
   };
 }
@@ -353,7 +309,6 @@ export async function sendWebsiteSms(websiteId, { to, message, senderId = null, 
 }
 
 const SmsSender = {
-  SUPPORTED_SMS_PROVIDERS,
   maskSmsApiKey,
   maskPhoneNumber,
   normalizePhoneNumber,

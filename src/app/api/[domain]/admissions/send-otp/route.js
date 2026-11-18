@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { queryDb } from 'src/lib/database/db.js';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { sendWebsiteEmail } from 'src/lib/database/websiteBrevo.js';
-import { buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendWebsiteEmail, buildStyledEmail } from 'src/lib/database/mailer.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
 
 export async function POST(request, context) {

@@ -832,7 +832,7 @@ CREATE TABLE IF NOT EXISTS website_sent_sms (
     message TEXT NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'Sent',
     failure_reason TEXT,
-    provider VARCHAR(50) DEFAULT 'bulksmsbd',
+    provider VARCHAR(50) DEFAULT 'zendsms',
     parts_count INT DEFAULT 1,
     year_month VARCHAR(7) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -863,7 +863,7 @@ CREATE TABLE IF NOT EXISTS website_sent_mails (
     content TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'Sent',
     failure_reason TEXT,
-    provider VARCHAR(50) DEFAULT 'brevo',
+    provider VARCHAR(50) DEFAULT 'resend',
     year_month VARCHAR(7) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

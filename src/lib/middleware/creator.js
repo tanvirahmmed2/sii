@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { JWT_SECRET, CREATOR_TOKEN, BASE_URL, BASE_DOMAIN, SITE_NAME, extractBaseDomain } from '../database/secret.js';
 import { query, queryDb } from '../database/db.js';
-import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendEmail, buildStyledEmail } from '../database/mailer.js';
 import { sendSms, maskPhoneNumber } from '../database/smsSender.js';
 import {
   checkAccountLockout,

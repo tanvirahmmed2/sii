@@ -148,12 +148,12 @@ export default function PackagesPage() {
     return [...(packages || [])]
       .filter((pkg) => pkg.is_public !== false && pkg.is_active !== false)
       .sort((a, b) => {
-      const priceA = getPrice(a);
-      const priceB = getPrice(b);
+        const priceA = getPrice(a);
+        const priceB = getPrice(b);
 
-      if (priceA !== priceB) return priceA - priceB;
-      return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
-    });
+        if (priceA !== priceB) return priceA - priceB;
+        return (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0);
+      });
   }, [packages, billingCycle, currency]);
 
   const handleInquirySubmit = async (e) => {
@@ -217,7 +217,7 @@ ${inquiryMessage}`,
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 max-w-7xl mx-auto relative">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-16 space-y-16 relative">
       {wishlistToast && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold animate-fade-in">
           <BiSolidHeart className="text-rose-500 text-base" />
@@ -226,12 +226,7 @@ ${inquiryMessage}`,
       )}
 
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
-          <BiRocket className="text-sm" />
-          <span>Transparent Pricing & Plans</span>
-        </span>
-
-        <h1 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight">
           Invest in Your Educational Excellence
         </h1>
 
@@ -244,22 +239,20 @@ ${inquiryMessage}`,
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${
-                currency === 'USD'
-                  ? 'bg-secondary text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${currency === 'USD'
+                ? 'bg-secondary text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               USD ($)
             </button>
             <button
               type="button"
               onClick={() => setCurrency('BDT')}
-              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${
-                currency === 'BDT'
-                  ? 'bg-secondary text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${currency === 'BDT'
+                ? 'bg-secondary text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               BDT (৳)
             </button>
@@ -269,22 +262,20 @@ ${inquiryMessage}`,
             <button
               type="button"
               onClick={() => setBillingCycle('MONTHLY')}
-              className={`px-4 py-1.5 rounded-xl transition-all cursor-pointer ${
-                billingCycle === 'MONTHLY'
-                  ? 'bg-secondary text-white shadow-md shadow-secondary/25'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`px-4 py-1.5 rounded-xl transition-all cursor-pointer ${billingCycle === 'MONTHLY'
+                ? 'bg-secondary text-white shadow-md shadow-secondary/25'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               Monthly Billing
             </button>
             <button
               type="button"
               onClick={() => setBillingCycle('YEARLY')}
-              className={`px-4 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                billingCycle === 'YEARLY'
-                  ? 'bg-secondary text-white shadow-md shadow-secondary/25'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`px-4 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${billingCycle === 'YEARLY'
+                ? 'bg-secondary text-white shadow-md shadow-secondary/25'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               <span>Annual Billing</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-md font-bold">
@@ -333,15 +324,14 @@ ${inquiryMessage}`,
             </button>
           </div>
 
-          <div className={`grid gap-8 ${
-            sortedPackages.length === 1
-              ? 'max-w-md mx-auto grid-cols-1'
-              : sortedPackages.length === 2
+          <div className={`grid gap-8 ${sortedPackages.length === 1
+            ? 'max-w-md mx-auto grid-cols-1'
+            : sortedPackages.length === 2
               ? 'max-w-3xl mx-auto grid-cols-1 md:grid-cols-2'
               : sortedPackages.length === 3
-              ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-          }`}>
+                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            }`}>
             {sortedPackages.map((pkg, idx) => {
               const price =
                 currency === 'BDT'
@@ -349,8 +339,8 @@ ${inquiryMessage}`,
                     ? Number(pkg.yearly_price_bdt ?? 0)
                     : Number(pkg.monthly_price_bdt ?? 0)
                   : billingCycle === 'YEARLY'
-                  ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
-                  : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+                    ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
+                    : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
 
               const hasExplicitPopular = sortedPackages.some((p) => Boolean(p.is_popular));
               const isPopular = hasExplicitPopular
@@ -418,12 +408,8 @@ ${inquiryMessage}`,
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
           <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15 backdrop-blur-md">
-              <BiSupport className="text-secondary text-sm" />
-              <span>Enterprise & Custom Institutional Packages</span>
-            </div>
 
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-snug">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white leading-snug">
               Need a Custom Package for Your Educational Network?
             </h2>
 
@@ -459,7 +445,7 @@ ${inquiryMessage}`,
               </p>
             </div>
 
-            {creator?.id ? (
+            {creator?.id && (
               <Link
                 href={`/creator/${creator.id}/tickets`}
                 className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-secondary hover:bg-secondary-dark text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/30 cursor-pointer"
@@ -467,15 +453,6 @@ ${inquiryMessage}`,
                 <BiSupport className="text-base" />
                 <span>Open Creator Support Ticket</span>
               </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowInquiryModal(true)}
-                className="w-full py-3 px-4 rounded-xl font-bold text-xs bg-secondary hover:bg-secondary-dark text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-secondary/30 cursor-pointer"
-              >
-                <BiSupport className="text-base" />
-                <span>Request Custom Package</span>
-              </button>
             )}
 
             <Link
@@ -561,7 +538,7 @@ ${inquiryMessage}`,
                   <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
                     Creator Support Desk
                   </span>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight">
                     Custom Package Inquiry
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">

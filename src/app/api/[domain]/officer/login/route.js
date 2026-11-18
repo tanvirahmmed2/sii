@@ -9,7 +9,7 @@ import {
   setOfficerSessionCookie,
   ensureOfficerSchema,
 } from 'src/lib/middleware/officer.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 
 export async function POST(request, context) {
   try {

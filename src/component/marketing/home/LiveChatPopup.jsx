@@ -525,10 +525,10 @@ export default function LiveChatPopup() {
       {isOpen && (
         <div
           style={getPopupStyle()}
-          className="bg-white border border-slate-200 shadow-2xl rounded-3xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 font-sans"
+          className="bg-white border border-slate-200 shadow-2xl rounded-xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in slide-in-from-bottom-3 font-sans"
         >
-          <div className="bg-slate-900 px-4 py-3.5 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-            <div className="flex items-center gap-2.5">
+          <div className="bg-primary px-4 py-3.5 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-2.5 ">
               <div className="relative">
                 <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                   <BiSupport className="text-lg" />

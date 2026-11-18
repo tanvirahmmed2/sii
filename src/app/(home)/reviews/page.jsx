@@ -76,8 +76,8 @@ export default function PublicReviewsPage() {
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 w-full space-y-12">
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        
-        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+
+        <h1 className="text-3xl sm:text-5xl font-semibold text-slate-900 tracking-tight leading-tight">
           Loved by Creators, Trusted Worldwide
         </h1>
         <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
@@ -87,7 +87,7 @@ export default function PublicReviewsPage() {
 
       <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-center divide-y md:divide-y-0 md:divide-x divide-slate-100">
         <div className="flex flex-col items-center justify-center text-center space-y-1">
-          <div className="text-5xl font-black text-slate-900 leading-none">
+          <div className="text-5xl font-semibold text-slate-900 leading-none">
             {stats.averageRating}
           </div>
           <div className="flex items-center text-amber-400 text-lg">
@@ -136,11 +136,10 @@ export default function PublicReviewsPage() {
           <button
             type="button"
             onClick={() => handleFilterChange('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              starFilter === 'ALL'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${starFilter === 'ALL'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+              }`}
           >
             All Reviews ({stats.totalApproved})
           </button>
@@ -149,11 +148,10 @@ export default function PublicReviewsPage() {
               key={r}
               type="button"
               onClick={() => handleFilterChange(String(r))}
-              className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                starFilter === String(r)
+              className={`flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${starFilter === String(r)
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <span>{r}</span>
               <BiStar className="text-amber-400" />
@@ -296,11 +294,10 @@ export default function PublicReviewsPage() {
                         setPage(p);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
-                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        page === p
+                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${page === p
                           ? 'bg-slate-900 text-white shadow-xs'
                           : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
@@ -325,7 +322,7 @@ export default function PublicReviewsPage() {
       )}
 
       <div className="rounded-3xl bg-primary text-white p-8 sm:p-12 text-center w-full space-y-6 shadow-xl">
-        <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
           Ready to Elevate Your Portfolio?
         </h2>
         <p className="text-xs sm:text-sm  max-w-xl mx-auto leading-relaxed">
@@ -342,7 +339,7 @@ export default function PublicReviewsPage() {
             href="/creator/login"
             className="px-6 py-3 rounded-xl border border-slate-700 text-white text-xs font-bold bg-slate-500 hover:bg-slate-800 transition-colors"
           >
-             Creator Studio
+            Creator Studio
           </Link>
         </div>
       </div>

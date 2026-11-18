@@ -4,7 +4,7 @@ import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
 import { hashPassword } from 'src/lib/middleware/students.js';
 import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo.js';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { buildStudentSetupUrl } from 'src/lib/student/urls.js';
 
 export async function GET(request, context) {

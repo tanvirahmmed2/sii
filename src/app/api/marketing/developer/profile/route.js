@@ -14,7 +14,7 @@ import {
   recordOtpDispatch,
   getClientIp,
 } from 'src/lib/security/shield';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/brevo';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { SITE_NAME } from 'src/lib/database/secret';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -16,13 +16,13 @@ export const PG_HOST = cleanEnv(process.env.PG_HOST);
 export const PG_PORT = cleanEnv(process.env.PG_PORT);
 export const PG_DATABASE = cleanEnv(process.env.PG_DATABASE);
 
-export const BREVO_SENDER_EMAIL = cleanEnv(process.env.BREVO_SENDER_EMAIL);
-export const BREVO_SENDER_NAME = cleanEnv(process.env.BREVO_SENDER_NAME);
-export const BREVO_API_KEY = cleanEnv(process.env.BREVO_API_KEY);
+export const RESEND_API_KEY = cleanEnv(process.env.RESEND_API_KEY);
+export const RESEND_SENDER_EMAIL = cleanEnv(process.env.RESEND_SENDER_EMAIL) || 'onboarding@resend.dev';
+export const RESEND_SENDER_NAME = cleanEnv(process.env.RESEND_SENDER_NAME) || 'Disibin';
 
-export const BULKSMSBD_API_KEY = cleanEnv(process.env.BULKSMSBD_API_KEY);
-export const BULKSMSBD_SENDER_ID = cleanEnv(process.env.BULKSMSBD_SENDER_ID) || '8809617614488';
-export const BULKSMSBD_URL = cleanEnv(process.env.BULKSMSBD_URL) || 'http://bulksmsbd.net/api/smsapi';
+export const ZENDSMS_API_KEY = cleanEnv(process.env.ZENDSMS_API_KEY);
+export const ZENDSMS_SENDER_ID = cleanEnv(process.env.ZENDSMS_SENDER_ID) || 'ZendSMS';
+export const ZENDSMS_URL = cleanEnv(process.env.ZENDSMS_URL) || 'https://api.zendsms.com/api/v1/send-sms';
 
 export const SCHOOL_NAME = "website.name";
 export const LOGO_URL = '/icon.png';
@@ -31,12 +31,10 @@ export const META_DESCRIPTION = 'Manage student enrollments, exam records, grade
 
 export const MONTHLY_FEE_DUE_DAY = parseInt('6', 10);
 
-export const SITE_NAME = 'Hiesci';
-export const SITE_MAIL = 'support@hiesci.io';
-export const SITE_CONTACT = '+1 (800) 555-0199';
-export const SITE_ADDRESS = 'Tech Innovation District, 100 Enterprise Way, Suite 400';
-export const COMPANY_NAME = 'Sky International Institute';
-export const COMPANY_URL = process.env.COMPANY_URL || 'http://localhost:3000';
+export const SITE_NAME = 'Disibin';
+export const SITE_MAIL = 'support@disibin.com';
+export const SITE_CONTACT = '+880 180 500 3886';
+export const SITE_ADDRESS = 'Mymensingh, Bangladesh';
 
 export const BASE_URL = cleanEnv(process.env.BASE_URL) || 'localhost:3000';
 
@@ -170,7 +168,7 @@ export const getWebsiteDomain = (request) => {
   if (!rawHost) return null;
 
   const cleanHostWithPort = rawHost.split(',')[0].trim().toLowerCase();
-  const cleanHost = cleanHostWithPort.split(':')[0]; 
+  const cleanHost = cleanHostWithPort.split(':')[0];
 
   const baseDomain = BASE_DOMAIN.toLowerCase();
   const baseHost = BASE_HOST.toLowerCase();

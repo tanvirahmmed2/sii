@@ -10,7 +10,7 @@ import {
   recordOtpDispatch,
   generateSecureOtp,
 } from '../security/shield.js';
-import { sendEmail, buildStyledEmail } from '../database/brevo.js';
+import { sendEmail, buildStyledEmail } from '../database/mailer.js';
 import { sendSms } from '../database/smsSender.js';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET;

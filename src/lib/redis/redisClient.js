@@ -53,7 +53,7 @@ export async function recordSentSms({
   message,
   status = 'Sent',
   failureReason = null,
-  provider = 'bulksmsbd',
+  provider = 'zendsms',
   partsCount = 1,
 }) {
   if (!websiteId || !recipientIdentifier) return null;
@@ -82,7 +82,7 @@ export async function recordSentSms({
         String(message || '').trim(),
         String(status || 'Sent'),
         failureReason ? String(failureReason) : null,
-        String(provider || 'bulksmsbd'),
+        String(provider || 'zendsms'),
         count,
         yearMonth,
       ]
@@ -138,7 +138,7 @@ export async function recordSentMail({
   content = null,
   status = 'Sent',
   failureReason = null,
-  provider = 'brevo',
+  provider = 'resend',
 }) {
   if (!websiteId || !recipientIdentifier) return null;
   const yearMonth = getCurrentYearMonth();
@@ -166,7 +166,7 @@ export async function recordSentMail({
         content ? String(content).trim() : null,
         String(status || 'Sent'),
         failureReason ? String(failureReason) : null,
-        String(provider || 'brevo'),
+        String(provider || 'resend'),
         yearMonth,
       ]
     );
