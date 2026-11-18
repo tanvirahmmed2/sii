@@ -375,8 +375,7 @@ export default function PayHomePage() {
               'Sonali Bank e-Payment Gateway',
               'SSLCommerz Multi-Gateway',
               'Stripe Card Payments',
-              'SurjoPay Gateway',
-              'EPS (Easy Payment System)'
+              'SurjoPay Gateway'
             ].map((gw) => (
               <span
                 key={gw}

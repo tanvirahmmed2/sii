@@ -28,7 +28,6 @@ const KNOWN_GATEWAYS = [
   { code: 'sslcommerz', name: 'SSLCommerz Payment Gateway', category: 'aggregator', supported_currencies: ['BDT', 'USD', 'EUR', 'GBP'] },
   { code: 'paddle', name: 'Paddle Billing', category: 'card_international', supported_currencies: ['USD', 'EUR', 'GBP'] },
   { code: 'sonali_gateway', name: 'Sonali Bank e-Payment Gateway', category: 'banking_portal', supported_currencies: ['BDT'] },
-  { code: 'eps', name: 'Easy Payment System (EPS)', category: 'banking_portal', supported_currencies: ['BDT'] },
   { code: 'surjopay', 'name': 'Shurjopay (SurjoPay)', category: 'aggregator', supported_currencies: ['BDT'] },
   { code: 'razorpay', name: 'Razorpay', category: 'card_international', supported_currencies: ['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD'] },
 ];

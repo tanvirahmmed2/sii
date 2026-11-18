@@ -2817,7 +2817,7 @@ CREATE INDEX IF NOT EXISTS idx_ws_notes_subj ON website_classroom_notes(website_
 
 -- ============================================================================
 -- SECTION 15: MULTI-TENANT PAYMENT GATEWAYS & ROUTING CONFIGURATION
--- Supports: paddle, sslcommerz, sonali gateway, stripe, bkash, nagad, surjopay, eps
+-- Supports: paddle, sslcommerz, sonali gateway, stripe, bkash, nagad, surjopay
 -- Multi-account per gateway, sandbox & live environments, task/fee routing
 -- ============================================================================
 
@@ -2890,7 +2890,7 @@ ON CONFLICT (code) DO UPDATE SET
 
 -- ----------------------------------------------------------------------------
 -- 60. WEBSITE PAYMENT GATEWAY ACCOUNTS (Tenant Multi-Account Gateway Configurations)
--- Unified accounts table for all gateways (e.g. bKash, Nagad, Stripe, PayPal, SSLCommerz, Paddle, Sonali, EPS, Razorpay)
+-- Unified accounts table for all gateways (e.g. bKash, Nagad, Stripe, PayPal, SSLCommerz, Paddle, Sonali, Razorpay)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_payment_gateway_accounts (
     id BIGSERIAL PRIMARY KEY,

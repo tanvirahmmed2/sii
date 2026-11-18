@@ -170,7 +170,6 @@ export default function PaymentForm({ onSuccess, onCancel }) {
               <option value="manual_bkash_agent">Direct bKash Agent/Merchant</option>
               <option value="manual_nagad_agent">Direct Nagad Agent/Merchant</option>
               <option value="manual_cheque">Bank Cheque / Draft</option>
-              <option value="eps_gateway_manual">EPS Gateway Manual Settlement</option>
             </select>
           </div>
 

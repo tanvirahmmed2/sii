@@ -21,7 +21,7 @@ export default function Layout({ children }) {
             Multi-Gateway & Task Routing Engine
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Configure merchant accounts for bKash, Nagad, Stripe, SSLCommerz, Paddle, Sonali Gateway, SurjoPay & EPS with sandbox/live switching and fee task routing.
+            Configure merchant accounts for bKash, Nagad, Stripe, SSLCommerz, Paddle, Sonali Gateway, and SurjoPay with sandbox/live switching and fee task routing.
           </p>
         </div>
         <div className="flex items-center gap-2">

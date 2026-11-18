@@ -108,7 +108,6 @@ export const GATEWAY_CURRENCY_SUPPORT = {
   sslcommerz: ['BDT', 'USD', 'EUR', 'GBP'],
   paddle: ['USD', 'EUR', 'GBP'],
   sonali_gateway: ['BDT'],
-  eps: ['BDT'],
   surjopay: ['BDT'],
   razorpay: ['INR', 'USD', 'EUR', 'GBP', 'BDT', 'AED', 'SGD']
 };
@@ -414,19 +413,6 @@ export async function testGatewayAccountConnection({ gateway_code, environment, 
       };
     }
 
-    case 'eps': {
-      const { merchant_id, username, password } = credentials || {};
-      if (!merchant_id || !username || !password) {
-        return { success: false, message: 'Missing EPS Merchant ID, Username, or Password.' };
-      }
-      return {
-        success: true,
-        gateway: 'Easy Payment System (EPS)',
-        environment,
-        message: `EPS Bangladesh Bank compliant PG verified for Merchant ID ${merchant_id} (${isLive ? 'Live EPS PG' : 'EPS Sandbox Environment'}).`,
-      };
-    }
-
     case 'paypal': {
       const { client_id, client_secret } = credentials || {};
       if (!client_id || !client_secret) {
@@ -639,11 +625,6 @@ export async function initiatePaymentForPurpose({
     case 'surjopay':
       gatewayRef = `SP-${Date.now()}`;
       checkoutUrl = `https://${isSandbox ? 'sandbox' : 'engine'}.shurjopay.com.bd/sp/${gatewayRef}`;
-      break;
-
-    case 'eps':
-      gatewayRef = `EPS-${Date.now()}`;
-      checkoutUrl = `https://${isSandbox ? 'sandbox' : 'pg'}.eps.com.bd/checkout/${gatewayRef}`;
       break;
 
     case 'paypal':

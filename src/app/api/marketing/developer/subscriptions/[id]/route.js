@@ -425,9 +425,9 @@ export async function POST(request, { params }) {
       let paymentMethod = 'bKash';
       let paymentGateway = 'BKASH';
 
-      if (rawMethod === 'EPS' || rawMethod === 'PADDLE') {
-        paymentGateway = 'EPS';
-        paymentMethod = 'EPS Global';
+      if (rawMethod === 'MANUAL_USD' || rawMethod === 'EPS' || rawMethod === 'PADDLE') {
+        paymentGateway = 'MANUAL';
+        paymentMethod = 'Manual USD';
       } else {
         paymentGateway = 'BKASH';
         paymentMethod = 'bKash';

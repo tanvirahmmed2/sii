@@ -102,7 +102,7 @@ export default function SubscriptionDetailsPage({ params }) {
       if (json.success) {
         setData(json);
         const subCurr = json.subscription?.payment_currency || (Number(json.subscription?.total_amount) > 500 ? 'BDT' : 'BDT');
-        const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'EPS';
+        const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'MANUAL_USD';
         setRenewForm((prev) => ({
           ...prev,
           package_id: json.subscription?.package_id || '',
@@ -148,7 +148,7 @@ export default function SubscriptionDetailsPage({ params }) {
           if (json.success) {
             setData(json);
             const subCurr = json.subscription?.payment_currency || (Number(json.subscription?.total_amount) > 500 ? 'BDT' : 'BDT');
-            const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'EPS';
+            const defaultMeth = subCurr === 'BDT' ? 'BKASH' : 'MANUAL_USD';
             setRenewForm((prev) => ({
               ...prev,
               package_id: json.subscription?.package_id || '',
@@ -1482,7 +1482,7 @@ export default function SubscriptionDetailsPage({ params }) {
                       className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"
                     >
                       <option value="BKASH">bKash (BDT)</option>
-                      <option value="EPS">EPS Global (USD)</option>
+                      <option value="MANUAL_USD">Manual USD</option>
                     </select>
                   </div>
                 </div>
@@ -1494,7 +1494,7 @@ export default function SubscriptionDetailsPage({ params }) {
                       value={renewForm.currency}
                       onChange={(e) => {
                         const nextCurr = e.target.value;
-                        const nextMethod = nextCurr === 'BDT' ? 'BKASH' : 'EPS';
+                        const nextMethod = nextCurr === 'BDT' ? 'BKASH' : 'MANUAL_USD';
                         setRenewForm((prev) => {
                           const pkg = data?.available_packages?.find((p) => p.id === Number(prev.package_id)) || data?.package;
                           let nextAmount = prev.amount;

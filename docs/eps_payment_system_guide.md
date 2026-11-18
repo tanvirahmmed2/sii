@@ -3,9 +3,9 @@
 This document details the architecture, integration points, database schema updates, and execution flow of the Easy Payment System (EPS) implemented exclusively for the main SaaS platform.
 
 ## 1. Scope and Boundary Isolation
-- Exclusivity: EPS is configured strictly for the main platform (http://localhost:3000) for SaaS subscription packages (/packages, /creator/checkout, /creator/[id]/payments/[paymentId]/pay).
-- Deprecated Gateways: Legacy central gateway variables (SHURJOPAY_*, PAYPAL_*, PADDLE_*) and their usages have been completely removed from the environment, secrets, and routes.
-- Tenant Isolation: Tenant websites ([domain]) do not use this EPS configuration.
+- Strict Isolation: EPS is configured and used **strictly and exclusively** for the main platform (http://localhost:3000) for creator SaaS subscription package purchases, renewals, and checkout (/packages, /creator/checkout, /creator/[id]/payments/[paymentId]/pay).
+- Zero Tenant Exposure: Tenant websites ([domain]), tenant student fee portals, admission fee circulars, and institutional merchant settings do not use, configure, or expose EPS.
+- Deprecated Gateways: Legacy central gateway variables (SHURJOPAY_*, PAYPAL_*, PADDLE_*) and their usages have been completely removed.
 
 ## 2. Environment Variables Configuration
 Configured in .env:
@@ -27,8 +27,8 @@ In payments table:
 ## 4. Key Components and Files
 - src/lib/eps/gateway.js: Core EPS client supporting sandbox simulation and live EPS API.
 - src/app/api/webhooks/eps-ipn/route.js: Dedicated EPS IPN and callback verification endpoint.
-- src/app/api/marketing/creator/payments/initiate/route.js: Generates unpaid purchase and unpaid payment.
-- src/app/api/marketing/creator/payments/route.js: Confirms EPS payment and activates subscription.
+- src/app/api/marketing/creator/payments/initiate/route.js: Generates unpaid purchase and unpaid payment for packages.
+- src/app/api/marketing/creator/payments/route.js: Confirms EPS package payment and activates subscription.
 - src/app/api/marketing/developer/payments/route.js: Handles developer manual payment entry and status changes.
 - src/app/(creator)/creator/checkout/page.jsx: Supports /creator/checkout?[package_id], month/year selection, and redirects to /creator/[id]/payments/[paymentId]/pay.
 - src/component/marketing/creator/PaymentGatewayCheckout.jsx: Multi-rail EPS checkout component supporting BDT (MFS + Bank) and Foreign Currencies (USD).
