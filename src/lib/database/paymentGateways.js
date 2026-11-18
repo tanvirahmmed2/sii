@@ -1,8 +1,14 @@
 import crypto from 'crypto';
 import { queryDb } from './db.js';
+import { decryptCredentials } from '../tenant-gateways/crypto.js';
 
 export const SUPPORTED_GATEWAYS = [
+  'bkash',
+  'eps',
+  'sslcommerz',
   'surjopay',
+  'sonali_gateway',
+  'stripe',
   'paypal',
   'paddle'
 ];
@@ -474,14 +480,14 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
   let res;
   if (hostelId) {
     res = await queryDb(
-      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3 AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose IN ($2, 'all_fees') AND pa.hostel_id = $3 AND pa.is_active = TRUE ${portalFilter} ORDER BY CASE WHEN pa.purpose = $2 THEN 1 ELSE 2 END LIMIT 1`,
       [websiteId, purpose, hostelId]
     );
   }
 
   if (!res || res.rows.length === 0) {
     res = await queryDb(
-      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL AND pa.is_active = TRUE ${portalFilter} LIMIT 1`,
+      `${selectQuery} WHERE pa.website_id = $1 AND pa.purpose IN ($2, 'all_fees') AND pa.hostel_id IS NULL AND pa.is_active = TRUE ${portalFilter} ORDER BY CASE WHEN pa.purpose = $2 THEN 1 ELSE 2 END LIMIT 1`,
       [websiteId, purpose]
     );
   }
@@ -513,7 +519,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
       account_number: def.account_number,
       environment: def.environment,
       currency: def.currency,
-      credentials: def.credentials,
+      credentials: decryptCredentials(def.credentials),
       logo_icon: def.logo_icon
     };
   }
@@ -532,7 +538,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
       account_name: row.fallback_account_name,
       environment: row.fallback_environment,
       currency: row.currency,
-      credentials: row.fallback_credentials,
+      credentials: decryptCredentials(row.fallback_credentials),
       is_fallback: true
     };
   }
@@ -551,7 +557,7 @@ export async function resolveGatewayRouteForTask(websiteId, purpose, options = {
     account_number: row.account_number,
     environment: row.environment,
     currency: row.currency,
-    credentials: row.credentials,
+    credentials: decryptCredentials(row.credentials),
     logo_icon: row.logo_icon,
     fallback_account_id: row.fallback_account_id
   };
@@ -707,8 +713,9 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
     assignRes = await queryDb(`
       SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
       FROM website_payment_purpose_assignments pa
-      WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id = $3
+      WHERE pa.website_id = $1 AND pa.purpose IN ($2, 'all_fees') AND pa.hostel_id = $3
         AND pa.is_active = TRUE ${visibilityClause}
+      ORDER BY CASE WHEN pa.purpose = $2 THEN 1 ELSE 2 END
       LIMIT 1
     `, [websiteId, purpose, hostelId]);
   }
@@ -717,8 +724,9 @@ export async function fetchAssignedGatewaysForPurpose(websiteId, purpose, option
     assignRes = await queryDb(`
       SELECT pa.gateway_account_id, pa.fallback_gateway_account_id
       FROM website_payment_purpose_assignments pa
-      WHERE pa.website_id = $1 AND pa.purpose = $2 AND pa.hostel_id IS NULL
+      WHERE pa.website_id = $1 AND pa.purpose IN ($2, 'all_fees') AND pa.hostel_id IS NULL
         AND pa.is_active = TRUE ${visibilityClause}
+      ORDER BY CASE WHEN pa.purpose = $2 THEN 1 ELSE 2 END
       LIMIT 1
     `, [websiteId, purpose]);
   }

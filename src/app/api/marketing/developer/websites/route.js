@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
+import { purgeWebsite } from 'src/lib/database/websitePurge';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
 export async function GET(request) {
@@ -232,8 +233,8 @@ export async function DELETE(request) {
       id = body.id;
     }
     if (!id) return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
-    await queryDb('DELETE FROM websites WHERE id = $1', [id]);
-    return NextResponse.json({ success: true });
+    await purgeWebsite(null, { websiteId: Number(id) });
+    return NextResponse.json({ success: true, message: 'Website deleted successfully.' });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

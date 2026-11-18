@@ -133,6 +133,8 @@ function WorkspaceContent() {
   const [updateErr, setUpdateErr] = useState('');
 
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteBanner, setDeleteBanner] = useState(null);
   const [copiedSubdomain, setCopiedSubdomain] = useState(null);
 
   useEffect(() => {
@@ -496,30 +498,46 @@ function WorkspaceContent() {
     }
   };
 
-  const handleDeleteWebsite = async (websiteId, websiteName) => {
-    if (!confirm(`Are you sure you want to permanently delete "${websiteName}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteWebsite = (websiteId, websiteName) => {
+    setDeleteBanner(null);
+    setDeleteTarget({ id: websiteId, name: websiteName });
+  };
 
-    setDeletingId(websiteId);
+  const confirmDeleteWebsite = async () => {
+    if (!deleteTarget) return;
+    const targetId = deleteTarget.id;
+    const targetName = deleteTarget.name;
+    setDeletingId(targetId);
+    setDeleteBanner(null);
     try {
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'delete_website',
-          id: websiteId,
+          id: targetId,
           creatorId: Number(creatorId),
         }),
       });
       const json = await res.json();
       if (json.success) {
+        setDeleteTarget(null);
+        setDeleteBanner({
+          type: 'success',
+          text: json.message || `Website "${targetName}" and all associated data have been permanently deleted.`
+        });
         if (refetch) await refetch();
       } else {
-        alert(json.error || 'Failed to delete website');
+        setDeleteBanner({
+          type: 'error',
+          text: json.error || 'Failed to delete website'
+        });
       }
     } catch {
-      alert('Network error deleting website.');
+      setDeleteBanner({
+        type: 'error',
+        text: 'Network error deleting website.'
+      });
     } finally {
       setDeletingId(null);
     }
@@ -685,6 +703,25 @@ function WorkspaceContent() {
             + New Website
           </Link>
         </div>
+
+        {deleteBanner && !deleteTarget && (
+          <div
+            className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
+              deleteBanner.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border-rose-200 text-rose-800'
+            }`}
+          >
+            <span>{deleteBanner.text}</span>
+            <button
+              type="button"
+              onClick={() => setDeleteBanner(null)}
+              className="text-slate-500 hover:text-slate-800 font-bold ml-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {websites.length === 0 ? (
           <div className="py-12 px-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 space-y-3">
@@ -1267,6 +1304,66 @@ function WorkspaceContent() {
                 </button>
               </div>
             </form>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-200">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Permanently Delete Website
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Are you sure you want to permanently delete <strong className="text-slate-900">{deleteTarget.name}</strong>? All institutional data, students, notices, staff records, and files will be permanently erased. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {deleteBanner?.type === 'error' && (
+              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                {deleteBanner.text}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteBanner(null);
+                }}
+                className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={confirmDeleteWebsite}
+                className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {deletingId ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>Purging Data...</span>
+                  </>
+                ) : (
+                  <span>Delete Permanently</span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

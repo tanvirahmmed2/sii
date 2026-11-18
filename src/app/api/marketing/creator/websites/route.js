@@ -5,6 +5,7 @@ import { queryDb } from '../../../../../lib/database/db.js';
 import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
 import { BASE_DOMAIN, getBaseUrl, CUSTOM_DOMAIN_CNAME_TARGET, CUSTOM_DOMAIN_A_TARGET } from '../../../../../lib/database/secret.js';
 import { uploadImage, deleteImage, uploadPdf } from '../../../../../lib/database/cloudinary.js';
+import { purgeWebsite } from '../../../../../lib/database/websitePurge.js';
 import { checkDomainAvailability, checkCustomDomainAvailability } from './check-domain/route.js';
 
 export const dynamic = 'force-dynamic';
@@ -1408,11 +1409,21 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       return NextResponse.json({ success: false, error: 'Website ID required.' }, { status: 400 });
     }
 
-    const res = await queryDb('DELETE FROM websites WHERE id = $1 AND creator_id = $2 RETURNING id', [id, creatorId]);
-    if (res.rows.length === 0) {
-      return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
+    try {
+      const purgeResult = await purgeWebsite(null, { websiteId: id, creatorId });
+      return NextResponse.json({
+        success: true,
+        id,
+        name: purgeResult.name,
+        message: 'Website and all associated data have been permanently deleted.'
+      });
+    } catch (err) {
+      const isAuthOrNotFound = err.message?.includes('unauthorized') || err.message?.includes('not found');
+      return NextResponse.json({
+        success: false,
+        error: err.message || 'Failed to delete website.'
+      }, { status: isAuthOrNotFound ? 404 : 500 });
     }
-    return NextResponse.json({ success: true, id, message: 'Website deleted successfully.' });
   }
 
   return NextResponse.json({ success: false, error: `Unknown websites action: ${action}` }, { status: 400 });

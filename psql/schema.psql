@@ -638,7 +638,7 @@ CREATE TRIGGER update_websites_updated_at
 CREATE TABLE IF NOT EXISTS purchases (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
-    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
     purchase_code VARCHAR(100) UNIQUE NOT NULL,
     billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
@@ -726,7 +726,7 @@ CREATE TRIGGER update_wishlists_updated_at
 CREATE TABLE IF NOT EXISTS subscriptions (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
-    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
     purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trailing', 'past_due', 'cancelled', 'expired')),
@@ -829,7 +829,7 @@ CREATE TRIGGER update_contacts_updated_at
 CREATE TABLE IF NOT EXISTS reviews (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
-    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     reviewer_name VARCHAR(255) NOT NULL,
     institution_name VARCHAR(255),
     rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
@@ -947,7 +947,7 @@ CREATE TRIGGER update_reports_updated_at
 CREATE TABLE IF NOT EXISTS supports (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
-    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
     ticket_number VARCHAR(100) UNIQUE NOT NULL,
     subject VARCHAR(255) NOT NULL,
@@ -1004,7 +1004,7 @@ CREATE TABLE IF NOT EXISTS live_chats (
     ip_address VARCHAR(100),
     user_agent TEXT,
     creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
-    website_id BIGINT REFERENCES websites(id) ON DELETE SET NULL,
+    website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     assigned_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
     status VARCHAR(50) DEFAULT 'OPEN',
     started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
+import TenantGatewayModal from 'src/component/payment/TenantGatewayModal';
 
 export default function PayHomePage() {
   const params = useParams();
@@ -151,7 +151,7 @@ export default function PayHomePage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter Student ID, Roll No, Reg No, or Application Tracking No..."
+              aria-label="Student ID, Roll No, Reg No, or Application Tracking Number"
               className="input-style w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
 
@@ -388,12 +388,13 @@ export default function PayHomePage() {
         </div>
       </div>
 
-      <UniversalGatewayCheckout
+      <TenantGatewayModal
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         invoice={activeInvoice}
         availableGateways={activeInvoice?.assigned_gateways || lookupResult?.gateways_by_purpose?.[activeInvoice?.category] || availableGateways}
         domain={domain}
+        purpose={activeInvoice?.category || 'education_fees'}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>

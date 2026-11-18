@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
+import TenantGatewayModal from 'src/component/payment/TenantGatewayModal';
 
 export default function ResidentialFeesPayPage() {
   const params = useParams();
@@ -106,7 +106,7 @@ export default function ResidentialFeesPayPage() {
               type="text"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
-              placeholder="Enter Student ID (e.g. STU-2026-001), Roll No, or Hall Seat Number..."
+              aria-label="Student ID, Roll No, or Hall Seat Number"
               className="input-style w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <button
@@ -221,13 +221,13 @@ export default function ResidentialFeesPayPage() {
         )}
       </div>
 
-      <UniversalGatewayCheckout
+      <TenantGatewayModal
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         invoice={activeInvoice}
         availableGateways={data?.available_gateways || []}
         domain={domain}
-        apiEndpoint={domain ? `/api/${domain}/pay/residential-fees` : '/api/pay/residential-fees'}
+        purpose="residential_fees"
         onPaymentSuccess={handleSearch}
       />
     </div>

@@ -1119,7 +1119,7 @@ CREATE TABLE IF NOT EXISTS website_teachers (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
-    designation_id BIGINT NOT NULL REFERENCES website_teacher_designation(id) ON DELETE RESTRICT,
+    designation_id BIGINT NOT NULL REFERENCES website_teacher_designation(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     number VARCHAR(50) NOT NULL,
@@ -2069,7 +2069,7 @@ CREATE TABLE IF NOT EXISTS website_teacher_salaries (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
-    payroll_id BIGINT NOT NULL REFERENCES website_teacher_payrolls(id) ON DELETE RESTRICT,
+    payroll_id BIGINT NOT NULL REFERENCES website_teacher_payrolls(id) ON DELETE CASCADE,
     effective_date DATE DEFAULT CURRENT_DATE,
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'on_leave', 'suspended')),
     remarks TEXT,
@@ -2137,7 +2137,7 @@ CREATE TABLE IF NOT EXISTS website_officer_salaries (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     officer_id BIGINT NOT NULL REFERENCES website_officers(id) ON DELETE CASCADE,
-    payroll_id BIGINT NOT NULL REFERENCES website_officer_payrolls(id) ON DELETE RESTRICT,
+    payroll_id BIGINT NOT NULL REFERENCES website_officer_payrolls(id) ON DELETE CASCADE,
     effective_date DATE DEFAULT CURRENT_DATE,
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'on_leave', 'suspended')),
     remarks TEXT,
@@ -2328,7 +2328,7 @@ CREATE TRIGGER update_website_books_updated_at
 CREATE TABLE IF NOT EXISTS website_book_student_issues (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE RESTRICT,
+    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
     issued_by_type VARCHAR(20) NOT NULL CHECK (issued_by_type IN ('staff', 'officer', 'developer')),
     issued_by_id BIGINT,
@@ -2352,7 +2352,7 @@ CREATE TABLE IF NOT EXISTS website_book_student_returns (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     issue_id BIGINT NOT NULL REFERENCES website_book_student_issues(id) ON DELETE CASCADE,
-    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE RESTRICT,
+    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE CASCADE,
     student_id BIGINT NOT NULL REFERENCES website_students(id) ON DELETE CASCADE,
     received_by_type VARCHAR(20) NOT NULL CHECK (received_by_type IN ('staff', 'officer', 'developer')),
     received_by_id BIGINT,
@@ -2368,7 +2368,7 @@ CREATE TABLE IF NOT EXISTS website_book_student_returns (
 CREATE TABLE IF NOT EXISTS website_book_teacher_issues (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE RESTRICT,
+    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE CASCADE,
     teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
     issued_by_type VARCHAR(20) NOT NULL CHECK (issued_by_type IN ('staff', 'officer', 'developer')),
     issued_by_id BIGINT,
@@ -2392,7 +2392,7 @@ CREATE TABLE IF NOT EXISTS website_book_teacher_returns (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     issue_id BIGINT NOT NULL REFERENCES website_book_teacher_issues(id) ON DELETE CASCADE,
-    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE RESTRICT,
+    book_id BIGINT NOT NULL REFERENCES website_books(id) ON DELETE CASCADE,
     teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
     received_by_type VARCHAR(20) NOT NULL CHECK (received_by_type IN ('staff', 'officer', 'developer')),
     received_by_id BIGINT,
@@ -2869,19 +2869,21 @@ CREATE TRIGGER update_website_payment_gateways_updated_at
     BEFORE UPDATE ON website_payment_gateways
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Seed supported central payment gateway providers (Unified 3-Gateway Model)
+-- Seed supported tenant payment gateway providers (8 Production Providers)
 INSERT INTO website_payment_gateways (code, name, category, description, logo_icon, website_url, supported_currencies, credential_schema, is_active)
 VALUES
-    ('surjopay', 'shurjoPay (bKash, Nagad, Rocket & Local/Intl Cards -> BDT)', 'aggregator', 'Platform-managed shurjoPay gateway. Settles in BDT to your configured Bank or MFS account.', '/icons/gateways/surjopay.svg', 'https://shurjopay.com.bd', ARRAY['BDT', 'USD']::varchar[], '{"required": ["payout_method", "account_holder_name", "account_number"], "optional": ["bank_name", "branch_name", "routing_number"]}'::jsonb, TRUE),
-    ('paypal', 'PayPal Commerce Platform (Global USD / Multi-Currency)', 'card_processing', 'Global checkout via PayPal. Splits platform commission at checkout or settles to your PayPal Merchant account.', '/icons/gateways/paypal.svg', 'https://developer.paypal.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '{"required": ["paypal_email"], "optional": ["paypal_merchant_id"]}'::jsonb, TRUE),
-    ('paddle', 'Paddle Billing (Global Cards, Apple Pay, PayPal & Tax Compliance)', 'card_international', 'Global checkout via Paddle Billing. Tax compliant multi-currency card processing.', '/icons/gateways/paddle.svg', 'https://paddle.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '{"required": ["vendor_id", "payout_email"], "optional": ["account_holder_name"]}'::jsonb, TRUE)
+    ('bkash', 'bKash Tokenized Checkout', 'mobile_banking', 'Direct bKash Tokenized Checkout for seamless mobile payments in BDT.', '/icons/gateways/bkash.svg', 'https://www.bkash.com', ARRAY['BDT']::varchar[], '[{"key": "app_key", "type": "text", "label": "App Key", "secret": false, "required": true}, {"key": "app_secret", "type": "password", "label": "App Secret", "secret": true, "required": true}, {"key": "username", "type": "text", "label": "Username", "secret": false, "required": true}, {"key": "password", "type": "password", "label": "Password", "secret": true, "required": true}]'::jsonb, TRUE),
+    ('eps', 'Easy Payment System (EPS)', 'banking_portal', 'Electronic Payment System connecting Bangladeshi banks and MFS wallets.', '/icons/gateways/eps.svg', 'https://eps.com.bd', ARRAY['BDT']::varchar[], '[{"key": "merchant_id", "type": "text", "label": "Merchant ID", "secret": false, "required": true}, {"key": "store_id", "type": "text", "label": "Store ID", "secret": false, "required": true}, {"key": "username", "type": "text", "label": "Username", "secret": false, "required": true}, {"key": "password", "type": "password", "label": "Password", "secret": true, "required": true}, {"key": "hash_secret", "type": "password", "label": "Hash Secret / Key", "secret": true, "required": true}]'::jsonb, TRUE),
+    ('sslcommerz', 'SSLCommerz Payment Gateway', 'aggregator', 'Largest payment aggregator in Bangladesh supporting all debit/credit cards, internet banking, and mobile banking.', '/icons/gateways/sslcommerz.svg', 'https://sslcommerz.com', ARRAY['BDT', 'USD', 'EUR', 'GBP']::varchar[], '[{"key": "store_id", "type": "text", "label": "Store ID", "secret": false, "required": true}, {"key": "store_passwd", "type": "password", "label": "Store Password", "secret": true, "required": true}]'::jsonb, TRUE),
+    ('surjopay', 'shurjoPay Merchant Gateway', 'aggregator', 'shurjoPay merchant gateway for institutional fee collection via MFS and local bank cards.', '/icons/gateways/surjopay.svg', 'https://shurjopay.com.bd', ARRAY['BDT', 'USD']::varchar[], '[{"key": "merchant_username", "type": "text", "label": "Merchant Username", "secret": false, "required": true}, {"key": "merchant_password", "type": "password", "label": "Merchant Password", "secret": true, "required": true}, {"key": "merchant_prefix", "type": "text", "label": "Merchant Prefix", "secret": false, "required": true}]'::jsonb, TRUE),
+    ('sonali_gateway', 'Sonali Bank e-Payment Gateway', 'banking_portal', 'Official national treasury and educational e-payment portal of Sonali Bank.', '/icons/gateways/sonali.svg', 'https://spg.sonalibank.com.bd', ARRAY['BDT']::varchar[], '[{"key": "portal_id", "type": "text", "label": "Portal ID", "secret": false, "required": true}, {"key": "secret_key", "type": "password", "label": "Secret Key", "secret": true, "required": true}, {"key": "merchant_id", "type": "text", "label": "Merchant / Institution Code", "secret": false, "required": true}, {"key": "service_id", "type": "text", "label": "Service ID", "secret": false, "required": false}]'::jsonb, TRUE),
+    ('stripe', 'Stripe Connect & Card Processing', 'card_international', 'Global credit/debit card processing, Apple Pay, Google Pay, and Stripe Connect.', '/icons/gateways/stripe.svg', 'https://stripe.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD', 'BDT']::varchar[], '[{"key": "publishable_key", "type": "text", "label": "Publishable Key", "secret": false, "required": true}, {"key": "secret_key", "type": "password", "label": "Secret Key", "secret": true, "required": true}, {"key": "webhook_secret", "type": "password", "label": "Webhook Signing Secret", "secret": true, "required": false}, {"key": "account_id", "type": "text", "label": "Connected Account ID (Optional)", "secret": false, "required": false}]'::jsonb, TRUE),
+    ('paypal', 'PayPal Commerce Platform', 'card_international', 'Global PayPal checkout, PayPal wallet, Venmo, and international credit cards.', '/icons/gateways/paypal.svg', 'https://developer.paypal.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '[{"key": "client_id", "type": "text", "label": "Client ID", "secret": false, "required": true}, {"key": "client_secret", "type": "password", "label": "Client Secret", "secret": true, "required": true}, {"key": "webhook_id", "type": "text", "label": "Webhook ID", "secret": false, "required": false}]'::jsonb, TRUE),
+    ('paddle', 'Paddle Billing (Global Cards & Multi-Currency)', 'card_international', 'Global tax-compliant Merchant of Record checkout for international students.', '/icons/gateways/paddle.svg', 'https://paddle.com', ARRAY['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'SGD']::varchar[], '[{"key": "vendor_id", "type": "text", "label": "Vendor / Account ID", "secret": false, "required": true}, {"key": "api_key", "type": "password", "label": "API Key", "secret": true, "required": true}, {"key": "client_token", "type": "text", "label": "Client Token", "secret": false, "required": false}, {"key": "webhook_secret", "type": "password", "label": "Webhook Secret", "secret": true, "required": false}]'::jsonb, TRUE)
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
     category = EXCLUDED.category,
     description = EXCLUDED.description,
-    supported_currencies = EXCLUDED.supported_currencies,
-    credential_schema = EXCLUDED.credential_schema,
-    is_active = TRUE;
     logo_icon = EXCLUDED.logo_icon,
     website_url = EXCLUDED.website_url,
     supported_currencies = EXCLUDED.supported_currencies,

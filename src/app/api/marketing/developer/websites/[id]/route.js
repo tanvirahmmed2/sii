@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
+import { purgeWebsite } from 'src/lib/database/websitePurge';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 
 async function fetchFullWebsite(websiteId) {
@@ -443,7 +444,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ success: false, error: 'Invalid Website ID' }, { status: 400 });
     }
 
-    await queryDb('DELETE FROM websites WHERE id = $1', [websiteId]);
+    await purgeWebsite(null, { websiteId });
 
     return NextResponse.json({ success: true, message: 'Website deleted successfully.' });
   } catch (error) {

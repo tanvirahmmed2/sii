@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
+import TenantGatewayModal from 'src/component/payment/TenantGatewayModal';
 
 export default function CandidateAdmissionPaymentPage() {
   const params = useParams();
@@ -264,13 +264,13 @@ export default function CandidateAdmissionPaymentPage() {
         </div>
       </div>
 
-      <UniversalGatewayCheckout
+      <TenantGatewayModal
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         invoice={invoice}
         availableGateways={availableGateways}
         domain={domain}
-        apiEndpoint={domain ? `/api/${domain}/pay/admission-fees/${id}` : `/api/pay/admission-fees/${id}`}
+        purpose="admission_fees"
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>

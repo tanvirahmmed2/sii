@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import UniversalGatewayCheckout from 'src/component/payment/UniversalGatewayCheckout';
+import TenantGatewayModal from 'src/component/payment/TenantGatewayModal';
 
 export default function AdmissionFeesSearchPage() {
   const router = useRouter();
@@ -106,7 +106,7 @@ export default function AdmissionFeesSearchPage() {
               type="text"
               value={trackingNo}
               onChange={(e) => setTrackingNo(e.target.value)}
-              placeholder="Enter Application Tracking No (e.g. ADM-2026-0001) or Phone..."
+              aria-label="Application Tracking Number or Phone Number"
               className="input-style w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
             <button
@@ -233,13 +233,13 @@ export default function AdmissionFeesSearchPage() {
         )}
       </div>
 
-      <UniversalGatewayCheckout
+      <TenantGatewayModal
         isOpen={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         invoice={activeInvoice}
         availableGateways={data?.available_gateways || []}
         domain={domain}
-        apiEndpoint={domain ? `/api/${domain}/pay/admission-fees` : '/api/pay/admission-fees'}
+        purpose="admission_fees"
         onPaymentSuccess={handleSearch}
       />
     </div>
