@@ -122,7 +122,7 @@ export async function recordSentSms({
         client.expire(typeKey, 60 * 24 * 60 * 60),
       ]);
     }
-  } catch {}
+  } catch { }
 
   return insertedRow;
 }
@@ -189,6 +189,9 @@ export async function recordSentMail({
     console.error('Error updating monthly usage for Mail:', err.message);
   }
 
+
+
+
   try {
     const client = getRedisClient();
     if (client && isRedisConnected()) {
@@ -205,7 +208,7 @@ export async function recordSentMail({
         client.expire(typeKey, 60 * 24 * 60 * 60),
       ]);
     }
-  } catch {}
+  } catch { }
 
   return insertedRow;
 }
@@ -249,7 +252,7 @@ export async function getMonthlySmsAnalytics(websiteId, targetYearMonth = null) 
         redisUsed = true;
       }
     }
-  } catch {}
+  } catch { }
 
   if (!redisUsed) {
     try {
@@ -301,7 +304,7 @@ export async function getMonthlySmsAnalytics(websiteId, targetYearMonth = null) 
             await client.expire(typeKey, 60 * 24 * 60 * 60);
           }
         }
-      } catch {}
+      } catch { }
     } catch (err) {
       console.error('Error fetching SMS analytics from DB:', err.message);
     }
@@ -362,7 +365,7 @@ export async function getMonthlyMailAnalytics(websiteId, targetYearMonth = null)
         redisUsed = true;
       }
     }
-  } catch {}
+  } catch { }
 
   if (!redisUsed) {
     try {
@@ -414,7 +417,7 @@ export async function getMonthlyMailAnalytics(websiteId, targetYearMonth = null)
             await client.expire(typeKey, 60 * 24 * 60 * 60);
           }
         }
-      } catch {}
+      } catch { }
     } catch (err) {
       console.error('Error fetching Mail analytics from DB:', err.message);
     }
