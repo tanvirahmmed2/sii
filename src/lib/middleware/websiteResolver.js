@@ -1,12 +1,17 @@
 import { query, queryDb } from '../database/db.js';
-import { BASE_DOMAIN, BASE_HOST, BASE_URL, extractBaseDomain, getWebsiteDomain } from '../database/secret.js';
+import {
+  BASE_DOMAIN,
+  BASE_HOST,
+  BASE_URL,
+  extractBaseDomain,
+  getWebsiteDomain,
+  DEFAULT_CACHE_TTL_MS,
+  DEFAULT_NEGATIVE_CACHE_TTL_MS,
+  DEFAULT_REDIS_TTL_SEC,
+  DEFAULT_REDIS_NEGATIVE_TTL_SEC,
+  QUERY_TIMEOUT_MS,
+} from '../database/secret.js';
 import { getRedisClient, isRedisConnected } from '../redis/redisClient.js';
-
-const DEFAULT_CACHE_TTL_MS = 60 * 1000;
-const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000;
-const DEFAULT_REDIS_TTL_SEC = 300;
-const DEFAULT_REDIS_NEGATIVE_TTL_SEC = 10;
-const QUERY_TIMEOUT_MS = 10000;
 
 const websiteCache = new Map();
 const inFlightResolutions = new Map();

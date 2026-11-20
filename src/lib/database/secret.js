@@ -239,3 +239,9 @@ export const EPS_RETURN_URL = process.env.EPS_RETURN_URL || '';
 export const EPS_CANCEL_URL = process.env.EPS_CANCEL_URL || '';
 
 export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');
+
+export const DEFAULT_CACHE_TTL_MS = parseInt(process.env.DEFAULT_CACHE_TTL_MS || '60000', 10);
+export const DEFAULT_NEGATIVE_CACHE_TTL_MS = parseInt(process.env.DEFAULT_NEGATIVE_CACHE_TTL_MS || '5000', 10);
+export const DEFAULT_REDIS_TTL_SEC = parseInt(process.env.DEFAULT_REDIS_TTL_SEC || '300', 10);
+export const DEFAULT_REDIS_NEGATIVE_TTL_SEC = parseInt(process.env.DEFAULT_REDIS_NEGATIVE_TTL_SEC || '10', 10);
+export const QUERY_TIMEOUT_MS = parseInt(process.env.QUERY_TIMEOUT_MS || '10000', 10);
