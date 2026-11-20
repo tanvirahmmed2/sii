@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server.js';
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import { queryDb } from '../../../../../lib/database/db.js';
-import { getCreatorSession } from '../../../../../lib/middleware/creator.js';
+import { getCreatorSession, invalidateWebsiteCache } from '../../../../../lib/middleware/creator.js';
 import { BASE_DOMAIN, getBaseUrl, CUSTOM_DOMAIN_CNAME_TARGET, CUSTOM_DOMAIN_A_TARGET } from '../../../../../lib/database/secret.js';
 import { uploadImage, deleteImage, uploadPdf } from '../../../../../lib/database/cloudinary.js';
 import { purgeWebsite } from '../../../../../lib/database/websitePurge.js';
@@ -704,6 +704,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       [uploadRes.url, uploadRes.publicId, websiteId, creatorId]
     );
 
+    await invalidateWebsiteCache(websiteId);
+
     return NextResponse.json({
       success: true,
       message: `${type === 'logo' ? 'Logo' : 'Favicon'} uploaded successfully.`,
@@ -1067,6 +1069,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       if (res.rows.length === 0) {
         return NextResponse.json({ success: false, error: 'Website not found or unauthorized.' }, { status: 404 });
       }
+
+      await invalidateWebsiteCache(id);
     }
 
     const refreshed = await queryDb(
@@ -1368,6 +1372,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       [domRes.rows[0].id]
     );
 
+    await invalidateWebsiteCache(id);
+
     return NextResponse.json({
       success: true,
       message: `Domain "${targetDomain}" is now confirmed, active, and live! All traffic is routed to your custom domain.`,
@@ -1393,6 +1399,8 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
       [id]
     );
 
+    await invalidateWebsiteCache(id);
+
     return NextResponse.json({
       success: true,
       message: 'Custom domain removed successfully. Traffic reverted to default subdomain.',
@@ -1407,6 +1415,7 @@ export async function handleWebsitesAction(body, sessionCreator, request = null)
 
     try {
       const purgeResult = await purgeWebsite(null, { websiteId: id, creatorId });
+      await invalidateWebsiteCache(id);
       return NextResponse.json({
         success: true,
         id,

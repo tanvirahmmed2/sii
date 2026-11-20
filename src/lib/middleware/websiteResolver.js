@@ -1,12 +1,110 @@
 import { query, queryDb } from '../database/db.js';
 import { BASE_DOMAIN, BASE_HOST, BASE_URL, extractBaseDomain, getWebsiteDomain } from '../database/secret.js';
+import { getRedisClient, isRedisConnected } from '../redis/redisClient.js';
 
-const DEFAULT_CACHE_TTL_MS = 60 * 1000; 
-const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000; 
-const QUERY_TIMEOUT_MS = 10000; 
+const DEFAULT_CACHE_TTL_MS = 60 * 1000;
+const DEFAULT_NEGATIVE_CACHE_TTL_MS = 5 * 1000;
+const DEFAULT_REDIS_TTL_SEC = 300;
+const DEFAULT_REDIS_NEGATIVE_TTL_SEC = 10;
+const QUERY_TIMEOUT_MS = 10000;
 
 const websiteCache = new Map();
 const inFlightResolutions = new Map();
+
+async function getCachedWebsiteFromRedis(cleanId) {
+  try {
+    const client = getRedisClient();
+    if (!client || !isRedisConnected()) return null;
+    const raw = await client.get(`website:resolve:${cleanId}`);
+    if (!raw) return null;
+    if (raw === '__NULL__') return '__NULL__';
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function saveWebsiteToRedis(cleanId, website, ttlSec = DEFAULT_REDIS_TTL_SEC) {
+  try {
+    const client = getRedisClient();
+    if (!client || !isRedisConnected()) return;
+    if (website) {
+      const serialized = JSON.stringify(website);
+      const aliasKeys = new Set();
+      aliasKeys.add(cleanId);
+      if (website.id) aliasKeys.add(String(website.id).toLowerCase());
+      if (website.slug) aliasKeys.add(String(website.slug).toLowerCase());
+      if (website.subdomain) aliasKeys.add(String(website.subdomain).toLowerCase());
+      if (website.domain) aliasKeys.add(String(website.domain).toLowerCase());
+      if (website.custom_domain) aliasKeys.add(String(website.custom_domain).toLowerCase());
+
+      const pipeline = client.pipeline();
+      for (const alias of aliasKeys) {
+        pipeline.set(`website:resolve:${alias}`, serialized, 'EX', ttlSec);
+      }
+      if (website.id) {
+        const aliasSetKey = `website:aliases:${website.id}`;
+        pipeline.sadd(aliasSetKey, ...Array.from(aliasKeys));
+        pipeline.expire(aliasSetKey, ttlSec);
+      }
+      await pipeline.exec();
+    } else {
+      await client.set(`website:resolve:${cleanId}`, '__NULL__', 'EX', DEFAULT_REDIS_NEGATIVE_TTL_SEC);
+    }
+  } catch {}
+}
+
+async function removeWebsiteFromRedis(identifier) {
+  try {
+    const client = getRedisClient();
+    if (!client || !isRedisConnected()) return;
+
+    if (!identifier) {
+      const keys = await client.keys('website:resolve:*');
+      const aliasSets = await client.keys('website:aliases:*');
+      const allKeys = [...keys, ...aliasSets];
+      if (allKeys.length > 0) {
+        const pipeline = client.pipeline();
+        for (const k of allKeys) {
+          pipeline.del(k);
+        }
+        await pipeline.exec();
+      }
+      return;
+    }
+
+    const cleanId = String(identifier).trim().toLowerCase();
+    const isNum = /^[0-9]+$/.test(cleanId);
+    let targetWebsiteId = isNum ? cleanId : null;
+
+    if (!targetWebsiteId) {
+      const cached = await client.get(`website:resolve:${cleanId}`);
+      if (cached && cached !== '__NULL__') {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id) targetWebsiteId = String(parsed.id);
+        } catch {}
+      }
+    }
+
+    const keysToDelete = new Set();
+    keysToDelete.add(`website:resolve:${cleanId}`);
+
+    if (targetWebsiteId) {
+      const aliasSetKey = `website:aliases:${targetWebsiteId}`;
+      const aliases = await client.smembers(aliasSetKey);
+      if (Array.isArray(aliases)) {
+        aliases.forEach((alias) => keysToDelete.add(`website:resolve:${alias}`));
+      }
+      keysToDelete.add(aliasSetKey);
+    }
+
+    const toDelArray = Array.from(keysToDelete);
+    if (toDelArray.length > 0) {
+      await client.del(...toDelArray);
+    }
+  } catch {}
+}
 
 export async function extractWebsiteIdentifier(request, context) {
   if (typeof context === 'string' && context.trim()) {
@@ -367,6 +465,27 @@ export async function resolveWebsite(identifier, options = {}) {
     websiteCache.delete(cleanId);
   }
 
+  if (!bypassCache) {
+    const redisData = await getCachedWebsiteFromRedis(cleanId);
+    if (redisData === '__NULL__') {
+      websiteCache.set(cleanId, {
+        website: null,
+        expiresAt: now + DEFAULT_NEGATIVE_CACHE_TTL_MS,
+      });
+      return null;
+    }
+    if (redisData && typeof redisData === 'object') {
+      const ttl = options.ttlMs || DEFAULT_CACHE_TTL_MS;
+      const entry = { website: redisData, expiresAt: now + ttl };
+      websiteCache.set(cleanId, entry);
+      if (redisData.slug) websiteCache.set(String(redisData.slug).toLowerCase(), entry);
+      if (redisData.subdomain) websiteCache.set(String(redisData.subdomain).toLowerCase(), entry);
+      if (redisData.custom_domain) websiteCache.set(String(redisData.custom_domain).toLowerCase(), entry);
+      if (redisData.id) websiteCache.set(String(redisData.id), entry);
+      return redisData;
+    }
+  }
+
   if (!bypassCache && inFlightResolutions.has(cleanId)) {
     return inFlightResolutions.get(cleanId);
   }
@@ -390,6 +509,10 @@ export async function resolveWebsite(identifier, options = {}) {
         if (website.subdomain) websiteCache.set(String(website.subdomain).toLowerCase(), cacheEntry);
         if (website.custom_domain) websiteCache.set(String(website.custom_domain).toLowerCase(), cacheEntry);
         if (website.id) websiteCache.set(String(website.id), cacheEntry);
+        const redisTtl = Math.max(30, Math.floor((options.ttlMs || DEFAULT_CACHE_TTL_MS * 5) / 1000));
+        await saveWebsiteToRedis(cleanId, website, redisTtl);
+      } else {
+        await saveWebsiteToRedis(cleanId, null);
       }
 
       return website;
@@ -438,14 +561,28 @@ export function getWebsiteFromCache(identifier) {
   return null;
 }
 
-export function invalidateWebsiteCache(identifier) {
+export async function getWebsiteFromCacheAsync(identifier) {
+  const fromMemory = getWebsiteFromCache(identifier);
+  if (fromMemory) return fromMemory;
+  if (!identifier) return null;
+  const cleanId = String(identifier).trim().toLowerCase().split(':')[0];
+  const fromRedis = await getCachedWebsiteFromRedis(cleanId);
+  if (fromRedis && fromRedis !== '__NULL__') {
+    return fromRedis;
+  }
+  return null;
+}
+
+export async function invalidateWebsiteCache(identifier) {
   if (!identifier) {
     websiteCache.clear();
+    await removeWebsiteFromRedis();
     return;
   }
   const cleanId = String(identifier).trim().toLowerCase();
   websiteCache.delete(cleanId);
 
+  let matchedWebsiteId = null;
   for (const [key, entry] of websiteCache.entries()) {
     const w = entry?.website;
     if (
@@ -455,14 +592,18 @@ export function invalidateWebsiteCache(identifier) {
        String(w.subdomain).toLowerCase() === cleanId ||
        String(w.custom_domain).toLowerCase() === cleanId)
     ) {
+      matchedWebsiteId = w.id;
       websiteCache.delete(key);
     }
   }
+
+  await removeWebsiteFromRedis(matchedWebsiteId || cleanId);
 }
 
-export function clearWebsiteCache() {
+export async function clearWebsiteCache() {
   websiteCache.clear();
   inFlightResolutions.clear();
+  await removeWebsiteFromRedis();
 }
 
 export async function hasTenantModuleAllowance(websiteOrId, moduleSlug) {
@@ -504,6 +645,7 @@ const websiteResolver = {
   getWebsiteBySlug,
   getWebsiteByDomain,
   getWebsiteFromCache,
+  getWebsiteFromCacheAsync,
   invalidateWebsiteCache,
   clearWebsiteCache,
   hasTenantModuleAllowance,

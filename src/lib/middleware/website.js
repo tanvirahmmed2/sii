@@ -13,6 +13,8 @@ import {
   resolveWebsite,
   invalidateWebsiteCache,
   clearWebsiteCache,
+  getWebsiteFromCache,
+  getWebsiteFromCacheAsync,
 } from './websiteResolver.js';
 import {
   getWebsiteUserSession,
@@ -27,6 +29,8 @@ export {
   resolveWebsite,
   invalidateWebsiteCache,
   clearWebsiteCache,
+  getWebsiteFromCache,
+  getWebsiteFromCacheAsync,
   getWebsiteUserSession,
   getUserRolesAndPermissions,
   generateWebsiteToken,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { resolveWebsiteFromRequest, invalidateWebsiteCache } from 'src/lib/middleware/creator';
 import { SCHOOL_NAME, LOGO_URL, META_TITLE, META_DESCRIPTION } from 'src/lib/database/secret';
 import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 
@@ -182,6 +182,8 @@ export async function PUT(request, context) {
       meta_title: `${updated.name} - Academic Excellence & Growth`,
       meta_description: `Official portal for ${updated.name}.`,
     };
+
+    await invalidateWebsiteCache(websiteId);
 
     return NextResponse.json({
       success: true,

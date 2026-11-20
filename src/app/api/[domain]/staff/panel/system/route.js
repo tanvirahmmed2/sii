@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db.js';
 import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
 import { getWebsiteUrl } from 'src/lib/database/secret.js';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver.js';
 
 async function verifyStaffAccess(request, context, action = 'view') {
   return verifyStaffModuleAccess(request, context, ['settings', 'routine'], action);
@@ -166,6 +167,8 @@ export async function PUT(request, context) {
         auth.website.id
       ]
     );
+
+    await invalidateWebsiteCache(auth.website.id);
 
     return NextResponse.json({
       success: true,

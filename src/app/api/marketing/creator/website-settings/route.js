@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { getCreatorSession } from 'src/lib/middleware/creator';
+import { getCreatorSession, invalidateWebsiteCache } from 'src/lib/middleware/creator';
 
 export async function GET(request) {
   try {
@@ -174,6 +174,8 @@ export async function POST(request) {
        LIMIT 1`,
       [websiteId]
     );
+
+    await invalidateWebsiteCache(websiteId);
 
     return NextResponse.json({
       success: true,
