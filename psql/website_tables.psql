@@ -863,7 +863,7 @@ CREATE TABLE IF NOT EXISTS website_sent_mails (
     content TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'Sent',
     failure_reason TEXT,
-    provider VARCHAR(50) DEFAULT 'resend',
+    provider VARCHAR(50) DEFAULT 'brevo',
     year_month VARCHAR(7) NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP

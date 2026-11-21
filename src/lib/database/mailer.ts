@@ -1,5 +1,10 @@
 import { queryDb } from './db';
-import { RESEND_API_KEY, RESEND_SENDER_EMAIL, RESEND_SENDER_NAME } from './secret';
+import {
+  BREVO_API_KEY,
+  BREVO_SENDER_EMAIL,
+  BREVO_SENDER_NAME,
+  BREVO_URL,
+} from './secret';
 import { checkAndIncrementMailUsage, getWebsiteMonthlyUsageAndLimits } from './usageLimiter';
 import { recordSentMail } from '../redis/redisClient';
 
@@ -49,7 +54,7 @@ export function buildStyledEmail({
   senderName = null,
   websiteName = null
 }: BuildStyledEmailParams): string {
-  const brandName = institutionName || senderName || websiteName || RESEND_SENDER_NAME || 'Disibin';
+  const brandName = institutionName || senderName || websiteName || BREVO_SENDER_NAME || 'Disibin';
   let computedHtml = bodyHtml || bodyContent;
   if (!computedHtml) {
     const parts: string[] = [];
@@ -177,7 +182,7 @@ export async function logEmailAttempt({
   subject,
   content = null,
   channel = 'email',
-  provider = 'resend',
+  provider = 'brevo',
   senderEmail = null,
   senderName = null,
   status = 'Sent',
@@ -202,7 +207,7 @@ export async function logEmailAttempt({
         String(subject || 'System Notification').trim(),
         content ? String(content).trim() : null,
         String(channel || 'email').trim(),
-        String(provider || 'resend').trim(),
+        String(provider || 'brevo').trim(),
         senderEmail ? String(senderEmail).trim() : null,
         senderName ? String(senderName).trim() : null,
         String(status || 'Sent').trim(),
@@ -251,8 +256,8 @@ export async function sendEmail({
   }
 
   const emailSubject = String(subject || 'Notification').trim();
-  const effectiveFromName = fromName || RESEND_SENDER_NAME || 'Disibin';
-  const effectiveFromEmail = fromEmail || RESEND_SENDER_EMAIL || 'onboarding@resend.dev';
+  const effectiveFromName = fromName || BREVO_SENDER_NAME || 'Disibin';
+  const effectiveFromEmail = fromEmail || BREVO_SENDER_EMAIL || 'contact@disibin.com';
   const fromFormatted = `"${effectiveFromName.replace(/"/g, '')}" <${effectiveFromEmail}>`;
 
   const finalHtml = html || (text ? `<p style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #0f172a;">${text.replace(/\n/g, '<br/>')}</p>` : '');
@@ -262,10 +267,11 @@ export async function sendEmail({
     await checkAndIncrementMailUsage(websiteId, 1);
   }
 
-  const apiKey = RESEND_API_KEY || process.env.RESEND_API_KEY || '';
+  const apiKey = BREVO_API_KEY || process.env.BREVO_API_KEY || '';
+  const brevoEndpoint = BREVO_URL || 'https://api.brevo.com/v3/smtp/email';
 
   if (!apiKey) {
-    const simulatedId = `sim_resend_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const simulatedId = `sim_brevo_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     await logEmailAttempt({
       websiteId,
@@ -277,7 +283,7 @@ export async function sendEmail({
       subject: emailSubject,
       content: finalText || emailSubject,
       channel: 'email',
-      provider: 'resend',
+      provider: 'brevo',
       senderEmail: effectiveFromEmail,
       senderName: effectiveFromName,
       status: 'Simulated',
@@ -298,7 +304,7 @@ export async function sendEmail({
         content: finalText || emailSubject,
         status: 'Simulated',
         failureReason: null,
-        provider: 'resend'
+        provider: 'brevo'
       });
     }
 
@@ -306,7 +312,7 @@ export async function sendEmail({
       success: true,
       simulated: true,
       id: simulatedId,
-      provider: 'resend',
+      provider: 'brevo',
       from: fromFormatted,
       to: recipientEmail,
       subject: emailSubject,
@@ -315,26 +321,39 @@ export async function sendEmail({
   }
 
   try {
-    const payload = {
-      from: fromFormatted,
-      to: [recipientEmail],
+    const payload: any = {
+      sender: {
+        name: effectiveFromName,
+        email: effectiveFromEmail
+      },
+      to: [
+        {
+          email: recipientEmail,
+          name: toName ? String(toName).trim() : recipientEmail
+        }
+      ],
       subject: emailSubject,
-      html: finalHtml,
-      text: finalText
+      htmlContent: finalHtml
     };
+    if (finalText) {
+      payload.textContent = finalText;
+    }
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch(brevoEndpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json'
       },
       body: JSON.stringify(payload)
     });
 
     const data: any = await res.json().catch(() => ({}));
+    const messageId = data?.messageId || data?.id || (Array.isArray(data?.messageIds) ? data.messageIds[0] : null);
 
-    if (res.ok && data?.id) {
+    if (res.ok && messageId) {
+      const finalMsgId = String(messageId);
       await logEmailAttempt({
         websiteId,
         recipient: recipientEmail,
@@ -345,11 +364,11 @@ export async function sendEmail({
         subject: emailSubject,
         content: finalText || emailSubject,
         channel: 'email',
-        provider: 'resend',
+        provider: 'brevo',
         senderEmail: effectiveFromEmail,
         senderName: effectiveFromName,
         status: 'Sent',
-        messageId: data.id,
+        messageId: finalMsgId,
         failureReason: null,
         ip
       });
@@ -366,21 +385,21 @@ export async function sendEmail({
           content: finalText || emailSubject,
           status: 'Sent',
           failureReason: null,
-          provider: 'resend'
+          provider: 'brevo'
         });
       }
 
       return {
         success: true,
-        id: data.id,
-        provider: 'resend',
+        id: finalMsgId,
+        provider: 'brevo',
         from: fromFormatted,
         to: recipientEmail,
         subject: emailSubject,
         dispatchedAt: new Date().toISOString()
       };
     } else {
-      const errMsg = data?.message || data?.error || `Resend delivery failed with status ${res.status}`;
+      const errMsg = data?.message || data?.error || (data?.code ? `${data.code}: ${data.message || 'Error'}` : null) || `Brevo delivery failed with status ${res.status}`;
 
       await logEmailAttempt({
         websiteId,
@@ -392,7 +411,7 @@ export async function sendEmail({
         subject: emailSubject,
         content: finalText || emailSubject,
         channel: 'email',
-        provider: 'resend',
+        provider: 'brevo',
         senderEmail: effectiveFromEmail,
         senderName: effectiveFromName,
         status: 'Failed',
@@ -413,7 +432,7 @@ export async function sendEmail({
           content: finalText || emailSubject,
           status: 'Failed',
           failureReason: errMsg,
-          provider: 'resend'
+          provider: 'brevo'
         });
       }
 
@@ -430,7 +449,7 @@ export async function sendEmail({
       subject: emailSubject,
       content: finalText || emailSubject,
       channel: 'email',
-      provider: 'resend',
+      provider: 'brevo',
       senderEmail: effectiveFromEmail,
       senderName: effectiveFromName,
       status: 'Failed',
@@ -451,7 +470,7 @@ export async function sendEmail({
         content: finalText || emailSubject,
         status: 'Failed',
         failureReason: err.message,
-        provider: 'resend'
+        provider: 'brevo'
       });
     }
 
@@ -460,7 +479,7 @@ export async function sendEmail({
 }
 
 export async function getWebsiteMailerConfig(websiteId: string | number | null): Promise<any> {
-  let institutionName = RESEND_SENDER_NAME || 'Campus Administration';
+  let institutionName = BREVO_SENDER_NAME || 'Campus Administration';
   if (websiteId) {
     try {
       const siteRes = await queryDb(`SELECT name FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
@@ -471,15 +490,15 @@ export async function getWebsiteMailerConfig(websiteId: string | number | null):
   }
 
   const usageLimits = websiteId ? await getWebsiteMonthlyUsageAndLimits(websiteId) : null;
-  const apiKey = RESEND_API_KEY || process.env.RESEND_API_KEY || '';
+  const apiKey = BREVO_API_KEY || process.env.BREVO_API_KEY || '';
 
   return {
     configured: Boolean(apiKey),
     isCustom: false,
     useMainMailer: true,
-    provider: 'resend',
+    provider: 'brevo',
     apiKey: maskApiKey(apiKey),
-    senderEmail: RESEND_SENDER_EMAIL || 'onboarding@resend.dev',
+    senderEmail: BREVO_SENDER_EMAIL || 'contact@disibin.com',
     senderName: institutionName,
     websiteName: institutionName,
     isActive: Boolean(apiKey),
@@ -487,7 +506,6 @@ export async function getWebsiteMailerConfig(websiteId: string | number | null):
   };
 }
 
-export const getWebsiteResendConfig = getWebsiteMailerConfig;
 export const getWebsiteBrevoConfig = getWebsiteMailerConfig;
 
 export interface SendWebsiteEmailParams {
@@ -513,7 +531,7 @@ export async function sendWebsiteEmail(websiteId: string | number, {
   type = 'general',
   ip = null
 }: SendWebsiteEmailParams): Promise<any> {
-  let institutionName = RESEND_SENDER_NAME || 'Campus Administration';
+  let institutionName = BREVO_SENDER_NAME || 'Campus Administration';
   if (websiteId) {
     try {
       const siteRes = await queryDb(`SELECT name FROM websites WHERE id = $1 LIMIT 1`, [websiteId]);
@@ -529,7 +547,7 @@ export async function sendWebsiteEmail(websiteId: string | number, {
     subject,
     html,
     text,
-    fromEmail: RESEND_SENDER_EMAIL || 'onboarding@resend.dev',
+    fromEmail: BREVO_SENDER_EMAIL || 'contact@disibin.com',
     fromName: institutionName,
     websiteId,
     recipientType,
@@ -544,7 +562,6 @@ const Mailer = {
   sendWebsiteEmail,
   buildStyledEmail,
   getWebsiteMailerConfig,
-  getWebsiteResendConfig,
   getWebsiteBrevoConfig,
   logEmailAttempt,
   maskApiKey

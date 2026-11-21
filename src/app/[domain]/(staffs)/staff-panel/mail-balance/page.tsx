@@ -532,7 +532,7 @@ export default function MailBalancePage() {
 
             <div>
               <span className="text-slate-400 block text-[11px]">Mailer Provider</span>
-              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'resend'}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-mono uppercase">{activeLog.provider || 'brevo'}</span>
               <div className="text-slate-500">{new Date(activeLog.created_at).toLocaleString()}</div>
             </div>
           </div>

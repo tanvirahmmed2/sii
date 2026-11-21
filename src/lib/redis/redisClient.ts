@@ -166,7 +166,7 @@ export async function recordSentMail({
   content = null,
   status = 'Sent',
   failureReason = null,
-  provider = 'resend',
+  provider = 'brevo',
 }: RecordSentMailParams): Promise<any> {
   if (!websiteId || !recipientIdentifier) return null;
   const yearMonth = getCurrentYearMonth();
@@ -194,7 +194,7 @@ export async function recordSentMail({
         content ? String(content).trim() : null,
         String(status || 'Sent'),
         failureReason ? String(failureReason) : null,
-        String(provider || 'resend'),
+        String(provider || 'brevo'),
         yearMonth,
       ]
     );

@@ -500,7 +500,7 @@ CREATE TABLE IF NOT EXISTS email_logs (
     subject VARCHAR(500) NOT NULL,
     content TEXT,
     channel VARCHAR(20) DEFAULT 'email',
-    provider VARCHAR(50) DEFAULT 'resend',
+    provider VARCHAR(50) DEFAULT 'brevo',
     sender_email VARCHAR(255),
     sender_name VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'Sent',

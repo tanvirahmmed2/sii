@@ -18,9 +18,10 @@ export const PG_HOST: string = cleanEnv(process.env.PG_HOST);
 export const PG_PORT: string = cleanEnv(process.env.PG_PORT);
 export const PG_DATABASE: string = cleanEnv(process.env.PG_DATABASE);
 
-export const RESEND_API_KEY: string = cleanEnv(process.env.RESEND_API_KEY);
-export const RESEND_SENDER_EMAIL: string = cleanEnv(process.env.RESEND_SENDER_EMAIL) || 'onboarding@resend.dev';
-export const RESEND_SENDER_NAME: string = cleanEnv(process.env.RESEND_SENDER_NAME) || 'Disibin';
+export const BREVO_API_KEY: string = cleanEnv(process.env.BREVO_API_KEY);
+export const BREVO_SENDER_EMAIL: string = cleanEnv(process.env.BREVO_SENDER_EMAIL) || 'contact@disibin.com';
+export const BREVO_SENDER_NAME: string = cleanEnv(process.env.BREVO_SENDER_NAME) || 'Disibin';
+export const BREVO_URL: string = cleanEnv(process.env.BREVO_URL) || 'https://api.brevo.com/v3/smtp/email';
 
 export const ZENDSMS_API_KEY: string = cleanEnv(process.env.ZENDSMS_API_KEY);
 export const ZENDSMS_SENDER_ID: string = cleanEnv(process.env.ZENDSMS_SENDER_ID) || 'ZendSMS';

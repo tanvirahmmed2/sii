@@ -102,7 +102,7 @@ export async function POST(request: any, context: any) {
         const staffName = staffSession?.staff?.name || staffSession?.user?.name || 'Staff Desk';
         const mailerConfig = await getWebsiteMailerConfig(website.id);
         let effectiveMailerType = mailerConfig.isCustom ? 'website' : 'main';
-        let effectiveSenderEmail = mailerConfig.senderEmail || 'onboarding@resend.dev';
+        let effectiveSenderEmail = mailerConfig.senderEmail || 'contact@disibin.com';
         const htmlEmail = buildStyledEmail({
             title: finalSubject,
             previewText: replyBody.slice(0, 100),
