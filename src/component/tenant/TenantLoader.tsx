@@ -18,18 +18,7 @@ export function getWebsiteShortName(name: any) {
         .join('')
         .toUpperCase();
 }
-export default function TenantLoader({ website: propWebsite, primaryColor: propPrimaryColor, label = '', fullScreen = true, size = 'md', className = '', style = {}, }: any) {
-    let contextWebsite = null;
-    try {
-        const ctx = useTenantWebsite();
-        if (ctx && ctx.website) {
-            contextWebsite = ctx.website;
-        }
-    }
-    catch {
-    }
-    const website = propWebsite || contextWebsite;
-    const primaryColor = propPrimaryColor || website?.primary_color || 'var(--primary, #1e40af)';
+export default function TenantLoader({ website: propWebsite, label = '', fullScreen = true, size = 'md', className = '', style = {}, }: any) {
     const sizeClass = ({
         sm: 'loader-sm',
         md: 'loader-md',
@@ -38,13 +27,7 @@ export default function TenantLoader({ website: propWebsite, primaryColor: propP
     const defaultContainer = fullScreen
         ? 'fixed inset-0 z-50 min-h-screen w-full bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4'
         : 'w-full min-h-[160px] py-8 bg-transparent flex items-center justify-center p-4';
-    const customLoaderStyle: any = {
-        '--loader-color': primaryColor,
-        '--c': `linear-gradient(${primaryColor} 0 0)`,
-        '--m': `radial-gradient(farthest-side, ${primaryColor} 92%, #0000)`,
-        ...style,
-    };
     return (<div className={`${defaultContainer} transition-colors ${className}`.trim()} role="status" aria-live="polite" aria-label={label || 'Loading'}>
-      <div className={`loader ${sizeClass}`} style={customLoaderStyle}/>
+      <div className={`loader ${sizeClass}`} style={style}/>
     </div>);
 }

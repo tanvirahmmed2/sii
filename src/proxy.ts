@@ -1,13 +1,59 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import {
   BASE_URL,
   BASE_DOMAIN,
   BASE_HOST,
   getBaseUrl,
   getWebsiteDomain,
+  CREATOR_TOKEN,
+  JWT_SECRET,
 } from './lib/database/secret';
 
 export { getWebsiteDomain };
+
+const DEFAULT_JWT_SECRET = JWT_SECRET || 'creator_jwt_secret_key_2026';
+
+function getLoggedInCreatorId(request: any): number | null {
+  const token = request.cookies?.get?.(CREATOR_TOKEN)?.value;
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const [headerB64, payloadB64, signature] = parts;
+    let valid = false;
+    try {
+      const expectedSig = crypto
+        .createHmac('sha256', DEFAULT_JWT_SECRET)
+        .update(`${headerB64}.${payloadB64}`)
+        .digest('base64url');
+      valid = expectedSig === signature;
+    } catch {}
+
+    if (!valid) {
+      try {
+        const expectedSig = crypto
+          .createHmac('sha256', DEFAULT_JWT_SECRET)
+          .update(`${headerB64}.${payloadB64}`)
+          .digest('base64')
+          .replace(/=/g, '')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_');
+        valid = expectedSig === signature;
+      } catch {}
+    }
+
+    if (!valid) return null;
+
+    const payloadJson = Buffer.from(payloadB64, 'base64').toString('utf8');
+    const payload = JSON.parse(payloadJson);
+    if (!payload || !payload.id) return null;
+    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
+    return Number(payload.id);
+  } catch {
+    return null;
+  }
+}
 
 export function proxy(request: any) {
   const url = typeof request.nextUrl?.clone === 'function'
@@ -27,6 +73,58 @@ export function proxy(request: any) {
   }
 
   const tenantDomain = getWebsiteDomain(request);
+  const loggedInCreatorId = getLoggedInCreatorId(request);
+  const primaryBase = getBaseUrl(request);
+
+  if (loggedInCreatorId !== null && !pathname.startsWith('/api')) {
+    if (tenantDomain) {
+      const destUrl = new URL(`/creator/${loggedInCreatorId}`, primaryBase);
+      return NextResponse.redirect(destUrl);
+    }
+
+    const isAllowedCreatorWorkspace =
+      pathname === `/creator/${loggedInCreatorId}` ||
+      pathname.startsWith(`/creator/${loggedInCreatorId}/`);
+    const isAllowedCheckout =
+      pathname === '/creator/checkout' ||
+      pathname.startsWith('/creator/checkout/');
+
+    if (!isAllowedCreatorWorkspace && !isAllowedCheckout) {
+      const destUrl = new URL(`/creator/${loggedInCreatorId}`, primaryBase);
+      return NextResponse.redirect(destUrl);
+    }
+  }
+
+  if (pathname === '/login') {
+    const dest = new URL('/creator/login', request.url);
+    dest.search = request.nextUrl.search;
+    return NextResponse.redirect(dest);
+  }
+  if (pathname === '/register') {
+    const dest = new URL('/creator/register', request.url);
+    dest.search = request.nextUrl.search;
+    return NextResponse.redirect(dest);
+  }
+  if (pathname === '/recovery') {
+    const dest = new URL('/creator/recovery', request.url);
+    dest.search = request.nextUrl.search;
+    return NextResponse.redirect(dest);
+  }
+  if (pathname === '/verify') {
+    const dest = new URL('/creator/verify', request.url);
+    dest.search = request.nextUrl.search;
+    return NextResponse.redirect(dest);
+  }
+
+  if (!loggedInCreatorId && pathname.startsWith('/creator/')) {
+    const publicCreatorPaths = ['/creator/login', '/creator/register', '/creator/recovery', '/creator/verify', '/creator/checkout'];
+    const isPublicCreatorPath = publicCreatorPaths.some((p) => pathname === p || pathname.startsWith(p + '/'));
+    if (!isPublicCreatorPath) {
+      const dest = new URL('/creator/login', request.url);
+      dest.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(dest);
+    }
+  }
 
   const PLATFORM_RESERVED = new Set([
     'creator', 'developer', 'developer-auth', 'developers', 'api', '_next',

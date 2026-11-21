@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db';
-import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth';
+import { queryDb } from 'src/lib/database/db.js';
+import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth.js';
 function slugify(text: any) {
     return String(text || '')
         .toLowerCase()

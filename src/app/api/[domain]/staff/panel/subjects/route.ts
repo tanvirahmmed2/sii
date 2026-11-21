@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db';
-import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { queryDb } from 'src/lib/database/db.js';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
     return verifyStaffModuleAccess(request, context, ['subjects', 'class-subject'], action);
 }

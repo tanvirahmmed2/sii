@@ -98,44 +98,47 @@
 .animate-shimmer { animation: shimmer 3s linear infinite; }
 
 .loader {
-  width: 40px;
-  aspect-ratio: 1;
-  --loader-color: var(--primary, currentColor);
-  --c: linear-gradient(var(--loader-color, #000) 0 0);
-  --m: radial-gradient(farthest-side, var(--loader-color, #000) 92%, #0000);
+  width: 90px;
+  height: 14px;
+  --c: 50%, #000 90deg, #0000 0;
   background: 
-    var(--c),var(--m),
-    var(--c),var(--m), 
-    var(--c),var(--m);
-  background-size: calc(100% * 0.2) calc(100% * 0.375), calc(100% * 0.2) calc(100% * 0.2);
-  background-repeat: no-repeat;
-  animation: l14 1s infinite alternate;
+    conic-gradient(from   45deg at calc(100% - 7px) var(--c)),
+    conic-gradient(from -135deg at             7px  var(--c));
+  background-position: calc(100%/3) 0;
+  background-size: calc(100%/4) 100%;
+  animation: l6 0.5s infinite linear;
 }
 
-.loader.loader-sm {
-  width: 24px;
+:where(.dark, .dark *) .loader,
+.dark .loader,
+.dark.loader {
+  --c: 50%, #fff 90deg, #0000 0;
 }
 
-.loader.loader-md {
-  width: 40px;
-}
-
-.loader.loader-lg {
-  width: 56px;
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .loader,
+  :root:not(.light) :where(.loader) {
+    --c: 50%, #fff 90deg, #0000 0;
+  }
 }
 
 .loader.loader-white {
-  --loader-color: #ffffff;
-  --c: linear-gradient(#ffffff 0 0);
-  --m: radial-gradient(farthest-side, #ffffff 92%, #0000);
+  --c: 50%, #fff 90deg, #0000 0;
 }
 
-@keyframes l14 {
-  0%,
-  10% {background-position: 0 0   ,0 100%,50% 0   ,50% 100%,100% 0   ,100% 100%}
-  33% {background-position: 0 100%,0 0   ,50% 0   ,50% 100%,100% 0   ,100% 100%}
-  66% {background-position: 0 100%,0 0   ,50% 100%,50% 0   ,100% 0   ,100% 100%}
-  90%,
-  100%{background-position: 0 100%,0 0   ,50% 100%,50% 0   ,100% 100%,100% 0   }
+.loader.loader-sm {
+  transform: scale(0.65);
+}
+
+.loader.loader-md {
+  transform: scale(1);
+}
+
+.loader.loader-lg {
+  transform: scale(1.3);
+}
+
+@keyframes l6 {
+  100% {background-position: 0 0}
 }
 

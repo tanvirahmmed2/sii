@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { SITE_NAME, CREATOR_TOKEN, getBaseUrl } from 'src/lib/database/secret';
+import { SITE_NAME, CREATOR_TOKEN } from 'src/lib/database/secret';
 import { authenticateCreator, getCreatorSession, clearCreatorSessionCookie, setCreatorSessionCookie, generateToken, hashPassword, } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { sendSms } from 'src/lib/database/smsSender';
@@ -93,8 +93,6 @@ export async function handleAuthAction(body: any, request: any) {
             verificationCode,
         ]);
         const newCreator = res.rows[0];
-        const baseUrl = getBaseUrl(request);
-        const verifyUrl = `${baseUrl}/creator/verify?token=${verificationCode}&email=${encodeURIComponent(cleanEmail)}`;
         try {
             await sendEmail({
                 to: cleanEmail,
@@ -104,15 +102,13 @@ export async function handleAuthAction(body: any, request: any) {
                     subtitle: 'Creator Account Verification',
                     recipientName: newCreator.name,
                     bodyParagraphs: [
-                        'Thank you for joining our platform. Use the verification token below to activate your creator account.',
+                        'Thank you for joining our platform. Enter the 6-digit verification code below on the verification page to activate your creator account.',
                     ],
                     code: verificationCode,
-                    codeLabel: 'Verification Token',
-                    actionUrl: verifyUrl,
-                    actionText: 'Verify Account Instantly',
-                    footerNote: 'This verification token and link will expire in 24 hours. If you did not create an account, please ignore this email.',
+                    codeLabel: 'Verification Code',
+                    footerNote: 'This verification code will expire in 24 hours. If you did not create an account, please ignore this email.',
                 }),
-                text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\n\nOr verify directly at:\n${verifyUrl}\n\nExpires in 24 hours.`,
+                text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\n\nEnter this 6-digit code on the verification page to activate your account.\n\nExpires in 24 hours.`,
             });
             await recordOtpDispatch({
                 identifier: cleanEmail,
@@ -277,8 +273,6 @@ export async function handleAuthAction(body: any, request: any) {
        WHERE id = $2`, [newCode, creator.id]);
         const targetEmail = creator.email;
         const targetPhone = creator.phone;
-        const baseUrl = getBaseUrl(request);
-        const verifyUrl = `${baseUrl}/creator/verify?token=${newCode}&email=${encodeURIComponent(targetEmail)}`;
         if (channel === 'sms') {
             if (!targetPhone) {
                 return NextResponse.json({ success: false, error: 'No phone number registered on this account.' }, { status: 400 });
@@ -286,7 +280,7 @@ export async function handleAuthAction(body: any, request: any) {
             try {
                 await sendSms({
                     to: targetPhone,
-                    message: `Your ${SITE_NAME} Creator verification code is: ${newCode}. Enter code or visit ${verifyUrl}`,
+                    message: `Your ${SITE_NAME} Creator verification code is: ${newCode}. Valid for 24 hours.`,
                     purpose: 'verification',
                     userId: creator.id,
                     userType: 'creator',
@@ -320,15 +314,13 @@ export async function handleAuthAction(body: any, request: any) {
                     subtitle: `${SITE_NAME} Security Verification`,
                     recipientName: creator.name,
                     bodyParagraphs: [
-                        'Here is your new verification token to activate your creator account.',
+                        'Here is your 6-digit verification code to activate your creator account.',
                     ],
                     code: newCode,
-                    codeLabel: 'Verification Token',
-                    actionUrl: verifyUrl,
-                    actionText: 'Verify Account Instantly',
-                    footerNote: 'This verification token and link will expire in 24 hours. If you did not request this, please ignore this email.',
+                    codeLabel: 'Verification Code',
+                    footerNote: 'This verification code will expire in 24 hours. If you did not request this, please ignore this email.',
                 }),
-                text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\n\nOr verify at:\n${verifyUrl}\n\nExpires in 24 hours.`,
+                text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\n\nEnter this 6-digit code on the verification page to activate your account.\n\nExpires in 24 hours.`,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,
@@ -472,8 +464,6 @@ export async function handleAuthAction(body: any, request: any) {
         const creator = res.rows[0];
         const targetEmail = creator.email;
         const targetPhone = creator.phone;
-        const baseUrl = getBaseUrl(request);
-        const resetUrl = `${baseUrl}/creator/recovery?token=${recoveryCode}&email=${encodeURIComponent(targetEmail)}`;
         if (channel === 'sms') {
             if (!targetPhone) {
                 return NextResponse.json({ success: false, error: 'No phone number registered for this creator account.' }, { status: 400 });
@@ -515,15 +505,13 @@ export async function handleAuthAction(body: any, request: any) {
                     subtitle: `${SITE_NAME} Security Recovery`,
                     recipientName: creator.name,
                     bodyParagraphs: [
-                        `You requested to reset your password on ${SITE_NAME}. Use the security recovery token below or click the reset link to set your new password:`,
+                        `You requested to reset your password on ${SITE_NAME}. Enter the 6-digit security recovery code below on the password reset page to set your new password:`,
                     ],
                     code: recoveryCode,
-                    codeLabel: 'Recovery Token',
-                    actionUrl: resetUrl,
-                    actionText: 'Reset Password Instantly',
-                    footerNote: 'This recovery token and link will expire in 1 hour. If you did not request a password reset, please ignore this email.',
+                    codeLabel: 'Recovery Code',
+                    footerNote: 'This recovery code will expire in 1 hour. If you did not request a password reset, please ignore this email.',
                 }),
-                text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nOr reset directly at:\n${resetUrl}\n\nExpires in 1 hour.`,
+                text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nEnter this 6-digit code on the password reset page to update your password.\n\nExpires in 1 hour.`,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,

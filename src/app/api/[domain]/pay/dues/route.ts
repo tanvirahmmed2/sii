@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { queryDb } from 'src/lib/database/db.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
 export async function GET(request: any, context: any) {
     try {
         const website = await resolveWebsiteFromRequest(request, context);

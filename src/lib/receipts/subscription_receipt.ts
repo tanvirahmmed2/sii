@@ -4,7 +4,7 @@ import {
   SITE_CONTACT,
   SITE_ADDRESS,
   getBaseUrl,
-} from '../database/secret';
+} from '../database/secret.js';
 
 export const PLATFORM_INFO = {
   SITE_NAME: SITE_NAME || 'Disibin',
@@ -81,30 +81,30 @@ export function generateSubscriptionReceiptHTML(payment: any = {}, creator: any 
 
   const paymentDateStr = payment.payment_date || payment.created_at
     ? new Date(payment.payment_date || payment.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
     : new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
 
   const periodStartStr = payment.current_period_start || purchase.period_start || payment.period_start
     ? new Date(payment.current_period_start || purchase.period_start || payment.period_start).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
     : 'Immediate';
 
   const periodEndStr = payment.current_period_end || purchase.period_end || payment.period_end
     ? new Date(payment.current_period_end || purchase.period_end || payment.period_end).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
     : 'Renews periodically';
 
   const currency = (payment.currency || 'BDT').toUpperCase();

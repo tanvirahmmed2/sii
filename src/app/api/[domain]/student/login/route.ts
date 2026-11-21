@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { authenticateStudent, setStudentSessionCookie, } from 'src/lib/middleware/students';
-import { inspectMalwareAndAttacks, checkRateLimit, extractClientIp, } from 'src/lib/security/shield';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
+import { authenticateStudent, setStudentSessionCookie, } from 'src/lib/middleware/students.js';
+import { inspectMalwareAndAttacks, checkRateLimit, extractClientIp, } from 'src/lib/security/shield.js';
 export async function POST(request: any, context: any) {
     try {
         const attackCheck = await inspectMalwareAndAttacks(request);
