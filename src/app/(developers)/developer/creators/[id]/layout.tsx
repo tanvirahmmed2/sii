@@ -1,0 +1,14 @@
+import { redirect } from 'next/navigation';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Creator Full Details | ${SITE_NAME}`,
+    description: `Comprehensive portfolio creator details, subscription history, hosted websites, and audit logs.`,
+};
+export default async function CreatorDetailsLayout({ children }: any) {
+    const auth = await hasModulePermission(undefined, 'creators');
+    if (!auth || !auth.success) {
+        redirect('/developer');
+    }
+    return <>{children}</>;
+}

@@ -1,0 +1,212 @@
+import { NextResponse } from 'next/server';
+import crypto from 'crypto';
+import * as XLSX from 'xlsx';
+import { queryDb } from 'src/lib/database/db';
+import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth';
+import { hashPassword } from 'src/lib/middleware/students';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { buildStudentSetupUrl } from 'src/lib/student/urls';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
+export async function POST(request: any, context: any) {
+    try {
+        const auth = await verifyStudentStaffAccess(request, context, 'create');
+        if (auth.error) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        const { website } = auth;
+        const contentType = request.headers.get('content-type') || '';
+        let rawRows: any[] = [];
+        if (contentType.includes('multipart/form-data')) {
+            const formData = await request.formData();
+            const file = formData.get('file');
+            if (!file || typeof file === 'string') {
+                return NextResponse.json({ success: false, error: 'Excel or CSV file is required.' }, { status: 400 });
+            }
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const workbook = XLSX.read(buffer, { type: 'buffer' });
+            const firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+                return NextResponse.json({ success: false, error: 'Spreadsheet has no sheets.' }, { status: 400 });
+            }
+            const worksheet = workbook.Sheets[firstSheetName];
+            rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        }
+        else {
+            const body = await request.json();
+            rawRows = Array.isArray(body.students) ? body.students : (Array.isArray(body) ? body : []);
+        }
+        if (!rawRows || rawRows.length === 0) {
+            return NextResponse.json({ success: false, error: 'No student records found to import.' }, { status: 400 });
+        }
+        const [deptsRes, classesRes, sectionsRes, sessionsRes] = await Promise.all([
+            queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1`, [website.id]),
+            queryDb(`SELECT id, name, code, department_id FROM website_classes WHERE website_id = $1`, [website.id]),
+            queryDb(`SELECT id, name, class_id FROM website_sections WHERE website_id = $1`, [website.id]),
+            queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1`, [website.id]),
+        ]);
+        const deptsList = deptsRes.rows;
+        const classesList = classesRes.rows;
+        const sectionsList = sectionsRes.rows;
+        const sessionsList = sessionsRes.rows;
+        const findDepartmentId = (val: any) => {
+            if (!val)
+                return null;
+            const str = String(val).trim().toLowerCase();
+            const found = deptsList.find((d: any) => (d.code && d.code.toLowerCase() === str) || d.name.toLowerCase() === str || String(d.id) === str);
+            return found ? found.id : null;
+        };
+        const findClassId = (val: any) => {
+            if (!val)
+                return null;
+            const str = String(val).trim().toLowerCase();
+            const found = classesList.find((c: any) => (c.code && c.code.toLowerCase() === str) || c.name.toLowerCase() === str || String(c.id) === str);
+            return found ? found.id : null;
+        };
+        const findSectionId = (val: any, classId: any) => {
+            if (!val)
+                return null;
+            const str = String(val).trim().toLowerCase();
+            const found = sectionsList.find((s: any) => (!classId || String(s.class_id) === String(classId)) &&
+                (s.name.toLowerCase() === str || String(s.id) === str));
+            return found ? found.id : null;
+        };
+        const findSessionId = (val: any) => {
+            if (!val)
+                return null;
+            const str = String(val).trim().toLowerCase();
+            const found = sessionsList.find((s: any) => s.name.toLowerCase() === str || String(s.id) === str);
+            return found ? found.id : null;
+        };
+        const results: { total: number; successful: number; failed: number; created: any[]; errors: any[] } = {
+            total: rawRows.length,
+            successful: 0,
+            failed: 0,
+            created: [],
+            errors: [],
+        };
+        for (let i = 0; i < rawRows.length; i++) {
+            const row = rawRows[i];
+            const rowIdx = i + 1;
+            const rawReg = (row.Registration || row['Registration No'] || row['Registration Number'] || row.registration_no || row.reginumber || row['Reg No'] || '').trim();
+            const deptInput = row.Department || row['Department Name'] || row.department_id || row.department || '';
+            const classInput = row.Class || row['Class Code'] || row['Class Name'] || row.class_id || '';
+            const sectionInput = row.Section || row['Section Name'] || row.section_id || '';
+            const sessionInput = row.Session || row['Session Name'] || row.session_id || '';
+            const email = (row.Email || row['Email Address'] || row.email || '').trim().toLowerCase() || null;
+            const rollNo = (row.Roll || row['Roll No'] || row['Roll Number'] || row.roll_no || '').trim() || null;
+            if (!rawReg) {
+                results.failed++;
+                results.errors.push({ row: rowIdx, error: 'Registration number is missing.' });
+                continue;
+            }
+            const resolvedClassId = findClassId(classInput);
+            if (!resolvedClassId) {
+                results.failed++;
+                results.errors.push({ row: rowIdx, registration_no: rawReg, error: `Class "${classInput || 'Blank'}" could not be matched.` });
+                continue;
+            }
+            const matchedClass = classesList.find((c: any) => String(c.id) === String(resolvedClassId));
+            const resolvedDeptId = findDepartmentId(deptInput) || matchedClass?.department_id || null;
+            const resolvedSessionId = findSessionId(sessionInput) || matchedClass?.session_id || null;
+            const resolvedSectionId = findSectionId(sectionInput, resolvedClassId);
+            if (email) {
+                const emailAvail = await checkInstitutionEmailAvailability(website.id, email);
+                if (!emailAvail.available) {
+                    results.failed++;
+                    results.errors.push({ row: rowIdx, email, registration_no: rawReg, error: emailAvail.message });
+                    continue;
+                }
+            }
+            const regNo = rawReg;
+            const regCheck = await queryDb(`SELECT id FROM website_students WHERE website_id = $1 AND registration_no = $2 LIMIT 1`, [website.id, regNo]);
+            if (regCheck.rows.length > 0) {
+                results.failed++;
+                results.errors.push({ row: rowIdx, registration_no: regNo, error: 'Registration number already exists.' });
+                continue;
+            }
+            const studentUniqueId = `STU-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+            try {
+                const insertRes = await queryDb(`INSERT INTO website_students (
+              website_id, department_id, session_id, class_id, section_id,
+              registration_no, roll_no, email, student_unique_id, is_active
+           )
+           VALUES (
+              $1, $2, $3, $4, $5,
+              $6, $7, $8, $9, FALSE
+           )
+           RETURNING id, registration_no, roll_no, student_unique_id, email`, [
+                    website.id,
+                    resolvedDeptId,
+                    resolvedSessionId,
+                    resolvedClassId,
+                    resolvedSectionId,
+                    regNo,
+                    rollNo || null,
+                    email || null,
+                    studentUniqueId,
+                ]);
+                const newStudent = insertRes.rows[0];
+                if (email) {
+                    try {
+                        const setupUrl = buildStudentSetupUrl(website, null, request, email);
+                        const instName = website.name || 'Campus Student Portal';
+                        const emailHtml = buildStyledEmail({
+                            title: `Welcome to ${instName}`,
+                            subtitle: 'Official Student Identity & Portal Account Setup',
+                            recipientName: 'Student',
+                            bodyParagraphs: [
+                                `Congratulations! You have been registered into the official academic database at <strong>${instName}</strong>.`,
+                                `Please keep your institutional credentials safe:`,
+                                `<div style="margin: 12px 0; padding: 14px 18px; background-color: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 4px; font-size: 13px; color: #1e293b;">
+                  <div style="margin-bottom: 6px;"><strong>Registration No:</strong> <code style="font-family: monospace; font-size: 14px; font-weight: 700; color: #4338ca;">${newStudent.registration_no}</code></div>
+                  <div style="margin-bottom: 6px;"><strong>Student ID:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${newStudent.student_unique_id}</code></div>
+                  ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
+                  <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${email}</code></div>
+                </div>`,
+                                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your one-time email verification and configure your personal password:`,
+                            ],
+                            actionText: 'Activate & Set Up Student Account →',
+                            actionUrl: setupUrl,
+                            footerNote: `If you did not request this registration or have questions, please contact the ${instName} administrative office.`
+                        });
+                        await sendEmail({
+                            to: email,
+                            toName: 'Student',
+                            subject: `Student Account Setup & Registration - ${instName}`,
+                            html: emailHtml,
+                            websiteId: website.id,
+                        });
+                    }
+                    catch (mailErr: any) {
+                        console.warn(`[BulkRegister] Mail dispatch skipped for ${email}:`, mailErr.message);
+                    }
+                }
+                results.successful++;
+                results.created.push({
+                    row: rowIdx,
+                    id: newStudent.id,
+                    registration_no: newStudent.registration_no,
+                    student_unique_id: newStudent.student_unique_id,
+                    email: newStudent.email,
+                });
+            }
+            catch (insertErr: any) {
+                results.failed++;
+                results.errors.push({
+                    row: rowIdx,
+                    registration_no: regNo,
+                    error: insertErr.message || 'Database insert failed.',
+                });
+            }
+        }
+        return NextResponse.json({
+            success: true,
+            message: `Batch import complete. Successfully imported ${results.successful} of ${results.total} students.`,
+            payload: results,
+        });
+    }
+    catch (error: any) {
+        console.error('Error in bulk student import:', error);
+        return NextResponse.json({ success: false, error: 'Bulk import failed: ' + error.message }, { status: 500 });
+    }
+}

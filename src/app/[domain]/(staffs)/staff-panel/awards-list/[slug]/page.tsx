@@ -1,0 +1,346 @@
+'use client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { FiTrash2 } from 'react-icons/fi';
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor'), {
+    ssr: false,
+    loading: () => (<div className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md flex items-center justify-center text-xs text-slate-400">
+      Loading rich text editor...
+    </div>),
+});
+export default function UpdateAwardPage() {
+    const params: any = useParams();
+    const router = useRouter();
+    const domain = params?.domain || '';
+    const slug = params?.slug || '';
+    const [loading, setLoading] = useState<any>(true);
+    const [saving, setSaving] = useState<any>(false);
+    const [awardId, setAwardId] = useState<any>(null);
+    const [title, setTitle] = useState<any>('');
+    const [year, setYear] = useState<any>('');
+    const [issuer, setIssuer] = useState<any>('');
+    const [description, setDescription] = useState<any>('');
+    const [isActive, setIsActive] = useState<any>(true);
+    const [image, setImage] = useState<any>(null);
+    const [selectedPhotoFile, setSelectedPhotoFile] = useState<any>(null);
+    const [previewUrl, setPreviewUrl] = useState<any>(null);
+    const [removeImage, setRemoveImage] = useState<any>(false);
+    const [toastMessage, setToastMessage] = useState<any>(null);
+    const [toastError, setToastError] = useState<any>(null);
+    const [deleting, setDeleting] = useState<any>(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<any>(false);
+    const showToast = useCallback((msg: any, isErr: any = false) => {
+        if (isErr) {
+            setToastError(msg);
+            setTimeout(() => setToastError(null), 4000);
+        }
+        else {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+        }
+    }, []);
+    const fetchAwardData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/${domain}/staff/panel/awards?slug=${encodeURIComponent(slug)}`);
+            const data = await res.json();
+            if (data.success && data.award) {
+                const a = data.award;
+                setAwardId(a.id);
+                setTitle(a.title || '');
+                setYear(a.year ? a.year.toString() : '');
+                setIssuer(a.issuer || '');
+                setDescription(a.description || '');
+                setIsActive(Boolean(a.is_active));
+                if (a.image_url) {
+                    setImage({
+                        image_url: a.image_url,
+                        image_id: a.image_id,
+                        caption: a.image_caption || '',
+                    });
+                }
+                else {
+                    setImage(null);
+                }
+            }
+            else {
+                showToast(data.error || 'Failed to load award record', true);
+            }
+        }
+        catch (err: any) {
+            console.error('Fetch award error:', err);
+            showToast('Network error while loading award details', true);
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [domain, slug, showToast]);
+    useEffect(() => {
+        document.title = 'Update';
+        if (slug) {
+            fetchAwardData();
+        }
+    }, [domain, slug, fetchAwardData]);
+    const handlePhotoSelect = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file)
+            return;
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+        }
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+        setSelectedPhotoFile(file);
+        setImage((prev: any) => ({
+            image_url: objectUrl,
+            caption: prev?.caption || '',
+        }));
+        setRemoveImage(false);
+    };
+    const handleRemovePhoto = () => {
+        if (previewUrl) {
+            URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
+        }
+        setSelectedPhotoFile(null);
+        setRemoveImage(true);
+        setImage(null);
+    };
+    const handleSave = async (e: any) => {
+        e.preventDefault();
+        if (!title.trim()) {
+            showToast('Award title is required', true);
+            return;
+        }
+        setSaving(true);
+        try {
+            const formData = new FormData();
+            formData.append('id', String(awardId) as any);
+            formData.append('current_slug', slug as any);
+            formData.append('title', title.trim() as any);
+            if (year)
+                formData.append('year', String(year) as any);
+            if (issuer)
+                formData.append('issuer', issuer.trim() as any);
+            formData.append('description', description || '' as any);
+            formData.append('is_active', isActive ? 'true' : 'false' as any);
+            formData.append('remove_image', removeImage ? 'true' : 'false' as any);
+            if (image?.caption)
+                formData.append('caption', image.caption as any);
+            if (selectedPhotoFile) {
+                formData.append('image', selectedPhotoFile as any);
+            }
+            const res = await fetch(`/api/${domain}/staff/panel/awards`, {
+                method: 'PUT',
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Award updated successfully!');
+                if (selectedPhotoFile && previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl(null);
+                    setSelectedPhotoFile(null);
+                }
+                if (data.award?.slug && data.award.slug !== slug) {
+                    router.replace(`/${domain}/staff-panel/awards-list/${data.award.slug}`);
+                }
+                else {
+                    fetchAwardData();
+                }
+            }
+            else {
+                showToast(data.error || 'Failed to update award', true);
+            }
+        }
+        catch (err: any) {
+            console.error('Update award error:', err);
+            showToast('Network error while saving changes', true);
+        }
+        finally {
+            setSaving(false);
+        }
+    };
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/${domain}/staff/panel/awards?id=${awardId}`, {
+                method: 'DELETE',
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Award deleted successfully');
+                setTimeout(() => {
+                    router.push(`/${domain}/staff-panel/awards-list`);
+                }, 800);
+            }
+            else {
+                showToast(data.error || 'Failed to delete award', true);
+            }
+        }
+        catch (err: any) {
+            console.error('Delete error:', err);
+            showToast('Network error deleting award', true);
+        }
+        finally {
+            setDeleting(false);
+            setDeleteConfirmOpen(false);
+        }
+    };
+    if (loading) {
+        return (<div className="w-full py-24 flex justify-center items-center">
+        <div className="loader loader-md"/>
+      </div>);
+    }
+    return (<div className="w-full space-y-4">
+      {toastMessage && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
+          <span>{toastMessage}</span>
+        </div>)}
+      {toastError && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-md shadow-lg text-xs font-medium animate-fade-in">
+          <span>{toastError}</span>
+        </div>)}
+
+      <div className="flex items-center justify-between">
+        <Link href={`/${domain}/staff-panel/awards-list`} className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
+          <span>← Back to Awards List</span>
+        </Link>
+
+        <button type="button" onClick={() => setDeleteConfirmOpen(true)} className="px-3 py-1.5 rounded-md text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 transition cursor-pointer flex items-center gap-1.5">
+          <FiTrash2 className="text-xs"/>
+          <span>Delete Award</span>
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xs overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+          <h1 className="text-sm font-semibold text-slate-900 dark:text-white">
+            Update Award
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Modify institutional award recognition, year, granting body, trophy photo, and full citation.
+          </p>
+        </div>
+
+        <form onSubmit={handleSave} className="p-4 space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              Award Title <span className="text-secondary">*</span>
+            </label>
+            <input type="text" required value={title} onChange={(e: any) => setTitle(e.target.value)} className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"/>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Award Year
+              </label>
+              <input type="number" min="1950" max="2100" value={year} onChange={(e: any) => setYear(e.target.value)} className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"/>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Granting Body / Issuer
+              </label>
+              <input type="text" value={issuer} onChange={(e: any) => setIssuer(e.target.value)} className="w-full px-3 py-2 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary transition"/>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <span>Trophy / Certificate Photograph</span>
+                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                  Strictly single image
+                </span>
+              </label>
+
+              {image && !removeImage && (<button type="button" onClick={handleRemovePhoto} className="text-xs text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer">
+                  <FiTrash2 className="text-xs"/> Remove photo
+                </button>)}
+            </div>
+
+            {!removeImage && image ? (<div className="p-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 flex flex-col sm:flex-row items-center gap-3">
+                <div className="relative w-28 h-28 rounded overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-900/10">
+                  <img src={image.image_url} alt="Award photo" className="w-full h-full object-cover"/>
+                </div>
+                <div className="space-y-2 flex-1 w-full">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      {selectedPhotoFile ? 'Selected for Upload' : 'Stored Photo'}
+                    </span>
+                    <label className="text-xs font-medium text-primary hover:underline cursor-pointer">
+                      <span>Replace Photo</span>
+                      <input type="file" accept="image/*" onChange={handlePhotoSelect} className="hidden"/>
+                    </label>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      Photo Caption (Optional)
+                    </label>
+                    <input type="text" value={image.caption || ''} onChange={(e: any) => setImage({ ...image, caption: e.target.value })} className="mt-1 w-full px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:border-primary"/>
+                  </div>
+                </div>
+              </div>) : (<div className="relative border border-dashed border-slate-300 dark:border-slate-700 hover:border-primary rounded-md p-6 text-center transition-all bg-slate-50/50 dark:bg-slate-800/20">
+                <input type="file" accept="image/*" onChange={handlePhotoSelect} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/>
+                <div className="flex flex-col items-center justify-center space-y-1 pointer-events-none">
+                  <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                    Click or drop photo here to select
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Supports high-resolution PNG, JPG, WEBP. Uploads to Cloudinary on saving.
+                  </p>
+                </div>
+              </div>)}
+          </div>
+
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                Award Citation & Full Description
+              </label>
+              <span className="text-[11px] text-slate-400">Rich Text</span>
+            </div>
+            <TiptapEditor value={description} onChange={(html: any) => setDescription(html)} minHeight="220px"/>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <input type="checkbox" id="isActive" checked={isActive} onChange={(e: any) => setIsActive(e.target.checked)} className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer accent-primary"/>
+            <label htmlFor="isActive" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+              Display on public awards showcase page (Active)
+            </label>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
+            <Link href={`/${domain}/staff-panel/awards-list`} className="px-3.5 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+              Cancel
+            </Link>
+            <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-md text-xs font-medium bg-primary hover:bg-primary-dark text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+              {saving ? (<div className="loader loader-sm loader-white"/>) : (<span>Save Changes</span>)}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {deleteConfirmOpen && (<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md w-full max-w-md shadow-2xl p-5 space-y-4 animate-scale-up">
+            <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+              <FiTrash2 className="text-lg"/>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Delete Award Entry</h3>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Are you sure you want to permanently delete this award? This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setDeleteConfirmOpen(false)} className="px-3 py-1.5 rounded-md text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer">
+                Cancel
+              </button>
+              <button type="button" disabled={deleting} onClick={handleDelete} className="px-3.5 py-1.5 rounded-md text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+                {deleting ? (<div className="loader loader-sm loader-white"/>) : (<span>Delete Permanently</span>)}
+              </button>
+            </div>
+          </div>
+        </div>)}
+    </div>);
+}

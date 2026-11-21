@@ -1,0 +1,82 @@
+'use client';
+import React, { useEffect, useState, useRef, useContext } from 'react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import AwardCard from 'src/component/website/cards/AwardCard';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
+const Awards = () => {
+    const { tenantUrl, getApiEndpoint } = useContext<any>(TenantWebsiteContext);
+    const [awards, setAwards] = useState<any>([]);
+    const [loading, setLoading] = useState<any>(true);
+    const sliderRef = useRef<any>(null);
+    useEffect(() => {
+        const fetchAwards = async () => {
+            try {
+                const res = await fetch(getApiEndpoint('awards'));
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = data.payload?.awards ||
+                        data.paylod?.awards ||
+                        data.awards ||
+                        [];
+                    setAwards(list);
+                }
+            }
+            catch (err: any) {
+                console.error('Error fetching awards in home/Awards:', err);
+            }
+            finally {
+                setLoading(false);
+            }
+        };
+        fetchAwards();
+    }, [getApiEndpoint]);
+    const handleScroll = (direction: any) => {
+        if (sliderRef.current) {
+            const scrollAmount = direction === 'left' ? -260 : 260;
+            sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+    };
+    if (loading)
+        return null;
+    if (awards.length === 0)
+        return null;
+    return (<section className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-16 px-4 sm:px-6 lg:px-8 transition-colors overflow-hidden">
+      <div className="w-full max-w-6xl mx-auto space-y-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.5 }} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+          <div>
+            <span className="text-xs uppercase tracking-[0.25em] font-semibold text-primary block">
+              Honors &amp; Accreditations
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white tracking-tight mt-1">
+              Institutional Awards
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Honors, academic awards, and regulatory certifications achieved by our campus.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <motion.button whileTap={{ scale: 0.95 }} type="button" onClick={() => handleScroll('left')} className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors cursor-pointer shadow-xs" aria-label="Previous awards">
+              &larr; Prev
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.95 }} type="button" onClick={() => handleScroll('right')} className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-primary hover:text-primary transition-colors cursor-pointer shadow-xs" aria-label="Next awards">
+              Next &rarr;
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+              <Link href={tenantUrl('/awards')} className="inline-block px-4 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 hover:border-primary text-slate-800 dark:text-slate-200 hover:text-primary font-semibold transition-colors shadow-xs">
+                View All ({awards.length})
+              </Link>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <div ref={sliderRef} className="flex items-stretch gap-5 overflow-x-auto pb-4 scroll-smooth">
+          {awards.map((item: any, index: any) => (<motion.div key={item.id} initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.4, delay: Math.min(index * 0.06, 0.3) }} className="w-64 shrink-0">
+              <AwardCard award={item}/>
+            </motion.div>))}
+        </div>
+      </div>
+    </section>);
+};
+export default Awards;

@@ -1,0 +1,634 @@
+'use client';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import { FiEdit2, FiUser, FiMail, FiPhone, FiCalendar, FiDollarSign, FiAward, FiUpload, FiTrash2, FiCheck, FiX, FiArrowLeft, FiList, FiRefreshCw, FiMapPin, FiBookOpen, FiLayers } from 'react-icons/fi';
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+const GENDERS = [
+    { label: 'Male', value: 'male' },
+    { label: 'Female', value: 'female' },
+    { label: 'Other', value: 'other' }
+];
+function TeacherUpdateContent() {
+    const params: any = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const { tenantUrl, slug } = useTenantWebsite();
+    const domain = params?.domain || slug || '';
+    const apiBase = domain ? `/api/${domain}` : '/api';
+    const initialTeacherId = searchParams.get('id') || '';
+    const fileInputRef = useRef<any>(null);
+    const [allTeachers, setAllTeachers] = useState<any>([]);
+    const [selectedTeacherId, setSelectedTeacherId] = useState<any>(initialTeacherId);
+    const [designations, setDesignations] = useState<any>([]);
+    const [departments, setDepartments] = useState<any>([]);
+    const [payrolls, setPayrolls] = useState<any>([]);
+    const [loadingPayrolls, setLoadingPayrolls] = useState<any>(true);
+    const [loading, setLoading] = useState<any>(false);
+    const [submitting, setSubmitting] = useState<any>(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState<any>(false);
+    const [selectedPhotoFile, setSelectedPhotoFile] = useState<any>(null);
+    const [resendingVerification, setResendingVerification] = useState<any>(false);
+    const [formData, setFormData] = useState<any>({
+        id: '',
+        name: '',
+        email: '',
+        number: '',
+        emergency_contact: '',
+        gender: 'male',
+        blood_group: '',
+        date_of_birth: '',
+        religion: '',
+        address: '',
+        permanent_address: '',
+        joining_date: '',
+        payroll_id: '',
+        department_id: '',
+        designation_id: '',
+        photo_url: '',
+        photo_id: '',
+        password: '',
+        is_active: true,
+        is_registered: false
+    });
+    const [toastMessage, setToastMessage] = useState<any>(null);
+    const [toastError, setToastError] = useState<any>(null);
+    const showToast = useCallback((msg: any, isErr: any = false) => {
+        if (isErr) {
+            setToastError(msg);
+            setTimeout(() => setToastError(null), 4000);
+        }
+        else {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3000);
+        }
+    }, []);
+    useEffect(() => {
+        async function loadData() {
+            if (!domain)
+                return;
+            try {
+                setLoadingPayrolls(true);
+                const [desRes, deptRes, payRes] = await Promise.all([
+                    fetch(`${apiBase}/staff/panel/teacher/designations`),
+                    fetch(`${apiBase}/staff/panel/departments`),
+                    fetch(`${apiBase}/staff/panel/teacher-payrolls`)
+                ]);
+                const desData = await desRes.json();
+                const deptData = await deptRes.json();
+                const payData = await payRes.json();
+                if (desData.success) {
+                    setDesignations(desData.designations || []);
+                }
+                if (deptData.success) {
+                    setDepartments(deptData.departments || []);
+                }
+                if (payData.success && Array.isArray(payData.payrolls)) {
+                    setPayrolls(payData.payrolls.filter((p: any) => p.is_active));
+                }
+            }
+            catch (err: any) {
+                console.error(err);
+            }
+            finally {
+                setLoadingPayrolls(false);
+            }
+        }
+        loadData();
+    }, [domain, apiBase]);
+    useEffect(() => {
+        let active = true;
+        if (!domain)
+            return;
+        fetch(`${apiBase}/staff/panel/teacher?limit=100`)
+            .then((res: any) => res.json())
+            .then((data: any) => {
+            if (!active)
+                return;
+            if (data.success) {
+                setAllTeachers(data.teachers || []);
+                if (!selectedTeacherId && data.teachers && data.teachers.length > 0) {
+                    setSelectedTeacherId(String(data.teachers[0].id));
+                }
+            }
+        })
+            .catch((err: any) => {
+            if (!active)
+                return;
+            console.error(err);
+        });
+        return () => {
+            active = false;
+        };
+    }, [domain, selectedTeacherId, apiBase]);
+    useEffect(() => {
+        let active = true;
+        if (!domain || !selectedTeacherId)
+            return;
+        fetch(`${apiBase}/staff/panel/teacher?id=${selectedTeacherId}`)
+            .then((res: any) => res.json())
+            .then((data: any) => {
+            if (!active)
+                return;
+            if (data.success && data.teacher) {
+                const t = data.teacher;
+                setFormData({
+                    id: t.id,
+                    name: t.name || '',
+                    email: t.email || '',
+                    number: t.number || '',
+                    emergency_contact: t.emergency_contact || '',
+                    gender: t.gender || 'male',
+                    blood_group: t.blood_group || '',
+                    date_of_birth: t.date_of_birth ? t.date_of_birth.split('T')[0] : '',
+                    religion: t.religion || '',
+                    address: t.address || '',
+                    permanent_address: t.permanent_address || '',
+                    joining_date: t.joining_date ? t.joining_date.split('T')[0] : '',
+                    payroll_id: t.payroll_id ? String(t.payroll_id) : '',
+                    department_id: t.department_id ? String(t.department_id) : '',
+                    designation_id: t.designation_id ? String(t.designation_id) : '',
+                    photo_url: t.photo_url || '',
+                    photo_id: t.photo_id || '',
+                    password: '',
+                    is_active: Boolean(t.is_active),
+                    is_registered: Boolean(t.is_registered)
+                });
+            }
+            setLoading(false);
+        })
+            .catch((err: any) => {
+            if (!active)
+                return;
+            console.error(err);
+            setLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, [domain, selectedTeacherId, apiBase]);
+    const handleInputChange = (e: any) => {
+        const { name, value, type, checked } = e.target;
+        setFormData((prev: any) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+    const handlePhotoSelect = (e: any) => {
+        const file = e.target.files?.[0];
+        if (!file)
+            return;
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select a valid image file.', true);
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Image size exceeds 10MB limit.', true);
+            return;
+        }
+        setSelectedPhotoFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setFormData((prev: any) => ({
+            ...prev,
+            photo_url: objectUrl
+        }));
+        showToast('Photo selected. Click "Save Changes" to upload and apply.');
+        if (fileInputRef.current)
+            fileInputRef.current.value = '';
+    };
+    const removePhoto = () => {
+        setSelectedPhotoFile(null);
+        setFormData((prev: any) => ({ ...prev, photo_url: '', photo_id: '' }));
+        if (fileInputRef.current)
+            fileInputRef.current.value = '';
+    };
+    const handleResendVerification = async () => {
+        if (!formData.id || !domain)
+            return;
+        try {
+            setResendingVerification(true);
+            const res = await fetch(`${apiBase}/staff/panel/teacher/resend-verification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teacherId: formData.id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Verification link resent successfully!');
+            }
+            else {
+                showToast(data.error || 'Failed to resend verification link.', true);
+            }
+        }
+        catch (err: any) {
+            console.error(err);
+            showToast('Network error while resending verification link.', true);
+        }
+        finally {
+            setResendingVerification(false);
+        }
+    };
+    const handleSubmit = async (e: any) => {
+        e.preventDefault();
+        if (!formData.name.trim()) {
+            showToast('Name is required.', true);
+            return;
+        }
+        if (!formData.email.trim()) {
+            showToast('Email is required.', true);
+            return;
+        }
+        if (!formData.number.trim()) {
+            showToast('Phone number is required.', true);
+            return;
+        }
+        if (!formData.designation_id) {
+            showToast('Teacher designation is required.', true);
+            return;
+        }
+        try {
+            setSubmitting(true);
+            const putData = new FormData();
+            Object.keys(formData).forEach((key: any) => {
+                if (key === 'department_id') {
+                    putData.append('department_id', formData.department_id ? Number(formData.department_id) : '' as any);
+                }
+                else if (key === 'designation_id') {
+                    putData.append('designation_id', Number(formData.designation_id) as any);
+                }
+                else if (key === 'payroll_id') {
+                    putData.append('payroll_id', formData.payroll_id ? Number(formData.payroll_id) : '' as any);
+                }
+                else if (key === 'salary') {
+                }
+                else if (formData[key] !== null && formData[key] !== undefined) {
+                    putData.append(key, formData[key] as any);
+                }
+            });
+            if (selectedPhotoFile) {
+                putData.append('photo', selectedPhotoFile as any);
+            }
+            const res = await fetch(`${apiBase}/staff/panel/teacher`, {
+                method: 'PUT',
+                body: putData
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Teacher profile updated successfully!');
+                setSelectedPhotoFile(null);
+                setSelectedTeacherId(String(formData.id));
+            }
+            else {
+                showToast(data.error || 'Failed to update teacher.', true);
+            }
+        }
+        catch (err: any) {
+            console.error(err);
+            showToast('Error connecting to server.', true);
+        }
+        finally {
+            setSubmitting(false);
+        }
+    };
+    return (<div className="w-full space-y-4">
+      {toastMessage && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
+          <FiCheck className="w-4 h-4"/>
+          <span>{toastMessage}</span>
+        </div>)}
+      {toastError && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
+          <FiX className="w-4 h-4"/>
+          <span>{toastError}</span>
+        </div>)}
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+            <Link href={tenantUrl('/staff-panel/teacher-list')} className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1">
+              <FiArrowLeft className="w-3.5 h-3.5"/>
+              <span>Teacher Directory</span>
+            </Link>
+            <span>/</span>
+            <span className="text-slate-900 dark:text-white font-medium">Update Teacher Profile</span>
+          </div>
+          <h1 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <FiEdit2 className="w-5 h-5 text-blue-600"/>
+            <span>Teacher Profile Editor</span>
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Modify faculty credentials, designated institutional rank, contact records, and portal accessibility.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {allTeachers.length > 0 && (<select value={selectedTeacherId} onChange={(e: any) => {
+                setSelectedTeacherId(e.target.value);
+                router.push(tenantUrl(`/staff-panel/teacher-update?id=${e.target.value}`));
+            }} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer">
+              {allTeachers.map((t: any) => (<option key={t.id} value={t.id}>
+                  {t.name} ({t.designation_title || 'No rank'})
+                </option>))}
+            </select>)}
+
+          <Link href={tenantUrl(`/staff-panel/teacher-qualifications?teacher_id=${selectedTeacherId}`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <FiAward className="w-3.5 h-3.5"/>
+            <span>Qualifications</span>
+          </Link>
+
+          <Link href={tenantUrl(`/staff-panel/teacher-assign?teacher_id=${selectedTeacherId}`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <FiBookOpen className="w-3.5 h-3.5"/>
+            <span>Subject Routine</span>
+          </Link>
+        </div>
+      </div>
+
+      {loading ? (<div className="p-16 flex justify-center items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
+          <div className="loader loader-md"/>
+        </div>) : (<form onSubmit={handleSubmit} className="space-y-4">
+          {formData.id && !formData.is_registered && (<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs">
+              <div>
+                <span className="font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>Account Pending Email Verification</span>
+                </span>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                  This faculty profile is currently inactive until verified by the teacher via their invitation link.
+                </p>
+              </div>
+              <button type="button" onClick={handleResendVerification} disabled={resendingVerification} className="px-3 py-1.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition shadow-xs shrink-0">
+                <FiMail className={`w-3.5 h-3.5 ${resendingVerification ? 'animate-spin' : ''}`}/>
+                <span>{resendingVerification ? 'Sending Link...' : 'Resend Verification Link'}</span>
+              </button>
+            </div>)}
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <FiUser className="w-4 h-4 text-blue-600"/>
+              <span>1. Personal & Contact Information</span>
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-1 flex flex-col items-center justify-center p-4 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/40 text-center">
+                {formData.photo_url ? (<div className="relative group w-32 h-32 rounded-lg overflow-hidden border-2 border-slate-300 dark:border-slate-700 shadow-sm">
+                    <img src={formData.photo_url} alt="Teacher preview" className="w-full h-full object-cover"/>
+                    <button type="button" onClick={removePhoto} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity text-xs gap-1">
+                      <FiTrash2 className="w-4 h-4 text-rose-400"/>
+                      <span>Remove</span>
+                    </button>
+                  </div>) : (<div className="w-32 h-32 rounded-lg bg-slate-200 dark:bg-slate-800 flex flex-col items-center justify-center text-slate-400">
+                    <FiUser className="w-12 h-12"/>
+                    <span className="text-[10px] mt-1 font-medium">No Photo</span>
+                  </div>)}
+
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handlePhotoSelect} className="hidden"/>
+
+                <button type="button" disabled={uploadingPhoto} onClick={() => fileInputRef.current?.click()} className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50">
+                  <FiUpload className="w-3.5 h-3.5"/>
+                  <span>{uploadingPhoto ? 'Uploading...' : 'Change Photo'}</span>
+                </button>
+              </div>
+
+              <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input type="text" required name="name" value={formData.name} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Email Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input type="email" required name="email" value={formData.email} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Contact Phone Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input type="text" required name="number" value={formData.number} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Emergency Contact
+                  </label>
+                  <input type="text" name="emergency_contact" value={formData.emergency_contact} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Gender
+                  </label>
+                  <select name="gender" value={formData.gender} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer">
+                    {GENDERS.map((g: any) => (<option key={g.value} value={g.value}>{g.label}</option>))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Blood Group
+                  </label>
+                  <select name="blood_group" value={formData.blood_group} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer">
+                    <option value="">Select blood group</option>
+                    {BLOOD_GROUPS.map((bg: any) => (<option key={bg} value={bg}>{bg}</option>))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Date of Birth
+                  </label>
+                  <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Religion
+                  </label>
+                  <input type="text" name="religion" value={formData.religion} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Reset Portal Password (Optional)
+                  </label>
+                  <input type="password" name="password" aria-label="Reset Portal Password (leave blank to keep current)" value={formData.password} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiMapPin className="w-3 h-3 text-slate-400"/>
+                  <span>Present Address</span>
+                </label>
+                <textarea rows={2} name="address" value={formData.address} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"/>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiMapPin className="w-3 h-3 text-slate-400"/>
+                  <span>Permanent Address</span>
+                </label>
+                <textarea rows={2} name="permanent_address" value={formData.permanent_address} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 resize-none"/>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2">
+              <FiAward className="w-4 h-4 text-emerald-600"/>
+              <span>2. Institutional Role & Employment</span>
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiLayers className="w-3.5 h-3.5 text-blue-600"/>
+                  <span>Department (Optional)</span>
+                </label>
+                <select name="department_id" value={formData.department_id} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer">
+                  <option value="">-- None / Unassigned --</option>
+                  {departments.map((d: any) => (<option key={d.id} value={d.id}>
+                      {d.name} {d.code ? `(${d.code})` : ''}
+                    </option>))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <FiAward className="w-3.5 h-3.5 text-emerald-600"/>
+                  <span>Designation / Rank <span className="text-rose-500">*</span></span>
+                </label>
+                <select name="designation_id" required value={formData.designation_id} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer">
+                  <option value="">-- Choose Designation --</option>
+                  {designations.map((d: any) => (<option key={d.id} value={d.id}>
+                      {d.title} {d.display_order ? `(#${d.display_order})` : ''}
+                    </option>))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Joining Date
+                </label>
+                <input type="date" name="joining_date" value={formData.joining_date} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"/>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <FiDollarSign className="w-3.5 h-3.5 text-emerald-600"/>
+                    <span>Payroll Scale / Grade</span>
+                  </span>
+                  <Link href={tenantUrl('/staff-panel/teacher-payrolls')} target="_blank" className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline">
+                    Manage Scales
+                  </Link>
+                </label>
+                <select name="payroll_id" value={formData.payroll_id} onChange={handleInputChange} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300 cursor-pointer">
+                  <option value="">-- No Payroll Scale (Unassigned) --</option>
+                  {payrolls.map((p: any) => (<option key={p.id} value={p.id}>
+                      {p.title} ({p.grade_code || 'Scale'}) — Basic: ৳{Number(p.basic_salary).toLocaleString()}
+                    </option>))}
+                </select>
+                {payrolls.length === 0 && !loadingPayrolls && (<p className="text-[10px] text-amber-600 mt-1">
+                    No payroll scales found.{' '}
+                    <Link href={tenantUrl('/staff-panel/teacher-payrolls')} className="underline font-semibold">
+                      Create in Payroll
+                    </Link>
+                  </p>)}
+              </div>
+
+              <div className="flex flex-col justify-center pt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleInputChange} className="rounded border-slate-300 text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"/>
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white">Active Faculty Status</span>
+                </label>
+                <p className="text-[10px] text-slate-400 mt-0.5 ml-6">Controls portal authentication access</p>
+              </div>
+            </div>
+
+            {(() => {
+                const selectedPayroll = payrolls.find((p: any) => String(p.id) === String(formData.payroll_id));
+                if (!selectedPayroll)
+                    return null;
+                return (<div className="mt-3 p-3 rounded border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/70 dark:border-emerald-800/40 pb-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-emerald-950 dark:text-emerald-300 text-xs">
+                        {selectedPayroll.title}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-200/60 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200">
+                        {selectedPayroll.grade_code || 'STANDARD'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                      <span className="text-slate-600 dark:text-slate-300">
+                        Gross: <strong className="text-slate-900 dark:text-white">৳{Number(selectedPayroll.gross_salary || 0).toLocaleString()}</strong>
+                      </span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-rose-600 dark:text-rose-400">
+                        Deductions: <strong>-৳{Number(selectedPayroll.total_deductions || 0).toLocaleString()}</strong>
+                      </span>
+                      <span className="text-slate-400">|</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                        Net Monthly: ৳{Number(selectedPayroll.net_salary || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Basic</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.basic_salary || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">House Rent</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.house_rent || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Medical</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.medical_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Transport</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.transport_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Other Allow.</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">৳{Number(selectedPayroll.other_allowance || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">PF Ded.</span>
+                      <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.provident_fund || 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase text-slate-400">Tax Ded.</span>
+                      <span className="font-medium text-rose-600 dark:text-rose-400">৳{Number(selectedPayroll.tax_deduction || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>);
+            })()}
+        </div>
+
+          <div className="flex items-center justify-end gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-2xs">
+            <Link href={tenantUrl('/staff-panel/teacher-list')} className="px-4 py-2 rounded text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              Cancel
+            </Link>
+            <button type="submit" disabled={submitting} className="flex items-center gap-2 px-6 py-2 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white disabled:opacity-50 transition shadow-sm cursor-pointer">
+              <FiCheck className="w-4 h-4"/>
+              <span>{submitting ? 'Updating Profile...' : 'Save Profile Changes'}</span>
+            </button>
+          </div>
+        </form>)}
+    </div>);
+}
+export default function TeacherUpdatePage() {
+    return (<Suspense fallback={<div className="p-16 flex justify-center items-center">
+          <div className="loader loader-md"/>
+        </div>}>
+      <TeacherUpdateContent />
+    </Suspense>);
+}

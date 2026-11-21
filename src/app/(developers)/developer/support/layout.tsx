@@ -1,0 +1,14 @@
+import { redirect } from 'next/navigation';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Support Tickets | ${SITE_NAME}`,
+    description: `Help desk ticketing system and creator assistance on ${SITE_NAME}.`,
+};
+export default async function SupportLayout({ children }: any) {
+    const auth = await hasModulePermission(undefined, 'support');
+    if (!auth || !auth.success) {
+        redirect('/developer');
+    }
+    return <>{children}</>;
+}

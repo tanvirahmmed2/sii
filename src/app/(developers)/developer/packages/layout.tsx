@@ -1,0 +1,14 @@
+import { redirect } from 'next/navigation';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Subscription Packages | ${SITE_NAME}`,
+    description: `Manage pricing tiers, portfolio quotas, and billing plans on ${SITE_NAME}.`,
+};
+export default async function PackagesLayout({ children }: any) {
+    const auth = await hasModulePermission(undefined, 'packages');
+    if (!auth || !auth.success) {
+        redirect('/developer');
+    }
+    return <>{children}</>;
+}

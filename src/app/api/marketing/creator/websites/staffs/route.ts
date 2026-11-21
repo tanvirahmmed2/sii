@@ -1,0 +1,545 @@
+import { NextResponse } from 'next/server';
+import { queryDb } from 'src/lib/database/db';
+import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
+import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { sendSms } from 'src/lib/database/smsSender';
+import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
+import { generateToken } from 'src/lib/utils/random';
+import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
+import { getClientIp, getUserAgent, inspectMalwareAndAttacks, checkRateLimit, } from 'src/lib/security/shield';
+async function verifyWebsiteOwnership(websiteId: any, sessionCreator: any, creatorIdParam: any) {
+    const cId = sessionCreator?.id || creatorIdParam;
+    if (!cId || !websiteId)
+        return null;
+    const res = await queryDb(`SELECT id, creator_id, name, slug, 
+            COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.is_primary = TRUE LIMIT 1), slug) AS subdomain,
+            (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+            (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+            primary_color, contact_email 
+     FROM websites 
+     WHERE id = $1 AND creator_id = $2 LIMIT 1`, [websiteId, cId]);
+    return res.rows[0] || null;
+}
+function buildStaffVerificationUrl(website: any, token: any, request: any) {
+    const origin = getWebsiteUrl(website, request);
+    return `${origin}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+}
+export async function GET(request: any) {
+    try {
+        const sessionCreator = await getCreatorSession(request);
+        const { searchParams } = new URL(request.url);
+        const websiteId = searchParams.get('websiteId') || searchParams.get('id');
+        const creatorId = searchParams.get('creatorId') || sessionCreator?.id;
+        if (!websiteId) {
+            return NextResponse.json({ success: false, error: 'websiteId is required.' }, { status: 400 });
+        }
+        const website: any = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
+        if (!website && !sessionCreator?.isDeveloper) {
+            return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
+        }
+        const staffsRes = await queryDb(`SELECT ws.id, ws.website_id, ws.name, ws.email, ws.number, ws.phone, ws.address,
+              ws.is_active, ws.is_registered, ws.is_two_factor_enabled, ws.grade_id,
+              ws.failed_login_attempts, ws.locked_until, ws.last_login_at,
+              ws.date_of_birth, ws.gender, ws.nid_number, ws.bio, ws.username,
+              ws.verification_token, ws.verification_token_expires,
+              ws.created_at, ws.updated_at,
+              gp.name AS grade_name, gp.basic_salary, gp.allowance
+       FROM website_staffs ws
+       LEFT JOIN website_staff_pay_scale gp ON gp.id = ws.grade_id
+       WHERE ws.website_id = $1
+       ORDER BY ws.id DESC`, [websiteId]);
+        const permsRes = await queryDb(`SELECT wmp.staff_id, cm.slug AS module_slug, COALESCE(wmp.control_module_id, wmp.website_module_id) AS website_module_id,
+              wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
+              cm.name AS module_name, cm.icon AS module_icon
+       FROM website_modules_permissions wmp
+       JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
+       WHERE wmp.website_id = $1`, [websiteId]);
+        const sessionsRes = await queryDb(`SELECT staff_id, COUNT(*)::int AS active_sessions
+       FROM staff_sessions
+       WHERE website_id = $1 AND is_active = TRUE AND expires_at > CURRENT_TIMESTAMP
+       GROUP BY staff_id`, [websiteId]);
+        const sessionCountMap: any = {};
+        for (const row of sessionsRes.rows) {
+            sessionCountMap[row.staff_id] = row.active_sessions;
+        }
+        const permsMap: any = {};
+        for (const p of permsRes.rows) {
+            if (!permsMap[p.staff_id])
+                permsMap[p.staff_id] = {};
+            permsMap[p.staff_id][p.module_slug] = {
+                can_view: Boolean(p.can_view),
+                can_create: Boolean(p.can_create),
+                can_edit: Boolean(p.can_edit),
+                can_delete: Boolean(p.can_delete),
+                module_name: p.module_name,
+                website_module_id: p.website_module_id,
+                module_icon: p.module_icon,
+            };
+        }
+        const staffs = staffsRes.rows.map((s: any) => ({
+            ...s,
+            permissions: permsMap[s.id] || {},
+            activeSessions: sessionCountMap[s.id] || 0,
+        }));
+        let modulesRes = await queryDb(`SELECT DISTINCT cm.id, cm.name, cm.slug, cm.description, cm.icon, cm.is_active
+       FROM website_control_modules cm
+       JOIN package_control_modules pcm ON pcm.control_module_id = cm.id
+       JOIN subscriptions s ON s.package_id = pcm.package_id
+       JOIN websites w ON (w.subscription_id = s.id OR s.website_id = w.id)
+       WHERE w.id = $1 AND cm.is_active = TRUE
+       ORDER BY cm.id ASC`, [websiteId]);
+        if (modulesRes.rows.length === 0) {
+            modulesRes = await queryDb(`SELECT id, name, slug, description, icon, is_active
+         FROM website_control_modules
+         WHERE is_active = TRUE
+         ORDER BY id ASC`);
+        }
+        const payScalesRes = await queryDb(`SELECT id, name, basic_salary, allowance
+       FROM website_staff_pay_scale
+       WHERE website_id = $1
+       ORDER BY name ASC`, [websiteId]).catch(() => ({ rows: [] }));
+        return NextResponse.json({
+            success: true,
+            staffs,
+            modules: modulesRes.rows,
+            payScales: payScalesRes.rows,
+            website,
+        });
+    }
+    catch (error: any) {
+        console.error('Creator staff GET error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export async function POST(request: any) {
+    try {
+        const sessionCreator = await getCreatorSession(request);
+        const body = await request.json();
+        const attackInspection = await inspectMalwareAndAttacks(request, body);
+        if (attackInspection.isBlocked) {
+            return NextResponse.json({ success: false, error: attackInspection.error }, { status: attackInspection.status || 403 });
+        }
+        const { websiteId, creatorId, name, email, number, address, password, gradeId, bio, permissions, sendInvite, } = body;
+        const cleanName = (name || '').trim();
+        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanNumber = (number || body.phone || '').trim();
+        if (!websiteId) {
+            return NextResponse.json({ success: false, error: 'Website ID is required.' }, { status: 400 });
+        }
+        if (!cleanName) {
+            return NextResponse.json({ success: false, error: 'Staff member full name is required.' }, { status: 400 });
+        }
+        if (!cleanEmail) {
+            return NextResponse.json({ success: false, error: 'Staff member email address is required.' }, { status: 400 });
+        }
+        if (!cleanNumber) {
+            return NextResponse.json({ success: false, error: 'Staff member contact phone number is required.' }, { status: 400 });
+        }
+        const website: any = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
+        if (!website && !sessionCreator?.isDeveloper) {
+            return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
+        }
+        const emailAvail = await checkInstitutionEmailAvailability(websiteId, cleanEmail);
+        if (!emailAvail.available) {
+            return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
+        }
+        const phoneAvail = await checkInstitutionPhoneAvailability(websiteId, cleanNumber);
+        if (!phoneAvail.available) {
+            return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+        }
+        const verificationToken = generateToken(32);
+        const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        let hashedPassword = null;
+        let isRegistered = false;
+        if (password && password.trim().length >= 6) {
+            hashedPassword = await hashPassword(password.trim());
+            isRegistered = Boolean(body.markAsRegistered ?? false);
+        }
+        else {
+            hashedPassword = await hashPassword(generateToken(16));
+            isRegistered = false;
+        }
+        const usernameCandidate = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') + '_' + Math.floor(Math.random() * 899 + 100);
+        const insertStaff = await queryDb(`INSERT INTO website_staffs (
+        website_id, name, email, number, phone, address, password,
+        grade_id, bio, username, is_active, is_registered,
+        failed_login_attempts, locked_until,
+        verification_token, verification_token_expires
+      )
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, TRUE, $10, 0, NULL, $11, $12)
+      RETURNING *`, [
+            websiteId,
+            cleanName,
+            cleanEmail,
+            cleanNumber,
+            address ? address.trim() : null,
+            hashedPassword,
+            gradeId ? Number(gradeId) : null,
+            bio ? bio.trim() : null,
+            usernameCandidate,
+            isRegistered,
+            verificationToken,
+            verificationExpires,
+        ]);
+        const newStaff = insertStaff.rows[0];
+        if (permissions && typeof permissions === 'object') {
+            const allModulesRes = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
+            const modIdMap: any = {};
+            allModulesRes.rows.forEach((m: any) => {
+                modIdMap[m.slug] = m.id;
+                modIdMap[m.id] = m.id;
+            });
+            const permRows: any[] = [];
+            for (const [moduleKey, perm] of Object.entries(permissions as Record<string, any>)) {
+                if (!perm)
+                    continue;
+                const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? Number(moduleKey) : null);
+                if (!controlModuleId)
+                    continue;
+                permRows.push({
+                    controlModuleId: Number(controlModuleId),
+                    can_view: Boolean(perm.can_view ?? perm.view),
+                    can_create: Boolean(perm.can_create ?? perm.create),
+                    can_edit: Boolean(perm.can_edit ?? perm.edit),
+                    can_delete: Boolean(perm.can_delete ?? perm.delete),
+                });
+            }
+            if (permRows.length > 0) {
+                const ctrlIds = permRows.map((r: any) => r.controlModuleId);
+                const views = permRows.map((r: any) => r.can_view);
+                const creates = permRows.map((r: any) => r.can_create);
+                const edits = permRows.map((r: any) => r.can_edit);
+                const deletes = permRows.map((r: any) => r.can_delete);
+                await queryDb(`INSERT INTO website_modules_permissions (
+            website_id, staff_id, control_module_id, website_module_id,
+            can_view, can_create, can_edit, can_delete
+          )
+          SELECT 
+            $1, $2, t.ctrl_id, t.ctrl_id, t.can_v, t.can_c, t.can_e, t.can_d
+          FROM unnest(
+            $3::bigint[],
+            $4::boolean[],
+            $5::boolean[],
+            $6::boolean[],
+            $7::boolean[]
+          ) AS t(ctrl_id, can_v, can_c, can_e, can_d)
+          ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
+            website_module_id = EXCLUDED.website_module_id,
+            can_view = EXCLUDED.can_view,
+            can_create = EXCLUDED.can_create,
+            can_edit = EXCLUDED.can_edit,
+            can_delete = EXCLUDED.can_delete,
+            updated_at = CURRENT_TIMESTAMP`, [websiteId, newStaff.id, ctrlIds, views, creates, edits, deletes]);
+            }
+        }
+        const setupUrl = buildStaffVerificationUrl(website, verificationToken, request);
+        let emailSent = false;
+        let emailError = null;
+        try {
+            await sendEmail({
+                to: newStaff.email,
+                toName: newStaff.name,
+                subject: `Staff Verification & Portal Setup - ${website.name}`,
+                html: buildStyledEmail({
+                    title: `${website.name} Staff Portal`,
+                    subtitle: 'Institutional Account Verification',
+                    recipientName: newStaff.name,
+                    bodyParagraphs: [
+                        `You have been registered as an official staff member for ${website.name}.`,
+                        'Please verify your staff account and complete your portal setup by clicking the button below:',
+                    ],
+                    code: verificationToken,
+                    codeLabel: 'Verification Token',
+                    actionUrl: setupUrl,
+                    actionText: 'Verify Account & Complete Setup',
+                    footerNote: `This verification link is valid for 7 days. If you were not expecting this, please contact administration at ${website.contact_email || 'the institution'}.`,
+                }),
+            });
+            emailSent = true;
+        }
+        catch (err: any) {
+            console.warn('Notice sending staff verification email:', err.message);
+            emailError = err.message;
+        }
+        let smsSent = false;
+        if (sendInvite && cleanNumber) {
+            try {
+                await sendSms({
+                    to: cleanNumber,
+                    message: `Welcome to ${website.name}. You have been registered as a staff member. Setup your account: ${setupUrl}`,
+                    purpose: 'staff_invite',
+                    userId: newStaff.id,
+                    userType: 'staff',
+                    websiteId,
+                });
+                smsSent = true;
+            }
+            catch (_: any) { }
+        }
+        return NextResponse.json({
+            success: true,
+            message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}${smsSent ? ' Notification SMS sent.' : ''}`,
+            staff: newStaff,
+            inviteSent: emailSent || smsSent,
+            emailSent,
+            smsSent,
+            setupUrl,
+            verificationToken,
+        });
+    }
+    catch (error: any) {
+        console.error('Creator staff POST error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export async function PUT(request: any) {
+    try {
+        const sessionCreator = await getCreatorSession(request);
+        const body = await request.json();
+        const attackInspection = await inspectMalwareAndAttacks(request, body);
+        if (attackInspection.isBlocked) {
+            return NextResponse.json({ success: false, error: attackInspection.error }, { status: attackInspection.status || 403 });
+        }
+        const { action = 'update_profile', staffId, websiteId, creatorId } = body;
+        if (!staffId || !websiteId) {
+            return NextResponse.json({ success: false, error: 'staffId and websiteId are required.' }, { status: 400 });
+        }
+        const website: any = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
+        if (!website && !sessionCreator?.isDeveloper) {
+            return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
+        }
+        if (action === 'resend_verification') {
+            const newToken = generateToken(32);
+            const newExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            const updStaff = await queryDb(`UPDATE website_staffs
+         SET verification_token = $1,
+             verification_token_expires = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND website_id = $4
+         RETURNING *`, [newToken, newExpires, staffId, websiteId]);
+            if (updStaff.rows.length === 0) {
+                return NextResponse.json({ success: false, error: 'Staff member not found.' }, { status: 404 });
+            }
+            const staff = updStaff.rows[0];
+            const setupUrl = buildStaffVerificationUrl(website, newToken, request);
+            let emailSent = false;
+            let emailError = null;
+            try {
+                await sendEmail({
+                    to: staff.email,
+                    toName: staff.name,
+                    subject: `Staff Verification Link - ${website.name}`,
+                    html: buildStyledEmail({
+                        title: `${website.name} Staff Portal`,
+                        subtitle: 'Official Staff Account Verification',
+                        recipientName: staff.name,
+                        bodyParagraphs: [
+                            `Here is your requested staff verification link for ${website.name}.`,
+                            'Click the button below to complete your staff profile and security setup:',
+                        ],
+                        code: newToken,
+                        codeLabel: 'Verification Token',
+                        actionUrl: setupUrl,
+                        actionText: 'Verify Staff Account',
+                        footerNote: 'This verification link is valid for 7 days.',
+                    }),
+                });
+                emailSent = true;
+            }
+            catch (err: any) {
+                console.warn('Notice resending verification email:', err.message);
+                emailError = err.message;
+            }
+            return NextResponse.json({
+                success: true,
+                message: emailSent
+                    ? `Verification email sent successfully to ${staff.email}.`
+                    : `Generated verification link (Email delivery notice: ${emailError || 'Failed to dispatch'}).`,
+                setupUrl,
+                emailSent,
+            });
+        }
+        if (action === 'toggle_active') {
+            const currentRes = await queryDb(`SELECT is_active FROM website_staffs WHERE id = $1 AND website_id = $2`, [staffId, websiteId]);
+            if (currentRes.rows.length === 0) {
+                return NextResponse.json({ success: false, error: 'Staff member not found.' }, { status: 404 });
+            }
+            const newActive = !currentRes.rows[0].is_active;
+            await queryDb(`UPDATE website_staffs SET is_active = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND website_id = $3`, [newActive, staffId, websiteId]);
+            if (!newActive) {
+                await revokeAllStaffSessions(staffId, websiteId);
+            }
+            return NextResponse.json({
+                success: true,
+                isActive: newActive,
+                message: `Staff member is now ${newActive ? 'Active' : 'Inactive'}.`,
+            });
+        }
+        if (action === 'update_permissions') {
+            const { permissions } = body;
+            if (!permissions || typeof permissions !== 'object') {
+                return NextResponse.json({ success: false, error: 'Permissions matrix is required.' }, { status: 400 });
+            }
+            const allModulesRes = await queryDb(`SELECT id, slug FROM website_control_modules WHERE is_active = TRUE`);
+            const modIdMap: any = {};
+            allModulesRes.rows.forEach((m: any) => {
+                modIdMap[m.slug] = m.id;
+                modIdMap[m.id] = m.id;
+            });
+            const permRows: any[] = [];
+            for (const [moduleKey, perm] of Object.entries(permissions as Record<string, any>)) {
+                if (!perm)
+                    continue;
+                const controlModuleId = modIdMap[moduleKey] || (Number.isInteger(Number(moduleKey)) ? Number(moduleKey) : null);
+                if (!controlModuleId)
+                    continue;
+                permRows.push({
+                    controlModuleId: Number(controlModuleId),
+                    can_view: Boolean(perm.can_view ?? perm.view),
+                    can_create: Boolean(perm.can_create ?? perm.create),
+                    can_edit: Boolean(perm.can_edit ?? perm.edit),
+                    can_delete: Boolean(perm.can_delete ?? perm.delete),
+                });
+            }
+            if (permRows.length > 0) {
+                const ctrlIds = permRows.map((r: any) => r.controlModuleId);
+                const views = permRows.map((r: any) => r.can_view);
+                const creates = permRows.map((r: any) => r.can_create);
+                const edits = permRows.map((r: any) => r.can_edit);
+                const deletes = permRows.map((r: any) => r.can_delete);
+                await queryDb(`INSERT INTO website_modules_permissions (
+            website_id, staff_id, control_module_id, website_module_id,
+            can_view, can_create, can_edit, can_delete
+          )
+          SELECT 
+            $1, $2, t.ctrl_id, t.ctrl_id, t.can_v, t.can_c, t.can_e, t.can_d
+          FROM unnest(
+            $3::bigint[],
+            $4::boolean[],
+            $5::boolean[],
+            $6::boolean[],
+            $7::boolean[]
+          ) AS t(ctrl_id, can_v, can_c, can_e, can_d)
+          ON CONFLICT (staff_id, control_module_id) DO UPDATE SET
+            website_module_id = EXCLUDED.website_module_id,
+            can_view = EXCLUDED.can_view,
+            can_create = EXCLUDED.can_create,
+            can_edit = EXCLUDED.can_edit,
+            can_delete = EXCLUDED.can_delete,
+            updated_at = CURRENT_TIMESTAMP`, [websiteId, staffId, ctrlIds, views, creates, edits, deletes]);
+            }
+            return NextResponse.json({
+                success: true,
+                message: 'Module permissions updated successfully.',
+            });
+        }
+        if (action === 'revoke_sessions') {
+            await revokeAllStaffSessions(staffId, websiteId);
+            return NextResponse.json({
+                success: true,
+                message: 'All active sessions for this staff member have been terminated.',
+            });
+        }
+        if (action === 'reset_password') {
+            const { newPassword } = body;
+            if (!newPassword || newPassword.length < 6) {
+                return NextResponse.json({ success: false, error: 'Password must be at least 6 characters.' }, { status: 400 });
+            }
+            const hashed = await hashPassword(newPassword);
+            await queryDb(`UPDATE website_staffs 
+         SET password = $1, 
+             failed_login_attempts = 0,
+             locked_until = NULL,
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 AND website_id = $3`, [hashed, staffId, websiteId]);
+            await revokeAllStaffSessions(staffId, websiteId);
+            return NextResponse.json({ success: true, message: 'Password reset successfully.' });
+        }
+        const { name, email, number, address, gradeId, bio } = body;
+        const cleanNumber = number !== undefined || body.phone !== undefined ? (number || body.phone || '').trim() : undefined;
+        const cleanName = name !== undefined ? name.trim() : undefined;
+        const cleanEmail = email !== undefined ? email.trim().toLowerCase() : undefined;
+        if (cleanName !== undefined && !cleanName) {
+            return NextResponse.json({ success: false, error: 'Staff member name cannot be empty.' }, { status: 400 });
+        }
+        if (cleanEmail !== undefined && !cleanEmail) {
+            return NextResponse.json({ success: false, error: 'Staff member email address cannot be empty.' }, { status: 400 });
+        }
+        if (cleanNumber !== undefined && !cleanNumber) {
+            return NextResponse.json({ success: false, error: 'Staff member phone number cannot be empty.' }, { status: 400 });
+        }
+        if (cleanEmail) {
+            const emailAvail = await checkInstitutionEmailAvailability(websiteId, cleanEmail, {
+                excludeRole: 'staff',
+                excludeId: staffId,
+            });
+            if (!emailAvail.available) {
+                return NextResponse.json({ success: false, error: emailAvail.message }, { status: 409 });
+            }
+        }
+        if (cleanNumber) {
+            const phoneAvail = await checkInstitutionPhoneAvailability(websiteId, cleanNumber, {
+                excludeRole: 'staff',
+                excludeId: staffId,
+            });
+            if (!phoneAvail.available) {
+                return NextResponse.json({ success: false, error: phoneAvail.message }, { status: 409 });
+            }
+        }
+        const updRes = await queryDb(`UPDATE website_staffs
+       SET name = COALESCE($1, name),
+           email = COALESCE($2, email),
+           number = COALESCE($3, number),
+           phone = COALESCE($3, phone),
+           address = COALESCE($4, address),
+           grade_id = $5,
+           bio = COALESCE($6, bio),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $7 AND website_id = $8
+       RETURNING *`, [
+            cleanName || null,
+            cleanEmail || null,
+            cleanNumber || null,
+            address ? address.trim() : null,
+            gradeId ? Number(gradeId) : null,
+            bio ? bio.trim() : null,
+            staffId,
+            websiteId,
+        ]);
+        return NextResponse.json({
+            success: true,
+            message: 'Staff profile updated successfully.',
+            staff: updRes.rows[0],
+        });
+    }
+    catch (error: any) {
+        console.error('Creator staff PUT error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export async function DELETE(request: any) {
+    try {
+        const sessionCreator = await getCreatorSession(request);
+        const { searchParams } = new URL(request.url);
+        const staffId = searchParams.get('staffId') || searchParams.get('id');
+        const websiteId = searchParams.get('websiteId');
+        const creatorId = searchParams.get('creatorId') || sessionCreator?.id;
+        if (!staffId || !websiteId) {
+            return NextResponse.json({ success: false, error: 'staffId and websiteId are required.' }, { status: 400 });
+        }
+        const website: any = await verifyWebsiteOwnership(websiteId, sessionCreator, creatorId);
+        if (!website && !sessionCreator?.isDeveloper) {
+            return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
+        }
+        await queryDb(`DELETE FROM website_staffs WHERE id = $1 AND website_id = $2`, [staffId, websiteId]);
+        return NextResponse.json({
+            success: true,
+            message: 'Staff member removed successfully.',
+        });
+    }
+    catch (error: any) {
+        console.error('Creator staff DELETE error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}

@@ -1,0 +1,315 @@
+import { NextResponse } from 'next/server';
+import { queryDb } from 'src/lib/database/db';
+import { hashPassword, hasModulePermission } from 'src/lib/middleware/developer';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
+import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
+async function handleCreateAdmin(d: any, request: any) {
+    const data = d || {};
+    const name = data.name?.trim();
+    const email = data.email?.trim().toLowerCase();
+    const phone = data.phone?.trim();
+    const password = data.password?.trim();
+    let roleId = data.role_id || data.roleId || null;
+    if (!roleId) {
+        const defaultRoleRes = await queryDb(`SELECT id FROM developer_roles WHERE slug = 'developer' OR is_system = TRUE ORDER BY id ASC LIMIT 1`);
+        if (defaultRoleRes.rows.length > 0) {
+            roleId = defaultRoleRes.rows[0].id;
+        }
+    }
+    const isActive = data.isActive !== undefined ? Boolean(data.isActive) : (data.is_active !== undefined ? Boolean(data.is_active) : true);
+    if (!name || !email || !phone || !password) {
+        throw new Error('Full Name, Email Address, Phone Number, and Password are required.');
+    }
+    if (phone.length < 5) {
+        throw new Error('Please enter a valid phone number.');
+    }
+    const phoneDigits = phone.replace(/\D/g, '');
+    const existing = await queryDb(`SELECT id, email, phone FROM developers 
+     WHERE LOWER(email) = $1 
+        OR phone = $2 
+        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+     LIMIT 1`, [email, phone, phoneDigits]);
+    if (existing.rows.length > 0) {
+        const ex = existing.rows[0];
+        if (ex.email && ex.email.toLowerCase() === email) {
+            throw new Error('A developer with this email address already exists.');
+        }
+        throw new Error('A developer with this phone number already exists.');
+    }
+    const hashedPassword = await hashPassword(password);
+    const verificationToken = generateRandomHex(32);
+    const verificationCode = generateRandomCode(100000, 999999);
+    const insertRes = await queryDb(`INSERT INTO developers (
+       name, email, phone, role_id, password, is_active, email_verified,
+       verification_token, verification_token_expires, two_factor_code, two_factor_expires
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, FALSE, $7, CURRENT_TIMESTAMP + INTERVAL '24 hours', $8, CURRENT_TIMESTAMP + INTERVAL '24 hours')
+     RETURNING id, name, email, phone, role_id, is_active, email_verified, created_at`, [name, email, phone, roleId, hashedPassword, isActive, verificationToken, verificationCode]);
+    const devWithRole = await queryDb(`SELECT d.id, d.name, d.email, d.phone, d.role_id, r.name AS role_name, r.slug AS role_slug,
+            d.is_active, d.email_verified, d.created_at, d.updated_at
+     FROM developers d
+     LEFT JOIN developer_roles r ON d.role_id = r.id
+     WHERE d.id = $1 LIMIT 1`, [insertRes.rows[0].id]);
+    const newAdmin = {
+        ...(devWithRole.rows[0] || insertRes.rows[0]),
+        is_verified: false,
+    };
+    const baseUrl = getBaseUrl(request);
+    const verifyUrl = `${baseUrl}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+    try {
+        await sendEmail({
+            to: email,
+            subject: `Verify Your Developer Account - ${SITE_NAME}`,
+            html: buildStyledEmail({
+                title: `${SITE_NAME} Developer Portal`,
+                subtitle: 'Account Verification & Activation',
+                recipientName: name,
+                bodyParagraphs: [
+                    `An administrator account has been created for you on ${SITE_NAME}.`,
+                    'To activate your account and set up access, please click the button below to verify your email address.',
+                ],
+                actionUrl: verifyUrl,
+                actionText: 'Verify & Activate Account',
+                footerNote: 'This activation link is valid for 24 hours. If you did not expect this invitation, please ignore this email.',
+            }),
+            text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nPlease click the link below to verify your email and activate your account:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+        });
+    }
+    catch (mailErr: any) {
+        console.warn('Resend email sending notice during developer creation:', mailErr.message);
+    }
+    return newAdmin;
+}
+export async function GET() {
+    try {
+        const devsRes = await queryDb(`
+      SELECT d.id, d.name, d.email, d.phone,
+             d.role_id, r.name AS role_name,
+             d.is_active, COALESCE(d.email_verified, FALSE) AS email_verified, d.last_login_at, d.created_at
+      FROM developers d
+      LEFT JOIN developer_roles r ON d.role_id = r.id
+      ORDER BY d.id DESC
+    `);
+        const records = devsRes.rows.map((r: any) => ({ ...r, is_verified: Boolean(r.email_verified) }));
+        return NextResponse.json({ success: true, table: 'developers', records });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+async function checkLastActiveAdminGuard(targetId: any, willDeactivateOrDelete: any = true) {
+    if (!willDeactivateOrDelete)
+        return null;
+    const adminRes = await queryDb(`
+    SELECT d.id, d.is_active
+    FROM developers d
+    WHERE d.id = $1 LIMIT 1
+  `, [targetId]);
+    if (adminRes.rows.length === 0) {
+        return { error: 'Developer not found.', status: 404 };
+    }
+    const admin = adminRes.rows[0];
+    if (admin.is_active) {
+        const countRes = await queryDb(`
+      SELECT COUNT(*) as count
+      FROM developers d
+      WHERE d.is_active = TRUE
+    `);
+        const activeAdminCount = parseInt(countRes.rows[0].count, 10);
+        if (activeAdminCount <= 1) {
+            return {
+                error: 'Operation rejected: At least one active developer account must remain in the platform.',
+                status: 400,
+            };
+        }
+    }
+    return null;
+}
+export async function POST(request: any) {
+    try {
+        const devCountRes = await queryDb('SELECT COUNT(*)::int AS count FROM developers');
+        const devCount = devCountRes.rows[0]?.count || 0;
+        if (devCount > 0) {
+            const authCheck = await hasModulePermission(request, 'developers');
+            if (!authCheck.success) {
+                return NextResponse.json({ success: false, error: authCheck.message }, { status: authCheck.status || 403 });
+            }
+        }
+        const body = await request.json();
+        const data = body.data || body.adminData || body;
+        const newAdmin = await handleCreateAdmin(data, request);
+        return NextResponse.json({
+            success: true,
+            admin: newAdmin,
+            record: newAdmin,
+            message: 'Developer account created successfully. A verification link has been sent to the developer email.',
+        });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+}
+export async function PUT(request: any) {
+    try {
+        const authCheck = await hasModulePermission(request, 'developers');
+        if (!authCheck.success) {
+            return NextResponse.json({ success: false, error: authCheck.message }, { status: authCheck.status || 403 });
+        }
+        const body = await request.json();
+        const targetId = body.id || body.adminId;
+        if (!targetId) {
+            return NextResponse.json({ success: false, error: 'Target admin ID is required.' }, { status: 400 });
+        }
+        const action = body.action;
+        if (action === 'update_permissions' || body.permissions) {
+            const permissions = body.permissions || {};
+            if (typeof permissions === 'object') {
+                const mods = await queryDb('SELECT id, slug FROM modules');
+                const modIdMap: any = {};
+                mods.rows.forEach((m: any) => { modIdMap[m.slug] = m.id; });
+                for (const [slug, p] of Object.entries(permissions as Record<string, any>)) {
+                    const modId = modIdMap[slug];
+                    if (!modId)
+                        continue;
+                    await queryDb(`INSERT INTO module_permissions (developer_id, module_id, can_view, can_create, can_edit, can_delete)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (developer_id, module_id) DO UPDATE SET
+               can_view = EXCLUDED.can_view,
+               can_create = EXCLUDED.can_create,
+               can_edit = EXCLUDED.can_edit,
+               can_delete = EXCLUDED.can_delete,
+               updated_at = CURRENT_TIMESTAMP`, [
+                        targetId,
+                        modId,
+                        Boolean(p?.can_view ?? p?.view ?? false),
+                        Boolean(p?.can_create ?? p?.create ?? false),
+                        Boolean(p?.can_edit ?? p?.edit ?? false),
+                        Boolean(p?.can_delete ?? p?.delete ?? false),
+                    ]);
+                }
+            }
+            return NextResponse.json({
+                success: true,
+                message: 'Developer module permissions updated successfully.',
+            });
+        }
+        if (action === 'change_role' || body.role_id !== undefined || body.roleId !== undefined) {
+            const nextRoleId = body.role_id !== undefined ? body.role_id : body.roleId;
+            await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [nextRoleId || null, targetId]);
+            if (action === 'change_role') {
+                return NextResponse.json({
+                    success: true,
+                    message: 'Developer role updated successfully.',
+                });
+            }
+        }
+        if (action === 'toggle_status' || body.is_active !== undefined) {
+            let nextActive = body.is_active;
+            if (nextActive === undefined) {
+                const currentRes = await queryDb('SELECT is_active FROM developers WHERE id = $1 LIMIT 1', [targetId]);
+                if (currentRes.rows.length === 0) {
+                    return NextResponse.json({ success: false, error: 'Developer not found.' }, { status: 404 });
+                }
+                nextActive = !currentRes.rows[0].is_active;
+            }
+            if (nextActive === false) {
+                const guard = await checkLastActiveAdminGuard(targetId, true);
+                if (guard) {
+                    return NextResponse.json({ success: false, error: guard.error }, { status: guard.status });
+                }
+            }
+            const res = await queryDb(`UPDATE developers SET is_active = $1 WHERE id = $2 
+         RETURNING id, name, email, is_active, created_at`, [Boolean(nextActive), targetId]);
+            if (res.rows.length === 0) {
+                return NextResponse.json({ success: false, error: 'Developer not found.' }, { status: 404 });
+            }
+            const fullRes = await queryDb(`SELECT d.id, d.name, d.email, d.phone,
+                d.role_id, r.name AS role_name, r.slug AS role_slug,
+                d.is_active, d.created_at, d.updated_at
+         FROM developers d
+         LEFT JOIN developer_roles r ON d.role_id = r.id
+         WHERE d.id = $1 LIMIT 1`, [targetId]);
+            const record = fullRes.rows[0] || res.rows[0];
+            return NextResponse.json({
+                success: true,
+                record: { ...record, is_verified: true },
+                message: `Status updated to ${nextActive ? 'Active' : 'Inactive'}.`,
+            });
+        }
+        const rawData = body.data || body;
+        const targetRoleId = rawData.role_id !== undefined ? rawData.role_id : rawData.roleId;
+        const data: any = {};
+        const allowedFields = ['name', 'email', 'phone', 'bio', 'github_profile', 'linkedin_profile', 'is_active'];
+        for (const field of allowedFields) {
+            if (rawData[field] !== undefined) {
+                data[field] = rawData[field];
+            }
+        }
+        if (targetRoleId !== undefined) {
+            data.role_id = targetRoleId || null;
+        }
+        if (data.phone) {
+            data.phone = data.phone.trim();
+            const phoneDigits = data.phone.replace(/\D/g, '');
+            const existingPhone = await queryDb(`SELECT id FROM developers 
+         WHERE (phone = $1 OR (LENGTH($2) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($2, 10))) 
+           AND id != $3 LIMIT 1`, [data.phone, phoneDigits, targetId]);
+            if (existingPhone.rows.length > 0) {
+                return NextResponse.json({ success: false, error: 'A developer with this phone number already exists.' }, { status: 400 });
+            }
+        }
+        if (rawData.password && rawData.password.trim()) {
+            data.password = await hashPassword(rawData.password.trim());
+        }
+        const keys = Object.keys(data);
+        if (keys.length === 0)
+            return NextResponse.json({ success: true });
+        const values = keys.map((k: any) => data[k]);
+        const setClauses = keys.map((k: any, i: any) => `"${k}" = $${i + 1}`);
+        values.push(targetId);
+        const res = await queryDb(`UPDATE developers SET ${setClauses.join(', ')} WHERE id = $${values.length} 
+       RETURNING id, name, email, is_active, created_at`, values);
+        const fullRes = await queryDb(`SELECT d.id, d.name, d.email, d.phone,
+              d.role_id, r.name AS role_name, r.slug AS role_slug,
+              d.is_active, d.created_at, d.updated_at
+       FROM developers d
+       LEFT JOIN developer_roles r ON d.role_id = r.id
+       WHERE d.id = $1 LIMIT 1`, [targetId]);
+        const record = fullRes.rows[0] || res.rows[0];
+        return NextResponse.json({
+            success: true,
+            record: { ...record, is_verified: true },
+            message: 'Developer account updated successfully.',
+        });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+}
+export async function DELETE(request: any) {
+    try {
+        const authCheck = await hasModulePermission(request, 'developers');
+        if (!authCheck.success) {
+            return NextResponse.json({ success: false, error: authCheck.message }, { status: authCheck.status || 403 });
+        }
+        const { searchParams } = new URL(request.url);
+        let id = searchParams.get('id');
+        if (!id) {
+            const body = await request.json().catch(() => ({}));
+            id = body.id || body.adminId;
+        }
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
+        }
+        const guard = await checkLastActiveAdminGuard(id, true);
+        if (guard) {
+            return NextResponse.json({ success: false, error: guard.error }, { status: guard.status });
+        }
+        await queryDb('DELETE FROM developers WHERE id = $1', [id]);
+        return NextResponse.json({ success: true, message: 'Developer account deleted successfully.' });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}

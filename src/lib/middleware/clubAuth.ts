@@ -1,0 +1,42 @@
+import { resolveWebsiteFromRequest } from './websiteResolver';
+import { getStaffSession } from './staff';
+import { getOfficerSession } from './officer';
+
+export async function verifyClubStaffAccess(request: any, context?: any): Promise<any> {
+  const website = await resolveWebsiteFromRequest(request, context);
+  if (!website) {
+    return { error: 'Educational institution portal not found.', status: 404, code: 'WEBSITE_NOT_FOUND' };
+  }
+
+  try {
+    const staffSession = await getStaffSession(request);
+    if (staffSession) {
+      const staffWebsiteId =
+        staffSession?.website_id ||
+        staffSession?.websiteId ||
+        staffSession?.staff?.websiteId ||
+        staffSession?.staff?.website_id;
+
+      if (!staffWebsiteId || String(staffWebsiteId) === String(website.id)) {
+        return { website, user: staffSession, type: 'staff', allowed: true };
+      }
+    }
+  } catch {}
+
+  try {
+    const officerSession = await getOfficerSession(request);
+    if (officerSession) {
+      const officerWebsiteId =
+        officerSession?.website_id ||
+        officerSession?.websiteId ||
+        officerSession?.officer?.websiteId ||
+        officerSession?.officer?.website_id;
+
+      if (!officerWebsiteId || String(officerWebsiteId) === String(website.id)) {
+        return { website, user: officerSession, type: 'officer', allowed: true };
+      }
+    }
+  } catch {}
+
+  return { error: 'Unauthorized: Staff or Officer credentials required.', status: 401, code: 'UNAUTHORIZED' };
+}

@@ -1,0 +1,429 @@
+'use client';
+import { useState, useEffect, useContext, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Context } from 'src/component/helper/Context';
+import PackageForm from 'src/component/marketing/developer/forms/PackageForm';
+import LoadingScreen from 'src/component/common/LoadingScreen';
+function getModulePermissions(user: any, moduleKey: any) {
+    if (!user)
+        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+    const isOwner = Number(user.id) === 1 || String(user.email || '').toLowerCase() === 'tanvir004006@gmail.com';
+    if (isOwner)
+        return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+    const keys = Array.isArray(moduleKey) ? moduleKey : [moduleKey];
+    for (const k of keys) {
+        const p = user.permissionsMap?.[k];
+        if (p) {
+            return {
+                canView: Boolean(p.can_view),
+                canCreate: Boolean(p.can_create),
+                canEdit: Boolean(p.can_edit),
+                canDelete: Boolean(p.can_delete),
+                canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+            };
+        }
+    }
+    const perms = (user.permissions || []).map((x: any) => String(x).toLowerCase().trim());
+    const found = keys.some((k: any) => perms.includes(k.toLowerCase()));
+    if (found) {
+        return { canView: true, canCreate: true, canEdit: true, canDelete: true, canManage: true };
+    }
+    return { canView: false, canCreate: false, canEdit: false, canDelete: false, canManage: false };
+}
+export default function AdminPackagesPage() {
+    const { user } = useContext<any>(Context) || {};
+    const { canView, canCreate, canEdit, canDelete } = getModulePermissions(user, ['packages', 'package']);
+    const router = useRouter();
+    const [packages, setPackages] = useState<any>([]);
+    const [loading, setLoading] = useState<any>(true);
+    const [searchTerm, setSearchTerm] = useState<any>('');
+    const [statusFilter, setStatusFilter] = useState<any>('ALL');
+    const [visibilityFilter, setVisibilityFilter] = useState<any>('ALL');
+    const [sortOrder, setSortOrder] = useState<any>('PRICE_ASC');
+    const [deletingId, setDeletingId] = useState<any>(null);
+    const [togglingId, setTogglingId] = useState<any>(null);
+    const [feedback, setFeedback] = useState<any>(null);
+    const [showCreateForm, setShowCreateForm] = useState<any>(false);
+    const fetchPackages = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/marketing/developer/packages');
+            const data = await res.json();
+            if (data.success) {
+                setPackages(data.records || []);
+            }
+        }
+        catch (e: any) {
+            console.error('Failed to fetch packages:', e);
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        fetchPackages();
+    }, []);
+    const handleToggleStatus = async (pkg: any) => {
+        if (!canEdit) {
+            showFeedback('Access Denied: Edit permission required to toggle package status.');
+            return;
+        }
+        setTogglingId(pkg.id);
+        try {
+            const res = await fetch('/api/marketing/developer/packages', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: pkg.id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPackages((prev: any) => prev.map((item: any) => (item.id === pkg.id ? { ...item, is_active: !item.is_active } : item)));
+                showFeedback(`Package "${pkg.name}" status updated.`);
+            }
+            else {
+                console.warn(data.error || 'Failed to toggle status');
+            }
+        }
+        catch (e: any) {
+            console.error('Error toggling package status:', e);
+        }
+        finally {
+            setTogglingId(null);
+        }
+    };
+    const handleDelete = async (id: any, name: any) => {
+        if (!canDelete) {
+            showFeedback('Access Denied: Delete permission required for packages.');
+            return;
+        }
+        if (!true) {
+            return;
+        }
+        setDeletingId(id);
+        try {
+            const res = await fetch('/api/marketing/developer/packages', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPackages((prev: any) => prev.filter((pkg: any) => pkg.id !== id));
+                showFeedback(`Package "${name}" was successfully deleted.`);
+            }
+            else {
+                console.warn(data.error || 'Failed to delete package');
+            }
+        }
+        catch (e: any) {
+            console.error('Error deleting package:', e);
+        }
+        finally {
+            setDeletingId(null);
+        }
+    };
+    const showFeedback = (msg: any) => {
+        setFeedback(msg);
+        setTimeout(() => setFeedback(null), 4000);
+    };
+    const filtered = useMemo(() => {
+        return packages
+            .filter((pkg: any) => {
+            const matchesSearch = !searchTerm.trim() ||
+                pkg.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                pkg.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                pkg.tagline?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (Array.isArray(pkg.home_modules) &&
+                    pkg.home_modules.some((m: any) => (m.name || m.slug || '').toLowerCase().includes(searchTerm.toLowerCase()))) ||
+                (Array.isArray(pkg.control_modules) &&
+                    pkg.control_modules.some((m: any) => (m.name || m.slug || '').toLowerCase().includes(searchTerm.toLowerCase())));
+            const matchesStatus = statusFilter === 'ALL' ||
+                (statusFilter === 'ACTIVE' && pkg.is_active !== false) ||
+                (statusFilter === 'DISABLED' && pkg.is_active === false);
+            const matchesVisibility = visibilityFilter === 'ALL' ||
+                (visibilityFilter === 'PUBLIC' && pkg.is_public !== false) ||
+                (visibilityFilter === 'CUSTOM' && pkg.is_public === false);
+            return matchesSearch && matchesStatus && matchesVisibility;
+        })
+            .sort((a: any, b: any) => {
+            if (sortOrder === 'PRICE_ASC') {
+                return Number(a.monthly_price_usd ?? a.monthly_price ?? 0) - Number(b.monthly_price_usd ?? b.monthly_price ?? 0);
+            }
+            if (sortOrder === 'PRICE_DESC') {
+                return Number(b.monthly_price_usd ?? b.monthly_price ?? 0) - Number(a.monthly_price_usd ?? a.monthly_price ?? 0);
+            }
+            if (sortOrder === 'NAME_ASC') {
+                return (a.name || '').localeCompare(b.name || '');
+            }
+            if (sortOrder === 'NEWEST') {
+                return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            }
+            return 0;
+        });
+    }, [packages, searchTerm, statusFilter, visibilityFilter, sortOrder]);
+    const activePackages = packages.filter((p: any) => p.is_active !== false).length;
+    const avgMonthlyUsd = packages.length
+        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.monthly_price_usd ?? curr.monthly_price ?? 0), 0) /
+            packages.length).toFixed(2)
+        : '0.00';
+    const avgMonthlyBdt = packages.length
+        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.monthly_price_bdt ?? 0), 0) / packages.length).toFixed(2)
+        : '0.00';
+    return (<div className="w-full space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-semibold text-slate-900 dark:text-white">
+              Subscription Packages &amp; Pricing
+            </h1>
+            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+              Billing
+            </span>
+            {!canCreate && !canEdit && !canDelete && (<span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                Read-Only
+              </span>)}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Configure platform subscription tiers, multi-currency pricing models, and module allocations.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={fetchPackages} className="px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-xs transition-colors cursor-pointer">
+            Refresh
+          </button>
+
+          {canCreate && (<button type="button" onClick={() => setShowCreateForm(!showCreateForm)} className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 font-medium text-xs transition-colors cursor-pointer">
+              {showCreateForm ? 'Close Form' : 'New Package'}
+            </button>)}
+        </div>
+      </div>
+
+      {!canCreate && !canEdit && !canDelete && (<div className="bg-amber-50 border border-amber-200 text-amber-800 rounded p-3 text-xs">
+          You are currently viewing subscription packages in read-only mode.
+        </div>)}
+
+      {feedback && (<div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded font-medium">
+          {feedback}
+        </div>)}
+
+      {showCreateForm && (<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
+          <PackageForm onSuccess={(newPkg: any) => {
+                setShowCreateForm(false);
+                fetchPackages();
+                showFeedback(`Package "${newPkg?.name || 'New'}" successfully created.`);
+            }} onCancel={() => setShowCreateForm(false)}/>
+        </div>)}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Total Plans</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1">{packages.length}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Configured tiers</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Active Tiers</div>
+          <div className="text-base font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{activePackages}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Published for checkout</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Avg USD Monthly</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1 font-mono">${avgMonthlyUsd}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Average dollar rate</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5">
+          <div className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">Avg BDT Monthly</div>
+          <div className="text-base font-semibold text-slate-900 dark:text-white mt-1 font-mono">৳{avgMonthlyBdt}</div>
+          <p className="text-[11px] text-slate-400 mt-0.5">Average Taka rate</p>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex-1 max-w-md">
+            <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              Search Packages
+            </label>
+            <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-800"/>
+          </div>
+
+          <div className="flex items-center gap-2 self-end">
+            <select value={visibilityFilter} onChange={(e: any) => setVisibilityFilter(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800 cursor-pointer" title="Filter by visibility">
+              <option value="ALL">All Visibility</option>
+              <option value="PUBLIC">Public Only</option>
+              <option value="CUSTOM">Custom / Private</option>
+            </select>
+
+            <select value={statusFilter} onChange={(e: any) => setStatusFilter(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800 cursor-pointer">
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active Only</option>
+              <option value="DISABLED">Disabled Only</option>
+            </select>
+
+            <select value={sortOrder} onChange={(e: any) => setSortOrder(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800 cursor-pointer" title="Sort packages order">
+              <option value="PRICE_ASC">Price: Low to High</option>
+              <option value="PRICE_DESC">Price: High to Low</option>
+              <option value="NAME_ASC">Name (A-Z)</option>
+              <option value="NEWEST">Newest First</option>
+            </select>
+
+            <div className="text-xs text-slate-500 font-medium pl-1 hidden sm:block whitespace-nowrap">
+              {filtered.length} of {packages.length}
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 text-[10px] uppercase font-semibold">
+                <th className="pb-2 whitespace-nowrap">ID</th>
+                <th className="pb-2 whitespace-nowrap">Package Tier</th>
+                <th className="pb-2 whitespace-nowrap">USD Pricing ($)</th>
+                <th className="pb-2 whitespace-nowrap">BDT Pricing (৳)</th>
+                <th className="pb-2 whitespace-nowrap">Capacity &amp; Storage</th>
+                <th className="pb-2 whitespace-nowrap">Panels &amp; Domain</th>
+                <th className="pb-2 whitespace-nowrap">Linked Modules</th>
+                <th className="pb-2 whitespace-nowrap">Status</th>
+                <th className="pb-2 whitespace-nowrap">Created</th>
+                <th className="pb-2 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              {loading ? (<tr>
+                  <td colSpan={10} className="py-12 text-center">
+                    <LoadingScreen fullScreen={false} size="sm" label="Loading packages from database..."/>
+                  </td>
+                </tr>) : filtered.length === 0 ? (<tr>
+                  <td colSpan={10} className="py-12 text-center text-slate-400 text-xs font-normal">
+                    No packages found matching your criteria.
+                  </td>
+                </tr>) : (filtered.map((pkg: any) => {
+            const isRowActive = pkg.is_active !== false;
+            const homeCount = Array.isArray(pkg.home_modules) ? pkg.home_modules.length : 0;
+            const controlCount = Array.isArray(pkg.control_modules) ? pkg.control_modules.length : 0;
+            const monthlyUsd = Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+            const yearlyUsd = Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0);
+            const monthlyBdt = Number(pkg.monthly_price_bdt ?? 0);
+            const yearlyBdt = Number(pkg.yearly_price_bdt ?? 0);
+            return (<tr key={pkg.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 font-mono font-medium text-slate-400">#{pkg.id}</td>
+
+                      <td className="py-2.5">
+                        <div className="flex items-center gap-2">
+                          {canEdit ? (<Link href={`/developer/packages/${pkg.slug}`} className="font-medium text-slate-900 dark:text-white hover:underline block truncate" title="Open Plan Workspace">
+                              {pkg.name}
+                            </Link>) : (<span className="font-medium text-slate-900 dark:text-white block truncate">
+                              {pkg.name}
+                            </span>)}
+                          {pkg.is_public === false ? (<span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200">
+                              Custom Plan
+                            </span>) : (<span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              Public
+                            </span>)}
+                          {pkg.is_popular && (<span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 border border-purple-200">
+                              Popular
+                            </span>)}
+                        </div>
+                        {pkg.short_description ? (<div className="text-[11px] text-slate-500 line-clamp-1 max-w-xs mt-0.5">
+                            {pkg.short_description}
+                          </div>) : pkg.tagline ? (<div className="text-[11px] text-slate-500 line-clamp-1 max-w-xs mt-0.5">
+                            {pkg.tagline}
+                          </div>) : pkg.description ? (<div className="text-[11px] text-slate-400 line-clamp-1 max-w-xs mt-0.5">
+                            {pkg.description}
+                          </div>) : null}
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="font-mono font-medium text-slate-900 dark:text-white text-xs">
+                          ${monthlyUsd.toFixed(2)} USD<span className="text-[10px] text-slate-400 font-normal">/mo</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          ${yearlyUsd.toFixed(2)} USD<span className="text-[9px] text-slate-400 font-normal">/yr</span>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="font-mono font-medium text-slate-900 dark:text-white text-xs">
+                          ৳{monthlyBdt.toFixed(2)} BDT<span className="text-[10px] text-slate-400 font-normal">/mo</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          ৳{yearlyBdt.toFixed(2)} BDT<span className="text-[9px] text-slate-400 font-normal">/yr</span>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="font-medium text-slate-800 dark:text-slate-200">
+                          {pkg.max_students || 500} Students &bull; {pkg.max_storage || '5 GB'}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_staff || 20} Staff &bull; {pkg.grace_period ?? 3}d Grace
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="flex flex-wrap items-center gap-1 max-w-xs">
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${pkg.is_available_student_panel !== false
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                            Student
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${pkg.is_available_teacher_panel !== false
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                            Teacher
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-medium border ${pkg.is_available_custom_domain
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                            Custom Domain
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {controlCount} Control
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            {homeCount} Home
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-2.5">
+                        <button type="button" disabled={togglingId === pkg.id || !canEdit} onClick={() => handleToggleStatus(pkg)} className={`inline-flex items-center px-1.5 py-0.2 rounded border text-[9px] font-medium transition-colors ${!canEdit ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} ${isRowActive
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200'}`} title={canEdit ? 'Click to toggle status' : 'Edit permission required to toggle status'}>
+                          {togglingId === pkg.id ? 'Updating...' : isRowActive ? 'Active' : 'Disabled'}
+                        </button>
+                      </td>
+
+                      <td className="py-2.5 text-slate-500 text-[11px] font-mono">
+                        {pkg.created_at ? new Date(pkg.created_at).toLocaleDateString() : '—'}
+                      </td>
+
+                      <td className="py-2.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          {canEdit && (<Link href={`/developer/packages/${pkg.slug}`} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium transition-colors">
+                              Edit
+                            </Link>)}
+
+                          {canDelete && (<button type="button" disabled={deletingId === pkg.id} onClick={() => handleDelete(pkg.id, pkg.name)} className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50">
+                              Delete
+                            </button>)}
+                        </div>
+                      </td>
+                    </tr>);
+        }))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>);
+}

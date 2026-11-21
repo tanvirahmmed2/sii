@@ -1,0 +1,14 @@
+import { redirect } from 'next/navigation';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Developer Settings | ${SITE_NAME}`,
+    description: `Configure platform preferences, API settings, and developer options on ${SITE_NAME}.`,
+};
+export default async function SettingsLayout({ children }: any) {
+    const auth = await hasModulePermission(undefined, 'settings');
+    if (!auth || !auth.success) {
+        redirect('/developer');
+    }
+    return <>{children}</>;
+}

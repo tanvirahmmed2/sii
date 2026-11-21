@@ -1,0 +1,88 @@
+import { NextResponse } from 'next/server';
+import { queryDb } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+export async function GET(request: any) {
+    try {
+        const auth = await hasModulePermission(request, 'subscribers');
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
+        }
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (id) {
+            const res = await queryDb(`SELECT *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
+         FROM subscribers WHERE id = $1 LIMIT 1`, [Number(id)]).catch(() => ({ rows: [] }));
+            if (res.rows.length === 0) {
+                return NextResponse.json({ success: false, error: 'Subscriber not found.' }, { status: 404 });
+            }
+            return NextResponse.json({ success: true, record: res.rows[0] });
+        }
+        const res = await queryDb(`SELECT *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status
+       FROM subscribers ORDER BY id DESC`).catch(() => ({ rows: [] }));
+        return NextResponse.json({ success: true, table: 'subscribers', records: res.rows });
+    }
+    catch (error: any) {
+        console.error('Error fetching subscribers:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export async function POST() {
+    return NextResponse.json({
+        success: false,
+        error: 'Manual subscriber creation in the developer panel is disabled. Subscribers are registered via the public website footer.',
+    }, { status: 403 });
+}
+export async function PUT(request: any) {
+    try {
+        const auth = await hasModulePermission(request, 'subscribers');
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
+        }
+        const body = await request.json().catch(() => ({}));
+        const id = body.id || body.data?.id;
+        const status = (body.status || body.data?.status || '').toString().toUpperCase();
+        const isActiveInput = body.is_active !== undefined ? Boolean(body.is_active) : (status === 'SUBSCRIBED');
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'Subscriber ID is required.' }, { status: 400 });
+        }
+        const res = await queryDb(`UPDATE subscribers 
+       SET is_active = $1, 
+           unsubscribed_at = CASE WHEN $1 THEN NULL ELSE CURRENT_TIMESTAMP END 
+       WHERE id = $2 
+       RETURNING *, CASE WHEN is_active THEN 'SUBSCRIBED' ELSE 'UNSUBSCRIBED' END AS status`, [isActiveInput, Number(id)]);
+        if (res.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Subscriber not found.' }, { status: 404 });
+        }
+        return NextResponse.json({ success: true, record: res.rows[0], message: 'Subscriber status updated.' });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export const PATCH = PUT;
+export async function DELETE(request: any) {
+    try {
+        const auth = await hasModulePermission(request, 'subscribers');
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
+        }
+        const { searchParams } = new URL(request.url);
+        let id = searchParams.get('id');
+        if (!id) {
+            const body = await request.json().catch(() => ({}));
+            id = body.id;
+        }
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'Subscriber ID is required.' }, { status: 400 });
+        }
+        const res = await queryDb('DELETE FROM subscribers WHERE id = $1 RETURNING id', [Number(id)]);
+        if (res.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Subscriber not found or already deleted.' }, { status: 404 });
+        }
+        return NextResponse.json({ success: true, message: 'Subscriber removed successfully.' });
+    }
+    catch (error: any) {
+        console.error('Error deleting subscriber:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}

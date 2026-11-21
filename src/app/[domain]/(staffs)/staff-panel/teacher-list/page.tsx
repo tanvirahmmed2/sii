@@ -1,0 +1,618 @@
+'use client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
+import { FiUsers, FiUserPlus, FiAward, FiSearch, FiEdit2, FiTrash2, FiEye, FiRefreshCw, FiCheck, FiX, FiMail, FiPhone, FiCalendar, FiDollarSign, FiBookOpen, FiLayers } from 'react-icons/fi';
+export default function TeacherListPage() {
+    const params: any = useParams();
+    const router = useRouter();
+    const { tenantUrl, slug } = useTenantWebsite();
+    const domain = params?.domain || slug || '';
+    const apiBase = domain ? `/api/${domain}` : '/api';
+    const [teachers, setTeachers] = useState<any>([]);
+    const [designations, setDesignations] = useState<any>([]);
+    const [departments, setDepartments] = useState<any>([]);
+    const [stats, setStats] = useState<any>({
+        total_teachers: 0,
+        active_teachers: 0,
+        inactive_teachers: 0,
+        total_designations: 0,
+        total_departments: 0
+    });
+    const [loading, setLoading] = useState<any>(true);
+    const [searchTerm, setSearchTerm] = useState<any>('');
+    const [selectedDesignation, setSelectedDesignation] = useState<any>('all');
+    const [selectedDepartment, setSelectedDepartment] = useState<any>('all');
+    const [selectedStatus, setSelectedStatus] = useState<any>('all');
+    const [page, setPage] = useState<any>(1);
+    const [pagination, setPagination] = useState<any>({ page: 1, limit: 50, total: 0, totalPages: 1 });
+    const [deleteModalOpen, setDeleteModalOpen] = useState<any>(false);
+    const [teacherToDelete, setTeacherToDelete] = useState<any>(null);
+    const [deleting, setDeleting] = useState<any>(false);
+    const [viewModalOpen, setViewModalOpen] = useState<any>(false);
+    const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+    const [loadingDetails, setLoadingDetails] = useState<any>(false);
+    const [resendingId, setResendingId] = useState<any>(null);
+    const [toastMessage, setToastMessage] = useState<any>(null);
+    const [toastError, setToastError] = useState<any>(null);
+    const showToast = useCallback((msg: any, isErr: any = false) => {
+        if (isErr) {
+            setToastError(msg);
+            setTimeout(() => setToastError(null), 4000);
+        }
+        else {
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 3000);
+        }
+    }, []);
+    useEffect(() => {
+        async function loadFilterOptions() {
+            if (!domain)
+                return;
+            try {
+                const [desRes, deptRes] = await Promise.all([
+                    fetch(`${apiBase}/staff/panel/teacher/designations`),
+                    fetch(`${apiBase}/staff/panel/departments`)
+                ]);
+                const desData = await desRes.json();
+                const deptData = await deptRes.json();
+                if (desData.success) {
+                    setDesignations(desData.designations || []);
+                }
+                if (deptData.success) {
+                    setDepartments(deptData.departments || []);
+                }
+            }
+            catch (err: any) {
+                console.error('Failed to load filter options:', err);
+            }
+        }
+        loadFilterOptions();
+    }, [domain, apiBase]);
+    const fetchTeachers = useCallback(async () => {
+        if (!domain)
+            return;
+        try {
+            setLoading(true);
+            const queryParams = new URLSearchParams({
+                page: String(page),
+                limit: '50',
+            });
+            if (searchTerm.trim())
+                queryParams.set('search', searchTerm.trim());
+            if (selectedDesignation !== 'all')
+                queryParams.set('designation_id', selectedDesignation);
+            if (selectedDepartment !== 'all')
+                queryParams.set('department_id', selectedDepartment);
+            if (selectedStatus !== 'all')
+                queryParams.set('status', selectedStatus);
+            const res = await fetch(`${apiBase}/staff/panel/teacher?${queryParams.toString()}`);
+            const data = await res.json();
+            if (data.success) {
+                setTeachers(data.teachers || []);
+                if (data.pagination)
+                    setPagination(data.pagination);
+                if (data.stats)
+                    setStats(data.stats);
+            }
+            else {
+                showToast(data.error || 'Failed to load teachers roster.', true);
+            }
+        }
+        catch (err: any) {
+            console.error(err);
+            showToast('Error connecting to server.', true);
+        }
+        finally {
+            setLoading(false);
+        }
+    }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, showToast, apiBase]);
+    useEffect(() => {
+        let active = true;
+        if (!domain)
+            return;
+        const queryParams = new URLSearchParams({
+            page: String(page),
+            limit: '50',
+        });
+        if (searchTerm.trim())
+            queryParams.set('search', searchTerm.trim());
+        if (selectedDesignation !== 'all')
+            queryParams.set('designation_id', selectedDesignation);
+        if (selectedDepartment !== 'all')
+            queryParams.set('department_id', selectedDepartment);
+        if (selectedStatus !== 'all')
+            queryParams.set('status', selectedStatus);
+        fetch(`${apiBase}/staff/panel/teacher?${queryParams.toString()}`)
+            .then((res: any) => res.json())
+            .then((data: any) => {
+            if (!active)
+                return;
+            if (data.success) {
+                setTeachers(data.teachers || []);
+                if (data.pagination)
+                    setPagination(data.pagination);
+                if (data.stats)
+                    setStats(data.stats);
+            }
+            setLoading(false);
+        })
+            .catch((err: any) => {
+            if (!active)
+                return;
+            console.error(err);
+            setLoading(false);
+        });
+        return () => {
+            active = false;
+        };
+    }, [domain, page, searchTerm, selectedDesignation, selectedDepartment, selectedStatus, apiBase]);
+    const handleOpenView = async (teacher: any) => {
+        setViewModalOpen(true);
+        setLoadingDetails(true);
+        try {
+            const res = await fetch(`${apiBase}/staff/panel/teacher?id=${teacher.id}`);
+            const data = await res.json();
+            if (data.success && data.teacher) {
+                setSelectedTeacher(data.teacher);
+            }
+            else {
+                setSelectedTeacher(teacher);
+            }
+        }
+        catch {
+            setSelectedTeacher(teacher);
+        }
+        finally {
+            setLoadingDetails(false);
+        }
+    };
+    const confirmDelete = (teacher: any) => {
+        setTeacherToDelete(teacher);
+        setDeleteModalOpen(true);
+    };
+    const handleDelete = async () => {
+        if (!teacherToDelete)
+            return;
+        try {
+            setDeleting(true);
+            const res = await fetch(`${apiBase}/staff/panel/teacher?id=${teacherToDelete.id}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Teacher removed successfully.');
+                setDeleteModalOpen(false);
+                setTeacherToDelete(null);
+                fetchTeachers();
+            }
+            else {
+                showToast(data.error || 'Failed to delete teacher.', true);
+            }
+        }
+        catch (err: any) {
+            console.error(err);
+            showToast('Error deleting teacher.', true);
+        }
+        finally {
+            setDeleting(false);
+        }
+    };
+    const handleResendVerification = async (teacherId: any) => {
+        if (!teacherId)
+            return;
+        try {
+            setResendingId(teacherId);
+            const res = await fetch(`${apiBase}/staff/panel/teacher/resend-verification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ teacherId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Verification link resent successfully!');
+            }
+            else {
+                showToast(data.error || 'Failed to resend verification link.', true);
+            }
+        }
+        catch (err: any) {
+            console.error(err);
+            showToast('Network error while resending verification link.', true);
+        }
+        finally {
+            setResendingId(null);
+        }
+    };
+    return (<div className="w-full space-y-4">
+      {toastMessage && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
+          <FiCheck className="w-4 h-4"/>
+          <span>{toastMessage}</span>
+        </div>)}
+      {toastError && (<div className="fixed top-5 right-5 z-50 flex items-center gap-2 bg-rose-600 text-white px-4 py-2.5 rounded shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2">
+          <FiX className="w-4 h-4"/>
+          <span>{toastError}</span>
+        </div>)}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Faculty</p>
+            <FiUsers className="w-3.5 h-3.5 text-blue-500"/>
+          </div>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{stats.total_teachers}</span>
+            <span className="text-[10px] font-medium text-slate-500">Registered</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Active Status</p>
+            <FiCheck className="w-3.5 h-3.5 text-emerald-500"/>
+          </div>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stats.active_teachers}</span>
+            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">On Duty</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Inactive</p>
+            <FiX className="w-3.5 h-3.5 text-slate-400"/>
+          </div>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-slate-600 dark:text-slate-400 font-mono">{stats.inactive_teachers}</span>
+            <span className="text-[10px] font-medium text-slate-500">Deactivated</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Designations</p>
+            <FiAward className="w-3.5 h-3.5 text-amber-500"/>
+          </div>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-bold text-amber-600 dark:text-amber-400 font-mono">{designations.length}</span>
+            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">Categories</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative w-full">
+              <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5"/>
+              <input type="text" aria-label="Search teachers by name, email, or phone" value={searchTerm} onChange={(e: any) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+        }} className="w-full text-xs pl-8 pr-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={selectedDepartment} onChange={(e: any) => {
+            setSelectedDepartment(e.target.value);
+            setPage(1);
+        }} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer">
+              <option value="all">All Departments</option>
+              {departments.map((dept: any) => (<option key={dept.id} value={dept.id}>
+                  {dept.name} {dept.code ? `(${dept.code})` : ''}
+                </option>))}
+            </select>
+
+            <select value={selectedDesignation} onChange={(e: any) => {
+            setSelectedDesignation(e.target.value);
+            setPage(1);
+        }} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer">
+              <option value="all">All Designations</option>
+              {designations.map((d: any) => (<option key={d.id} value={d.id}>{d.title}</option>))}
+            </select>
+
+            <select value={selectedStatus} onChange={(e: any) => {
+            setSelectedStatus(e.target.value);
+            setPage(1);
+        }} className="text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-hidden cursor-pointer">
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+
+            <button onClick={fetchTeachers} className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded border border-slate-300 dark:border-slate-700 transition" title="Refresh roster">
+              <FiRefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}/>
+            </button>
+
+            <Link href={tenantUrl('/staff-panel/teacher-registration')} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition">
+              <FiUserPlus className="w-3.5 h-3.5"/>
+              <span>Register Teacher</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded">
+          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 divide-y divide-slate-200 dark:divide-slate-800">
+            <thead className="bg-slate-50 dark:bg-slate-800/60 text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
+              <tr>
+                <th className="px-3 py-2">Teacher Profile</th>
+                <th className="px-3 py-2">Department</th>
+                <th className="px-3 py-2">Designation</th>
+                <th className="px-3 py-2">Contact Details</th>
+                <th className="px-3 py-2">Joining &amp; Salary</th>
+                <th className="px-3 py-2 text-center">Qualifications</th>
+                <th className="px-3 py-2 text-center">Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal">
+              {loading && teachers.length === 0 ? (<tr>
+                  <td colSpan={8} className="px-3 py-8 text-center">
+                    <div className="flex justify-center items-center">
+                      <div className="loader loader-sm"/>
+                    </div>
+                  </td>
+                </tr>) : teachers.length === 0 ? (<tr>
+                  <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
+                    <FiUsers className="w-6 h-6 mx-auto mb-2 text-slate-300 dark:text-slate-700"/>
+                    <p className="font-medium text-slate-600 dark:text-slate-400">No teachers found</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Register your first teacher by clicking &quot;Register Teacher&quot; above.
+                    </p>
+                  </td>
+                </tr>) : (teachers.map((teacher: any) => (<tr key={teacher.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2.5">
+                        {teacher.photo_url ? (<img src={teacher.photo_url} alt={teacher.name} className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"/>) : (<div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 text-xs shrink-0">
+                            {teacher.name?.charAt(0) || 'T'}
+                          </div>)}
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-white leading-tight">
+                            {teacher.name}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-slate-400 uppercase font-mono">
+                              ID: #{teacher.id}
+                            </span>
+                            {teacher.blood_group && (<span className="text-[9px] px-1 rounded bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900 font-semibold">
+                                {teacher.blood_group}
+                              </span>)}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-3 py-2">
+                      {teacher.department_name ? (<div className="flex flex-col">
+                          <span className="text-slate-900 dark:text-white font-medium text-xs">
+                            {teacher.department_name}
+                          </span>
+                          {teacher.department_code && (<span className="text-[10px] text-slate-400 font-mono">
+                              {teacher.department_code}
+                            </span>)}
+                        </div>) : (<span className="text-slate-400 text-[11px] italic">Unassigned</span>)}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      {teacher.designation_title ? (<span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
+                          {teacher.designation_title}
+                        </span>) : (<span className="text-slate-400 text-[11px] italic">Unassigned</span>)}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <p className="text-slate-900 dark:text-white flex items-center gap-1">
+                        <FiMail className="w-3 h-3 text-slate-400 shrink-0"/>
+                        <span className="truncate max-w-[150px]">{teacher.email}</span>
+                      </p>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1 mt-0.5">
+                        <FiPhone className="w-3 h-3 text-slate-400 shrink-0"/>
+                        <span>{teacher.number}</span>
+                      </p>
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                        {teacher.joining_date ? new Date(teacher.joining_date).toLocaleDateString() : 'N/A'}
+                      </p>
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                        {teacher.salary ? `${Number(teacher.salary).toLocaleString()} BDT` : 'Not Set'}
+                      </p>
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
+                        <FiAward className="w-3 h-3"/>
+                        <span>{teacher.qualification_count || 0}</span>
+                      </span>
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {teacher.is_active ? (<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          <span>Active</span>
+                        </span>) : !teacher.is_registered ? (<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800" title="Account inactive pending email verification">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                          <span>Pending Verification</span>
+                        </span>) : (<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                          <span>Inactive</span>
+                        </span>)}
+                    </td>
+
+                    <td className="px-3 py-2 text-right space-x-1">
+                      {!teacher.is_registered && (<button onClick={() => handleResendVerification(teacher.id)} disabled={resendingId === teacher.id} className="p-1 rounded text-amber-600 hover:text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition disabled:opacity-50 cursor-pointer" title="Resend Verification Link">
+                          <FiMail className={`w-3.5 h-3.5 ${resendingId === teacher.id ? 'animate-spin' : ''}`}/>
+                        </button>)}
+                      <button onClick={() => handleOpenView(teacher)} className="p-1 rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="View Full Profile">
+                        <FiEye className="w-3.5 h-3.5"/>
+                      </button>
+                      <Link href={tenantUrl(`/staff-panel/teacher-update?id=${teacher.id}`)} className="p-1 inline-flex rounded text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Edit Teacher">
+                        <FiEdit2 className="w-3.5 h-3.5"/>
+                      </Link>
+                      <button onClick={() => confirmDelete(teacher)} className="p-1 rounded text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer" title="Delete Teacher">
+                        <FiTrash2 className="w-3.5 h-3.5"/>
+                      </button>
+                    </td>
+                  </tr>)))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <span>
+            Showing {teachers.length} of {pagination.total} teachers
+          </span>
+          {pagination.totalPages > 1 && (<div className="flex items-center gap-1 font-mono">
+              <button disabled={page <= 1} onClick={() => setPage((p: any) => Math.max(1, p - 1))} className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">
+                Previous
+              </button>
+              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-900 dark:text-white">
+                {page} / {pagination.totalPages}
+              </span>
+              <button disabled={page >= pagination.totalPages} onClick={() => setPage((p: any) => p + 1)} className="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40">
+                Next
+              </button>
+            </div>)}
+        </div>
+      </div>
+
+      {viewModalOpen && selectedTeacher && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-5 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <FiUsers className="w-4 h-4 text-blue-600"/>
+                <span>Teacher Profile Dossier</span>
+              </h3>
+              <button onClick={() => setViewModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <FiX className="w-4 h-4"/>
+              </button>
+            </div>
+
+            {loadingDetails ? (<div className="py-12 flex justify-center items-center">
+                <div className="loader loader-sm"/>
+              </div>) : (<div className="space-y-4 text-xs">
+                {!selectedTeacher.is_registered && (<div className="flex items-center justify-between p-2.5 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+                    <div>
+                      <span className="font-semibold flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>Pending Email Verification</span>
+                      </span>
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                        Status is inactive. Teacher cannot log in until they verify via the invitation link.
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => handleResendVerification(selectedTeacher.id)} disabled={resendingId === selectedTeacher.id} className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs flex items-center gap-1 cursor-pointer disabled:opacity-50 transition">
+                      <FiMail className={`w-3.5 h-3.5 ${resendingId === selectedTeacher.id ? 'animate-spin' : ''}`}/>
+                      <span>{resendingId === selectedTeacher.id ? 'Sending...' : 'Resend Verification Link'}</span>
+                    </button>
+                  </div>)}
+
+                <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700">
+                  {selectedTeacher.photo_url ? (<img src={selectedTeacher.photo_url} alt={selectedTeacher.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700 shrink-0"/>) : (<div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-lg font-bold text-slate-600 dark:text-slate-200 shrink-0">
+                      {selectedTeacher.name?.charAt(0) || 'T'}
+                    </div>)}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{selectedTeacher.name}</h4>
+                      {selectedTeacher.department_name && (<span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
+                          {selectedTeacher.department_name} {selectedTeacher.department_code ? `(${selectedTeacher.department_code})` : ''}
+                        </span>)}
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
+                        {selectedTeacher.designation_title || 'Unassigned'}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-0.5">{selectedTeacher.email} • {selectedTeacher.number}</p>
+                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                      <span>Salary: <strong>{Number(selectedTeacher.salary || 0).toLocaleString()} BDT</strong></span>
+                      <span>Joined: <strong>{selectedTeacher.joining_date ? new Date(selectedTeacher.joining_date).toLocaleDateString() : 'N/A'}</strong></span>
+                      <span>Gender: <strong className="capitalize">{selectedTeacher.gender || 'N/A'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Present Address:</span>
+                    <p className="text-slate-500 mt-0.5">{selectedTeacher.address || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Permanent Address:</span>
+                    <p className="text-slate-500 mt-0.5">{selectedTeacher.permanent_address || 'Not specified'}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                    <FiAward className="w-3.5 h-3.5 text-purple-600"/>
+                    <span>Academic Qualifications ({selectedTeacher.qualifications?.length || 0})</span>
+                  </h5>
+                  {selectedTeacher.qualifications && selectedTeacher.qualifications.length > 0 ? (<div className="border border-slate-200 dark:border-slate-800 rounded divide-y divide-slate-100 dark:divide-slate-800">
+                      {selectedTeacher.qualifications.map((q: any) => (<div key={q.id} className="p-2.5 flex items-center justify-between">
+                          <div>
+                            <span className="font-semibold text-slate-900 dark:text-white">{q.degree}</span>
+                            <p className="text-slate-500 text-[11px]">{q.institute} {q.board ? `(${q.board})` : ''}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-mono text-slate-700 dark:text-slate-300">{q.passing_year || 'Year N/A'}</span>
+                            {q.result && <p className="text-[10px] text-emerald-600 font-semibold">{q.result}</p>}
+                          </div>
+                        </div>))}
+                    </div>) : (<p className="text-slate-400 italic text-[11px]">No qualifications recorded yet.</p>)}
+                </div>
+
+                {selectedTeacher.subjects && selectedTeacher.subjects.length > 0 && (<div>
+                    <h5 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
+                      <FiBookOpen className="w-3.5 h-3.5 text-blue-600"/>
+                      <span>Assigned Subjects ({selectedTeacher.subjects.length})</span>
+                    </h5>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedTeacher.subjects.map((s: any) => (<span key={s.id} className="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px]">
+                          {s.subject_name} {s.class_name ? `(${s.class_name})` : ''}
+                        </span>))}
+                    </div>
+                  </div>)}
+              </div>)}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Link href={tenantUrl(`/staff-panel/teacher-update?id=${selectedTeacher.id}`)} className="px-3 py-1.5 rounded text-xs font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 transition flex items-center gap-1">
+                <FiEdit2 className="w-3 h-3"/>
+                <span>Edit Full Profile</span>
+              </Link>
+              <button type="button" onClick={() => setViewModalOpen(false)} className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>)}
+
+      {deleteModalOpen && teacherToDelete && (<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+                <FiTrash2 className="w-5 h-5"/>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Delete Teacher Record?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Are you sure you want to remove &quot;{teacherToDelete.name}&quot;?
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              This will remove the teacher along with their login sessions, routine assignments, qualifications, and attendance logs.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onClick={() => setDeleteModalOpen(false)} className="px-3 py-1.5 rounded text-xs border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                Cancel
+              </button>
+              <button type="button" onClick={handleDelete} disabled={deleting} className="px-4 py-1.5 rounded text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50 transition">
+                {deleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        </div>)}
+    </div>);
+}

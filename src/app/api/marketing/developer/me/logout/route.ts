@@ -1,0 +1,19 @@
+import { NextResponse } from 'next/server';
+import { clearDeveloperSessionCookie } from 'src/lib/middleware/developer';
+import { DEVELOPER_TOKEN } from 'src/lib/database/secret';
+import { queryDb } from 'src/lib/database/db';
+export async function POST(request: any) {
+    try {
+        const token = request?.cookies?.get?.(DEVELOPER_TOKEN)?.value ||
+            request?.headers?.get?.('authorization')?.replace('Bearer ', '');
+        if (token) {
+            await queryDb(`UPDATE developer_login_sessions SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE token = $1`, [token]).catch(() => { });
+        }
+        const response = NextResponse.json({ success: true, message: 'Logged out successfully.' });
+        await clearDeveloperSessionCookie(response);
+        return response;
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message || 'Logout failed.' }, { status: 500 });
+    }
+}

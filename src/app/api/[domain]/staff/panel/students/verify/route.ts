@@ -1,0 +1,279 @@
+import { NextResponse } from 'next/server';
+import { queryDb } from 'src/lib/database/db';
+import { verifyStudentStaffAccess } from 'src/lib/middleware/student-auth';
+import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { buildStudentPortalUrl, buildStudentSetupUrl } from 'src/lib/student/urls';
+export async function GET(request: any, context: any) {
+    try {
+        const auth = await verifyStudentStaffAccess(request, context, 'view');
+        if (auth.error) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        const { website } = auth;
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status') || 'submitted';
+        const classId = searchParams.get('class_id');
+        const sectionId = searchParams.get('section_id');
+        const sessionId = searchParams.get('session_id');
+        const search = searchParams.get('search')?.trim();
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+        const offset = (page - 1) * limit;
+        const conditions = ['s.website_id = $1'];
+        const values = [website.id];
+        let pIdx = 2;
+        if (status && status !== 'all') {
+            conditions.push(`i.verification_status = $${pIdx++}`);
+            values.push(status);
+        }
+        if (sessionId) {
+            conditions.push(`s.session_id = $${pIdx++}`);
+            values.push(sessionId);
+        }
+        if (classId) {
+            conditions.push(`s.class_id = $${pIdx++}`);
+            values.push(classId);
+        }
+        if (sectionId) {
+            conditions.push(`s.section_id = $${pIdx++}`);
+            values.push(sectionId);
+        }
+        if (search) {
+            conditions.push(`(COALESCE(s.name, i.data->>'name', '') ILIKE $${pIdx} OR COALESCE(s.email, i.data->>'email', '') ILIKE $${pIdx} OR s.registration_no ILIKE $${pIdx} OR s.student_unique_id ILIKE $${pIdx} OR COALESCE(s.number, i.data->>'number', '') ILIKE $${pIdx})`);
+            values.push(`%${search}%`);
+            pIdx++;
+        }
+        const whereClause = conditions.join(' AND ');
+        const countRes = await queryDb(`SELECT COUNT(*)::int AS total FROM website_students s LEFT JOIN website_student_info i ON s.id = i.student_id WHERE ${whereClause}`, values);
+        const totalCount = countRes.rows[0]?.total || 0;
+        const query = `
+      SELECT s.id, s.website_id, s.registration_no, s.roll_no, s.student_unique_id,
+             s.class_id, s.section_id, s.session_id, s.is_active,
+             s.created_at, s.updated_at,
+             COALESCE(s.name, i.data->>'name') AS name,
+             COALESCE(s.email, i.data->>'email') AS email,
+             COALESCE(s.number, i.data->>'number') AS number,
+             COALESCE(s.gender, i.data->>'gender') AS gender,
+             COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+             COALESCE(s.date_of_birth, (i.data->>'date_of_birth')::date) AS date_of_birth,
+             COALESCE(s.religion, i.data->>'religion') AS religion,
+             COALESCE(s.admission_date, (i.data->>'admission_date')::date) AS admission_date,
+             COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+             COALESCE(s.is_verified, FALSE) AS is_verified,
+             COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+             i.verification_notes, s.verification_token,
+             s.verified_at, i.rejection_reason,
+             c.name AS class_name, c.code AS class_code,
+             sec.name AS section_name,
+             ses.name AS session_name,
+             st.name AS verified_by_staff_name,
+             -- Address
+             addr.data AS address_data,
+             addr.data->>'present_address' AS present_address,
+             addr.data->>'permanent_address' AS permanent_address,
+             addr.data->>'district' AS district,
+             -- Guardian
+             g.data AS guardian_data,
+             g.data->>'father_name' AS father_name,
+             g.data->>'father_phone' AS father_phone,
+             g.data->>'mother_name' AS mother_name,
+             g.data->>'guardian_name' AS guardian_name,
+             g.data->>'guardian_phone' AS guardian_phone,
+             i.data AS info_data,
+             -- Pictures & Signature
+             p.image_url AS photo_url,
+             sig.signature_url
+      FROM website_students s
+      LEFT JOIN website_student_info i ON s.id = i.student_id
+      LEFT JOIN website_classes c ON s.class_id = c.id
+      LEFT JOIN website_sections sec ON s.section_id = sec.id
+      LEFT JOIN website_sessions ses ON s.session_id = ses.id
+      LEFT JOIN website_staffs st ON s.verified_by_staff_id = st.id
+      LEFT JOIN website_student_addresses addr ON s.id = addr.student_id
+      LEFT JOIN website_student_guardians g ON s.id = g.student_id
+      LEFT JOIN LATERAL (
+        SELECT image_url FROM website_student_pictures
+        WHERE student_id = s.id AND is_primary = TRUE
+        LIMIT 1
+      ) p ON true
+      LEFT JOIN website_student_signatures sig ON s.id = sig.student_id
+      WHERE ${whereClause}
+      ORDER BY
+        CASE WHEN i.verification_status = 'submitted' THEN 1 ELSE 2 END,
+        s.updated_at DESC
+      LIMIT $${pIdx++} OFFSET $${pIdx++}
+    `;
+        const res = await queryDb(query, [...values, limit, offset]);
+        const statsRes = await queryDb(`SELECT
+         COUNT(*) FILTER (WHERE i.verification_status = 'submitted')::int AS submitted_count,
+         COUNT(*) FILTER (WHERE i.verification_status = 'verified')::int AS verified_count,
+         COUNT(*) FILTER (WHERE i.verification_status = 'rejected')::int AS rejected_count,
+         COUNT(*) FILTER (WHERE i.verification_status = 'pending_setup')::int AS pending_setup_count,
+         COUNT(*)::int AS total_count
+       FROM website_students s
+       LEFT JOIN website_student_info i ON s.id = i.student_id
+       WHERE s.website_id = $1`, [website.id]);
+        return NextResponse.json({
+            success: true,
+            payload: {
+                students: res.rows,
+                pagination: {
+                    page,
+                    limit,
+                    total: totalCount,
+                    totalPages: Math.ceil(totalCount / limit),
+                },
+                stats: statsRes.rows[0] || {},
+            },
+        });
+    }
+    catch (error: any) {
+        console.error('Error fetching students for verification:', error);
+        return NextResponse.json({ success: false, error: 'Failed to retrieve students for verification.' }, { status: 500 });
+    }
+}
+export async function PUT(request: any, context: any) {
+    try {
+        const auth = await verifyStudentStaffAccess(request, context, 'edit');
+        if (auth.error) {
+            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+        }
+        const { website, staffSession } = auth;
+        const body = await request.json();
+        const { student_id, action, notes } = body;
+        if (!student_id) {
+            return NextResponse.json({ success: false, error: 'student_id is required.' }, { status: 400 });
+        }
+        if (!action || !['approve', 'reject'].includes(action)) {
+            return NextResponse.json({ success: false, error: 'action must be "approve" or "reject".' }, { status: 400 });
+        }
+        const checkRes = await queryDb(`SELECT s.id, s.registration_no, s.student_unique_id,
+              COALESCE(s.name, i.data->>'name') AS name,
+              COALESCE(s.email, i.data->>'email') AS email,
+              s.verification_token
+       FROM website_students s
+       LEFT JOIN website_student_info i ON s.id = i.student_id
+       WHERE s.id = $1 AND s.website_id = $2
+       LIMIT 1`, [student_id, website.id]);
+        if (checkRes.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Student record not found.' }, { status: 404 });
+        }
+        const student = checkRes.rows[0];
+        const staffId = staffSession?.staff?.id || staffSession?.id || null;
+        if (action === 'approve') {
+            await queryDb(`UPDATE website_student_info
+         SET is_verified = TRUE,
+             verification_status = 'verified',
+             verified_by_staff_id = $1,
+             verified_at = CURRENT_TIMESTAMP,
+             verification_notes = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE student_id = $3 AND website_id = $4`, [staffId, notes || null, student_id, website.id]);
+            const stuUpdate = await queryDb(`UPDATE website_students
+         SET is_active = TRUE,
+             email = COALESCE(email, $3),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND website_id = $2
+         RETURNING *`, [student_id, website.id, student.email || null]);
+            const updatedStudent = stuUpdate.rows[0];
+            if (student.email) {
+                try {
+                    const portalUrl = buildStudentPortalUrl(website, request);
+                    const emailHtml = buildStyledEmail({
+                        title: `Account Verified! Welcome to ${website.name || 'Student Portal'}`,
+                        previewText: `Your profile verification has been approved. You can now access your student portal.`,
+                        websiteName: website.name || 'Institutional Management Portal',
+                        bodyContent: `
+              <p>Dear <strong>${student.name || 'Student'}</strong>,</p>
+              <p>Congratulations! Your student profile and enrollment credentials have been reviewed and <strong>approved</strong> by the school administration.</p>
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px; color: #166534;">
+                <p style="margin: 0 0 6px 0;"><strong>Registration Number:</strong> <span style="font-family: monospace;">${student.registration_no}</span></p>
+                <p style="margin: 0 0 6px 0;"><strong>Status:</strong> Verified & Active</p>
+                ${notes ? `<p style="margin: 0;"><strong>Staff Note:</strong> ${notes}</p>` : ''}
+              </div>
+              <p style="font-size: 13px; color: #475569;">You can now log in to view your classes, attendance, marks, routine, and institutional notices.</p>
+            `,
+                        ctaButton: {
+                            label: 'Access Student Portal →',
+                            url: portalUrl,
+                        },
+                    });
+                    await sendEmail({
+                        to: student.email,
+                        toName: student.name || 'Student',
+                        subject: `Profile Approved - Student Portal Access Enabled`,
+                        html: emailHtml,
+                        websiteId: website.id,
+                    });
+                }
+                catch (err: any) {
+                    console.warn('Failed to send student approval email:', err.message);
+                }
+            }
+            return NextResponse.json({
+                success: true,
+                message: `Student "${student.name || student.registration_no}" has been verified successfully.`,
+                payload: { student: updatedStudent },
+            });
+        }
+        if (action === 'reject') {
+            await queryDb(`UPDATE website_student_info
+         SET is_verified = FALSE,
+             verification_status = 'rejected',
+             verified_by_staff_id = $1,
+             verified_at = CURRENT_TIMESTAMP,
+             verification_notes = $2,
+             rejection_reason = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE student_id = $3 AND website_id = $4`, [staffId, notes || 'Profile rejected during staff verification.', student_id, website.id]);
+            const stuUpdate = await queryDb(`UPDATE website_students
+         SET is_active = FALSE,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND website_id = $2
+         RETURNING *`, [student_id, website.id]);
+            const updatedStudent = stuUpdate.rows[0];
+            if (student.email) {
+                try {
+                    const setupUrl = buildStudentSetupUrl(website, student.verification_token, request);
+                    const emailHtml = buildStyledEmail({
+                        title: `Profile Verification Update`,
+                        previewText: `Changes required for your student account verification.`,
+                        websiteName: website.name || 'Institutional Management Portal',
+                        bodyContent: `
+              <p>Dear <strong>${student.name || 'Student'}</strong>,</p>
+              <p>Your student profile was reviewed by the school administration, and some details require correction or revision.</p>
+              <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px; padding: 14px; margin: 16px 0; font-size: 13px; color: #9f1239;">
+                <p style="margin: 0 0 4px 0;"><strong>Status:</strong> Action Required / Rejected</p>
+                <p style="margin: 0;"><strong>Review Feedback:</strong> ${notes || 'Please update your submitted details and resubmit.'}</p>
+              </div>
+              <p style="font-size: 13px; color: #475569;">Please click the button below to update your profile details and resubmit for verification.</p>
+            `,
+                        ctaButton: {
+                            label: 'Update Student Profile →',
+                            url: setupUrl,
+                        },
+                    });
+                    await sendEmail({
+                        to: student.email,
+                        toName: student.name || 'Student',
+                        subject: `Student Profile Verification Notice - Action Required`,
+                        html: emailHtml,
+                        websiteId: website.id,
+                    });
+                }
+                catch (err: any) {
+                    console.warn('Failed to send student rejection notice email:', err.message);
+                }
+            }
+            return NextResponse.json({
+                success: true,
+                message: `Student "${student.name || student.registration_no}" profile marked as rejected.`,
+                payload: { student: updatedStudent },
+            });
+        }
+    }
+    catch (error: any) {
+        console.error('Error during student verification action:', error);
+        return NextResponse.json({ success: false, error: 'Internal server error processing verification.' }, { status: 500 });
+    }
+}

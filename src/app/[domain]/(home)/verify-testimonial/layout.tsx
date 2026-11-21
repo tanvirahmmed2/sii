@@ -1,0 +1,7 @@
+export const metadata: any = {
+    title: 'Verify Academic Testimonial | Character Certificate',
+    description: 'Verify the authenticity of issued student academic and character testimonials.',
+};
+export default function VerifyTestimonialLayout({ children }: any) {
+    return <>{children}</>;
+}

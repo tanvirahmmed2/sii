@@ -1,0 +1,109 @@
+import { NextResponse } from 'next/server';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { queryDb } from 'src/lib/database/db';
+export async function GET(request: any, { params }: any) {
+    try {
+        const auth = await hasModulePermission(request, 'chats');
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+        }
+        const { id } = await params;
+        const currentDevId = auth.developer?.id || auth.user?.id || auth.staff?.id;
+        const partCheck = await queryDb('SELECT id FROM chat_participants WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
+        if (partCheck.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Forbidden: You are not a participant in this conversation.' }, { status: 403 });
+        }
+        await queryDb('UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
+        const messagesRes = await queryDb(`
+      SELECT 
+        m.id,
+        m.chat_id,
+        m.message,
+        m.is_system,
+        m.created_at,
+        d.id AS sender_id,
+        d.name AS sender_name,
+        d.email AS sender_email,
+        'developer' AS sender_role,
+        COALESCE(r.name, 'Developer') AS sender_role_name,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', ci.id,
+              'image_url', ci.image_url,
+              'file_name', ci.file_name,
+              'file_size', ci.file_size
+            )
+          ) FILTER (WHERE ci.id IS NOT NULL),
+          '[]'::jsonb
+        ) AS images
+      FROM chat_messages m
+      JOIN developers d ON m.sender_developer_id = d.id
+      LEFT JOIN developer_roles r ON d.role_id = r.id
+      LEFT JOIN chat_images ci ON m.id = ci.message_id
+      WHERE m.chat_id = $1
+      GROUP BY m.id, m.chat_id, m.message, m.is_system, m.created_at, d.id, d.name, d.email, r.name
+      ORDER BY m.created_at ASC
+      LIMIT 200
+    `, [id]);
+        return NextResponse.json({
+            success: true,
+            messages: messagesRes.rows,
+        });
+    }
+    catch (error: any) {
+        console.error('Chat messages GET error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}
+export async function POST(request: any, { params }: any) {
+    try {
+        const auth = await hasModulePermission(request, 'chats');
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message || 'Unauthorized' }, { status: auth.status || 401 });
+        }
+        const { id } = await params;
+        const currentDev = auth.developer || auth.user || auth.staff;
+        const currentDevId = currentDev?.id;
+        const body = await request.json();
+        const { message, images = [] } = body;
+        if ((!message || !message.trim()) && (!images || images.length === 0)) {
+            return NextResponse.json({ success: false, error: 'Message text or image attachment required.' }, { status: 400 });
+        }
+        const partCheck = await queryDb('SELECT id FROM chat_participants WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
+        if (partCheck.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Forbidden: You cannot post in this chat.' }, { status: 403 });
+        }
+        const msgRes = await queryDb(`INSERT INTO chat_messages (chat_id, sender_developer_id, message, is_system)
+       VALUES ($1, $2, $3, FALSE)
+       RETURNING *`, [id, currentDevId, (message || '').trim()]);
+        const newMsg = msgRes.rows[0];
+        const savedImages: any[] = [];
+        for (const img of images) {
+            if (!img.url && !img.image_url)
+                continue;
+            const url = img.url || img.image_url;
+            const imgRes = await queryDb(`INSERT INTO chat_images (message_id, image_url, file_name, file_size)
+         VALUES ($1, $2, $3, $4)
+         RETURNING *`, [newMsg.id, url, img.fileName || img.file_name || 'attachment.png', img.fileSize || img.file_size || null]);
+            savedImages.push(imgRes.rows[0]);
+        }
+        await queryDb('UPDATE internal_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+        await queryDb('UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
+        return NextResponse.json({
+            success: true,
+            message: {
+                ...newMsg,
+                sender_id: currentDev.id,
+                sender_name: currentDev.name,
+                sender_email: currentDev.email,
+                sender_role: 'developer',
+                images: savedImages,
+            },
+        });
+    }
+    catch (error: any) {
+        console.error('Chat message POST error:', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+}

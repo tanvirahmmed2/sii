@@ -1,0 +1,137 @@
+import { NextResponse } from 'next/server';
+import { queryDb } from 'src/lib/database/db';
+import { getClientIp, inspectMalwareAndAttacks, checkRateLimit, } from 'src/lib/security/shield';
+export const dynamic = 'force-dynamic';
+export async function GET(request: any) {
+    try {
+        const attackInspection = await inspectMalwareAndAttacks(request, {});
+        if (attackInspection.isBlocked) {
+            return NextResponse.redirect(new URL('/developer-auth/verify?error=security_blocked', request.url));
+        }
+        const { searchParams } = new URL(request.url);
+        const token = searchParams.get('token')?.trim();
+        const email = searchParams.get('email')?.trim().toLowerCase();
+        if (!token) {
+            return NextResponse.redirect(new URL('/developer-auth/verify?error=missing_token', request.url));
+        }
+        const ip = getClientIp(request);
+        const rateCheck = await checkRateLimit({
+            ip,
+            identifier: email || token,
+            action: 'dev_verify_get',
+            maxAttempts: 10,
+            windowSeconds: 600,
+            blockDurationSeconds: 900,
+        });
+        if (!rateCheck.isAllowed) {
+            return NextResponse.redirect(new URL('/developer-auth/verify?error=rate_limited', request.url));
+        }
+        const whereConditions = ['(verification_token = $1 OR two_factor_code = $1)'];
+        const params = [token];
+        if (email) {
+            params.push(email);
+            whereConditions.push(`LOWER(email) = $${params.length}`);
+        }
+        const devRes = await queryDb(`SELECT id, name, email, email_verified, verification_token, verification_token_expires, two_factor_code, two_factor_expires
+       FROM developers 
+       WHERE ${whereConditions.join(' AND ')}
+       LIMIT 1`, params);
+        if (devRes.rows.length === 0) {
+            return NextResponse.redirect(new URL(`/developer-auth/verify?error=invalid_token&email=${encodeURIComponent(email || '')}`, request.url));
+        }
+        const dev = devRes.rows[0];
+        const expiry = dev.verification_token_expires || dev.two_factor_expires;
+        if (expiry && new Date(expiry) < new Date()) {
+            return NextResponse.redirect(new URL(`/developer-auth/verify?error=expired_token&email=${encodeURIComponent(dev.email)}`, request.url));
+        }
+        await queryDb(`UPDATE developers 
+       SET email_verified = TRUE,
+           verification_token = NULL,
+           verification_token_expires = NULL,
+           two_factor_code = NULL,
+           two_factor_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           is_active = TRUE,
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`, [dev.id]);
+        return NextResponse.redirect(new URL('/developer-auth/login?verified=true', request.url));
+    }
+    catch (error: any) {
+        return NextResponse.redirect(new URL('/developer-auth/verify?error=server_error', request.url));
+    }
+}
+export async function POST(request: any) {
+    try {
+        const body = await request.json().catch(() => ({}));
+        const attackInspection = await inspectMalwareAndAttacks(request, body);
+        if (attackInspection.isBlocked) {
+            return NextResponse.json({ success: false, error: attackInspection.error }, { status: attackInspection.status || 403 });
+        }
+        const ip = getClientIp(request);
+        const token = (body.token || body.code)?.toString().trim();
+        const email = body.email?.trim().toLowerCase();
+        if (!token) {
+            return NextResponse.json({ success: false, error: 'Verification token or code is required.' }, { status: 400 });
+        }
+        const rateCheck = await checkRateLimit({
+            ip,
+            identifier: email || token,
+            action: 'dev_verify_post',
+            maxAttempts: 5,
+            windowSeconds: 600,
+            blockDurationSeconds: 900,
+        });
+        if (!rateCheck.isAllowed) {
+            return NextResponse.json({ success: false, error: rateCheck.error }, { status: 429 });
+        }
+        const whereConditions = ['(verification_token = $1 OR two_factor_code = $1)'];
+        const params = [token];
+        if (email) {
+            params.push(email);
+            whereConditions.push(`LOWER(email) = $${params.length}`);
+        }
+        const devRes = await queryDb(`SELECT id, name, email, email_verified, verification_token, verification_token_expires, two_factor_code, two_factor_expires
+       FROM developers 
+       WHERE ${whereConditions.join(' AND ')}
+       LIMIT 1`, params);
+        if (devRes.rows.length === 0) {
+            if (email) {
+                const checkEmail = await queryDb(`SELECT id, email_verified FROM developers WHERE LOWER(email) = $1 LIMIT 1`, [email]);
+                if (checkEmail.rows[0]?.email_verified) {
+                    return NextResponse.json({
+                        success: true,
+                        alreadyVerified: true,
+                        email,
+                        message: 'Your developer account is already verified! You can login.',
+                    });
+                }
+            }
+            return NextResponse.json({ success: false, error: 'Invalid verification token or code. Please check your link or request a new one.' }, { status: 400 });
+        }
+        const dev = devRes.rows[0];
+        const expiry = dev.verification_token_expires || dev.two_factor_expires;
+        if (expiry && new Date(expiry) < new Date()) {
+            return NextResponse.json({ success: false, error: 'This verification link has expired. Please request a new verification link.', expired: true }, { status: 400 });
+        }
+        await queryDb(`UPDATE developers 
+       SET email_verified = TRUE,
+           verification_token = NULL,
+           verification_token_expires = NULL,
+           two_factor_code = NULL,
+           two_factor_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           is_active = TRUE,
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`, [dev.id]);
+        return NextResponse.json({
+            success: true,
+            email: dev.email,
+            message: 'Developer account verified successfully! Redirecting to login...',
+        });
+    }
+    catch (error: any) {
+        return NextResponse.json({ success: false, error: error.message || 'Error verifying account.' }, { status: 500 });
+    }
+}

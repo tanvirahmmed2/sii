@@ -1,0 +1,8 @@
+import { SCHOOL_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: 'Facilities - Hostels',
+    description: `Explore classrooms, lab facilities, and hostel accommodations at ${SCHOOL_NAME}.`,
+};
+export default function FacilitiesHostelsLayout({ children }: any) {
+    return <>{children}</>;
+}

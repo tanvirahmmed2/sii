@@ -1,0 +1,78 @@
+import { NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { queryDb } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { sendWebsiteEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
+export async function POST(request: any, context: any) {
+    try {
+        const website = await resolveWebsiteFromRequest(request, context);
+        if (!website) {
+            return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
+        }
+        const body = await request.json().catch(() => ({}));
+        const { email } = body;
+        if (!email || !email.trim() || !email.includes('@')) {
+            return NextResponse.json({ success: false, error: 'A valid candidate email address is required.' }, { status: 400 });
+        }
+        const cleanEmail = email.trim().toLowerCase();
+        const emailCheck = await checkInstitutionEmailAvailability(website.id, cleanEmail);
+        if (!emailCheck.available) {
+            return NextResponse.json({ success: false, error: emailCheck.message }, { status: 409 });
+        }
+        const recentOtpRes = await queryDb(`
+      SELECT created_at FROM website_email_verifications
+      WHERE website_id = $1 AND email = $2 AND purpose = 'admission'
+        AND created_at > (CURRENT_TIMESTAMP - INTERVAL '60 seconds')
+      LIMIT 1
+    `, [website.id, cleanEmail]);
+        if (recentOtpRes.rows.length > 0) {
+            return NextResponse.json({
+                success: false,
+                error: 'Please wait at least 60 seconds before requesting another verification code.'
+            }, { status: 429 });
+        }
+        await queryDb(`
+      DELETE FROM website_email_verifications
+      WHERE website_id = $1 AND email = $2 AND purpose = 'admission' AND is_verified = FALSE
+    `, [website.id, cleanEmail]);
+        const otpCode = crypto.randomInt(100000, 1000000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+        await queryDb(`
+      INSERT INTO website_email_verifications (website_id, email, purpose, otp_code, expires_at)
+      VALUES ($1, $2, 'admission', $3, $4)
+    `, [website.id, cleanEmail, otpCode, expiresAt]);
+        const appName = website.name || 'Admissions Portal';
+        const emailHtml = buildStyledEmail({
+            title: 'Admission Email Verification',
+            recipientName: 'Admission Applicant',
+            bodyParagraphs: [
+                `You have initiated an admission application at <strong>${appName}</strong>.`,
+                `Please use the following 6-digit one-time passcode to confirm your email address:`,
+            ],
+            code: otpCode,
+            actionText: 'Continue Application',
+            footerNote: 'This security code is strictly confidential and expires in 15 minutes. If you did not request this code, no action is required.'
+        });
+        try {
+            await sendWebsiteEmail(website.id, {
+                to: cleanEmail,
+                toName: 'Admission Applicant',
+                subject: `[${appName}] Admission Application Verification Code`,
+                html: emailHtml
+            });
+        }
+        catch (emailErr: any) {
+            console.warn('Error dispatching admission OTP email:', emailErr.message);
+        }
+        return NextResponse.json({
+            success: true,
+            message: 'A 6-digit verification code has been dispatched to your email address. Please check your inbox and spam folder.',
+            email: cleanEmail
+        });
+    }
+    catch (error: any) {
+        console.error('Error in send-otp:', error);
+        return NextResponse.json({ success: false, error: 'Internal server error processing verification request.' }, { status: 500 });
+    }
+}

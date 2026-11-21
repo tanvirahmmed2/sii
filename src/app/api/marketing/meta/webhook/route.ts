@@ -1,0 +1,195 @@
+import { NextResponse } from 'next/server';
+import { pool } from 'src/lib/database/db';
+import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from 'src/lib/database/secret';
+import { parseIncomingMetaWebhook, verifyMetaWebhookSignature } from 'src/lib/meta/graph';
+const MAX_PAYLOAD_BYTES = 1024 * 1024;
+export async function GET(request: any) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const mode = searchParams.get('hub.mode');
+        const token = searchParams.get('hub.verify_token');
+        const challenge = searchParams.get('hub.challenge');
+        if (mode !== 'subscribe' || !token) {
+            return new Response('Bad Request: Invalid hub parameters', { status: 400 });
+        }
+        if (!META_WEBHOOK_VERIFY_TOKEN ||
+            typeof META_WEBHOOK_VERIFY_TOKEN !== 'string' ||
+            !META_WEBHOOK_VERIFY_TOKEN.trim()) {
+            console.warn('Meta Webhook Handshake: META_WEBHOOK_VERIFY_TOKEN is not configured on server.');
+            return new Response('Forbidden: Server webhook token not configured', { status: 403 });
+        }
+        let isTokenMatch = Boolean(META_WEBHOOK_VERIFY_TOKEN &&
+            String(token).trim() === META_WEBHOOK_VERIFY_TOKEN.trim());
+        if (!isTokenMatch) {
+            try {
+                const webCheck = await pool.query(`SELECT website_id FROM website_meta WHERE meta_webhook_verify_token = $1 AND is_active = TRUE LIMIT 1`, [String(token).trim()]);
+                if (webCheck.rows.length > 0) {
+                    isTokenMatch = true;
+                }
+            }
+            catch { }
+        }
+        if (!isTokenMatch) {
+            console.warn('Meta Webhook Handshake: Token mismatch attempt rejected.');
+            return new Response('Forbidden: Verification token mismatch', { status: 403 });
+        }
+        if (!challenge || !/^[a-zA-Z0-9_\-\.\=\+]+$/.test(challenge) || challenge.length > 255) {
+            return new Response('Bad Request: Invalid challenge parameter', { status: 400 });
+        }
+        return new Response(challenge, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'X-Content-Type-Options': 'nosniff',
+            },
+        });
+    }
+    catch (err: any) {
+        console.error('Meta webhook GET verification error:', err.message);
+        return new Response('Internal server error', { status: 500 });
+    }
+}
+export async function POST(request: any) {
+    try {
+        const rawBody = await request.text();
+        if (rawBody.length > MAX_PAYLOAD_BYTES) {
+            return new Response('Payload Too Large', { status: 413 });
+        }
+        const signature = request.headers.get('x-hub-signature-256');
+        if (META_APP_SECRET) {
+            if (!signature) {
+                console.warn('Meta webhook POST rejected: Missing X-Hub-Signature-256 header.');
+                return new Response('Forbidden: Signature required', { status: 403 });
+            }
+            const isValid = verifyMetaWebhookSignature(rawBody, signature, META_APP_SECRET);
+            if (!isValid) {
+                console.warn('Meta webhook POST rejected: Invalid signature.');
+                return new Response('Forbidden: Invalid signature', { status: 403 });
+            }
+        }
+        let body: any = {};
+        try {
+            body = JSON.parse(rawBody);
+        }
+        catch {
+            return new Response('Bad Request: Invalid JSON body', { status: 400 });
+        }
+        const events = parseIncomingMetaWebhook(body);
+        if (events.length === 0) {
+            return NextResponse.json({ success: true, message: 'No actionable message events found' });
+        }
+        for (const evt of events) {
+            try {
+                const safePlatform = ['facebook', 'instagram', 'whatsapp'].includes(evt.platform) ? evt.platform : null;
+                if (!safePlatform)
+                    continue;
+                const safeConvId = String(evt.externalConversationId).slice(0, 255);
+                const safeRecipientId = String(evt.recipientId).slice(0, 255);
+                const safeName = String(evt.recipientName || 'Customer').slice(0, 255);
+                const safePhone = evt.recipientPhone ? String(evt.recipientPhone).replace(/\D/g, '').slice(0, 50) : null;
+                const safeText = String(evt.messageText || '').replace(/\0/g, '').slice(0, 4000);
+                const safeMsgId = evt.externalMessageId ? String(evt.externalMessageId).slice(0, 255) : null;
+                const convUpsert = await pool.query(`INSERT INTO meta_conversations (
+             platform, external_conversation_id, recipient_id, recipient_name,
+             recipient_phone, last_message, last_message_at, status, unread_count, updated_at
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 'OPEN', 1, CURRENT_TIMESTAMP)
+           ON CONFLICT (platform, external_conversation_id)
+           DO UPDATE SET
+             last_message = EXCLUDED.last_message,
+             last_message_at = EXCLUDED.last_message_at,
+             unread_count = meta_conversations.unread_count + 1,
+             updated_at = CURRENT_TIMESTAMP,
+             recipient_name = COALESCE(NULLIF(EXCLUDED.recipient_name, 'Customer'), meta_conversations.recipient_name)
+           RETURNING id`, [
+                    safePlatform,
+                    safeConvId,
+                    safeRecipientId,
+                    safeName,
+                    safePhone,
+                    safeText,
+                    evt.timestamp || new Date(),
+                ]);
+                const convId = convUpsert.rows[0]?.id;
+                if (convId) {
+                    await pool.query(`INSERT INTO meta_messages (
+               conversation_id, platform, sender_type, sender_id, sender_name,
+               message_text, external_message_id, delivery_status, created_at
+             )
+             VALUES ($1, $2, 'CUSTOMER', $3, $4, $5, $6, 'DELIVERED', $7)`, [
+                        convId,
+                        safePlatform,
+                        safeRecipientId,
+                        safeName,
+                        safeText,
+                        safeMsgId,
+                        evt.timestamp || new Date(),
+                    ]);
+                }
+                try {
+                    const webMetaRes = await pool.query(`SELECT website_id FROM website_meta
+             WHERE is_active = TRUE
+               AND (
+                 whatsapp_phone_number_id = $1
+                 OR meta_app_id = $2
+               )
+             ORDER BY (whatsapp_phone_number_id = $1) DESC
+             LIMIT 1`, [safeRecipientId, body.entry?.[0]?.id || '']);
+                    if (webMetaRes.rows.length > 0) {
+                        const webId = webMetaRes.rows[0].website_id;
+                        const wConvUpsert = await pool.query(`INSERT INTO website_meta_conversations (
+                 website_id, platform, external_conversation_id, recipient_id, recipient_name,
+                 recipient_phone, last_message, last_message_at, status, unread_count, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'OPEN', 1, CURRENT_TIMESTAMP)
+               ON CONFLICT (website_id, platform, external_conversation_id)
+               DO UPDATE SET
+                 last_message = EXCLUDED.last_message,
+                 last_message_at = EXCLUDED.last_message_at,
+                 unread_count = website_meta_conversations.unread_count + 1,
+                 updated_at = CURRENT_TIMESTAMP,
+                 recipient_name = COALESCE(NULLIF(EXCLUDED.recipient_name, 'Customer'), website_meta_conversations.recipient_name)
+               RETURNING id`, [
+                            webId,
+                            safePlatform,
+                            safeConvId,
+                            safeRecipientId,
+                            safeName,
+                            safePhone,
+                            safeText,
+                            evt.timestamp || new Date(),
+                        ]);
+                        const wConvId = wConvUpsert.rows[0]?.id;
+                        if (wConvId) {
+                            await pool.query(`INSERT INTO website_meta_messages (
+                   website_id, conversation_id, platform, sender_type, sender_id, sender_name,
+                   message_text, external_message_id, delivery_status, created_at
+                 )
+                 VALUES ($1, $2, $3, 'CUSTOMER', $4, $5, $6, $7, 'DELIVERED', $8)`, [
+                                webId,
+                                wConvId,
+                                safePlatform,
+                                safeRecipientId,
+                                safeName,
+                                safeText,
+                                safeMsgId,
+                                evt.timestamp || new Date(),
+                            ]);
+                        }
+                    }
+                }
+                catch (tenantErr: any) {
+                    console.warn('Notice syncing to website_meta_conversations:', tenantErr.message);
+                }
+            }
+            catch (evtErr: any) {
+                console.error('Error processing single Meta webhook event:', evtErr.message);
+            }
+        }
+        return NextResponse.json({ success: true, processed: events.length });
+    }
+    catch (error: any) {
+        console.error('Meta webhook processing error:', error.message);
+        return new Response('Internal server error', { status: 500 });
+    }
+}

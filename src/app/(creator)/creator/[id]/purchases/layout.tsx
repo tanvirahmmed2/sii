@@ -1,0 +1,8 @@
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Package Purchases | ${SITE_NAME}`,
+    description: `Manage purchased templates, package upgrades, and billing cycles on ${SITE_NAME}.`,
+};
+export default function CreatorPurchasesLayout({ children }: any) {
+    return <>{children}</>;
+}

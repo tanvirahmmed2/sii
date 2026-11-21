@@ -1,0 +1,9 @@
+import { redirect } from 'next/navigation';
+import { getCreatorSession } from 'src/lib/middleware/creator';
+export default async function CreatorCheckoutLayout({ children }: any) {
+    const session = await getCreatorSession();
+    if (!session || session.isActive === false || session.isVerified === false) {
+        redirect('/creator/login');
+    }
+    return <>{children}</>;
+}

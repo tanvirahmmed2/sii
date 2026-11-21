@@ -1,0 +1,18 @@
+import { redirect } from 'next/navigation';
+import { getDeveloperSession } from 'src/lib/middleware/developer';
+import { SITE_NAME } from 'src/lib/database/secret';
+export const metadata: any = {
+    title: `Developer Access | ${SITE_NAME}`,
+    description: `Administrative authentication portal for ${SITE_NAME}.`,
+};
+export default async function DeveloperAuthLayout({ children }: any) {
+    const session = await getDeveloperSession();
+    if (session && session.isActive !== false) {
+        redirect('/developer');
+    }
+    return (<div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-sm">
+        {children}
+      </div>
+    </div>);
+}

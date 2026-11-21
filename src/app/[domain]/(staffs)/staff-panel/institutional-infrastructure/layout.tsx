@@ -1,0 +1,7 @@
+export const metadata: any = {
+    title: 'Campus Infrastructure & Facilities | Staff Panel',
+    description: 'Document campus physical infrastructure, labs, auditoriums, sports arenas, and libraries.',
+};
+export default function StaffInstInfrastructureLayout({ children }: any) {
+    return <>{children}</>;
+}

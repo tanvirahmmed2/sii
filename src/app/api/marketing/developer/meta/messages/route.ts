@@ -1,0 +1,115 @@
+import { NextResponse } from 'next/server';
+import { pool } from 'src/lib/database/db';
+import { hasModulePermission } from 'src/lib/middleware/developer';
+import { sendPlatformMessage } from 'src/lib/meta/graph';
+const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'meta'];
+export async function GET(request: any) {
+    try {
+        const auth = await hasModulePermission(request, META_PERMISSIONS);
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message }, { status: auth.status });
+        }
+        const { searchParams } = new URL(request.url);
+        const conversationId = searchParams.get('conversationId');
+        const convId = parseInt(conversationId || '', 10);
+        if (isNaN(convId) || convId <= 0) {
+            return NextResponse.json({ success: false, error: 'Valid integer conversationId is required' }, { status: 400 });
+        }
+        await pool.query('UPDATE meta_conversations SET unread_count = 0 WHERE id = $1', [convId]);
+        const { rows } = await pool.query(`SELECT id, conversation_id, platform, sender_type, sender_id, sender_name,
+              message_text, media_url, media_type, external_message_id, delivery_status,
+              error_message, created_at
+       FROM meta_messages
+       WHERE conversation_id = $1
+       ORDER BY created_at ASC
+       LIMIT 500`, [convId]);
+        return NextResponse.json({ success: true, records: rows });
+    }
+    catch (error: any) {
+        console.error('Failed to fetch Meta messages:', error.message);
+        return NextResponse.json({ success: false, error: 'Failed to retrieve messages' }, { status: 500 });
+    }
+}
+export async function POST(request: any) {
+    try {
+        const auth = await hasModulePermission(request, META_PERMISSIONS);
+        if (!auth.success) {
+            return NextResponse.json({ success: false, error: auth.message }, { status: auth.status });
+        }
+        const body = await request.json().catch(() => ({}));
+        const { conversationId } = body;
+        const messageInput = body.messageText !== undefined ? body.messageText : body.message;
+        const convId = parseInt(conversationId || '', 10);
+        if (isNaN(convId) || convId <= 0) {
+            return NextResponse.json({ success: false, error: 'Valid integer conversationId is required' }, { status: 400 });
+        }
+        if (!messageInput || typeof messageInput !== 'string') {
+            return NextResponse.json({ success: false, error: 'messageText is required' }, { status: 400 });
+        }
+        const cleanText = messageInput.replace(/[\0]/g, '').trim();
+        if (!cleanText) {
+            return NextResponse.json({ success: false, error: 'messageText cannot be empty' }, { status: 400 });
+        }
+        if (cleanText.length > 4096) {
+            return NextResponse.json({ success: false, error: 'messageText cannot exceed 4096 characters' }, { status: 400 });
+        }
+        const convRes = await pool.query(`SELECT id, platform, recipient_id, recipient_name, recipient_phone
+       FROM meta_conversations
+       WHERE id = $1`, [convId]);
+        if (convRes.rows.length === 0) {
+            return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
+        }
+        const conv = convRes.rows[0];
+        const staffUser = auth.user || auth.staff || {};
+        const staffName = staffUser.name ? String(staffUser.name).slice(0, 255) : 'Staff Agent';
+        const staffId = String(staffUser.id || '0');
+        let externalMessageId = null;
+        let deliveryStatus = 'SENT';
+        let errorMessage = null;
+        let apiWarning = null;
+        try {
+            const recipient = conv.platform === 'whatsapp' ? (conv.recipient_phone || conv.recipient_id) : conv.recipient_id;
+            const metaResult = await sendPlatformMessage({
+                platform: conv.platform,
+                recipientId: recipient,
+                message: cleanText,
+            });
+            externalMessageId = metaResult.messageId || metaResult.messages?.[0]?.id || null;
+        }
+        catch (metaErr: any) {
+            console.warn(`Meta Graph API dispatch warning for ${conv.platform}:`, metaErr.message);
+            deliveryStatus = 'FAILED';
+            errorMessage = metaErr.message.slice(0, 500);
+            apiWarning = `Message saved locally, but Meta Graph API dispatch failed: ${metaErr.message}`;
+        }
+        const insertRes = await pool.query(`INSERT INTO meta_messages (
+         conversation_id, platform, sender_type, sender_id, sender_name,
+         message_text, external_message_id, delivery_status, error_message
+       )
+       VALUES ($1, $2, 'STAFF', $3, $4, $5, $6, $7, $8)
+       RETURNING *`, [
+            conv.id,
+            conv.platform,
+            staffId,
+            staffName,
+            cleanText,
+            externalMessageId,
+            deliveryStatus,
+            errorMessage,
+        ]);
+        const savedMessage = insertRes.rows[0];
+        await pool.query(`UPDATE meta_conversations
+       SET last_message = $1, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`, [cleanText, conv.id]);
+        return NextResponse.json({
+            success: true,
+            record: savedMessage,
+            warning: apiWarning,
+            apiNotice: apiWarning,
+        });
+    }
+    catch (error: any) {
+        console.error('Failed to send Meta message:', error.message);
+        return NextResponse.json({ success: false, error: 'Failed to send message' }, { status: 500 });
+    }
+}
