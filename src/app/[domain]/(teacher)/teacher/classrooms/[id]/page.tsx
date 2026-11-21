@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { FiArrowLeft, FiBook, FiFileText, FiLayers, FiVideo, FiFolder, FiPlus, FiEdit, FiTrash2, FiDownload, FiCalendar, FiClock, FiUser, FiX, FiCheck, FiAlertTriangle, FiExternalLink } from 'react-icons/fi';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
-const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor'), {
   ssr: false,
   loading: () => (<div className="h-44 w-full bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center">
     <div className="loader loader-sm" />

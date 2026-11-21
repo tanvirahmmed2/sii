@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways.js';
-import { DEFAULT_ADMISSION_FIELDS } from 'src/lib/constants/admissionFields.js';
+import { queryDb } from 'src/lib/database/db';
+import { verifyStaffPaymentAccess } from 'src/lib/database/paymentGateways';
+import { DEFAULT_ADMISSION_FIELDS } from 'src/lib/constants/admissionFields';
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyStaffPaymentAccess(request, context);

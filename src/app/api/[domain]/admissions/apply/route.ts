@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
+import { queryDb } from 'src/lib/database/db';
 import { withTenantTransaction } from '@/lib/db';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness.js';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { checkInstitutionEmailAvailability } from 'src/lib/database/emailUniqueness';
 import { validateSubmissionPayload } from '@/lib/form-criteria-engine';
 export async function GET(request: any, context: any) {
     try {

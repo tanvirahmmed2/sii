@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth.js';
+import { queryDb } from 'src/lib/database/db';
+import { verifyClubStaffAccess } from 'src/lib/middleware/clubAuth';
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyClubStaffAccess(request, context);

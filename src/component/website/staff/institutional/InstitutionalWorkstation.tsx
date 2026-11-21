@@ -5,7 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 import Loader from 'src/component/common/Loader';
-const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor'), {
   ssr: false,
   loading: () => (<div className="h-36 border border-slate-200 dark:border-slate-800 rounded-lg animate-pulse bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center text-xs text-slate-400">
     Loading Rich Text Editor...

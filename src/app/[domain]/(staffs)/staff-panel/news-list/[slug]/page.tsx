@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { FiTrash2 } from 'react-icons/fi';
-const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor.jsx'), {
+const TiptapEditor = dynamic(() => import('src/component/website/ui/TiptapEditor'), {
   ssr: false,
   loading: () => (<div className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-md flex items-center justify-center text-xs text-slate-400">
     Loading rich text editor...

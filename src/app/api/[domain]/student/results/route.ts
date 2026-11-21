@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator.js';
-import { getStudentSession } from 'src/lib/middleware/students.js';
+import { queryDb } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { getStudentSession } from 'src/lib/middleware/students';
 export async function GET(request: any, context: any) {
     try {
         const website = await resolveWebsiteFromRequest(request, context);

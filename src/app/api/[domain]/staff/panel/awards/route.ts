@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
+import { queryDb } from 'src/lib/database/db';
 import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
-import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
     return verifyStaffModuleAccess(request, context, 'website-builder', action);
 }

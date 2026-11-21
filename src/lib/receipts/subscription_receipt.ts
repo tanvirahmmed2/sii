@@ -4,7 +4,7 @@ import {
   SITE_CONTACT,
   SITE_ADDRESS,
   getBaseUrl,
-} from '../database/secret.js';
+} from '../database/secret';
 
 export const PLATFORM_INFO = {
   SITE_NAME: SITE_NAME || 'Disibin',

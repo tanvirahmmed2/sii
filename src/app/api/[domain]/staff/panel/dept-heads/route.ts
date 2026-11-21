@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver.js';
-import { getStaffSession } from 'src/lib/middleware/staff.js';
-import { uploadImage, deleteImage } from 'src/lib/database/cloudinary.js';
+import { queryDb } from 'src/lib/database/db';
+import { resolveWebsiteFromRequest } from 'src/lib/middleware/websiteResolver';
+import { getStaffSession } from 'src/lib/middleware/staff';
+import { uploadImage, deleteImage } from 'src/lib/database/cloudinary';
 async function verifyStaffAccess(request: any, context: any) {
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {

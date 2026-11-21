@@ -315,27 +315,27 @@ export async function GET(request: any, context: any) {
                 data: libraryCard
             },
             ...(residenceCard ? [{
-                    id: `res-card-${residenceCard.card_number}`,
-                    type: 'residence_card',
-                    title: 'Hostel Accommodation Pass',
-                    subtitle: `${residenceCard.hostel_name} • Room ${residenceCard.room_number}`,
-                    badge: 'Residential Permit',
-                    card_number: residenceCard.card_number,
-                    issue_date: residenceCard.allocation_date,
-                    expiry_date: 'Active Session',
-                    status: 'active',
-                    status_label: 'Active Resident',
-                    is_downloadable: true,
-                    gradient: 'from-amber-600 via-orange-600 to-rose-700',
-                    accent_color: '#f59e0b',
-                    details: {
-                        hostel_name: residenceCard.hostel_name,
-                        room_number: residenceCard.room_number,
-                        seat_number: residenceCard.seat_number,
-                        warden_phone: residenceCard.warden_phone || 'N/A'
-                    },
-                    data: residenceCard
-                }] : []),
+                id: `res-card-${residenceCard.card_number}`,
+                type: 'residence_card',
+                title: 'Hostel Accommodation Pass',
+                subtitle: `${residenceCard.hostel_name} • Room ${residenceCard.room_number}`,
+                badge: 'Residential Permit',
+                card_number: residenceCard.card_number,
+                issue_date: residenceCard.allocation_date,
+                expiry_date: 'Active Session',
+                status: 'active',
+                status_label: 'Active Resident',
+                is_downloadable: true,
+                gradient: 'from-amber-600 via-orange-600 to-rose-700',
+                accent_color: '#f59e0b',
+                details: {
+                    hostel_name: residenceCard.hostel_name,
+                    room_number: residenceCard.room_number,
+                    seat_number: residenceCard.seat_number,
+                    warden_phone: residenceCard.warden_phone || 'N/A'
+                },
+                data: residenceCard
+            }] : []),
             ...admitCards.map((ac: any) => ({
                 id: `admit-card-${ac.id}`,
                 type: 'admit_card',

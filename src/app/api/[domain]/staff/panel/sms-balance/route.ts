@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { queryDb } from 'src/lib/database/db.js';
-import { verifyStaffModuleAccess } from 'src/lib/middleware/staff.js';
-import { getCurrentYearMonth } from 'src/lib/database/usageLimiter.js';
-import { getMonthlySmsAnalytics } from 'src/lib/redis/redisClient.js';
+import { queryDb } from 'src/lib/database/db';
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { getCurrentYearMonth } from 'src/lib/database/usageLimiter';
+import { getMonthlySmsAnalytics } from 'src/lib/redis/redisClient';
 export const dynamic = 'force-dynamic';
 export async function GET(request: any, context: any) {
     try {
