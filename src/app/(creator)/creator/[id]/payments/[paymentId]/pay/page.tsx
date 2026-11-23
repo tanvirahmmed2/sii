@@ -9,7 +9,7 @@ function PayContent({ params }: any) {
     const paymentId = resolvedParams?.paymentId;
     const searchParams = useSearchParams();
     const gatewayParam = searchParams.get('gateway');
-    return (<PaymentGatewayCheckout creatorId={creatorId} paymentId={paymentId} initialGateway={gatewayParam || 'eps'}/>);
+    return (<PaymentGatewayCheckout creatorId={creatorId} paymentId={paymentId} initialGateway={gatewayParam || 'sslcommerz'}/>);
 }
 export default function CreatorPaymentPayPage({ params }: any) {
     return (<Suspense fallback={<LoadingScreen fullScreen={false} label="Loading payment gateway..."/>}>

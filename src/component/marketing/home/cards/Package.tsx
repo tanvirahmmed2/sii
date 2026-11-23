@@ -73,12 +73,6 @@ export default function Package({ pkg, price, billingCycle = 'MONTHLY', currency
             <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               {isYearly ? '/ year' : '/ month'}
             </span>
-            {isYearly && discountPct > 0 && (<span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold ml-1.5 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                SAVE {discountPct}%
-              </span>)}
-            {isYearly && discountPct === 0 && (<span className="text-[10px] text-secondary font-bold ml-1.5 bg-secondary/10 border border-secondary/20 px-2 py-0.5 rounded-md">
-                Annual Pass
-              </span>)}
           </div>
           <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
             {isYearly ? 'Billed annually with full feature access' : 'Billed monthly, cancel anytime'}

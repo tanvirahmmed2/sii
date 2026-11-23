@@ -231,15 +231,10 @@ export const META_PHONE_NUMBER_ID = process.env.META_PHONE_NUMBER_ID || '';
 export const META_WABA_ID = process.env.META_WABA_ID || '';
 export const META_WEBHOOK_VERIFY_TOKEN = process.env.META_WEBHOOK_VERIFY_TOKEN || 'sii_meta_secure_verify_token_2026';
 
-export const EPS_MODE = process.env.EPS_MODE || 'sandbox';
-export const EPS_MERCHANT_ID = process.env.EPS_MERCHANT_ID || '';
-export const EPS_STORE_ID = process.env.EPS_STORE_ID || '';
-export const EPS_USERNAME = process.env.EPS_USERNAME || '';
-export const EPS_PASSWORD = process.env.EPS_PASSWORD || '';
-export const EPS_HASH_KEY = process.env.EPS_HASH_KEY || '';
-export const EPS_API_URL = process.env.EPS_API_URL || '';
-export const EPS_RETURN_URL = process.env.EPS_RETURN_URL || '';
-export const EPS_CANCEL_URL = process.env.EPS_CANCEL_URL || '';
+export const SSLCOMMERZ_STORE_ID = process.env.SSLCOMMERZ_STORE_ID || 'testbox';
+export const SSLCOMMERZ_STORE_PASSWORD = process.env.SSLCOMMERZ_STORE_PASSWORD || 'qwerty';
+export const SSLCOMMERZ_IS_LIVE = process.env.SSLCOMMERZ_IS_LIVE === 'true';
+export const SSLCOMMERZ_MODE = process.env.SSLCOMMERZ_MODE || (SSLCOMMERZ_IS_LIVE ? 'live' : 'sandbox');
 
 export const USD_TO_BDT_RATE = parseFloat(process.env.USD_TO_BDT_RATE || '120');
 

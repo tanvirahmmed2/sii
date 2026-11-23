@@ -193,14 +193,14 @@ export default function AdminPaymentsPage() {
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-base font-bold text-slate-900 dark:text-white">Platform Payment Management</h1>
             <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
-              EPS &amp; Manual
+              SSLCommerz &amp; Manual
             </span>
             {unpaidCount > 0 && (<span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300">
                 {unpaidCount} Awaiting Settlement
               </span>)}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Monitor EPS transactions, collect developer manual payments, and manage instant subscription provisioning.
+            Monitor SSLCommerz transactions, collect developer manual payments, and manage instant subscription provisioning.
           </p>
         </div>
 

@@ -235,10 +235,7 @@ ${inquiryMessage}`,
             <button type="button" onClick={() => setBillingCycle('YEARLY')} className={`px-4 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${billingCycle === 'YEARLY'
             ? 'bg-secondary text-white shadow-md shadow-secondary/25'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-              <span>Annual Billing</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-md font-bold">
-                SAVE 20%
-              </span>
+              Annual Billing
             </button>
           </div>
         </div>

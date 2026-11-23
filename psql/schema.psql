@@ -1329,3 +1329,69 @@ CREATE INDEX IF NOT EXISTS idx_dev_payrolls_status ON developer_payrolls(payment
 CREATE INDEX IF NOT EXISTS idx_payroll_payments_dp ON payroll_payments(developer_payroll_id);
 CREATE INDEX IF NOT EXISTS idx_payroll_payments_payroll ON payroll_payments(payroll_id);
 CREATE INDEX IF NOT EXISTS idx_payroll_payments_developer ON payroll_payments(developer_id);
+
+CREATE TABLE IF NOT EXISTS platform_balances (
+    id BIGSERIAL PRIMARY KEY,
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    total_revenue NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    available_balance NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    pending_balance NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    total_withdrawn NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_platform_balances_currency UNIQUE (currency)
+);
+
+DROP TRIGGER IF EXISTS update_platform_balances_updated_at ON platform_balances;
+CREATE TRIGGER update_platform_balances_updated_at
+    BEFORE UPDATE ON platform_balances
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS cashflows (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'subscription',
+    flow_type VARCHAR(20) NOT NULL CHECK (flow_type IN ('inflow', 'outflow')),
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    balance_after NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    reference_type VARCHAR(50) NOT NULL,
+    reference_id BIGINT,
+    creator_id BIGINT REFERENCES creators(id) ON DELETE SET NULL,
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    payment_method VARCHAR(100) DEFAULT 'sslcommerz',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cashflows_flow_type ON cashflows(flow_type);
+CREATE INDEX IF NOT EXISTS idx_cashflows_category ON cashflows(category);
+CREATE INDEX IF NOT EXISTS idx_cashflows_creator ON cashflows(creator_id);
+CREATE INDEX IF NOT EXISTS idx_cashflows_created_at ON cashflows(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS withdraws (
+    id BIGSERIAL PRIMARY KEY,
+    requested_by_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    fee NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    net_amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    method VARCHAR(50) NOT NULL DEFAULT 'bank_transfer',
+    account_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'processed')),
+    processed_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    notes TEXT,
+    transaction_reference VARCHAR(150),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_withdraws_updated_at ON withdraws;
+CREATE TRIGGER update_withdraws_updated_at
+    BEFORE UPDATE ON withdraws
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_withdraws_status ON withdraws(status);
+CREATE INDEX IF NOT EXISTS idx_withdraws_requested_by ON withdraws(requested_by_id);
+CREATE INDEX IF NOT EXISTS idx_withdraws_created_at ON withdraws(created_at DESC);
+

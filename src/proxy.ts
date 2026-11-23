@@ -136,7 +136,7 @@ export function proxy(request: any) {
     'marketing', 'auth', 'admin', 'icon.png', 'favicon.ico', 'robots.txt',
     'sitemap.xml', 'about', 'blogs', 'careers', 'contact', 'faqs', 'packages',
     'policies', 'reviews', 'tutorials', 'updates', 'help', 'terms', 'privacy',
-    'login', 'register'
+    'login', 'register', 'payment'
   ]);
 
   const admissionPaymentMatch = pathname.match(/^(?:\/([^/]+))?\/admission\/payment(?:\/([^/?#]+))?\/?$/i);
@@ -176,7 +176,7 @@ export function proxy(request: any) {
     }
 
     if (pathname.startsWith('/api')) {
-      if (!pathname.startsWith('/api/marketing') && !pathname.startsWith('/api/auth')) {
+      if (!pathname.startsWith('/api/marketing') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/payment') && !pathname.startsWith('/api/seed')) {
         let previewTenant = request.headers.get('x-website-domain') || request.headers.get('x-domain');
         if (!previewTenant) {
           previewTenant = request.cookies.get('x-website-domain')?.value || request.cookies.get('x-domain')?.value;
@@ -269,7 +269,7 @@ export function proxy(request: any) {
   requestHeaders.set('x-domain', tenantDomain);
 
   if (pathname.startsWith('/api')) {
-    if (pathname.startsWith('/api/marketing') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/seed')) {
+    if (pathname.startsWith('/api/marketing') || pathname.startsWith('/api/auth') || pathname.startsWith('/api/payment') || pathname.startsWith('/api/seed')) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 

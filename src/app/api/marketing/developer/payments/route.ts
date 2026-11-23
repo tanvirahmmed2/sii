@@ -242,6 +242,49 @@ export async function PUT(request: any) {
                )`, [existing.creator_id, pu.package_id, existing.purchase_id, pu.billing_cycle || 'monthly', durationDays]);
                     }
                 }
+
+                const payAmount = Number(existing.amount || 0);
+                const payCurrency = (existing.currency || 'BDT').toUpperCase();
+                const balRes = await queryDb(`SELECT available_balance FROM platform_balances WHERE currency = $1 LIMIT 1`, [payCurrency]);
+                const prevBal = balRes.rows.length > 0 ? Number(balRes.rows[0].available_balance) : 0;
+                const newBal = prevBal + payAmount;
+
+                await queryDb(
+                  `INSERT INTO platform_balances (currency, total_revenue, available_balance, pending_balance, total_withdrawn)
+                   VALUES ($1, $2, $2, 0.00, 0.00)
+                   ON CONFLICT (currency) DO UPDATE 
+                   SET total_revenue = platform_balances.total_revenue + EXCLUDED.total_revenue,
+                       available_balance = platform_balances.available_balance + EXCLUDED.available_balance,
+                       updated_at = CURRENT_TIMESTAMP`,
+                  [payCurrency, payAmount]
+                );
+
+                await queryDb(
+                  `INSERT INTO cashflows (
+                    title, category, flow_type, amount, currency, balance_after,
+                    reference_type, reference_id, creator_id, developer_id,
+                    payment_method, metadata
+                  ) VALUES (
+                    $1, 'subscription', 'inflow', $2, $3, $4,
+                    'payment', $5, $6, $7,
+                    $8, $9
+                  )`,
+                  [
+                    `Manual Approval for Payment #${id}`,
+                    payAmount,
+                    payCurrency,
+                    newBal,
+                    id,
+                    existing.creator_id,
+                    developerId,
+                    'manual_cash',
+                    JSON.stringify({
+                      payment_id: id,
+                      purchase_id: existing.purchase_id,
+                      notes: body.manual_payment_notes || 'Manual approval by developer',
+                    }),
+                  ]
+                );
             }
             const updateData = { ...data };
             delete updateData.id;

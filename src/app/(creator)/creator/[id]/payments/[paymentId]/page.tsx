@@ -117,11 +117,31 @@ export default function CreatorPaymentInvoicePage({ params }: any) {
             <span>Print Official Receipt</span>
           </button>
 
-          {isPending && (<Link href={`/creator/${creatorId}/payments/${paymentId}/pay`} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors">
-              Pay Now
+          {isPending && (<Link href={`/creator/${creatorId}/payments/${paymentId}/pay`} className="px-5 py-2 rounded-lg bg-secondary hover:bg-secondary-dark text-white font-bold transition-all shadow-md shadow-secondary/20 flex items-center gap-1.5">
+              <span>Pay with SSLCommerz &rarr;</span>
             </Link>)}
         </div>
       </div>
+
+      {isPending && (<div className="p-5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold text-sm text-amber-900">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <span>Unpaid Invoice Awaiting Settlement</span>
+            </div>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              This subscription invoice is pending. Settle online now with SSLCommerz or provide Payment ID #{paymentId} to an authorized developer.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="font-mono text-base font-black text-amber-900">
+              {amountFormatted}
+            </div>
+            <Link href={`/creator/${creatorId}/payments/${paymentId}/pay`} className="px-5 py-2.5 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-bold text-xs uppercase tracking-wide transition shadow-lg shadow-secondary/25">
+              Pay Invoice Now &rarr;
+            </Link>
+          </div>
+        </div>)}
 
       <div className="bg-white border border-slate-200/90 rounded-2xl shadow-sm overflow-hidden p-6 sm:p-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 border-b border-slate-200 pb-6">
@@ -185,7 +205,7 @@ export default function CreatorPaymentInvoicePage({ params }: any) {
               </div>
               <div className="flex justify-between">
                 <span>Payment Gateway:</span>
-                <strong className="text-slate-800 font-mono uppercase">{payment.payment_method || 'EPS'}</strong>
+                <strong className="text-slate-800 font-mono uppercase">{payment.payment_method || 'SSLCommerz'}</strong>
               </div>
               <div className="flex justify-between">
                 <span>Transaction Ref:</span>

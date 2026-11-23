@@ -123,7 +123,7 @@ function PaymentsContent() {
                         <span className="text-[10px] text-slate-500">{p.currency || 'USD'}</span>
                       </td>
                       <td className="py-2.5 text-slate-600">
-                        {p.payment_method || 'EPS'}
+                        {p.payment_method || 'SSLCommerz'}
                       </td>
                       <td className="py-2.5">
                         <span className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${isSuccessful

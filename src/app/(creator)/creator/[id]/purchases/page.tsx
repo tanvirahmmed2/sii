@@ -10,7 +10,7 @@ export default function CreatorPurchasesPage() {
     const [loadingPurchases, setLoadingPurchases] = useState<any>(true);
     const [renewalModalOpen, setRenewalModalOpen] = useState<any>(false);
     const [renewalCycle, setRenewalCycle] = useState<any>('monthly');
-    const [renewalGateway, setRenewalGateway] = useState<any>('eps');
+    const [renewalGateway, setRenewalGateway] = useState<any>('sslcommerz');
     const [creatingOrder, setCreatingOrder] = useState<any>(false);
     const [activePaymentId, setActivePaymentId] = useState<any>(null);
     const [renewalError, setRenewalError] = useState<any>('');
@@ -256,7 +256,7 @@ export default function CreatorPurchasesPage() {
                         : `$${Number(p.payment_amount || p.total_amount || 0).toFixed(2)} USD`}
                       </td>
                       <td className="py-2.5 text-slate-600">
-                        {p.payment_method || 'EPS'}
+                        {p.payment_method || 'SSLCommerz'}
                       </td>
                       <td className="py-2.5">
                         <span className={`text-[9px] font-medium px-1.5 py-0.2 rounded border ${isCompleted
@@ -331,11 +331,11 @@ export default function CreatorPurchasesPage() {
                   Select Payment Gateway
                 </label>
                 <div className="grid grid-cols-1 gap-2">
-                  <button type="button" onClick={() => setRenewalGateway('eps')} className="p-3 rounded-xl border border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-500 font-semibold text-slate-900 text-left cursor-pointer">
+                  <button type="button" onClick={() => setRenewalGateway('sslcommerz')} className="p-3 rounded-xl border border-secondary bg-secondary/10 ring-1 ring-secondary/30 font-semibold text-slate-900 dark:text-white text-left cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="block text-xs font-bold text-indigo-700">Easy Payment System (EPS)</span>
-                        <span className="block text-[10px] text-slate-500">Bangladeshi MFS (bKash, Nagad), Bank Accounts, &amp; Foreign Cards</span>
+                        <span className="block text-xs font-bold text-secondary">SSLCommerz Payment Gateway</span>
+                        <span className="block text-[10px] text-slate-500">bKash, Nagad, Rocket, Bank Cards, &amp; Net Banking</span>
                       </div>
                       <span className="font-mono text-xs font-bold text-slate-900">
                         ৳{pkgBdtPrice.toLocaleString()} BDT / ${pkgUsdPrice.toFixed(2)} USD
