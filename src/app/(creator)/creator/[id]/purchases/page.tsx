@@ -52,11 +52,11 @@ export default function CreatorPurchasesPage() {
     }, [creatorId]);
     const isYearly = renewalCycle === 'yearly';
     const pkgBdtPrice = isYearly
-        ? Number(activeSubscription?.yearly_price_bdt || 35000)
-        : Number(activeSubscription?.monthly_price_bdt || 3500);
+        ? Number(activeSubscription?.bdt_per_month || 3500) * 12
+        : Number(activeSubscription?.bdt_per_month || 3500);
     const pkgUsdPrice = isYearly
-        ? Number(activeSubscription?.yearly_price_usd || 290)
-        : Number(activeSubscription?.monthly_price_usd || 29);
+        ? Number(activeSubscription?.usd_per_month || 29) * 12
+        : Number(activeSubscription?.usd_per_month || 29);
     const handleStartRenewalPayment = async () => {
         setCreatingOrder(true);
         setRenewalError('');

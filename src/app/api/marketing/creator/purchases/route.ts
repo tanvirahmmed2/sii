@@ -90,25 +90,11 @@ export async function handlePurchasesAction(body: any, sessionCreator: any) {
             return NextResponse.json({ success: false, error: 'Selected package does not exist or is inactive' }, { status: 404 });
         }
         const isYearly = billingCycle === 'yearly';
-        let baseAmount = 0;
-        let currency = 'BDT';
-        const cleanMethod = String(paymentMethod || 'eps').toLowerCase();
-        const isBdt = !cleanMethod.includes('usd') && !cleanMethod.includes('global') && String(body.currency || '').toUpperCase() !== 'USD';
-        if (isBdt) {
-            currency = 'BDT';
-            baseAmount = isYearly
-                ? Number(pkg.yearly_price_bdt || 0)
-                : Number(pkg.monthly_price_bdt || 0);
-        }
-        else {
-            currency = 'USD';
-            baseAmount = isYearly
-                ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0)
-                : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
-            if (!baseAmount && pkg.price_in_cents) {
-                baseAmount = Number(pkg.price_in_cents) / 100;
-            }
-        }
+        const requestedCurrency = String(body.currency || 'BDT').toUpperCase();
+        const currency = ['BDT', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'].includes(requestedCurrency) ? requestedCurrency : 'BDT';
+        const currKey = `${currency.toLowerCase()}_per_month`;
+        const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+        const baseAmount = isYearly ? monthlyRate * 12 : monthlyRate;
         const purchaseCode = generateToken(12);
         const purchaseNotes = JSON.stringify({
             notes: notes || 'Package checkout order',

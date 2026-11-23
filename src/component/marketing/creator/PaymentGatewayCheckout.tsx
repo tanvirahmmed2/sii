@@ -131,7 +131,15 @@ export default function PaymentGatewayCheckout({
   const isYearly = String(payment?.billing_interval || '').toLowerCase() === 'yearly';
   const displayAmount = Number(payment?.amount || 0);
   const displayCurrency = payment?.currency || 'BDT';
-  const currencySymbol = displayCurrency === 'BDT' ? '৳' : '$';
+  const currencySymbols: Record<string, string> = {
+    BDT: '৳',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    AUD: 'A$',
+    CAD: 'C$',
+  };
+  const currencySymbol = currencySymbols[displayCurrency] || '$';
 
   return (
     <div className="w-full max-w-2xl mx-auto py-8 px-4 sm:px-6 space-y-6">

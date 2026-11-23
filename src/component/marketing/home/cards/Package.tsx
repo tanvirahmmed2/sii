@@ -5,7 +5,15 @@ import { BiCheckCircle, BiStar, BiGlobe, BiUser, BiGroup, BiCloud, BiTime, BiRig
 export default function Package({ pkg, price, billingCycle = 'MONTHLY', currency = 'USD', isWishlisted = false, onToggleWishlist, wishlistLoading = false, }: any) {
     if (!pkg)
         return null;
-    const symbol = currency === 'BDT' ? '৳' : '$';
+    const currencySymbols: Record<string, string> = {
+      BDT: '৳',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      AUD: 'A$',
+      CAD: 'C$',
+    };
+    const symbol = currencySymbols[String(currency).toUpperCase()] || '$';
     const isYearly = billingCycle === 'YEARLY';
     const isPopular = Boolean(pkg.is_popular ?? pkg.popular);
     const maxWebsites = Number(pkg.max_websites ?? pkg.maxWebsites ?? pkg.max_portfolios ?? pkg.maxPortfolios ?? 1);
@@ -126,7 +134,7 @@ export default function Package({ pkg, price, billingCycle = 'MONTHLY', currency
       </div>
 
       <div className="pt-7">
-        <Link href={`/creator/checkout?${pkg.id}`} className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${isPopular
+        <Link href={`/creator/checkout?${pkg.id}&interval=${billingCycle.toLowerCase()}&currency=${currency}`} className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${isPopular
             ? 'bg-secondary hover:bg-secondary-dark text-white shadow-secondary/25 ring-2 ring-secondary/30'
             : 'bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-white border border-slate-800 dark:border-white/10 hover:border-secondary/40'}`}>
           <span>{pkg.cta || `Get ${pkg.name}`}</span>

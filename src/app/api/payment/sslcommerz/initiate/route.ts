@@ -80,12 +80,58 @@ export async function POST(request: any) {
       creator = creatorRes.rows[0];
 
       const isYearly = billingCycle === 'yearly';
-      const isBdt = requestedCurrency === 'BDT';
-      const calculatedPrice = isYearly
-        ? Number(isBdt ? (pkg.yearly_price_bdt || 0) : (pkg.yearly_price_usd || pkg.yearly_price || 0))
-        : Number(isBdt ? (pkg.monthly_price_bdt || 0) : (pkg.monthly_price_usd || pkg.monthly_price || 0));
+      const validCurrencies = ['BDT', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'];
+      const currency = validCurrencies.includes(requestedCurrency) ? requestedCurrency : 'BDT';
+      const currKey = `${currency.toLowerCase()}_per_month`;
+      const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+      const baseAmount = Number((isYearly ? monthlyRate * 12 : monthlyRate).toFixed(2));
 
-      const finalAmount = Number(calculatedPrice.toFixed(2));
+      let promoRecord: any = null;
+      let discountAmount = 0;
+      const rawPromoCode = body.promoCode ? String(body.promoCode).trim().toUpperCase() : null;
+
+      if (rawPromoCode) {
+        const promoRes = await queryDb(
+          `SELECT * FROM promos WHERE UPPER(code) = UPPER($1) AND is_active = TRUE LIMIT 1`,
+          [rawPromoCode]
+        );
+        if (promoRes.rows.length > 0) {
+          const promo = promoRes.rows[0];
+          const now = new Date();
+          const isNotExpired = !promo.ending_date || new Date(promo.ending_date) >= now;
+          const isStarted = !promo.start_date || new Date(promo.start_date) <= now;
+
+          if (isNotExpired && isStarted) {
+            const usageRes = await queryDb(
+              `SELECT COUNT(*)::int AS count FROM promo_usages WHERE promo_id = $1 AND creator_id = $2`,
+              [promo.id, creatorId]
+            );
+            const usageCount = Number(usageRes.rows[0]?.count || 0);
+            const maxPerCreator = Number(promo.max_uses_per_creator || 1);
+
+            if (usageCount < maxPerCreator) {
+              let totalLimitOk = true;
+              if (promo.max_total_uses !== null) {
+                const totalRes = await queryDb(
+                  `SELECT COUNT(*)::int AS count FROM promo_usages WHERE promo_id = $1`,
+                  [promo.id]
+                );
+                if (Number(totalRes.rows[0]?.count || 0) >= Number(promo.max_total_uses)) {
+                  totalLimitOk = false;
+                }
+              }
+
+              if (totalLimitOk) {
+                promoRecord = promo;
+                const pct = Number(promo.discount_percentage || 0);
+                discountAmount = Number(((baseAmount * pct) / 100).toFixed(2));
+              }
+            }
+          }
+        }
+      }
+
+      const finalAmount = Math.max(0, Number((baseAmount - discountAmount).toFixed(2)));
       const purchaseCode = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const durationDays = isYearly ? 365 : 30;
 
@@ -93,18 +139,38 @@ export async function POST(request: any) {
       try {
         const purRes = await queryDb(
           `INSERT INTO purchases (
-            creator_id, website_id, package_id, purchase_code, billing_cycle,
-            base_amount, discount_amount, tax_amount, total_amount, status,
+            creator_id, website_id, package_id, promo_id, purchase_code, billing_cycle,
+            currency, base_amount, discount_amount, tax_amount, total_amount, status,
             period_start, period_end
           ) VALUES (
-            $1, $2, $3, $4, $5,
-            $6, 0.00, 0.00, $6, 'pending',
-            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($7 || ' days')::interval
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, 0.00, $10, 'pending',
+            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($11 || ' days')::interval
           ) RETURNING *`,
-          [creatorId, websiteId, packageId, purchaseCode, billingCycle, finalAmount, durationDays]
+          [
+            creatorId,
+            websiteId,
+            packageId,
+            promoRecord ? promoRecord.id : null,
+            purchaseCode,
+            billingCycle,
+            currency,
+            baseAmount,
+            discountAmount,
+            finalAmount,
+            durationDays,
+          ]
         );
         purchase = purRes.rows[0];
         purchaseId = purchase.id;
+
+        if (promoRecord) {
+          await queryDb(
+            `INSERT INTO promo_usages (promo_id, creator_id, purchase_id, discount_amount)
+             VALUES ($1, $2, $3, $4)`,
+            [promoRecord.id, creatorId, purchaseId, discountAmount]
+          );
+        }
 
         const initTxId = `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const payRes = await queryDb(
@@ -115,7 +181,7 @@ export async function POST(request: any) {
             $1, $2, $3, $4, $5,
             'sslcommerz', 'sslcommerz', 'pending', $6, $7
           ) RETURNING *`,
-          [purchaseId, creatorId, initTxId, finalAmount, requestedCurrency, creator.email, creator.phone]
+          [purchaseId, creatorId, initTxId, finalAmount, currency, creator.email, creator.phone]
         );
         payment = payRes.rows[0];
         paymentId = payment.id;

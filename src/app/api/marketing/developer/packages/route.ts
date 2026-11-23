@@ -191,14 +191,12 @@ export async function POST(request: any) {
         const shortDescription = (data.short_description || '').trim();
         const tagline = (data.tagline || '').trim();
         const description = (data.description || '').trim();
-        const monthlyPriceUsd = Math.max(0, Number(data.monthly_price_usd !== undefined
-            ? data.monthly_price_usd
-            : (data.monthly_price !== undefined ? data.monthly_price : 0)) || 0);
-        const yearlyPriceUsd = Math.max(0, Number(data.yearly_price_usd !== undefined
-            ? data.yearly_price_usd
-            : (data.yearly_price !== undefined ? data.yearly_price : 0)) || 0);
-        const monthlyPriceBdt = Math.max(0, Number(data.monthly_price_bdt !== undefined ? data.monthly_price_bdt : 0) || 0);
-        const yearlyPriceBdt = Math.max(0, Number(data.yearly_price_bdt !== undefined ? data.yearly_price_bdt : 0) || 0);
+        const bdtPerMonth = Math.max(0, Number(data.bdt_per_month !== undefined ? data.bdt_per_month : (data.monthly_price_bdt ?? 0)) || 0);
+        const usdPerMonth = Math.max(0, Number(data.usd_per_month !== undefined ? data.usd_per_month : (data.monthly_price_usd ?? data.monthly_price ?? 0)) || 0);
+        const eurPerMonth = Math.max(0, Number(data.eur_per_month !== undefined ? data.eur_per_month : (usdPerMonth * 0.92)) || 0);
+        const gbpPerMonth = Math.max(0, Number(data.gbp_per_month !== undefined ? data.gbp_per_month : (usdPerMonth * 0.79)) || 0);
+        const audPerMonth = Math.max(0, Number(data.aud_per_month !== undefined ? data.aud_per_month : (usdPerMonth * 1.52)) || 0);
+        const cadPerMonth = Math.max(0, Number(data.cad_per_month !== undefined ? data.cad_per_month : (usdPerMonth * 1.38)) || 0);
         const discountPercentage = Math.min(100, Math.max(0, Number(data.discount_percentage) || 0));
         const maxStudents = data.max_students !== undefined ? Math.max(1, Number(data.max_students)) : 500;
         const maxTeachers = data.max_teachers !== undefined ? Math.max(1, Number(data.max_teachers)) : 30;
@@ -241,23 +239,23 @@ export async function POST(request: any) {
         }
         const res = await queryDb(`INSERT INTO packages (
         name, slug, short_description, tagline, description,
-        monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
-        monthly_price, yearly_price, discount_percentage,
+        bdt_per_month, usd_per_month, eur_per_month, gbp_per_month, aud_per_month, cad_per_month,
+        discount_percentage,
         max_students, max_teachers, max_staff, max_storage_mb,
         is_available_student_panel, is_available_teacher_panel, is_available_custom_domain,
         features, is_popular, is_public, is_active, grace_period, sort_order
       ) VALUES (
         $1, $2, $3, $4, $5,
-        $6, $7, $8, $9,
-        $10, $11, $12,
+        $6, $7, $8, $9, $10, $11,
+        $12,
         $13, $14, $15, $16,
         $17, $18, $19,
         $20::jsonb, $21, $22, $23, $24, $25
       )
       RETURNING *`, [
             name, slug, shortDescription, tagline, description,
-            monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
-            monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
+            bdtPerMonth, usdPerMonth, eurPerMonth, gbpPerMonth, audPerMonth, cadPerMonth,
+            discountPercentage,
             maxStudents, maxTeachers, maxStaff, maxStorageMb,
             isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
             features, isPopular, isPublic, isActive, gracePeriod, sortOrder
@@ -315,18 +313,24 @@ export async function PUT(request: any) {
         const shortDescription = data.short_description !== undefined ? data.short_description : current.short_description;
         const tagline = data.tagline !== undefined ? (data.tagline || '').trim() : (current.tagline || '');
         const description = data.description !== undefined ? data.description : current.description;
-        const monthlyPriceUsd = data.monthly_price_usd !== undefined
-            ? Math.max(0, Number(data.monthly_price_usd) || 0)
-            : Number(current.monthly_price_usd ?? current.monthly_price ?? 0);
-        const yearlyPriceUsd = data.yearly_price_usd !== undefined
-            ? Math.max(0, Number(data.yearly_price_usd) || 0)
-            : Number(current.yearly_price_usd ?? current.yearly_price ?? 0);
-        const monthlyPriceBdt = data.monthly_price_bdt !== undefined
-            ? Math.max(0, Number(data.monthly_price_bdt) || 0)
-            : Number(current.monthly_price_bdt ?? 0);
-        const yearlyPriceBdt = data.yearly_price_bdt !== undefined
-            ? Math.max(0, Number(data.yearly_price_bdt) || 0)
-            : Number(current.yearly_price_bdt ?? 0);
+        const bdtPerMonth = data.bdt_per_month !== undefined
+            ? Math.max(0, Number(data.bdt_per_month) || 0)
+            : Number(current.bdt_per_month ?? 0);
+        const usdPerMonth = data.usd_per_month !== undefined
+            ? Math.max(0, Number(data.usd_per_month) || 0)
+            : Number(current.usd_per_month ?? 0);
+        const eurPerMonth = data.eur_per_month !== undefined
+            ? Math.max(0, Number(data.eur_per_month) || 0)
+            : Number(current.eur_per_month ?? (usdPerMonth * 0.92));
+        const gbpPerMonth = data.gbp_per_month !== undefined
+            ? Math.max(0, Number(data.gbp_per_month) || 0)
+            : Number(current.gbp_per_month ?? (usdPerMonth * 0.79));
+        const audPerMonth = data.aud_per_month !== undefined
+            ? Math.max(0, Number(data.aud_per_month) || 0)
+            : Number(current.aud_per_month ?? (usdPerMonth * 1.52));
+        const cadPerMonth = data.cad_per_month !== undefined
+            ? Math.max(0, Number(data.cad_per_month) || 0)
+            : Number(current.cad_per_month ?? (usdPerMonth * 1.38));
         const discountPercentage = data.discount_percentage !== undefined
             ? Math.min(100, Math.max(0, Number(data.discount_percentage) || 0))
             : Number(current.discount_percentage || 0);
@@ -368,12 +372,12 @@ export async function PUT(request: any) {
            short_description = $3,
            tagline = $4,
            description = $5,
-           monthly_price_usd = $6,
-           yearly_price_usd = $7,
-           monthly_price_bdt = $8,
-           yearly_price_bdt = $9,
-           monthly_price = $10,
-           yearly_price = $11,
+           bdt_per_month = $6,
+           usd_per_month = $7,
+           eur_per_month = $8,
+           gbp_per_month = $9,
+           aud_per_month = $10,
+           cad_per_month = $11,
            discount_percentage = $12,
            max_students = $13,
            max_teachers = $14,
@@ -391,8 +395,8 @@ export async function PUT(request: any) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $26`, [
             name, slug, shortDescription, tagline, description,
-            monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
-            monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
+            bdtPerMonth, usdPerMonth, eurPerMonth, gbpPerMonth, audPerMonth, cadPerMonth,
+            discountPercentage,
             maxStudents, maxTeachers, maxStaff, maxStorageMb,
             isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
             featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,

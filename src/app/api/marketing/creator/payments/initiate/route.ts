@@ -37,11 +37,9 @@ export async function POST(request: any) {
 
     const isYearly = String(billingCycle).toLowerCase() === 'yearly';
     const finalCurrency = String(currency || 'BDT').toUpperCase();
-    const isBdt = finalCurrency === 'BDT';
-
-    const baseAmount = isYearly
-      ? Number(isBdt ? (pkg.yearly_price_bdt || 0) : (pkg.yearly_price_usd || pkg.yearly_price || 0))
-      : Number(isBdt ? (pkg.monthly_price_bdt || 0) : (pkg.monthly_price_usd || pkg.monthly_price || 0));
+    const currKey = `${finalCurrency.toLowerCase()}_per_month`;
+    const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+    const baseAmount = isYearly ? monthlyRate * 12 : monthlyRate;
 
     const totalAmount = Number(baseAmount.toFixed(2));
     const purchaseCode = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;

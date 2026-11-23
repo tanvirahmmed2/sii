@@ -13,20 +13,12 @@ function formatPackageRecord(p: any) {
             features = [];
         }
     }
-    const monthlyUsd = Number(p.monthly_price_usd !== undefined
-        ? p.monthly_price_usd
-        : p.monthly_price !== undefined
-            ? p.monthly_price
-            : p.price_in_cents
-                ? p.price_in_cents / 100
-                : 0) || 0;
-    const yearlyUsd = Number(p.yearly_price_usd !== undefined
-        ? p.yearly_price_usd
-        : p.yearly_price !== undefined
-            ? p.yearly_price
-            : Math.round(monthlyUsd * 10)) || 0;
-    const monthlyBdt = Number(p.monthly_price_bdt ?? 0);
-    const yearlyBdt = Number(p.yearly_price_bdt ?? (monthlyBdt ? Math.round(monthlyBdt * 10) : 0));
+    const bdtPerMonth = Number(p.bdt_per_month ?? 0);
+    const usdPerMonth = Number(p.usd_per_month ?? 0);
+    const eurPerMonth = Number(p.eur_per_month ?? 0);
+    const gbpPerMonth = Number(p.gbp_per_month ?? 0);
+    const audPerMonth = Number(p.aud_per_month ?? 0);
+    const cadPerMonth = Number(p.cad_per_month ?? 0);
     const maxStorageMb = Number(p.max_storage_mb ?? 5120);
     const maxStorage = p.max_storage || `${Math.round(maxStorageMb / 1024)} GB`;
     return {
@@ -37,12 +29,18 @@ function formatPackageRecord(p: any) {
         short_description: p.short_description || '',
         tagline: p.tagline || '',
         description: p.description || '',
-        monthly_price_usd: monthlyUsd,
-        yearly_price_usd: yearlyUsd,
-        monthly_price_bdt: monthlyBdt,
-        yearly_price_bdt: yearlyBdt,
-        monthly_price: monthlyUsd,
-        yearly_price: yearlyUsd,
+        bdt_per_month: bdtPerMonth,
+        usd_per_month: usdPerMonth,
+        eur_per_month: eurPerMonth,
+        gbp_per_month: gbpPerMonth,
+        aud_per_month: audPerMonth,
+        cad_per_month: cadPerMonth,
+        monthly_price_usd: usdPerMonth,
+        yearly_price_usd: Math.round(usdPerMonth * 12),
+        monthly_price_bdt: bdtPerMonth,
+        yearly_price_bdt: Math.round(bdtPerMonth * 12),
+        monthly_price: usdPerMonth,
+        yearly_price: Math.round(usdPerMonth * 12),
         discount_percentage: Number(p.discount_percentage || 0),
         max_students: Number(p.max_students ?? 500),
         max_teachers: Number(p.max_teachers ?? 30),
@@ -150,7 +148,7 @@ export async function GET(request: any) {
         const listQuery = `
       ${baseQuery}
       WHERE p.is_active = TRUE AND p.is_public = TRUE
-      ORDER BY p.sort_order ASC, COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC
+      ORDER BY p.sort_order ASC, p.bdt_per_month ASC, p.id ASC
     `;
         const res = await queryDb(listQuery);
         const formattedPackages = (res.rows || [])

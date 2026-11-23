@@ -355,16 +355,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
         const yearCount = renewForm.duration_type === 'multiple_years' ? multiplier : 1;
         const monthCount = renewForm.duration_type === 'multiple_months' ? multiplier : 1;
         if (pkg) {
-            if (renewForm.currency === 'BDT') {
-                calculatedCost = isYearly
-                    ? Number(pkg.yearly_price_bdt || 0) * yearCount
-                    : Number(pkg.monthly_price_bdt || 0) * monthCount;
-            }
-            else {
-                calculatedCost = isYearly
-                    ? Number(pkg.yearly_price_usd || 0) * yearCount
-                    : Number(pkg.monthly_price_usd || 0) * monthCount;
-            }
+            const currKey = `${renewForm.currency.toLowerCase()}_per_month`;
+            const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+            calculatedCost = isYearly ? monthlyRate * 12 * yearCount : monthlyRate * monthCount;
         }
         return {
             startDate: start.toLocaleDateString(),
@@ -580,8 +573,8 @@ export default function SubscriptionDetailsPage({ params }: any) {
                   <div className="pt-2">
                     <span className="text-[10px] uppercase font-semibold text-slate-400">Standard Pricing Rates</span>
                     <div className="text-xs text-slate-700 dark:text-slate-300 font-mono space-y-0.5 mt-0.5">
-                      <div>USD: ${Number(pkg?.monthly_price_usd || 0).toFixed(2)}/mo &bull; ${Number(pkg?.yearly_price_usd || 0).toFixed(2)}/yr</div>
-                      <div>BDT: ৳{Number(pkg?.monthly_price_bdt || 0).toFixed(2)}/mo &bull; ৳{Number(pkg?.yearly_price_bdt || 0).toFixed(2)}/yr</div>
+                      <div>USD: ${Number(pkg?.usd_per_month || 0).toFixed(2)}/mo &bull; ${(Number(pkg?.usd_per_month || 0) * 12).toFixed(2)}/yr</div>
+                      <div>BDT: ৳{Number(pkg?.bdt_per_month || 0).toFixed(2)}/mo &bull; ৳{(Number(pkg?.bdt_per_month || 0) * 12).toFixed(2)}/yr</div>
                     </div>
                   </div>
                 </div>
@@ -1026,9 +1019,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
                         const count = isYearly
                             ? (prev.duration_type === 'multiple_years' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1)
                             : (prev.duration_type === 'multiple_months' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1);
-                        nextAmount = prev.currency === 'BDT'
-                            ? (isYearly ? Number(pkg.yearly_price_bdt || 0) : Number(pkg.monthly_price_bdt || 0)) * count
-                            : (isYearly ? Number(pkg.yearly_price_usd || 0) : Number(pkg.monthly_price_usd || 0)) * count;
+                        const currKey = `${prev.currency.toLowerCase()}_per_month`;
+                        const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                        nextAmount = isYearly ? monthlyRate * 12 * count : monthlyRate * count;
                     }
                     return {
                         ...prev,
@@ -1039,7 +1032,7 @@ export default function SubscriptionDetailsPage({ params }: any) {
                 });
             }} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-500 font-medium">
                   {data?.available_packages?.map((p: any) => (<option key={p.id} value={p.id}>
-                      {p.name} — ${p.monthly_price_usd}/mo (${p.yearly_price_usd}/yr) | ৳{p.monthly_price_bdt}/mo
+                      {p.name} — ৳{p.bdt_per_month}/mo | ${p.usd_per_month}/mo
                     </option>))}
                 </select>
               </div>
@@ -1059,9 +1052,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
                         const count = isYearly
                             ? (nextType === 'multiple_years' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1)
                             : (nextType === 'multiple_months' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1);
-                        nextAmount = prev.currency === 'BDT'
-                            ? (isYearly ? Number(pkg.yearly_price_bdt || 0) : Number(pkg.monthly_price_bdt || 0)) * count
-                            : (isYearly ? Number(pkg.yearly_price_usd || 0) : Number(pkg.monthly_price_usd || 0)) * count;
+                        const currKey = `${prev.currency.toLowerCase()}_per_month`;
+                        const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                        nextAmount = isYearly ? monthlyRate * 12 * count : monthlyRate * count;
                     }
                     return {
                         ...prev,
@@ -1089,9 +1082,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
                         let nextAmount = prev.amount;
                         if (pkg) {
                             const isYearly = prev.duration_type === 'yearly' || prev.duration_type === 'multiple_years';
-                            nextAmount = prev.currency === 'BDT'
-                                ? (isYearly ? Number(pkg.yearly_price_bdt || 0) : Number(pkg.monthly_price_bdt || 0)) * nextCount
-                                : (isYearly ? Number(pkg.yearly_price_usd || 0) : Number(pkg.monthly_price_usd || 0)) * nextCount;
+                            const currKey = `${prev.currency.toLowerCase()}_per_month`;
+                            const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                            nextAmount = isYearly ? monthlyRate * 12 * nextCount : monthlyRate * nextCount;
                         }
                         return {
                             ...prev,
@@ -1147,9 +1140,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
                         const count = isYearly
                             ? (prev.duration_type === 'multiple_years' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1)
                             : (prev.duration_type === 'multiple_months' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1);
-                        nextAmount = nextCurrency === 'BDT'
-                            ? (isYearly ? Number(pkg.yearly_price_bdt || 0) : Number(pkg.monthly_price_bdt || 0)) * count
-                            : (isYearly ? Number(pkg.yearly_price_usd || 0) : Number(pkg.monthly_price_usd || 0)) * count;
+                        const currKey = `${nextCurrency.toLowerCase()}_per_month`;
+                        const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                        nextAmount = isYearly ? monthlyRate * 12 * count : monthlyRate * count;
                     }
                     return {
                         ...prev,
@@ -1179,12 +1172,9 @@ export default function SubscriptionDetailsPage({ params }: any) {
                         const count = isYearly
                             ? (prev.duration_type === 'multiple_years' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1)
                             : (prev.duration_type === 'multiple_months' ? Math.max(1, Number(prev.duration_multiplier) || 1) : 1);
-                        if (nextCurr === 'BDT') {
-                            nextAmount = (isYearly ? Number(pkg.yearly_price_bdt || 0) : Number(pkg.monthly_price_bdt || 0)) * count;
-                        }
-                        else {
-                            nextAmount = (isYearly ? Number(pkg.yearly_price_usd || 0) : Number(pkg.monthly_price_usd || 0)) * count;
-                        }
+                        const currKey = `${nextCurr.toLowerCase()}_per_month`;
+                        const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                        nextAmount = isYearly ? monthlyRate * 12 * count : monthlyRate * count;
                     }
                     return {
                         ...prev,

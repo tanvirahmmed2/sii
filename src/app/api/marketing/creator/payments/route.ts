@@ -28,10 +28,12 @@ export async function GET(request: any) {
             p.slug AS package_slug, 
             p.tagline AS package_tagline,
             p.description AS package_description,
-            p.monthly_price_usd,
-            p.yearly_price_usd,
-            p.monthly_price_bdt,
-            p.yearly_price_bdt,
+            p.bdt_per_month,
+            p.usd_per_month,
+            p.eur_per_month,
+            p.gbp_per_month,
+            p.aud_per_month,
+            p.cad_per_month,
             1 AS max_websites,
             COALESCE(p.max_teachers, 0) AS max_teachers,
             COALESCE(p.max_students, 0) AS max_students,
@@ -108,10 +110,12 @@ export async function handlePaymentsAction(body: any, sessionCreator: any, reque
           pu.package_id,
           pu.billing_cycle,
           p.name AS package_name, 
-          p.monthly_price_usd,
-          p.yearly_price_usd,
-          p.monthly_price_bdt,
-          p.yearly_price_bdt,
+          p.bdt_per_month,
+          p.usd_per_month,
+          p.eur_per_month,
+          p.gbp_per_month,
+          p.aud_per_month,
+          p.cad_per_month,
           c.name AS creator_name,
           c.email AS creator_email,
           c.phone AS creator_phone,
@@ -141,16 +145,11 @@ export async function handlePaymentsAction(body: any, sessionCreator: any, reque
     }
 
     const isYearly = String(payment.billing_cycle || '').toLowerCase() === 'yearly';
-    const packageBdtPrice = isYearly
-      ? Number(payment.yearly_price_bdt || 0)
-      : Number(payment.monthly_price_bdt || 0);
-    const packageUsdPrice = isYearly
-      ? Number(payment.yearly_price_usd || 0)
-      : Number(payment.monthly_price_usd || 0);
-
-    const isBdt = body.currency === 'BDT' || payment.currency === 'BDT';
-    const finalAmount = isBdt ? packageBdtPrice : packageUsdPrice;
-    const finalCurrency = isBdt ? 'BDT' : 'USD';
+    const finalCurrency = String(payment.currency || body.currency || 'BDT').toUpperCase();
+    const currKey = `${finalCurrency.toLowerCase()}_per_month`;
+    const monthlyRate = Number(payment[currKey] ?? payment.bdt_per_month ?? 0);
+    const calculatedRate = isYearly ? monthlyRate * 12 : monthlyRate;
+    const finalAmount = Number(payment.amount) > 0 ? Number(payment.amount) : calculatedRate;
 
     const sslSession = await initiateSslcommerzPayment({
       paymentId: payment.id,

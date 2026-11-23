@@ -211,12 +211,12 @@ CREATE TABLE IF NOT EXISTS packages (
     short_description TEXT,
     description TEXT,
     tagline VARCHAR(255),
-    monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_usd >= 0.00),
-    yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price_usd >= 0.00),
-    monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price_bdt >= 0.00),
-    yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price_bdt >= 0.00),
-    monthly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (monthly_price >= 0.00),
-    yearly_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (yearly_price >= 0.00),
+    bdt_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (bdt_per_month >= 0.00),
+    usd_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (usd_per_month >= 0.00),
+    eur_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (eur_per_month >= 0.00),
+    gbp_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (gbp_per_month >= 0.00),
+    aud_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (aud_per_month >= 0.00),
+    cad_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (cad_per_month >= 0.00),
     discount_percentage DECIMAL(5, 2) DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
     max_students INT DEFAULT 500,
     max_teachers INT DEFAULT 30,
@@ -243,10 +243,18 @@ ALTER TABLE packages ADD COLUMN IF NOT EXISTS max_storage_mb BIGINT DEFAULT 5120
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_student_panel BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_teacher_panel BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_available_custom_domain BOOLEAN DEFAULT FALSE;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_usd DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS monthly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
-ALTER TABLE packages ADD COLUMN IF NOT EXISTS yearly_price_bdt DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS bdt_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS usd_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS eur_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS gbp_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS aud_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages ADD COLUMN IF NOT EXISTS cad_per_month DECIMAL(12, 2) NOT NULL DEFAULT 0.00;
+ALTER TABLE packages DROP COLUMN IF EXISTS monthly_price_usd;
+ALTER TABLE packages DROP COLUMN IF EXISTS yearly_price_usd;
+ALTER TABLE packages DROP COLUMN IF EXISTS monthly_price_bdt;
+ALTER TABLE packages DROP COLUMN IF EXISTS yearly_price_bdt;
+ALTER TABLE packages DROP COLUMN IF EXISTS monthly_price;
+ALTER TABLE packages DROP COLUMN IF EXISTS yearly_price;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS grace_period INT DEFAULT 3;
 ALTER TABLE packages DROP COLUMN IF EXISTS monthly_mail CASCADE;
@@ -651,13 +659,31 @@ CREATE TRIGGER update_websites_updated_at
 -- ----------------------------------------------------------------------------
 -- 15. PURCHASES TABLE (Package Subscriptions & Module Purchases by Creators)
 -- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS promos (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    discount_percentage DECIMAL(5, 2) NOT NULL CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
+    max_uses_per_creator INT NOT NULL DEFAULT 1 CHECK (max_uses_per_creator >= 1),
+    max_total_uses INT DEFAULT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    start_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ending_date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_promos_code_upper ON promos (UPPER(code));
+
 CREATE TABLE IF NOT EXISTS purchases (
     id BIGSERIAL PRIMARY KEY,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
     website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
+    promo_id BIGINT REFERENCES promos(id) ON DELETE SET NULL,
     purchase_code VARCHAR(100) UNIQUE NOT NULL,
     billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     base_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (base_amount >= 0.00),
     discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0.00),
     tax_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (tax_amount >= 0.00),
@@ -670,6 +696,19 @@ CREATE TABLE IF NOT EXISTS purchases (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS promo_id BIGINT REFERENCES promos(id) ON DELETE SET NULL;
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'BDT';
+
+CREATE TABLE IF NOT EXISTS promo_usages (
+    id BIGSERIAL PRIMARY KEY,
+    promo_id BIGINT NOT NULL REFERENCES promos(id) ON DELETE CASCADE,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
+    discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0.00),
+    used_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_promo_usages_promo_creator ON promo_usages(promo_id, creator_id);
 
 DROP TRIGGER IF EXISTS update_purchases_updated_at ON purchases;
 CREATE TRIGGER update_purchases_updated_at

@@ -115,14 +115,9 @@ export default function PackagesPage() {
     };
     const sortedPackages = useMemo(() => {
         const getPrice = (pkg: any) => {
-            if (currency === 'BDT') {
-                return billingCycle === 'YEARLY'
-                    ? Number(pkg.yearly_price_bdt ?? 0)
-                    : Number(pkg.monthly_price_bdt ?? 0);
-            }
-            return billingCycle === 'YEARLY'
-                ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
-                : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+            const currKey = `${currency.toLowerCase()}_per_month`;
+            const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+            return billingCycle === 'YEARLY' ? monthlyRate * 12 : monthlyRate;
         };
         return [...(packages || [])]
             .filter((pkg: any) => pkg.is_public !== false && pkg.is_active !== false)
@@ -213,17 +208,28 @@ ${inquiryMessage}`,
         </p>
 
         <div className="pt-4 flex flex-wrap items-center justify-center gap-3">
-          <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex items-center gap-1.5 text-xs font-semibold shadow-xs">
-            <button type="button" onClick={() => setCurrency('USD')} className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${currency === 'USD'
-            ? 'bg-secondary text-white shadow-xs'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-              USD ($)
-            </button>
-            <button type="button" onClick={() => setCurrency('BDT')} className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${currency === 'BDT'
-            ? 'bg-secondary text-white shadow-xs'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>
-              BDT (৳)
-            </button>
+          <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex flex-wrap items-center justify-center gap-1.5 text-xs font-semibold shadow-xs">
+            {[
+              { code: 'BDT', label: 'BDT (৳)' },
+              { code: 'USD', label: 'USD ($)' },
+              { code: 'EUR', label: 'EUR (€)' },
+              { code: 'GBP', label: 'GBP (£)' },
+              { code: 'AUD', label: 'AUD (A$)' },
+              { code: 'CAD', label: 'CAD (C$)' },
+            ].map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${
+                  currency === c.code
+                    ? 'bg-secondary text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
           </div>
 
           <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 inline-flex items-center gap-2 text-xs font-semibold shadow-xs">
@@ -274,13 +280,9 @@ ${inquiryMessage}`,
                         ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                         : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
             {sortedPackages.map((pkg: any, idx: any) => {
-                const price = currency === 'BDT'
-                    ? billingCycle === 'YEARLY'
-                        ? Number(pkg.yearly_price_bdt ?? 0)
-                        : Number(pkg.monthly_price_bdt ?? 0)
-                    : billingCycle === 'YEARLY'
-                        ? Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0)
-                        : Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
+                const currKey = `${currency.toLowerCase()}_per_month`;
+                const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                const price = billingCycle === 'YEARLY' ? monthlyRate * 12 : monthlyRate;
                 const hasExplicitPopular = sortedPackages.some((p: any) => Boolean(p.is_popular));
                 const isPopular = hasExplicitPopular
                     ? Boolean(pkg.is_popular)

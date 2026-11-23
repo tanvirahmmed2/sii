@@ -114,10 +114,12 @@ async function fetchFullSubscription(idNum: any) {
               p.slug AS package_slug,
               p.tagline AS package_tagline,
               p.description AS package_description,
-              p.monthly_price_usd,
-              p.yearly_price_usd,
-              p.monthly_price_bdt,
-              p.yearly_price_bdt,
+              p.bdt_per_month,
+              p.usd_per_month,
+              p.eur_per_month,
+              p.gbp_per_month,
+              p.aud_per_month,
+              p.cad_per_month,
               p.discount_percentage,
               p.max_students,
               p.max_teachers,
@@ -205,12 +207,12 @@ export async function GET(request: any, { params }: any) {
          WHERE pu.creator_id = $1
          ORDER BY pu.id DESC LIMIT 30`, [creatorId || 0]).catch(() => ({ rows: [] })),
             queryDb(`SELECT id, name, slug, tagline, description,
-                monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
+                bdt_per_month, usd_per_month, eur_per_month, gbp_per_month, aud_per_month, cad_per_month,
                 discount_percentage, max_students, max_teachers, max_staff, max_storage_mb, 1 AS max_websites,
                 features, is_active, is_public
          FROM packages
          WHERE is_active = TRUE
-         ORDER BY COALESCE(monthly_price_usd, 0) ASC, id ASC`).catch(() => ({ rows: [] })),
+         ORDER BY bdt_per_month ASC, id ASC`).catch(() => ({ rows: [] })),
             queryDb(`SELECT id, creator_id, name, slug,
                 COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.is_primary = TRUE LIMIT 1), websites.slug) AS subdomain,
                 (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = websites.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain,
@@ -251,10 +253,16 @@ export async function GET(request: any, { params }: any) {
                 slug: subscription.package_slug,
                 tagline: subscription.package_tagline,
                 description: subscription.package_description,
-                monthly_price_usd: subscription.monthly_price_usd,
-                yearly_price_usd: subscription.yearly_price_usd,
-                monthly_price_bdt: subscription.monthly_price_bdt,
-                yearly_price_bdt: subscription.yearly_price_bdt,
+                bdt_per_month: subscription.bdt_per_month,
+                usd_per_month: subscription.usd_per_month,
+                eur_per_month: subscription.eur_per_month,
+                gbp_per_month: subscription.gbp_per_month,
+                aud_per_month: subscription.aud_per_month,
+                cad_per_month: subscription.cad_per_month,
+                monthly_price_usd: subscription.usd_per_month,
+                yearly_price_usd: Number(subscription.usd_per_month || 0) * 12,
+                monthly_price_bdt: subscription.bdt_per_month,
+                yearly_price_bdt: Number(subscription.bdt_per_month || 0) * 12,
                 discount_percentage: subscription.discount_percentage,
                 max_students: subscription.max_students,
                 max_teachers: subscription.max_teachers,
@@ -362,21 +370,13 @@ export async function POST(request: any, { params }: any) {
             else {
                 const isYearly = durationType === 'yearly' || durationType === 'multiple_years';
                 const yearCount = durationType === 'multiple_years' ? durationMultiplier : 1;
-                if (currency === 'BDT') {
-                    if (isYearly) {
-                        calculatedAmount = Number(pkg.yearly_price_bdt || 0) * yearCount;
-                    }
-                    else {
-                        calculatedAmount = Number(pkg.monthly_price_bdt || 0) * monthsSpan;
-                    }
+                const currKey = `${currency.toLowerCase()}_per_month`;
+                const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
+                if (isYearly) {
+                    calculatedAmount = monthlyRate * 12 * yearCount;
                 }
                 else {
-                    if (isYearly) {
-                        calculatedAmount = Number(pkg.yearly_price_usd || pkg.yearly_price || 0) * yearCount;
-                    }
-                    else {
-                        calculatedAmount = Number(pkg.monthly_price_usd || pkg.monthly_price || 0) * monthsSpan;
-                    }
+                    calculatedAmount = monthlyRate * monthsSpan;
                 }
             }
             const isPaid = String(body.payment_status || '').toUpperCase() === 'PAID' ||

@@ -22,22 +22,24 @@ function buildInitialFormData(initialData: any) {
         short_description: initialData?.short_description || '',
         tagline: initialData?.tagline || '',
         description: initialData?.description || '',
-        monthly_price_usd: initialData?.monthly_price_usd !== undefined
-            ? String(initialData.monthly_price_usd)
-            : initialData?.monthly_price !== undefined
-                ? String(initialData.monthly_price)
-                : '29.00',
-        yearly_price_usd: initialData?.yearly_price_usd !== undefined
-            ? String(initialData.yearly_price_usd)
-            : initialData?.yearly_price !== undefined
-                ? String(initialData.yearly_price)
-                : '290.00',
-        monthly_price_bdt: initialData?.monthly_price_bdt !== undefined
-            ? String(initialData.monthly_price_bdt)
+        bdt_per_month: initialData?.bdt_per_month !== undefined
+            ? String(initialData.bdt_per_month)
             : '3500.00',
-        yearly_price_bdt: initialData?.yearly_price_bdt !== undefined
-            ? String(initialData.yearly_price_bdt)
-            : '35000.00',
+        usd_per_month: initialData?.usd_per_month !== undefined
+            ? String(initialData.usd_per_month)
+            : '29.00',
+        eur_per_month: initialData?.eur_per_month !== undefined
+            ? String(initialData.eur_per_month)
+            : '26.00',
+        gbp_per_month: initialData?.gbp_per_month !== undefined
+            ? String(initialData.gbp_per_month)
+            : '23.00',
+        aud_per_month: initialData?.aud_per_month !== undefined
+            ? String(initialData.aud_per_month)
+            : '44.00',
+        cad_per_month: initialData?.cad_per_month !== undefined
+            ? String(initialData.cad_per_month)
+            : '40.00',
         discount_percentage: initialData?.discount_percentage !== undefined
             ? String(initialData.discount_percentage)
             : '15.00',
@@ -199,10 +201,12 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
             return;
         }
         setLoading(true);
-        const monthlyUsd = Math.max(0, parseFloat(formData.monthly_price_usd) || 0);
-        const yearlyUsd = Math.max(0, parseFloat(formData.yearly_price_usd) || 0);
-        const monthlyBdt = Math.max(0, parseFloat(formData.monthly_price_bdt) || 0);
-        const yearlyBdt = Math.max(0, parseFloat(formData.yearly_price_bdt) || 0);
+        const bdtPerMonth = Math.max(0, parseFloat(formData.bdt_per_month) || 0);
+        const usdPerMonth = Math.max(0, parseFloat(formData.usd_per_month) || 0);
+        const eurPerMonth = Math.max(0, parseFloat(formData.eur_per_month) || 0);
+        const gbpPerMonth = Math.max(0, parseFloat(formData.gbp_per_month) || 0);
+        const audPerMonth = Math.max(0, parseFloat(formData.aud_per_month) || 0);
+        const cadPerMonth = Math.max(0, parseFloat(formData.cad_per_month) || 0);
         const maxStorageMb = Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120);
         const payload = {
             name: formData.name.trim(),
@@ -210,12 +214,12 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
             short_description: formData.short_description.trim(),
             tagline: formData.tagline.trim(),
             description: formData.description.trim(),
-            monthly_price_usd: monthlyUsd,
-            yearly_price_usd: yearlyUsd,
-            monthly_price_bdt: monthlyBdt,
-            yearly_price_bdt: yearlyBdt,
-            monthly_price: monthlyUsd,
-            yearly_price: yearlyUsd,
+            bdt_per_month: bdtPerMonth,
+            usd_per_month: usdPerMonth,
+            eur_per_month: eurPerMonth,
+            gbp_per_month: gbpPerMonth,
+            aud_per_month: audPerMonth,
+            cad_per_month: cadPerMonth,
             discount_percentage: Math.min(100, Math.max(0, parseFloat(formData.discount_percentage) || 0)),
             max_students: Math.max(1, parseInt(formData.max_students, 10) || 500),
             max_teachers: Math.max(1, parseInt(formData.max_teachers, 10) || 30),
@@ -324,10 +328,10 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-                Multi-Currency Pricing Configuration
+                Multi-Currency Monthly Pricing Configuration
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Independent monthly and yearly billing rates for Dollar (USD $) and Taka (BDT ৳).
+                Monthly rates for BDT (৳), USD ($), EUR (€), GBP (£), AUD (A$), and CAD (C$). Annual billing calculates 12 months dynamically.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -336,33 +340,7 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  USD Monthly ($)
-                </label>
-                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                  USD / mo
-                </span>
-              </div>
-              <input type="number" step="0.01" min="0" required value={formData.monthly_price_usd} onChange={(e: any) => setFormData({ ...formData, monthly_price_usd: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
-              <p className="text-[10px] text-slate-400 mt-1">Dollar rate per month</p>
-            </div>
-
-            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  USD Yearly ($)
-                </label>
-                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
-                  USD / yr
-                </span>
-              </div>
-              <input type="number" step="0.01" min="0" required value={formData.yearly_price_usd} onChange={(e: any) => setFormData({ ...formData, yearly_price_usd: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
-              <p className="text-[10px] text-slate-400 mt-1">Annual dollar billing</p>
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
@@ -372,21 +350,73 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
                   BDT / mo
                 </span>
               </div>
-              <input type="number" step="0.01" min="0" required value={formData.monthly_price_bdt} onChange={(e: any) => setFormData({ ...formData, monthly_price_bdt: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <input type="number" step="0.01" min="0" required value={formData.bdt_per_month} onChange={(e: any) => setFormData({ ...formData, bdt_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
               <p className="text-[10px] text-slate-400 mt-1">Taka rate per month</p>
             </div>
 
             <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  BDT Yearly (৳)
+                  USD Monthly ($)
                 </label>
-                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-indigo-50 text-indigo-700 border-indigo-200">
-                  BDT / yr
+                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-emerald-50 text-emerald-700 border-emerald-200">
+                  USD / mo
                 </span>
               </div>
-              <input type="number" step="0.01" min="0" required value={formData.yearly_price_bdt} onChange={(e: any) => setFormData({ ...formData, yearly_price_bdt: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
-              <p className="text-[10px] text-slate-400 mt-1">Annual Taka billing</p>
+              <input type="number" step="0.01" min="0" required value={formData.usd_per_month} onChange={(e: any) => setFormData({ ...formData, usd_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <p className="text-[10px] text-slate-400 mt-1">Dollar rate per month</p>
+            </div>
+
+            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  EUR Monthly (€)
+                </label>
+                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-blue-50 text-blue-700 border-blue-200">
+                  EUR / mo
+                </span>
+              </div>
+              <input type="number" step="0.01" min="0" required value={formData.eur_per_month} onChange={(e: any) => setFormData({ ...formData, eur_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <p className="text-[10px] text-slate-400 mt-1">Euro rate per month</p>
+            </div>
+
+            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  GBP Monthly (£)
+                </label>
+                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                  GBP / mo
+                </span>
+              </div>
+              <input type="number" step="0.01" min="0" required value={formData.gbp_per_month} onChange={(e: any) => setFormData({ ...formData, gbp_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <p className="text-[10px] text-slate-400 mt-1">British Pound rate per month</p>
+            </div>
+
+            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  AUD Monthly (A$)
+                </label>
+                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-purple-50 text-purple-700 border-purple-200">
+                  AUD / mo
+                </span>
+              </div>
+              <input type="number" step="0.01" min="0" required value={formData.aud_per_month} onChange={(e: any) => setFormData({ ...formData, aud_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <p className="text-[10px] text-slate-400 mt-1">Australian Dollar rate per month</p>
+            </div>
+
+            <div className="p-3 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  CAD Monthly (C$)
+                </label>
+                <span className="text-[9px] font-medium px-1.5 py-0.2 rounded border bg-teal-50 text-teal-700 border-teal-200">
+                  CAD / mo
+                </span>
+              </div>
+              <input type="number" step="0.01" min="0" required value={formData.cad_per_month} onChange={(e: any) => setFormData({ ...formData, cad_per_month: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+              <p className="text-[10px] text-slate-400 mt-1">Canadian Dollar rate per month</p>
             </div>
           </div>
         </div>

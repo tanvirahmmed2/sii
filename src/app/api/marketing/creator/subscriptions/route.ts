@@ -30,8 +30,8 @@ export async function GET(request: any) {
               p.slug AS package_slug, 
               p.tagline AS package_tagline,
               p.description AS package_description, 
-              COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-              (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+              COALESCE(p.usd_per_month, 0) AS price,
+              (COALESCE(p.usd_per_month, 0) * 100)::int AS price_in_cents, 
               'USD' AS currency, 
               1 AS max_websites,
               1 AS max_portfolios,
@@ -126,7 +126,7 @@ export async function handleSubscriptionsAction(body: any, sessionCreator: any) 
         }
         const isYearly = String(pkg.billing_interval || body.billingCycle || '').toLowerCase() === 'yearly';
         const billingCycle = isYearly ? 'yearly' : 'monthly';
-        const baseAmount = isYearly ? Number(pkg.yearly_price_usd || pkg.yearly_price || 0) : Number(pkg.monthly_price_usd || pkg.monthly_price || 0);
+        const baseAmount = isYearly ? Number(pkg.usd_per_month || 0) * 12 : Number(pkg.usd_per_month || 0);
         const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
         const purchaseCode = generateToken(12);
         const puRes = await queryDb(`INSERT INTO purchases (creator_id, package_id, purchase_code, billing_cycle, base_amount, total_amount, status, period_start, period_end, notes)
@@ -181,12 +181,11 @@ export async function handleSubscriptionsAction(body: any, sessionCreator: any) 
         const isYearly = String(body.billingCycle || sub.billing_cycle || '').toLowerCase() === 'yearly';
         const billingCycle = isYearly ? 'yearly' : 'monthly';
         const durationInterval = isYearly ? "INTERVAL '365 days'" : "INTERVAL '30 days'";
-        const cleanMethod = String(body.paymentMethod || '').toLowerCase();
-        const isBdt = !cleanMethod.includes('usd') && !cleanMethod.includes('global') && String(body.currency || '').toUpperCase() !== 'USD';
-        const currency = isBdt ? 'BDT' : 'USD';
-        const baseAmount = isYearly
-            ? Number(isBdt ? (sub.yearly_price_bdt || 0) : (sub.yearly_price_usd || sub.yearly_price || 0))
-            : Number(isBdt ? (sub.monthly_price_bdt || 0) : (sub.monthly_price_usd || sub.monthly_price || 0));
+        const requestedCurrency = String(body.currency || 'BDT').toUpperCase();
+        const currency = ['BDT', 'USD', 'EUR', 'GBP', 'AUD', 'CAD'].includes(requestedCurrency) ? requestedCurrency : 'BDT';
+        const currKey = `${currency.toLowerCase()}_per_month`;
+        const monthlyRate = Number(sub[currKey] ?? sub.bdt_per_month ?? 0);
+        const baseAmount = isYearly ? monthlyRate * 12 : monthlyRate;
         const now = new Date();
         const currentEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
         const isExpired = !currentEnd || currentEnd <= now;

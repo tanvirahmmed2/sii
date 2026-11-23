@@ -54,8 +54,8 @@ export async function GET(request: any) {
                 p.slug AS package_slug, 
                 p.tagline AS package_tagline,
                 p.description AS package_description, 
-                COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                COALESCE(p.usd_per_month, 0) AS price,
+                (COALESCE(p.usd_per_month, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
                 1 AS max_websites,
                 1 AS max_portfolios,
@@ -80,8 +80,8 @@ export async function GET(request: any) {
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.description AS package_description, 
-                COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents, 
+                COALESCE(p.usd_per_month, 0) AS price,
+                (COALESCE(p.usd_per_month, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
                 pu.billing_cycle AS billing_interval
          FROM purchases pu
@@ -91,7 +91,7 @@ export async function GET(request: any) {
             queryDb(`SELECT pu.*, 
                 p.name AS package_name, 
                 p.slug AS package_slug, 
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::int AS price_in_cents
+                (COALESCE(p.usd_per_month, 0) * 100)::int AS price_in_cents
          FROM purchases pu
          JOIN packages p ON pu.package_id = p.id
          WHERE pu.creator_id = $1 AND pu.status IN ('pending', 'UNPAID')
@@ -122,16 +122,16 @@ export async function GET(request: any) {
          LEFT JOIN packages p ON pu.package_id = p.id
          WHERE pay.creator_id = $1
          ORDER BY pay.id DESC LIMIT 50`, [creatorId]).catch(() => ({ rows: [] })),
-            queryDb(`SELECT id, name, slug, tagline, description, monthly_price_usd, yearly_price_usd,
-                monthly_price_bdt, yearly_price_bdt,
-                COALESCE(monthly_price_usd, monthly_price, 0) AS monthly_price,
-                (COALESCE(monthly_price_usd, monthly_price, 0) * 100)::bigint AS price_in_cents,
+            queryDb(`SELECT id, name, slug, tagline, description,
+                bdt_per_month, usd_per_month, eur_per_month, gbp_per_month, aud_per_month, cad_per_month,
+                COALESCE(usd_per_month, 0) AS monthly_price,
+                (COALESCE(usd_per_month, 0) * 100)::bigint AS price_in_cents,
                 discount_percentage, max_students, max_teachers, max_staff, max_storage_mb,
                 1 AS max_websites,
                 features, is_popular, is_active, grace_period, sort_order
          FROM packages
          WHERE is_active = TRUE AND is_public = TRUE
-         ORDER BY sort_order ASC, monthly_price_usd ASC, id ASC`).catch(() => ({ rows: [] })),
+         ORDER BY sort_order ASC, bdt_per_month ASC, id ASC`).catch(() => ({ rows: [] })),
             queryDb(`SELECT s.id, s.creator_id, s.ticket_number, s.subject, s.status, s.priority,
                 'General' AS category, s.created_at, s.updated_at,
                 (SELECT COUNT(*)::int FROM support_messages WHERE support_id = s.id) AS message_count,

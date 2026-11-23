@@ -148,10 +148,10 @@ export default function AdminPackagesPage() {
         })
             .sort((a: any, b: any) => {
             if (sortOrder === 'PRICE_ASC') {
-                return Number(a.monthly_price_usd ?? a.monthly_price ?? 0) - Number(b.monthly_price_usd ?? b.monthly_price ?? 0);
+                return Number(a.bdt_per_month ?? a.usd_per_month ?? 0) - Number(b.bdt_per_month ?? b.usd_per_month ?? 0);
             }
             if (sortOrder === 'PRICE_DESC') {
-                return Number(b.monthly_price_usd ?? b.monthly_price ?? 0) - Number(a.monthly_price_usd ?? a.monthly_price ?? 0);
+                return Number(b.bdt_per_month ?? b.usd_per_month ?? 0) - Number(a.bdt_per_month ?? a.usd_per_month ?? 0);
             }
             if (sortOrder === 'NAME_ASC') {
                 return (a.name || '').localeCompare(b.name || '');
@@ -164,11 +164,11 @@ export default function AdminPackagesPage() {
     }, [packages, searchTerm, statusFilter, visibilityFilter, sortOrder]);
     const activePackages = packages.filter((p: any) => p.is_active !== false).length;
     const avgMonthlyUsd = packages.length
-        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.monthly_price_usd ?? curr.monthly_price ?? 0), 0) /
+        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.usd_per_month ?? 0), 0) /
             packages.length).toFixed(2)
         : '0.00';
     const avgMonthlyBdt = packages.length
-        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.monthly_price_bdt ?? 0), 0) / packages.length).toFixed(2)
+        ? (packages.reduce((acc: any, curr: any) => acc + Number(curr.bdt_per_month ?? 0), 0) / packages.length).toFixed(2)
         : '0.00';
     return (<div className="w-full space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
@@ -306,10 +306,10 @@ export default function AdminPackagesPage() {
             const isRowActive = pkg.is_active !== false;
             const homeCount = Array.isArray(pkg.home_modules) ? pkg.home_modules.length : 0;
             const controlCount = Array.isArray(pkg.control_modules) ? pkg.control_modules.length : 0;
-            const monthlyUsd = Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0);
-            const yearlyUsd = Number(pkg.yearly_price_usd ?? pkg.yearly_price ?? 0);
-            const monthlyBdt = Number(pkg.monthly_price_bdt ?? 0);
-            const yearlyBdt = Number(pkg.yearly_price_bdt ?? 0);
+            const monthlyUsd = Number(pkg.usd_per_month ?? 0);
+            const yearlyUsd = monthlyUsd * 12;
+            const monthlyBdt = Number(pkg.bdt_per_month ?? 0);
+            const yearlyBdt = monthlyBdt * 12;
             return (<tr key={pkg.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="py-2.5 font-mono font-medium text-slate-400">#{pkg.id}</td>
 

@@ -79,10 +79,19 @@ export default function CreatorPaymentInvoicePage({ params }: any) {
         period_start: payment.period_start,
         period_end: payment.period_end,
     };
-    const currency = (payment.currency || (payment.payment_method === 'BKASH' ? 'BDT' : 'USD')).toUpperCase();
-    const amountFormatted = currency === 'BDT'
-        ? `৳${Number(payment.amount || 0).toLocaleString()} BDT`
-        : `$${Number(payment.amount || 0).toFixed(2)} USD`;
+    const currency = (payment.currency || 'BDT').toUpperCase();
+    const currencySymbols: Record<string, string> = {
+      BDT: '৳',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      AUD: 'A$',
+      CAD: 'C$',
+    };
+    const symbol = currencySymbols[currency] || '$';
+    const amountFormatted = `${symbol}${Number(payment.amount || 0).toLocaleString()} ${currency}`;
+    const baseFormatted = `${symbol}${Number(purchase.base_amount || payment.base_amount || payment.amount || 0).toLocaleString()} ${currency}`;
+    const discountFormatted = `${symbol}${Number(purchase.discount_amount || payment.discount_amount || 0).toLocaleString()} ${currency}`;
     const amountInWords = numberToWords(payment.amount, currency);
     const paymentDate = payment.payment_date || payment.created_at
         ? new Date(payment.payment_date || payment.created_at).toLocaleDateString('en-US', {
@@ -305,18 +314,18 @@ export default function CreatorPaymentInvoicePage({ params }: any) {
           <div className="w-full sm:w-5/12 bg-slate-50/70 p-5 rounded-xl border border-slate-200/80 space-y-2.5">
             <div className="flex justify-between text-slate-600">
               <span>Subscription Subtotal:</span>
-              <span className="font-mono text-slate-900">{amountFormatted}</span>
+              <span className="font-mono text-slate-900">{baseFormatted}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Applied Discounts:</span>
-              <span className="font-mono text-slate-900">{currency === 'BDT' ? '৳0.00' : '$0.00'}</span>
+              <span className="font-mono text-slate-900">{discountFormatted}</span>
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Processing / Tax:</span>
-              <span className="font-mono text-slate-900">{currency === 'BDT' ? '৳0.00' : '$0.00'}</span>
+              <span className="font-mono text-slate-900">{symbol}0.00</span>
             </div>
             <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline font-bold text-slate-900">
-              <span className="text-sm">Total Paid:</span>
+              <span className="text-sm">Total {isPending ? 'Payable' : 'Paid'}:</span>
               <span className="text-base font-mono text-blue-700">{amountFormatted}</span>
             </div>
           </div>

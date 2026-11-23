@@ -198,20 +198,11 @@ export default function SubscriptionForm({ packages: initialPackages = null, onS
     const autoPrice = useMemo(() => {
         if (!currentPackage)
             return 0;
-        const isYearlyBased = durationInfo.years > 0;
-        if (currency === 'BDT') {
-            if (isYearlyBased) {
-                const yrPrice = Number(currentPackage.yearly_price_bdt ?? 0);
-                return yrPrice * durationInfo.years;
-            }
-            const moPrice = Number(currentPackage.monthly_price_bdt ?? 0);
-            return moPrice * durationInfo.months;
+        const currKey = `${currency.toLowerCase()}_per_month`;
+        const moPrice = Number(currentPackage[currKey] ?? currentPackage.bdt_per_month ?? 0);
+        if (durationInfo.years > 0) {
+            return moPrice * 12 * durationInfo.years;
         }
-        if (isYearlyBased) {
-            const yrPrice = Number(currentPackage.yearly_price_usd ?? currentPackage.yearly_price ?? 0);
-            return yrPrice * durationInfo.years;
-        }
-        const moPrice = Number(currentPackage.monthly_price_usd ?? currentPackage.monthly_price ?? 0);
         return moPrice * durationInfo.months;
     }, [currentPackage, durationInfo, currency]);
     const effectivePrice = customAmount !== '' ? Number(customAmount) : autoPrice;
@@ -421,7 +412,7 @@ export default function SubscriptionForm({ packages: initialPackages = null, onS
                       <div className="loader loader-sm"/>
                     </div>) : (<select value={selectedPackageId} onChange={(e: any) => setSelectedPackageId(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800 cursor-pointer">
                       {packages.map((pkg: any) => (<option key={pkg.id} value={pkg.id}>
-                          #{pkg.id} - {pkg.name} {pkg.is_public === false ? '[Custom / Private]' : '[Public]'} &bull; ${Number(pkg.monthly_price_usd ?? pkg.monthly_price ?? 0).toFixed(2)}/mo
+                          #{pkg.id} - {pkg.name} {pkg.is_public === false ? '[Custom / Private]' : '[Public]'} &bull; ৳{Number(pkg.bdt_per_month ?? 0).toFixed(2)}/mo (${Number(pkg.usd_per_month ?? 0).toFixed(2)})
                         </option>))}
                     </select>)}
                 </div>
@@ -438,10 +429,7 @@ export default function SubscriptionForm({ packages: initialPackages = null, onS
                       </span>
                     </div>
                     <div className="text-slate-500 font-mono text-[10px]">
-                      USD: ${Number(currentPackage.monthly_price_usd ?? currentPackage.monthly_price ?? 0).toFixed(2)}/mo &bull; ${Number(currentPackage.yearly_price_usd ?? currentPackage.yearly_price ?? 0).toFixed(2)}/yr
-                    </div>
-                    <div className="text-slate-500 font-mono text-[10px]">
-                      BDT: ৳{Number(currentPackage.monthly_price_bdt ?? 0).toFixed(2)}/mo &bull; ৳{Number(currentPackage.yearly_price_bdt ?? 0).toFixed(2)}/yr
+                      BDT: ৳{Number(currentPackage.bdt_per_month ?? 0).toFixed(2)}/mo &bull; USD: ${Number(currentPackage.usd_per_month ?? 0).toFixed(2)}/mo
                     </div>
                     <div className="text-slate-500 text-[10px]">
                       Grace Period: <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{currentPackage.grace_period ?? 3} days</span> after expiration
