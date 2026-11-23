@@ -193,10 +193,6 @@ export async function PUT(request: any, context: any) {
               </div>
               <p style="font-size: 13px; color: #475569;">You can now log in to view your classes, attendance, marks, routine, and institutional notices.</p>
             `,
-                        ctaButton: {
-                            label: 'Access Student Portal →',
-                            url: portalUrl,
-                        },
                     });
                     await sendEmail({
                         to: student.email,
@@ -246,12 +242,8 @@ export async function PUT(request: any, context: any) {
                 <p style="margin: 0 0 4px 0;"><strong>Status:</strong> Action Required / Rejected</p>
                 <p style="margin: 0;"><strong>Review Feedback:</strong> ${notes || 'Please update your submitted details and resubmit.'}</p>
               </div>
-              <p style="font-size: 13px; color: #475569;">Please click the button below to update your profile details and resubmit for verification.</p>
+              <p style="font-size: 13px; color: #475569;">Please visit the student setup page to update your profile details and resubmit for verification.</p>
             `,
-                        ctaButton: {
-                            label: 'Update Student Profile →',
-                            url: setupUrl,
-                        },
                     });
                     await sendEmail({
                         to: student.email,

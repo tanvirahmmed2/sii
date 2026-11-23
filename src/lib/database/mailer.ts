@@ -79,14 +79,14 @@ export function buildStyledEmail({
     }
     computedHtml = parts.join('');
   }
-  const finalActionUrl = actionUrl || ctaButton?.url || null;
-  const finalActionText = actionText || ctaButton?.label || null;
+  const finalActionUrl = code ? null : (actionUrl || ctaButton?.url || null);
+  const finalActionText = code ? null : (actionText || ctaButton?.label || null);
   const actionButton = finalActionUrl && finalActionText ? `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
       <tr>
         <td align="center">
-          <a href="${actionUrl}" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; letter-spacing: 0.02em;">
-            ${actionText}
+          <a href="${finalActionUrl}" target="_blank" style="display: inline-block; background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; letter-spacing: 0.02em;">
+            ${finalActionText}
           </a>
         </td>
       </tr>

@@ -111,23 +111,21 @@ export async function POST(request: any) {
         try {
             const emailHtml = buildStyledEmail({
                 title: `${SITE_NAME} Developer Portal`,
-                subtitle: 'Account Verification Link',
+                subtitle: 'Account Verification Code',
                 recipientName: admin.name || 'Developer',
                 bodyParagraphs: [
-                    'You requested a new verification link for your platform administrator account.',
-                    'Click the link below or enter code ' + newCode + ' to activate your account.'
+                    'You requested a new verification code for your platform administrator account.',
+                    'Enter the 6-digit verification code below on the verification screen to activate your account.'
                 ],
                 code: newCode,
                 codeLabel: 'Verification Code',
-                actionText: 'Verify & Activate Account',
-                actionUrl: verifyUrl,
-                footerNote: 'This link and code will expire in 24 hours. Do not share it with anyone.'
+                footerNote: 'This verification code will expire in 24 hours. Do not share it with anyone.'
             });
             await sendEmail({
                 to: admin.email,
-                subject: `Developer Verification Link - ${SITE_NAME}`,
+                subject: `Developer Verification Code - ${SITE_NAME}`,
                 html: emailHtml,
-                text: `Hello ${admin.name},\n\nYour new developer verification link is:\n${verifyUrl}\nCode: ${newCode}\n\nExpires in 24 hours.`,
+                text: `Hello ${admin.name},\n\nYour new developer verification code is: ${newCode}\nEnter this code on the verification screen to activate your account.\n\nExpires in 24 hours.`,
             });
             await recordOtpDispatch({
                 identifier: admin.email,

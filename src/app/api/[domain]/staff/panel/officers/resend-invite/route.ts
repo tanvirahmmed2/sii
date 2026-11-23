@@ -50,11 +50,11 @@ export async function POST(request: any, context: any) {
             recipientName: officer.name,
             bodyParagraphs: [
                 `This is a reminder to complete your officer account verification (${officer.designation || 'Officer'} - ${officer.department || 'General'}) for ${website.name}.`,
-                'Please verify your identity and establish your login password using the secure link below.',
-                'This invitation link is valid for 7 days.',
+                'Please verify your identity and establish your login password on the verification screen using the token below.',
+                'This invitation token is valid for 7 days.',
             ],
-            actionUrl: verificationUrl,
-            actionText: 'Verify Officer Account & Set Password →',
+            code: verificationToken,
+            codeLabel: 'Verification Token',
             footerNote: 'If you did not request this email, please contact campus administration.',
         });
         await sendEmail({
@@ -62,6 +62,7 @@ export async function POST(request: any, context: any) {
             toName: officer.name,
             subject: `${website.name} - Complete Your Officer Account Setup`,
             html: emailHtml,
+            text: `Reminder for ${website.name} officer account verification. Your verification token is: ${verificationToken}. Valid for 7 days.`,
             websiteId: website.id,
         });
         return NextResponse.json({

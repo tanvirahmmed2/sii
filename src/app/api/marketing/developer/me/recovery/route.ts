@@ -113,8 +113,6 @@ export async function POST(request: any) {
         await queryDb(`UPDATE developers 
        SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`, [generatedToken, admin.id]);
-        const baseUrl = getBaseUrl(request);
-        const resetUrl = `${baseUrl}/developer-auth/recovery?token=${generatedToken}&email=${encodeURIComponent(targetEmail)}`;
         if (channel === 'sms') {
             if (!targetPhone) {
                 return NextResponse.json({ success: false, error: 'No phone number is registered for this developer account.' }, { status: 400 });
@@ -154,19 +152,17 @@ export async function POST(request: any) {
                 recipientName: admin.name || 'Developer',
                 bodyParagraphs: [
                     'You requested a security recovery token for your administrator account.',
-                    'Please enter the token below or click the direct link to set your new password.'
+                    'Please enter the 6-digit recovery token below on the recovery page to set your new password.'
                 ],
                 code: generatedToken,
                 codeLabel: 'Recovery Token',
-                actionUrl: resetUrl,
-                actionText: 'Reset Password Instantly',
                 footerNote: 'This token is valid for 60 minutes. Keep it confidential and do not share it with anyone.'
             });
             await sendEmail({
                 to: targetEmail,
                 subject: `Developer Security Recovery Token - ${SITE_NAME}`,
                 html: emailHtml,
-                text: `Your security recovery token is: ${generatedToken}.\nReset link: ${resetUrl}\nValid for 60 minutes.`,
+                text: `Your security recovery token is: ${generatedToken}.\nEnter this 6-digit token on the recovery page to set your new password.\nValid for 60 minutes.`,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,

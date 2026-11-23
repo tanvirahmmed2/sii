@@ -198,10 +198,8 @@ export async function POST(request: any, context: any) {
               ${student.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${student.roll_no}</div>` : ''}
               <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${candidateEmail}</code></div>
             </div>`,
-                        `To access the student portal (gradesheets, notice boards, class schedule, and ID card), please click the button below to complete your one-time email verification and configure your personal account password:`,
+                        `To access the student portal (gradesheets, notice boards, class schedule, and ID card), please visit the student setup page with your registration details to configure your personal account password.`,
                     ],
-                    actionText: 'Activate & Set Up Student Account →',
-                    actionUrl: setupUrl,
                     footerNote: `If you have questions regarding your enrollment, please contact the ${instName} admissions and administration office.`
                 });
                 await sendEmail({
@@ -209,6 +207,7 @@ export async function POST(request: any, context: any) {
                     toName: candidate.applicant_name || 'Student',
                     subject: `Enrollment Confirmation & Portal Setup - ${instName}`,
                     html: emailHtml,
+                    text: `Welcome to ${instName}. Your Registration No is ${student.registration_no}, Student ID: ${student.student_unique_id}. Please visit the student setup page to configure your personal account password.`,
                     websiteId: auth.website.id
                 });
             }

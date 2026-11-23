@@ -42,11 +42,10 @@ export async function POST(request: any, context: any) {
                 }, { status: 429 });
             }
         }
-        const recoveryToken = crypto.randomBytes(32).toString('hex');
+        const recoveryToken = crypto.randomInt(100000, 1000000).toString();
         await queryDb(`UPDATE website_officers
        SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour'
        WHERE id = $2`, [recoveryToken, officer.id]);
-        const recoveryUrl = buildOfficerRecoveryUrl(website, recoveryToken, request);
         try {
             const html = buildStyledEmail({
                 title: 'Officer Password Recovery',
@@ -54,17 +53,19 @@ export async function POST(request: any, context: any) {
                 recipientName: officer.name,
                 bodyParagraphs: [
                     'We received a request to recover or reset the password for your officer portal account.',
-                    'Click the button below to establish a new password. This reset link remains active for 1 hour.',
+                    'Enter the 6-digit recovery code below on the password reset screen. This code remains active for 1 hour.',
                     'If you did not request this, you can ignore this notice; your credentials will remain unchanged.',
                 ],
-                actionUrl: recoveryUrl,
-                actionText: 'Reset Officer Password →',
+                code: recoveryToken,
+                codeLabel: 'Recovery Passcode',
+                footerNote: 'This recovery passcode is valid for 1 hour. Do not share it with anyone.',
             });
             await sendEmail({
                 to: officer.email,
                 toName: officer.name,
-                subject: `${website.name} - Officer Password Reset Link`,
+                subject: `${website.name} - Officer Password Recovery Code`,
                 html,
+                text: `Your officer password recovery code is: ${recoveryToken}.\nEnter this 6-digit code on the password reset page to update your credentials.\nValid for 1 hour.`,
                 websiteId: website.id,
             });
         }
@@ -73,7 +74,7 @@ export async function POST(request: any, context: any) {
         }
         return NextResponse.json({
             success: true,
-            message: 'Password recovery email sent. Please check your inbox.',
+            message: 'Password recovery code sent. Please check your inbox.',
         });
     }
     catch (error: any) {

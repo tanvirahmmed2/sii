@@ -55,8 +55,6 @@ async function handleCreateAdmin(d: any, request: any) {
         ...(devWithRole.rows[0] || insertRes.rows[0]),
         is_verified: false,
     };
-    const baseUrl = getBaseUrl(request);
-    const verifyUrl = `${baseUrl}/developer-auth/verify?token=${verificationToken}&email=${encodeURIComponent(email)}`;
     try {
         await sendEmail({
             to: email,
@@ -67,13 +65,13 @@ async function handleCreateAdmin(d: any, request: any) {
                 recipientName: name,
                 bodyParagraphs: [
                     `An administrator account has been created for you on ${SITE_NAME}.`,
-                    'To activate your account and set up access, please click the button below to verify your email address.',
+                    'To activate your account and set up access, please enter the 6-digit verification code below on the verification page.',
                 ],
-                actionUrl: verifyUrl,
-                actionText: 'Verify & Activate Account',
-                footerNote: 'This activation link is valid for 24 hours. If you did not expect this invitation, please ignore this email.',
+                code: String(verificationCode),
+                codeLabel: 'Verification Code',
+                footerNote: 'This activation code is valid for 24 hours. If you did not expect this invitation, please ignore this email.',
             }),
-            text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nPlease click the link below to verify your email and activate your account:\n${verifyUrl}\n\nThis link expires in 24 hours.`,
+            text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nYour 6-digit verification code is: ${verificationCode}\n\nEnter this code on the verification page to activate your account.\n\nThis code expires in 24 hours.`,
         });
     }
     catch (mailErr: any) {

@@ -47,16 +47,16 @@ export async function POST(request: any, context: any) {
         let emailError = null;
         try {
             const emailHtml = buildStyledEmail({
-                title: 'Faculty Account Activation Link',
+                title: 'Faculty Account Activation Code',
                 subtitle: `${website.name} — Teacher Operations Portal`,
                 recipientName: teacher.name,
                 bodyParagraphs: [
-                    `A new verification link has been requested for your faculty account at ${website.name}.`,
-                    'Your account status is currently inactive pending verification. Please use the link below to verify your profile and set up your personal login password.',
-                    'This link is valid for 7 days. Once verified, your status will become active and you will be able to log in, recover your credentials, and access the Teacher Portal.',
+                    `A new verification token has been requested for your faculty account at ${website.name}.`,
+                    'Your account status is currently inactive pending verification. Please use the verification token below on the setup screen to verify your profile and set up your personal login password.',
+                    'This token is valid for 7 days. Once verified, your status will become active and you will be able to log in, recover your credentials, and access the Teacher Portal.',
                 ],
-                actionUrl: verificationUrl,
-                actionText: 'Activate Account & Set Password →',
+                code: verificationToken,
+                codeLabel: 'Verification Token',
                 footerNote: 'If you did not expect this email, please contact campus administration.',
             });
             await sendEmail({
@@ -64,6 +64,7 @@ export async function POST(request: any, context: any) {
                 toName: teacher.name,
                 subject: `${website.name} - Activate Your Faculty Account`,
                 html: emailHtml,
+                text: `Faculty account activation token for ${website.name}. Your verification token is: ${verificationToken}. Valid for 7 days.`,
                 websiteId: website.id,
             });
             emailSent = true;

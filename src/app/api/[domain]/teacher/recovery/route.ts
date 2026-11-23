@@ -82,7 +82,6 @@ export async function POST(request: any, context: any) {
             purpose: 'teacher_recovery',
             ip: clientIp,
         });
-        const recoveryUrl = buildTeacherRecoveryUrl(website, recoveryCode, request);
         const institutionName = website.name || 'Institution Teacher Portal';
         if (selectedChannel === 'sms') {
             try {
@@ -108,19 +107,19 @@ export async function POST(request: any, context: any) {
                     recipientName: teacher.name,
                     bodyParagraphs: [
                         'We received a request to reset the password for your faculty account.',
-                        'Click the button below to establish a new password, or use the 6-digit recovery code directly on the recovery page.',
+                        'Enter the 6-digit recovery code below on the recovery page to set your new password.',
                         'This security code is valid for 1 hour. If you did not make this request, you can safely ignore this email.',
                     ],
                     code: recoveryCode,
                     codeLabel: 'Recovery Passcode',
-                    actionUrl: recoveryUrl,
-                    actionText: 'Reset Teacher Password →',
+                    footerNote: 'This security code is valid for 1 hour. Do not share it with anyone.',
                 });
                 await sendEmail({
                     to: teacher.email,
                     toName: teacher.name,
                     subject: `${institutionName} - Teacher Password Recovery Code`,
                     html,
+                    text: `Your teacher password recovery code is: ${recoveryCode}. Valid for 1 hour.`,
                     websiteId: website.id,
                 });
             }

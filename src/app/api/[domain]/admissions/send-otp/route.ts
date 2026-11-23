@@ -51,7 +51,6 @@ export async function POST(request: any, context: any) {
                 `Please use the following 6-digit one-time passcode to confirm your email address:`,
             ],
             code: otpCode,
-            actionText: 'Continue Application',
             footerNote: 'This security code is strictly confidential and expires in 15 minutes. If you did not request this code, no action is required.'
         });
         try {

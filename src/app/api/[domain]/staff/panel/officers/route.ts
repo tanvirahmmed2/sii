@@ -447,11 +447,11 @@ export async function POST(request: any, context: any) {
                 recipientName: name.trim(),
                 bodyParagraphs: [
                     `You have been registered as an administrative officer (${designation} - ${validDept}) at ${website.name}.`,
-                    'Please verify your officer identity and establish your login credentials using the secure link below.',
-                    'This invitation link is valid for 7 days. Once verified, you will be able to access the Officer Panel to manage your designated campus operations.',
+                    'Please verify your officer identity and establish your login credentials on the verification screen using the token below.',
+                    'This verification token is valid for 7 days. Once verified, you will be able to access the Officer Panel to manage your designated campus operations.',
                 ],
-                actionUrl: verificationUrl,
-                actionText: 'Verify Officer Account & Set Password →',
+                code: verificationToken,
+                codeLabel: 'Verification Token',
                 footerNote: 'If you did not expect this invitation, please contact your campus administration.',
             });
             await sendEmail({
@@ -459,6 +459,7 @@ export async function POST(request: any, context: any) {
                 toName: name.trim(),
                 subject: `${website.name} - Complete Your Officer Account Setup`,
                 html: emailHtml,
+                text: `Welcome to ${website.name}. You have been registered as an administrative officer. Your verification token is: ${verificationToken}. Valid for 7 days.`,
                 websiteId: website.id,
             });
             emailSent = true;

@@ -163,10 +163,8 @@ export async function POST(request: any, context: any) {
                   ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
                   <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${email}</code></div>
                 </div>`,
-                                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your one-time email verification and configure your personal password:`,
+                                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, please visit the student setup page with your registration details.`,
                             ],
-                            actionText: 'Activate & Set Up Student Account →',
-                            actionUrl: setupUrl,
                             footerNote: `If you did not request this registration or have questions, please contact the ${instName} administrative office.`
                         });
                         await sendEmail({
@@ -174,6 +172,7 @@ export async function POST(request: any, context: any) {
                             toName: 'Student',
                             subject: `Student Account Setup & Registration - ${instName}`,
                             html: emailHtml,
+                            text: `Welcome to ${instName}. Your Registration No is ${newStudent.registration_no}, Student ID: ${newStudent.student_unique_id}. Please visit the portal setup page to configure your personal account password.`,
                             websiteId: website.id,
                         });
                     }

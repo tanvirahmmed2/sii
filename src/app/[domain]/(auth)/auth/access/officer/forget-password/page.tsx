@@ -10,7 +10,8 @@ function OfficerForgetPasswordContent() {
     const tokenParam = searchParams.get('token');
     const { website, getApiEndpoint, tenantUrl } = useTenantWebsite();
     const [email, setEmail] = useState<any>('');
-    const [requestSent, setRequestSent] = useState<any>(false);
+    const [step, setStep] = useState<any>(tokenParam ? 'reset' : 'request');
+    const [token, setToken] = useState<any>(tokenParam || '');
     const [requestLoading, setRequestLoading] = useState<any>(false);
     const [newPassword, setNewPassword] = useState<any>('');
     const [confirmPassword, setConfirmPassword] = useState<any>('');
@@ -33,8 +34,8 @@ function OfficerForgetPasswordContent() {
             if (!res.ok) {
                 throw new Error(data.error || 'Failed to dispatch password recovery email.');
             }
-            setRequestSent(true);
-            toast.success(data.message || 'Recovery email dispatched. Please check your inbox.');
+            setStep('reset');
+            toast.success(data.message || 'Recovery code dispatched. Please check your inbox.');
         }
         catch (err: any) {
             toast.error(err.message);
@@ -45,6 +46,11 @@ function OfficerForgetPasswordContent() {
     };
     const handleResetSubmit = async (e: any) => {
         e.preventDefault();
+        const cleanToken = (token || tokenParam || '').trim();
+        if (!cleanToken) {
+            toast.error('Password recovery passcode is required.');
+            return;
+        }
         if (!newPassword || newPassword.length < 6) {
             toast.error('New password must be at least 6 characters in length.');
             return;
@@ -60,7 +66,7 @@ function OfficerForgetPasswordContent() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    token: (tokenParam || '').trim(),
+                    token: cleanToken,
                     password: newPassword,
                 }),
             });
@@ -86,51 +92,50 @@ function OfficerForgetPasswordContent() {
             {website?.name || 'Campus Portal'}
           </span>
           <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">
-            {tokenParam ? 'Reset Officer Password' : 'Officer Password Recovery'}
+            {step === 'reset' ? 'Reset Officer Password' : 'Officer Password Recovery'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {tokenParam
-            ? 'Establish a new secure password for your officer portal account.'
-            : 'Enter your registered officer email to receive a secure recovery link.'}
+            {step === 'reset'
+            ? 'Enter your recovery code and establish a new secure password.'
+            : 'Enter your registered officer email to receive a secure recovery code.'}
           </p>
         </div>
 
-        {tokenParam ? (<form onSubmit={handleResetSubmit} className="space-y-4">
+        {step === 'reset' ? (<form onSubmit={handleResetSubmit} className="space-y-4">
+            {!tokenParam && (<div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Recovery Passcode *
+                </label>
+                <input type="text" required value={token} onChange={(e: any) => setToken(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
+              </div>)}
+
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 New Password *
               </label>
-              <input type="password" required minLength={6} value={newPassword} onChange={(e: any) => setNewPassword(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
+              <input type="password" required minLength={6} value={newPassword} onChange={(e: any) => setNewPassword(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Confirm New Password *
               </label>
-              <input type="password" required minLength={6} value={confirmPassword} onChange={(e: any) => setConfirmPassword(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
+              <input type="password" required minLength={6} value={confirmPassword} onChange={(e: any) => setConfirmPassword(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
             </div>
 
             <button type="submit" disabled={resetLoading} className="w-full py-2 px-4 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50">
               {resetLoading ? 'Saving New Password...' : 'Update Password & Return to Login'}
             </button>
-          </form>) : requestSent ? (<div className="space-y-4 text-center">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded text-xs text-emerald-800 dark:text-emerald-300">
-              Recovery link has been dispatched to <strong>{email}</strong>. Please check your inbox and spam folder.
-            </div>
-            <p className="text-xs text-slate-500">The recovery link will expire in 1 hour.</p>
-            <button type="button" onClick={() => setRequestSent(false)} className="text-xs text-slate-600 dark:text-slate-400 hover:underline">
-              Did not receive it? Try a different email
-            </button>
-          </div>) : (<form onSubmit={handleRequestSubmit} className="space-y-4">
+          </form>) : (<form onSubmit={handleRequestSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Registered Officer Email *
               </label>
-              <input type="email" required value={email} onChange={(e: any) => setEmail(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
+              <input type="email" required value={email} onChange={(e: any) => setEmail(e.target.value)} className="w-full px-3 py-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-400 transition"/>
             </div>
 
             <button type="submit" disabled={requestLoading} className="w-full py-2 px-4 rounded text-xs font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50">
-              {requestLoading ? 'Dispatching Recovery Email...' : 'Send Password Reset Link'}
+              {requestLoading ? 'Dispatching Recovery Code...' : 'Send Password Recovery Code'}
             </button>
           </form>)}
 

@@ -90,7 +90,6 @@ export async function POST(request: any, context: any) {
             purpose: 'student_recovery',
             ip: clientIp,
         });
-        const recoveryUrl = buildStudentRecoveryUrl(website, sixDigitCode, request);
         const institutionName = website.name || 'Institutional Management Portal';
         if (selectedChannel === 'sms') {
             try {
@@ -119,19 +118,19 @@ export async function POST(request: any, context: any) {
                     recipientName: student.name || 'Student',
                     bodyParagraphs: [
                         'We received a request to reset your student portal account password.',
-                        'Use the 6-digit verification code below to complete your password update. This security code is valid for 60 minutes.',
+                        'Enter the 6-digit verification code below on the recovery screen to complete your password update. This security code is valid for 60 minutes.',
                         'If you did not request a password reset, you can safely disregard this message.',
                     ],
                     code: sixDigitCode,
                     codeLabel: 'Recovery Passcode',
-                    actionUrl: recoveryUrl,
-                    actionText: 'Reset Password Online →',
+                    footerNote: 'This security code is valid for 60 minutes. Keep it confidential.',
                 });
                 await sendEmail({
                     to: student.email,
                     toName: student.name || 'Student',
                     subject: `${institutionName} - Student Account Verification Code [${sixDigitCode}]`,
                     html: emailHtml,
+                    text: `Your student password recovery code is: ${sixDigitCode}. Valid for 60 minutes.`,
                     websiteId: website.id,
                 });
             }

@@ -77,19 +77,24 @@ export function proxy(request: any) {
   const primaryBase = getBaseUrl(request);
 
   if (loggedInCreatorId !== null && !pathname.startsWith('/api')) {
-    if (tenantDomain) {
-      const destUrl = new URL(`/creator/${loggedInCreatorId}`, primaryBase);
-      return NextResponse.redirect(destUrl);
-    }
+    const isCreatorAuthPath =
+      pathname === '/creator/login' || pathname.startsWith('/creator/login/') ||
+      pathname === '/creator/register' || pathname.startsWith('/creator/register/') ||
+      pathname === '/creator/recovery' || pathname.startsWith('/creator/recovery/') ||
+      pathname === '/creator/verify' || pathname.startsWith('/creator/verify/') ||
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/recovery' ||
+      pathname === '/verify';
 
-    const isAllowedCreatorWorkspace =
-      pathname === `/creator/${loggedInCreatorId}` ||
-      pathname.startsWith(`/creator/${loggedInCreatorId}/`);
-    const isAllowedCheckout =
-      pathname === '/creator/checkout' ||
-      pathname.startsWith('/creator/checkout/');
+    const creatorIdMatch = pathname.match(/^\/creator\/([^/]+)/);
+    const isOtherCreatorWorkspace =
+      creatorIdMatch &&
+      creatorIdMatch[1] !== 'checkout' &&
+      creatorIdMatch[1] !== String(loggedInCreatorId) &&
+      !['login', 'register', 'recovery', 'verify'].includes(creatorIdMatch[1]);
 
-    if (!isAllowedCreatorWorkspace && !isAllowedCheckout) {
+    if (isCreatorAuthPath || isOtherCreatorWorkspace) {
       const destUrl = new URL(`/creator/${loggedInCreatorId}`, primaryBase);
       return NextResponse.redirect(destUrl);
     }

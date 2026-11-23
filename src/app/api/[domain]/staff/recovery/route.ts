@@ -78,7 +78,6 @@ export async function POST(request: any, context: any) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`, [generatedToken, staff.id]);
         const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
-        const recoveryUrl = buildStaffRecoveryUrl(website, generatedToken, request);
         await recordOtpDispatch({
             identifier: raw,
             phone: staff.phone || staff.number,
@@ -115,19 +114,19 @@ export async function POST(request: any, context: any) {
                     recipientName: staff.name,
                     bodyParagraphs: [
                         'We received a request to reset the password for your staff account.',
-                        'Enter the 6-digit recovery code on the reset screen, or click the direct link below. This code is active for 1 hour.',
+                        'Enter the 6-digit recovery code below on the reset screen to set your new password. This code is active for 1 hour.',
                         'If you did not make this request, you can safely ignore this email; your existing credentials remain secure.',
                     ],
                     code: generatedToken,
                     codeLabel: 'Password Recovery Code',
-                    actionUrl: recoveryUrl,
-                    actionText: 'Reset Staff Password →',
+                    footerNote: 'This security code is active for 1 hour. Do not share it with anyone.',
                 });
                 await sendEmail({
                     to: staff.email,
                     toName: staff.name,
                     subject: `${website.name} - Staff Password Recovery Code`,
                     html,
+                    text: `Your staff password recovery code is: ${generatedToken}. Valid for 60 minutes.`,
                     websiteId: website.id,
                 });
             }

@@ -247,14 +247,13 @@ export async function POST(request: any) {
                     recipientName: newStaff.name,
                     bodyParagraphs: [
                         `You have been registered as an official staff member for ${website.name}.`,
-                        'Please verify your staff account and complete your portal setup by clicking the button below:',
+                        'Please verify your staff account and complete your portal setup using the verification token below:',
                     ],
                     code: verificationToken,
                     codeLabel: 'Verification Token',
-                    actionUrl: setupUrl,
-                    actionText: 'Verify Account & Complete Setup',
-                    footerNote: `This verification link is valid for 7 days. If you were not expecting this, please contact administration at ${website.contact_email || 'the institution'}.`,
+                    footerNote: `This verification token is valid for 7 days. If you were not expecting this, please contact administration at ${website.contact_email || 'the institution'}.`,
                 }),
+                text: `Welcome to ${website.name}. You have been registered as a staff member. Your verification token is: ${verificationToken}. Valid for 7 days.`,
             });
             emailSent = true;
         }
@@ -267,7 +266,7 @@ export async function POST(request: any) {
             try {
                 await sendSms({
                     to: cleanNumber,
-                    message: `Welcome to ${website.name}. You have been registered as a staff member. Setup your account: ${setupUrl}`,
+                    message: `Welcome to ${website.name}. You have been registered as a staff member. Your verification token is: ${verificationToken}`,
                     purpose: 'staff_invite',
                     userId: newStaff.id,
                     userType: 'staff',
@@ -329,21 +328,20 @@ export async function PUT(request: any) {
                 await sendEmail({
                     to: staff.email,
                     toName: staff.name,
-                    subject: `Staff Verification Link - ${website.name}`,
+                    subject: `Staff Verification Code - ${website.name}`,
                     html: buildStyledEmail({
                         title: `${website.name} Staff Portal`,
                         subtitle: 'Official Staff Account Verification',
                         recipientName: staff.name,
                         bodyParagraphs: [
-                            `Here is your requested staff verification link for ${website.name}.`,
-                            'Click the button below to complete your staff profile and security setup:',
+                            `Here is your requested staff verification token for ${website.name}.`,
+                            'Enter the token below on the staff verification page to complete your staff profile and security setup:',
                         ],
                         code: newToken,
                         codeLabel: 'Verification Token',
-                        actionUrl: setupUrl,
-                        actionText: 'Verify Staff Account',
-                        footerNote: 'This verification link is valid for 7 days.',
+                        footerNote: 'This verification token is valid for 7 days.',
                     }),
+                    text: `Your staff verification token for ${website.name} is: ${newToken}. Valid for 7 days.`,
                 });
                 emailSent = true;
             }

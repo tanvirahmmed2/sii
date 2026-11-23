@@ -370,11 +370,11 @@ export async function POST(request: any, context: any) {
                 recipientName: name.trim(),
                 bodyParagraphs: [
                     `You have been registered as a teacher at ${website.name}.`,
-                    'Your account status is currently inactive pending verification. Please verify your faculty profile and configure your personal login password using the secure link below to activate your account.',
-                    'This verification link is valid for 7 days. Once verified, your status will become active and you will be able to log in, recover your password if forgotten, and access the Teacher Portal.',
+                    'Your account status is currently inactive pending verification. Please verify your faculty profile and configure your personal login password on the verification screen using the token below to activate your account.',
+                    'This verification token is valid for 7 days. Once verified, your status will become active and you will be able to log in, recover your password if forgotten, and access the Teacher Portal.',
                 ],
-                actionUrl: verificationUrl,
-                actionText: 'Activate Account & Set Password →',
+                code: verificationToken,
+                codeLabel: 'Verification Token',
                 footerNote: 'If you did not expect this invitation, please contact your campus administration.',
             });
             await sendEmail({
@@ -382,6 +382,7 @@ export async function POST(request: any, context: any) {
                 toName: name.trim(),
                 subject: `${website.name} - Activate Your Faculty Account`,
                 html: emailHtml,
+                text: `Welcome to ${website.name}. You have been registered as a teacher. Your verification token is: ${verificationToken}. Valid for 7 days.`,
                 websiteId: website.id,
             });
             emailSent = true;
