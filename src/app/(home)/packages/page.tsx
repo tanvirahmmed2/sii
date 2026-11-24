@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BiLoaderAlt, BiPackage, BiRefresh, BiCheckCircle, BiSupport, BiRocket, BiCheckShield, BiServer, BiMessageSquareDetail, BiPhoneCall, BiEnvelope, BiArrowBack, BiX, BiHeart, BiSolidHeart, } from 'react-icons/bi';
+import { BiLoaderAlt, BiPackage, BiRefresh, BiCheckCircle, BiSupport, BiRocket, BiCheckShield, BiServer, BiMessageSquareDetail, BiPhoneCall, BiEnvelope, BiArrowBack, BiX, BiHeart, BiSolidHeart, BiTag, } from 'react-icons/bi';
 import Package from 'src/component/marketing/home/cards/Package';
 import { SITE_MAIL, SITE_CONTACT } from 'src/lib/database/secret';
 import LoadingScreen from 'src/component/common/LoadingScreen';
@@ -40,6 +40,7 @@ export default function PackagesPage() {
     const [inquirySubmitting, setInquirySubmitting] = useState<any>(false);
     const [inquirySuccess, setInquirySuccess] = useState<any>(false);
     const [inquiryError, setInquiryError] = useState<any>('');
+    const [publicPromos, setPublicPromos] = useState<any>([]);
     const fetchPackages = async () => {
         try {
             setLoading(true);
@@ -73,6 +74,14 @@ export default function PackagesPage() {
     };
     useEffect(() => {
         fetchPackages();
+        fetch('/api/marketing/promos')
+            .then((res: any) => res.json())
+            .then((data: any) => {
+            if (data.success && Array.isArray(data.promos)) {
+                setPublicPromos(data.promos);
+            }
+        })
+            .catch(() => setPublicPromos([]));
         fetch('/api/marketing/creator/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -277,6 +286,41 @@ ${inquiryMessage}`,
             <span>Refresh Plans</span>
           </button>
         </div>) : (<div className="space-y-6">
+          {publicPromos.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 shrink-0">
+                  <BiTag className="text-base" />
+                </span>
+                <div>
+                  <span className="font-bold text-amber-950 dark:text-amber-200">
+                    Special Offers Available:
+                  </span>{' '}
+                  <span className="text-amber-900/80 dark:text-amber-300/80">
+                    Use public coupon{' '}
+                    <span className="font-mono font-bold px-1.5 py-0.5 rounded-md bg-amber-200/60 dark:bg-amber-800/60 text-amber-950 dark:text-amber-100 border border-amber-300 dark:border-amber-700">
+                      {publicPromos[0].code}
+                    </span>{' '}
+                    at checkout to save {publicPromos[0].discount_percentage}%!
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {publicPromos.map((pr: any) => (
+                  <span
+                    key={pr.id}
+                    className="inline-flex items-center gap-1 font-mono text-[11px] font-bold px-2 py-1 rounded-lg bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shadow-xs"
+                  >
+                    <span>{pr.code}</span>
+                    <span className="font-sans font-medium text-[10px] text-slate-500 dark:text-slate-400">
+                      -{pr.discount_percentage}%
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {wishlistIds.length > 0 && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs shadow-xs">
               <div className="flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 font-medium">

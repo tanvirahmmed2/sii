@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
+import { invalidatePromosCache } from 'src/lib/redis/redisClient';
 
 export async function GET(request: any) {
   try {
@@ -58,6 +59,7 @@ export async function POST(request: any) {
     const maxTotalUses = body.max_total_uses ? Math.max(1, Number(body.max_total_uses)) : null;
     const endingDate = body.ending_date ? new Date(body.ending_date) : new Date(Date.now() + 365 * 24 * 3600 * 1000);
     const startDate = body.start_date ? new Date(body.start_date) : new Date();
+    const isPublic = body.is_public !== undefined ? Boolean(body.is_public) : false;
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
 
     if (!name || !code) {
@@ -88,9 +90,9 @@ export async function POST(request: any) {
     const res = await queryDb(
       `INSERT INTO promos (
         name, code, description, discount_percentage,
-        max_uses_per_creator, max_total_uses, is_active,
+        max_uses_per_creator, max_total_uses, is_public, is_active,
         start_date, ending_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         name,
@@ -99,11 +101,14 @@ export async function POST(request: any) {
         discountPercentage,
         maxUsesPerCreator,
         maxTotalUses,
+        isPublic,
         isActive,
         startDate,
         endingDate,
       ]
     );
+
+    await invalidatePromosCache();
 
     return NextResponse.json(
       {
@@ -161,6 +166,7 @@ export async function PUT(request: any) {
     const maxTotalUses = body.max_total_uses !== undefined
       ? (body.max_total_uses ? Number(body.max_total_uses) : null)
       : current.max_total_uses;
+    const isPublic = body.is_public !== undefined ? Boolean(body.is_public) : Boolean(current.is_public);
     const isActive = body.is_active !== undefined ? Boolean(body.is_active) : Boolean(current.is_active);
     const endingDate = body.ending_date ? new Date(body.ending_date) : current.ending_date;
 
@@ -171,10 +177,11 @@ export async function PUT(request: any) {
            discount_percentage = $3,
            max_uses_per_creator = $4,
            max_total_uses = $5,
-           is_active = $6,
-           ending_date = $7,
+           is_public = $6,
+           is_active = $7,
+           ending_date = $8,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $8
+       WHERE id = $9
        RETURNING *`,
       [
         name,
@@ -182,11 +189,14 @@ export async function PUT(request: any) {
         discountPercentage,
         maxUsesPerCreator,
         maxTotalUses,
+        isPublic,
         isActive,
         endingDate,
         id,
       ]
     );
+
+    await invalidatePromosCache();
 
     return NextResponse.json({
       success: true,

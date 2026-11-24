@@ -12,6 +12,13 @@ import {
   checkOtpDispatchRateLimit,
   recordOtpDispatch,
 } from '../security/shield';
+import {
+  fetchDeveloperCredential,
+  fetchDeveloperSessionById,
+  fetchDeveloperPermissions,
+  invalidateDeveloperCache,
+  invalidateDeveloperPermissionsCache,
+} from '../redis/redisClient';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_jwt_secret_key_2026';
 export const DEVELOPER_COOKIE_NAME = DEVELOPER_TOKEN;
@@ -130,18 +137,18 @@ export async function getDeveloperSession(request?: any): Promise<any> {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const res = await query(
-      `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.bio,
-              d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
-       FROM developers d
-       WHERE d.id = $1 LIMIT 1`,
-      [decoded.id]
-    );
+    const dev = await fetchDeveloperSessionById(decoded.id, async () => {
+      const res = await query(
+        `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.bio,
+                d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
+         FROM developers d
+         WHERE d.id = $1 LIMIT 1`,
+        [decoded.id]
+      );
+      return res.rows[0] || null;
+    });
 
-    if (res.rows.length === 0) return null;
-    const dev = res.rows[0];
-
-    if (!dev.is_active) return null;
+    if (!dev || !dev.is_active) return null;
 
     try {
       const sessRes = await query(
@@ -170,34 +177,38 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       console.warn('Notice verifying developer session against database:', e.message);
     }
 
-    let permRes: { rows: any[] } = { rows: [] };
-    if (dev.role_id) {
-      permRes = await queryDb(
-        `SELECT m.slug AS module_slug, drp.can_view, drp.can_create, drp.can_edit, drp.can_delete
-         FROM developer_role_permissions drp
-         JOIN modules m ON drp.module_id = m.id
-         WHERE drp.role_id = $1 AND m.is_active = TRUE`,
-        [dev.role_id]
-      ).catch(() => ({ rows: [] }));
-    }
+    const rawPermRows = await fetchDeveloperPermissions(dev.id, dev.role_id, async () => {
+      let permRes: { rows: any[] } = { rows: [] };
+      if (dev.role_id) {
+        permRes = await queryDb(
+          `SELECT m.slug AS module_slug, drp.can_view, drp.can_create, drp.can_edit, drp.can_delete
+           FROM developer_role_permissions drp
+           JOIN modules m ON drp.module_id = m.id
+           WHERE drp.role_id = $1 AND m.is_active = TRUE`,
+          [dev.role_id]
+        ).catch(() => ({ rows: [] }));
+      }
 
-    if (!permRes.rows || permRes.rows.length === 0) {
-      permRes = await queryDb(
-        `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
-         FROM module_permissions mp
-         JOIN modules m ON mp.module_id = m.id
-         WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
-        [dev.id]
-      ).catch(() => ({ rows: [] }));
-    }
+      if (!permRes.rows || permRes.rows.length === 0) {
+        permRes = await queryDb(
+          `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+           FROM module_permissions mp
+           JOIN modules m ON mp.module_id = m.id
+           WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
+          [dev.id]
+        ).catch(() => ({ rows: [] }));
+      }
 
-    let permissions = permRes.rows
-      .filter((r) => r.can_view)
-      .map((r) => r.module_slug);
+      return permRes.rows || [];
+    });
+
+    let permissions = (rawPermRows || [])
+      .filter((r: any) => r.can_view)
+      .map((r: any) => r.module_slug);
 
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
     const permissionsMap: Record<string, any> = {};
-    for (const r of permRes.rows) {
+    for (const r of (rawPermRows || [])) {
       permissionsMap[r.module_slug] = {
         can_view: Boolean(r.can_view),
         can_create: Boolean(r.can_create),
@@ -521,21 +532,22 @@ export async function authenticateDeveloper(identifier: string, password: string
     throw err;
   }
 
-  const devRes = await queryDb(
-    `SELECT d.*
-     FROM developers d
-     WHERE LOWER(d.email) = $1 
-        OR d.phone = $2 
-        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(d.phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
-     LIMIT 1`,
-    [cleanEmail, raw, digits]
-  );
+  const dev = await fetchDeveloperCredential(raw, async () => {
+    const devRes = await queryDb(
+      `SELECT d.*
+       FROM developers d
+       WHERE LOWER(d.email) = $1 
+          OR d.phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(d.phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, digits]
+    );
+    return devRes.rows[0] || null;
+  });
 
-  if (devRes.rows.length === 0) {
+  if (!dev) {
     throw new Error('Invalid email, phone number, or password.');
   }
-
-  const dev = devRes.rows[0];
 
   if (!dev.is_active) {
     try {

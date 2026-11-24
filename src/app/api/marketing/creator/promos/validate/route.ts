@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
+import { fetchPromoByCode } from 'src/lib/redis/redisClient';
 
 export async function POST(request: any) {
   try {
@@ -19,21 +20,22 @@ export async function POST(request: any) {
       );
     }
 
-    const promoRes = await queryDb(
-      `SELECT * FROM promos 
-       WHERE UPPER(code) = UPPER($1) 
-       LIMIT 1`,
-      [rawCode]
-    );
+    const promo = await fetchPromoByCode(rawCode, async () => {
+      const promoRes = await queryDb(
+        `SELECT * FROM promos 
+         WHERE UPPER(code) = UPPER($1) 
+         LIMIT 1`,
+        [rawCode]
+      );
+      return promoRes.rows[0] || null;
+    });
 
-    if (promoRes.rows.length === 0) {
+    if (!promo) {
       return NextResponse.json(
         { success: false, error: 'Invalid promo code. Please check and try again.' },
         { status: 404 }
       );
     }
-
-    const promo = promoRes.rows[0];
 
     if (!promo.is_active) {
       return NextResponse.json(
@@ -119,6 +121,7 @@ export async function POST(request: any) {
         description: promo.description || '',
         discount_percentage: Number(promo.discount_percentage),
         max_uses_per_creator: Number(promo.max_uses_per_creator || 1),
+        is_public: Boolean(promo.is_public),
         ending_date: promo.ending_date,
       },
       baseAmount,

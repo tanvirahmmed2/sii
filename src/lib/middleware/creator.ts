@@ -18,6 +18,11 @@ import {
   invalidateWebsiteCache,
   clearWebsiteCache,
 } from './websiteResolver';
+import {
+  fetchCreatorCredential,
+  fetchCreatorSessionById,
+  invalidateCreatorCache,
+} from '../redis/redisClient';
 
 const DEFAULT_JWT_SECRET: string = JWT_SECRET || 'creator_jwt_secret_key_2026';
 const CREATOR_COOKIE_NAME = CREATOR_TOKEN;
@@ -114,17 +119,17 @@ export async function getCreatorSession(request?: any): Promise<any> {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const res = await query(
-      `SELECT *
-       FROM creators
-       WHERE id = $1 LIMIT 1`,
-      [decoded.id]
-    );
+    const c = await fetchCreatorSessionById(decoded.id, async () => {
+      const res = await query(
+        `SELECT *
+         FROM creators
+         WHERE id = $1 LIMIT 1`,
+        [decoded.id]
+      );
+      return res.rows[0] || null;
+    });
 
-    if (res.rows.length === 0) return null;
-    const c = res.rows[0];
-
-    if (!c.is_active) return null;
+    if (!c || !c.is_active) return null;
 
     try {
       const sessRes = await query(
@@ -187,20 +192,21 @@ export async function authenticateCreator(identifier: string, password: string, 
     throw err;
   }
 
-  const res = await queryDb(
-    `SELECT * FROM creators 
-     WHERE LOWER(email) = $1 
-        OR phone = $2 
-        OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
-     LIMIT 1`,
-    [cleanEmail, raw, digits]
-  );
+  const creator = await fetchCreatorCredential(raw, async () => {
+    const res = await queryDb(
+      `SELECT * FROM creators 
+       WHERE LOWER(email) = $1 
+          OR phone = $2 
+          OR (LENGTH($3) >= 8 AND RIGHT(REGEXP_REPLACE(phone, '\\D', '', 'g'), 10) = RIGHT($3, 10))
+       LIMIT 1`,
+      [cleanEmail, raw, digits]
+    );
+    return res.rows[0] || null;
+  });
 
-  if (res.rows.length === 0) {
+  if (!creator) {
     throw new Error('No creator account found with this email or phone number.');
   }
-
-  const creator = res.rows[0];
 
   if (!creator.is_active) {
     try {

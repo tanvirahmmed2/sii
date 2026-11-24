@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
+import { fetchCreatorWishlist, invalidateWishlistCache } from 'src/lib/redis/redisClient';
 export async function GET(request: any) {
     try {
         const sessionCreator = await getCreatorSession(request);
@@ -13,40 +14,45 @@ export async function GET(request: any) {
         if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
             return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
         }
-        const res = await queryDb(`SELECT w.id AS wishlist_id, 
-              w.package_id, 
-              w.created_at AS wishlisted_at,
-              p.name, 
-              p.slug, 
-              p.tagline, 
-              p.description,
-              p.bdt_per_month,
-              p.usd_per_month,
-              p.eur_per_month,
-              p.gbp_per_month,
-              p.aud_per_month,
-              p.cad_per_month,
-              p.max_students,
-              p.max_teachers,
-              p.max_staff,
-              p.max_storage_mb,
-              1 AS max_websites,
-              p.is_popular,
-              p.is_active,
-              p.features
-       FROM wishlists w
-       JOIN packages p ON w.package_id = p.id
-       WHERE w.creator_id = $1
-       ORDER BY w.id DESC
-       LIMIT 1`, [creatorId]).catch(() => ({ rows: [] }));
-        const packageIds = res.rows.map((row: any) => Number(row.package_id));
-        const wishlistedPackage = res.rows[0] || null;
+        const data = await fetchCreatorWishlist(creatorId, async () => {
+            const res = await queryDb(`SELECT w.id AS wishlist_id, 
+                  w.package_id, 
+                  w.created_at AS wishlisted_at,
+                  p.name, 
+                  p.slug, 
+                  p.tagline, 
+                  p.description,
+                  p.bdt_per_month,
+                  p.usd_per_month,
+                  p.eur_per_month,
+                  p.gbp_per_month,
+                  p.aud_per_month,
+                  p.cad_per_month,
+                  p.max_students,
+                  p.max_teachers,
+                  p.max_staff,
+                  p.max_storage_mb,
+                  1 AS max_websites,
+                  p.is_popular,
+                  p.is_active,
+                  p.features
+           FROM wishlists w
+           JOIN packages p ON w.package_id = p.id
+           WHERE w.creator_id = $1
+           ORDER BY w.id DESC
+           LIMIT 1`, [creatorId]).catch(() => ({ rows: [] }));
+            const packageIds = res.rows.map((row: any) => Number(row.package_id));
+            const wishlistedPackage = res.rows[0] || null;
+            return {
+                wishlists: res.rows,
+                wishlist: wishlistedPackage,
+                package_ids: packageIds,
+                count: res.rows.length,
+            };
+        });
         return NextResponse.json({
             success: true,
-            wishlists: res.rows,
-            wishlist: wishlistedPackage,
-            package_ids: packageIds,
-            count: res.rows.length,
+            ...data,
         });
     }
     catch (error: any) {
@@ -76,6 +82,7 @@ export async function POST(request: any) {
         const isCurrentPackageWishlisted = existing.rows.length > 0 && Number(existing.rows[0].package_id) === packageId;
         if (action === 'toggle' && isCurrentPackageWishlisted) {
             await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
+            await invalidateWishlistCache(creatorId);
             return NextResponse.json({
                 success: true,
                 isWishlisted: false,
@@ -87,6 +94,7 @@ export async function POST(request: any) {
         await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
         await queryDb(`INSERT INTO wishlists (creator_id, package_id)
        VALUES ($1, $2)`, [creatorId, packageId]);
+        await invalidateWishlistCache(creatorId);
         return NextResponse.json({
             success: true,
             isWishlisted: true,
@@ -121,6 +129,7 @@ export async function DELETE(request: any) {
         }
         if (clearAll || !packageId) {
             await queryDb('DELETE FROM wishlists WHERE creator_id = $1', [creatorId]);
+            await invalidateWishlistCache(creatorId);
             return NextResponse.json({
                 success: true,
                 isWishlisted: false,
@@ -129,6 +138,7 @@ export async function DELETE(request: any) {
             });
         }
         await queryDb('DELETE FROM wishlists WHERE creator_id = $1 AND package_id = $2', [creatorId, packageId]);
+        await invalidateWishlistCache(creatorId);
         return NextResponse.json({
             success: true,
             isWishlisted: false,

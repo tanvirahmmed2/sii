@@ -46,6 +46,7 @@ function CheckoutContent() {
   const [validatingPromo, setValidatingPromo] = useState<boolean>(false);
   const [promoMessage, setPromoMessage] = useState<string>('');
   const [promoError, setPromoError] = useState<string>('');
+  const [publicPromos, setPublicPromos] = useState<any[]>([]);
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -64,6 +65,15 @@ function CheckoutContent() {
     async function initCheckout() {
       setCheckingAuth(true);
       try {
+        fetch('/api/marketing/promos')
+          .then((res) => res.json())
+          .then((pData) => {
+            if (pData.success && Array.isArray(pData.promos)) {
+              setPublicPromos(pData.promos);
+            }
+          })
+          .catch(() => setPublicPromos([]));
+
         const authRes = await fetch('/api/marketing/creator/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -120,9 +130,8 @@ function CheckoutContent() {
     : 0;
   const finalAmount = Math.max(0, Number((baseAmount - discountAmount).toFixed(2)));
 
-  const handleApplyPromo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanCode = promoInput.trim().toUpperCase();
+  const applyCode = async (rawCode: string) => {
+    const cleanCode = rawCode.trim().toUpperCase();
     if (!cleanCode) {
       setPromoError('Please type a promo code.');
       setPromoMessage('');
@@ -154,6 +163,7 @@ function CheckoutContent() {
       const data = await res.json();
       if (data.success && data.promo) {
         setAppliedPromo(data.promo);
+        setPromoInput(data.promo.code);
         setPromoMessage(data.message || `${data.promo.code} applied! ${data.promo.discount_percentage}% discount granted.`);
         setPromoError('');
       } else {
@@ -165,6 +175,11 @@ function CheckoutContent() {
     } finally {
       setValidatingPromo(false);
     }
+  };
+
+  const handleApplyPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await applyCode(promoInput);
   };
 
   const handleRemovePromo = () => {
@@ -446,6 +461,31 @@ function CheckoutContent() {
                 </span>
               )}
             </div>
+
+            {!appliedPromo && publicPromos.length > 0 && (
+              <div className="space-y-1.5 pb-1">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                  Available Public Offers
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {publicPromos.map((p: any) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyCode(p.code)}
+                      disabled={validatingPromo}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/25 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <BiTag className="text-xs" />
+                      <span>{p.code}</span>
+                      <span className="font-sans font-medium text-[10px] text-slate-500 dark:text-slate-400">
+                        ({p.discount_percentage}% off)
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {!appliedPromo ? (
               <div className="space-y-2">

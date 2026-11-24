@@ -678,6 +678,7 @@ CREATE TABLE IF NOT EXISTS promos (
     discount_percentage DECIMAL(5, 2) NOT NULL CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
     max_uses_per_creator INT NOT NULL DEFAULT 1 CHECK (max_uses_per_creator >= 1),
     max_total_uses INT DEFAULT NULL,
+    is_public BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     start_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     ending_date TIMESTAMPTZ NOT NULL,
@@ -685,6 +686,7 @@ CREATE TABLE IF NOT EXISTS promos (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_promos_code_upper ON promos (UPPER(code));
+CREATE INDEX IF NOT EXISTS idx_promos_public_active ON promos(is_public, is_active);
 
 CREATE TABLE IF NOT EXISTS purchases (
     id BIGSERIAL PRIMARY KEY,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb, pool } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { fetchModulesList, invalidateDeveloperPermissionsCache } from 'src/lib/redis/redisClient';
 function slugify(text: any) {
     return text
         .toString()
@@ -33,14 +34,17 @@ export async function GET(request: any) {
       `;
             const rolePermsRes = await queryDb(rolePermsSql, [roleId]).catch(() => ({ rows: [] }));
             const rolesRes = await queryDb('SELECT * FROM developer_roles ORDER BY id ASC').catch(() => ({ rows: [] }));
-            const modulesRes = await queryDb('SELECT id, name, slug, description, page_path, api_path FROM modules WHERE is_active = TRUE ORDER BY sort_order ASC, name ASC').catch(() => ({ rows: [] }));
+            const modules = await fetchModulesList(async () => {
+              const r = await queryDb('SELECT id, name, slug, description, page_path, api_path FROM modules WHERE is_active = TRUE ORDER BY sort_order ASC, name ASC').catch(() => ({ rows: [] }));
+              return r.rows || [];
+            });
             return NextResponse.json({
                 success: true,
                 role_id: Number(roleId),
                 permissions: rolePermsRes.rows,
                 records: rolePermsRes.rows,
                 roles: rolesRes.rows,
-                modules: modulesRes.rows,
+                modules,
                 total: rolePermsRes.rows.length,
             });
         }
@@ -93,6 +97,7 @@ export async function POST(request: any) {
         const { roleId, developerId, moduleId, can_view = true, can_create = false, can_edit = false, can_delete = false } = body;
         if (developerId && roleId && !moduleId) {
             await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [roleId, developerId]);
+            await invalidateDeveloperPermissionsCache(developerId);
             return NextResponse.json({ success: true, message: 'Developer role assigned successfully.' });
         }
         if (roleId && moduleId) {
@@ -105,6 +110,7 @@ export async function POST(request: any) {
            can_delete = EXCLUDED.can_delete,
            updated_at = CURRENT_TIMESTAMP
          RETURNING *`, [roleId, moduleId, Boolean(can_view), Boolean(can_create), Boolean(can_edit), Boolean(can_delete)]);
+            await invalidateDeveloperPermissionsCache();
             return NextResponse.json({
                 success: true,
                 record: insertRes.rows[0],
@@ -123,6 +129,7 @@ export async function POST(request: any) {
          can_delete = EXCLUDED.can_delete,
          updated_at = CURRENT_TIMESTAMP
        RETURNING *`, [developerId, moduleId, Boolean(can_view), Boolean(can_create), Boolean(can_edit), Boolean(can_delete)]);
+        await invalidateDeveloperPermissionsCache(developerId);
         return NextResponse.json({
             success: true,
             record: insertRes.rows[0],
@@ -153,6 +160,7 @@ export async function PUT(request: any) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
        RETURNING *`, [body.can_view, body.can_create, body.can_edit, body.can_delete, id]);
+        await invalidateDeveloperPermissionsCache();
         return NextResponse.json({
             success: true,
             record: updateRes.rows[0],
@@ -176,6 +184,7 @@ export async function DELETE(request: any) {
             return NextResponse.json({ success: false, error: 'Permission ID is required.' }, { status: 400 });
         }
         await queryDb('DELETE FROM module_permissions WHERE id = $1', [id]);
+        await invalidateDeveloperPermissionsCache();
         return NextResponse.json({
             success: true,
             message: 'Developer module permission revoked successfully.',

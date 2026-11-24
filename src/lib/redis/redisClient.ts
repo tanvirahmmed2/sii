@@ -463,3 +463,152 @@ export async function getMonthlyMailAnalytics(websiteId: string | number, target
     redisConnected: isRedisConnected(),
   };
 }
+
+export async function fetchWithCache<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttlSeconds: number = 300
+): Promise<T> {
+  try {
+    const client = getRedisClient();
+    if (client && isRedisConnected()) {
+      const cached = await client.get(key);
+      if (cached !== null && cached !== undefined) {
+        try {
+          return JSON.parse(cached) as T;
+        } catch {
+          return cached as unknown as T;
+        }
+      }
+    }
+  } catch {}
+
+  const result = await fetcher();
+
+  if (result !== undefined && result !== null) {
+    try {
+      const client = getRedisClient();
+      if (client && isRedisConnected()) {
+        const payload = typeof result === 'string' ? result : JSON.stringify(result);
+        await client.set(key, payload, 'EX', ttlSeconds);
+      }
+    } catch {}
+  }
+
+  return result;
+}
+
+export async function invalidateCache(patternOrKey: string): Promise<void> {
+  try {
+    const client = getRedisClient();
+    if (!client || !isRedisConnected()) return;
+    if (patternOrKey.includes('*')) {
+      const keys = await client.keys(patternOrKey);
+      if (keys.length > 0) {
+        await client.del(...keys);
+      }
+    } else {
+      await client.del(patternOrKey);
+    }
+  } catch {}
+}
+
+export async function fetchCreatorCredential(identifier: string, fetcher: () => Promise<any>): Promise<any> {
+  const clean = String(identifier || '').trim().toLowerCase();
+  const cacheKey = `auth:creator:ident:${clean}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function fetchCreatorSessionById(id: number | string, fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = `auth:creator:id:${id}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateCreatorCache(id?: number | string, identifier?: string): Promise<void> {
+  if (id) await invalidateCache(`auth:creator:id:${id}`);
+  if (identifier) await invalidateCache(`auth:creator:ident:${String(identifier).trim().toLowerCase()}`);
+  await invalidateCache('auth:creator:*');
+}
+
+export async function fetchDeveloperCredential(identifier: string, fetcher: () => Promise<any>): Promise<any> {
+  const clean = String(identifier || '').trim().toLowerCase();
+  const cacheKey = `auth:developer:ident:${clean}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function fetchDeveloperSessionById(id: number | string, fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = `auth:developer:id:${id}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateDeveloperCache(id?: number | string, identifier?: string): Promise<void> {
+  if (id) await invalidateCache(`auth:developer:id:${id}`);
+  if (identifier) await invalidateCache(`auth:developer:ident:${String(identifier).trim().toLowerCase()}`);
+  await invalidateCache('auth:developer:*');
+}
+
+export async function fetchDeveloperPermissions(
+  devId: number | string,
+  roleId: number | string | null,
+  fetcher: () => Promise<any>
+): Promise<any> {
+  const cacheKey = `auth:dev:perms:${devId}:${roleId || 'norole'}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateDeveloperPermissionsCache(devId?: number | string): Promise<void> {
+  if (devId) {
+    await invalidateCache(`auth:dev:perms:${devId}:*`);
+  } else {
+    await invalidateCache('auth:dev:perms:*');
+  }
+}
+
+export async function fetchModulesList(fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = 'marketing:modules:active';
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateModulesCache(): Promise<void> {
+  await invalidateCache('marketing:modules:*');
+}
+
+export async function fetchPackagesList(fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = 'marketing:packages:public';
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function fetchPackageByIdOrSlug(idOrSlug: string | number, fetcher: () => Promise<any>): Promise<any> {
+  const clean = String(idOrSlug).trim().toLowerCase();
+  const cacheKey = `marketing:packages:single:${clean}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidatePackagesCache(): Promise<void> {
+  await invalidateCache('marketing:packages:*');
+}
+
+export async function fetchCreatorWishlist(creatorId: number | string, fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = `marketing:wishlist:${creatorId}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateWishlistCache(creatorId: number | string): Promise<void> {
+  await invalidateCache(`marketing:wishlist:${creatorId}`);
+  await invalidateCache('marketing:wishlist:*');
+}
+
+export async function fetchPublicPromos(fetcher: () => Promise<any>): Promise<any> {
+  const cacheKey = 'marketing:promos:public';
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function fetchPromoByCode(code: string, fetcher: () => Promise<any>): Promise<any> {
+  const clean = String(code || '').trim().toUpperCase();
+  const cacheKey = `marketing:promos:code:${clean}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidatePromosCache(): Promise<void> {
+  await invalidateCache('marketing:promos:*');
+}

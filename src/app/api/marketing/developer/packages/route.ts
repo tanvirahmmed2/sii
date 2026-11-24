@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
+import { invalidatePackagesCache } from 'src/lib/redis/redisClient';
 import slugify from 'slugify';
 async function generateUniqueSlug(name: any, excludeId: any = null) {
     const baseSlug = slugify(name || 'package', { lower: true, strict: true, trim: true }) || 'package';
@@ -272,6 +273,7 @@ export async function POST(request: any) {
          ON CONFLICT (package_id, control_module_id) DO NOTHING`, [newPackage.id, controlModuleIds]).catch((e: any) => console.warn('Error linking package_control_module batch:', e.message));
         }
         const fullPackage = await fetchPackageById(newPackage.id);
+        await invalidatePackagesCache();
         return NextResponse.json({
             success: true,
             message: 'Package created successfully',
@@ -439,6 +441,7 @@ export async function PUT(request: any) {
          ON CONFLICT (package_id, control_module_id) DO NOTHING`, [Number(id), controlIds]).catch((e: any) => console.warn('Error linking package_control_module batch:', e.message));
         }
         const fullPackage = await fetchPackageById(Number(id));
+        await invalidatePackagesCache();
         return NextResponse.json({
             success: true,
             message: 'Package updated successfully',
@@ -470,6 +473,7 @@ export async function DELETE(request: any) {
         if (res.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Package not found or already deleted' }, { status: 404 });
         }
+        await invalidatePackagesCache();
         return NextResponse.json({ success: true, message: 'Package deleted successfully', deleted: res.rows[0] });
     }
     catch (error: any) {
@@ -495,6 +499,7 @@ export async function PATCH(request: any) {
         if (res.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
         }
+        await invalidatePackagesCache();
         return NextResponse.json({ success: true, record: res.rows[0] });
     }
     catch (error: any) {

@@ -5,9 +5,12 @@ import Reviews from 'src/component/marketing/home/pages/Reviews';
 import Partners from 'src/component/marketing/home/pages/Partners';
 import React from 'react';
 import Main from 'src/component/marketing/home/pages/Main';
+import HomePromos from 'src/component/marketing/home/pages/HomePromos';
+
 const page = () => {
     return (<div className='w-full flex flex-col'>
       <Main />
+      <HomePromos />
       <Hero />
       <About />
       <LearnMore />

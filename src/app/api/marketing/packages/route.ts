@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
+import { fetchPackagesList, fetchPackageByIdOrSlug } from 'src/lib/redis/redisClient';
 function formatPackageRecord(p: any) {
     let features: any[] = [];
     if (Array.isArray(p.features)) {
@@ -128,32 +129,37 @@ export async function GET(request: any) {
       FROM packages p
     `;
         if (id || slug) {
-            const identifier = id || slug;
-            const isNum = !isNaN(Number(identifier));
-            const filterClause = isNum
-                ? `WHERE (p.id = $1 OR p.slug = $2) AND p.is_active = TRUE LIMIT 1`
-                : `WHERE p.slug = $1 AND p.is_active = TRUE LIMIT 1`;
-            const params = isNum ? [Number(identifier), String(identifier)] : [String(identifier)];
-            const res = await queryDb(`${baseQuery} ${filterClause}`, params);
-            if (res.rows.length === 0) {
+            const identifier = String(id || slug);
+            const formatted = await fetchPackageByIdOrSlug(identifier, async () => {
+                const isNum = !isNaN(Number(identifier));
+                const filterClause = isNum
+                    ? `WHERE (p.id = $1 OR p.slug = $2) AND p.is_active = TRUE LIMIT 1`
+                    : `WHERE p.slug = $1 AND p.is_active = TRUE LIMIT 1`;
+                const params = isNum ? [Number(identifier), String(identifier)] : [String(identifier)];
+                const res = await queryDb(`${baseQuery} ${filterClause}`, params);
+                if (res.rows.length === 0) return null;
+                return formatPackageRecord(res.rows[0]);
+            });
+            if (!formatted) {
                 return NextResponse.json({ success: false, error: 'Package not found.' }, { status: 404 });
             }
-            const formatted = formatPackageRecord(res.rows[0]);
             return NextResponse.json({
                 success: true,
                 package: formatted,
                 record: formatted,
             });
         }
-        const listQuery = `
-      ${baseQuery}
-      WHERE p.is_active = TRUE AND p.is_public = TRUE
-      ORDER BY p.sort_order ASC, p.bdt_per_month ASC, p.id ASC
-    `;
-        const res = await queryDb(listQuery);
-        const formattedPackages = (res.rows || [])
-            .map(formatPackageRecord)
-            .filter((p: any) => p.is_public === true && p.is_active === true);
+        const formattedPackages = await fetchPackagesList(async () => {
+            const listQuery = `
+              ${baseQuery}
+              WHERE p.is_active = TRUE AND p.is_public = TRUE
+              ORDER BY p.sort_order ASC, p.bdt_per_month ASC, p.id ASC
+            `;
+            const res = await queryDb(listQuery);
+            return (res.rows || [])
+                .map(formatPackageRecord)
+                .filter((p: any) => p.is_public === true && p.is_active === true);
+        });
         return NextResponse.json({
             success: true,
             packages: formattedPackages,
