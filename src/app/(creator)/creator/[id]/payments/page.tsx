@@ -140,6 +140,11 @@ function PaymentsContent() {
                         : '—'}
                       </td>
                       <td className="py-2.5 text-right space-x-2.5">
+                        {isPending && (
+                          <Link href={`/creator/${creator?.id}/payments/${p.id}/pay`} className="text-secondary hover:underline font-bold">
+                            Pay Now
+                          </Link>
+                        )}
                         <Link href={`/creator/${creator?.id}/payments/${p.id}`} className="text-slate-800 hover:text-blue-600 hover:underline font-medium">
                           View Receipt
                         </Link>

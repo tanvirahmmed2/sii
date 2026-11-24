@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState, useEffect, useContext } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   BiShieldQuarter,
@@ -16,41 +16,30 @@ import {
   BiX,
 } from 'react-icons/bi';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { Context } from 'src/component/helper/Context';
 
-const SUPPORTED_CURRENCIES = [
-  { code: 'BDT', label: 'BDT (৳)', symbol: '৳' },
-  { code: 'USD', label: 'USD ($)', symbol: '$' },
-  { code: 'EUR', label: 'EUR (€)', symbol: '€' },
-  { code: 'GBP', label: 'GBP (£)', symbol: '£' },
-  { code: 'AUD', label: 'AUD (A$)', symbol: 'A$' },
-  { code: 'CAD', label: 'CAD (C$)', symbol: 'C$' },
-];
+const DEFAULT_CURRENCY_SYMBOLS: Record<string, string> = {
+  BDT: '৳',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  AUD: 'A$',
+  CAD: 'C$',
+};
 
 function CheckoutContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  let resolvedPkgId = searchParams.get('packageId') || searchParams.get('id');
-  if (!resolvedPkgId) {
-    const keys = Array.from(searchParams.keys());
-    if (keys.length > 0 && /^\d+$/.test(keys[0])) {
-      resolvedPkgId = keys[0];
-    }
-  }
-
-  const initialInterval = (searchParams.get('interval') || 'monthly').toUpperCase();
-  const initialCurrency = (searchParams.get('currency') || 'BDT').toUpperCase();
+  const context = useContext<any>(Context) || {};
+  const contextCurrency = context.currency;
+  const contextCurrencySymbol = context.currencySymbol;
 
   const [creator, setCreator] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [loadingPackages, setLoadingPackages] = useState<boolean>(true);
-  const [wishlistPkgIds, setWishlistPkgIds] = useState<number[]>([]);
-  const [selectedPkgId, setSelectedPkgId] = useState<number | null>(resolvedPkgId ? Number(resolvedPkgId) : null);
-  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>(initialInterval === 'YEARLY' ? 'YEARLY' : 'MONTHLY');
-  const [selectedCurrency, setSelectedCurrency] = useState<string>(
-    SUPPORTED_CURRENCIES.some((c) => c.code === initialCurrency) ? initialCurrency : 'BDT'
-  );
+  const [wishlistPackages, setWishlistPackages] = useState<any[]>([]);
+  const [loadingWishlist, setLoadingWishlist] = useState<boolean>(true);
+  const [selectedPkgId, setSelectedPkgId] = useState<number | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [savedCurrency, setSavedCurrency] = useState<string>('BDT');
 
   const [promoInput, setPromoInput] = useState<string>('');
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
@@ -62,27 +51,44 @@ function CheckoutContent() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    async function checkCreatorSession() {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('preferred_currency') : null;
+      const initialCurr = stored || contextCurrency || 'BDT';
+      setSavedCurrency(String(initialCurr).toUpperCase());
+    } catch {
+      setSavedCurrency('BDT');
+    }
+  }, [contextCurrency]);
+
+  useEffect(() => {
+    async function initCheckout() {
       setCheckingAuth(true);
       try {
-        const res = await fetch('/api/marketing/creator/auth', {
+        const authRes = await fetch('/api/marketing/creator/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'me' }),
         });
-        const data = await res.json();
-        if (data.success && data.creator) {
-          setCreator(data.creator);
+        const authData = await authRes.json();
+        if (authData.success && authData.creator) {
+          setCreator(authData.creator);
+
           try {
-            const wishRes = await fetch(`/api/marketing/creator/wishlist?creatorId=${data.creator.id}`);
+            const wishRes = await fetch(`/api/marketing/creator/wishlist?creatorId=${authData.creator.id}`);
             const wishData = await wishRes.json();
-            if (wishData.success && Array.isArray(wishData.package_ids)) {
-              setWishlistPkgIds(wishData.package_ids.map(Number));
-              if (!resolvedPkgId && wishData.package_ids.length > 0) {
-                setSelectedPkgId(Number(wishData.package_ids[0]));
-              }
+            if (wishData.success && Array.isArray(wishData.wishlists) && wishData.wishlists.length > 0) {
+              setWishlistPackages(wishData.wishlists);
+              setSelectedPkgId(Number(wishData.wishlists[0].package_id));
+            } else if (wishData.success && wishData.wishlist) {
+              setWishlistPackages([wishData.wishlist]);
+              setSelectedPkgId(Number(wishData.wishlist.package_id));
+            } else {
+              setWishlistPackages([]);
+              setSelectedPkgId(null);
             }
-          } catch {}
+          } catch {
+            setWishlistPackages([]);
+          }
         } else {
           setCreator(null);
         }
@@ -90,47 +96,21 @@ function CheckoutContent() {
         setCreator(null);
       } finally {
         setCheckingAuth(false);
+        setLoadingWishlist(false);
       }
     }
-    checkCreatorSession();
-  }, [resolvedPkgId]);
+    initCheckout();
+  }, []);
 
-  useEffect(() => {
-    const loadPackages = async () => {
-      try {
-        const res = await fetch('/api/marketing/packages');
-        const data = await res.json();
-        let list = data.packages || [];
-        if (resolvedPkgId && !list.some((p: any) => p.id === Number(resolvedPkgId))) {
-          try {
-            const singleRes = await fetch(`/api/marketing/packages?id=${resolvedPkgId}`);
-            const singleData = await singleRes.json();
-            if (singleData.success && (singleData.package || singleData.record)) {
-              list = [singleData.package || singleData.record, ...list];
-            }
-          } catch {}
-        }
-        setPackages(list);
-        if (resolvedPkgId && list.some((p: any) => p.id === Number(resolvedPkgId))) {
-          setSelectedPkgId(Number(resolvedPkgId));
-        } else if (list.length > 0 && !selectedPkgId) {
-          setSelectedPkgId(list[0].id);
-        }
-      } catch (err: any) {
-        console.error(err);
-      } finally {
-        setLoadingPackages(false);
-      }
-    };
-    loadPackages();
-  }, [resolvedPkgId, selectedPkgId]);
+  const activeCurrency = savedCurrency || 'BDT';
+  const currencySymbol = contextCurrencySymbol || DEFAULT_CURRENCY_SYMBOLS[activeCurrency] || '$';
 
-  const selectedPkg = packages.find((p: any) => p.id === selectedPkgId) || null;
+  const selectedPkg =
+    wishlistPackages.find((p: any) => Number(p.package_id || p.id) === selectedPkgId) ||
+    (wishlistPackages.length > 0 ? wishlistPackages[0] : null);
+
   const isYearly = billingCycle === 'YEARLY';
-  const currConfig = SUPPORTED_CURRENCIES.find((c) => c.code === selectedCurrency) || SUPPORTED_CURRENCIES[0];
-  const currencySymbol = currConfig.symbol;
-
-  const currKey = `${selectedCurrency.toLowerCase()}_per_month`;
+  const currKey = `${activeCurrency.toLowerCase()}_per_month`;
   const monthlyRate = Number(selectedPkg ? selectedPkg[currKey] ?? selectedPkg.bdt_per_month ?? 0 : 0);
   const baseAmount = Number((isYearly ? monthlyRate * 12 : monthlyRate).toFixed(2));
 
@@ -167,7 +147,7 @@ function CheckoutContent() {
           creatorId: creator?.id || null,
           packageId: selectedPkgId,
           billingCycle: billingCycle.toLowerCase(),
-          currency: selectedCurrency,
+          currency: activeCurrency,
         }),
       });
 
@@ -197,11 +177,11 @@ function CheckoutContent() {
   const handleContinueToPay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!creator) {
-      router.push(`/creator/login?redirect=${encodeURIComponent(`/creator/checkout?${selectedPkgId || ''}`)}`);
+      router.push(`/creator/login?redirect=${encodeURIComponent('/creator/checkout')}`);
       return;
     }
     if (!selectedPkg) {
-      setError('Please select a subscription package before continuing.');
+      setError('No wishlisted package selected.');
       return;
     }
 
@@ -214,9 +194,9 @@ function CheckoutContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           creatorId: creator.id,
-          packageId: selectedPkg.id,
+          packageId: Number(selectedPkg.package_id || selectedPkg.id),
           billingCycle: billingCycle.toLowerCase(),
-          currency: selectedCurrency,
+          currency: activeCurrency,
           promoCode: appliedPromo?.code || null,
           createOnly: true,
         }),
@@ -227,7 +207,7 @@ function CheckoutContent() {
         router.push(`/creator/${creator.id}/payments/${data.paymentId}`);
         return;
       } else {
-        setError(data.error || 'Failed to initialize unpaid purchase. Please try again.');
+        setError(data.error || 'Failed to initialize unpaid invoice. Please try again.');
       }
     } catch {
       setError('Network error processing checkout order.');
@@ -236,7 +216,7 @@ function CheckoutContent() {
     }
   };
 
-  if (checkingAuth || loadingPackages) {
+  if (checkingAuth || loadingWishlist) {
     return <LoadingScreen fullScreen={true} label="Loading checkout..." />;
   }
 
@@ -255,7 +235,7 @@ function CheckoutContent() {
           </div>
           <div className="flex flex-col gap-2.5">
             <Link
-              href={`/creator/login?redirect=${encodeURIComponent(`/creator/checkout?${selectedPkgId || ''}`)}`}
+              href={`/creator/login?redirect=${encodeURIComponent('/creator/checkout')}`}
               className="w-full py-3 px-4 rounded-2xl bg-secondary hover:bg-secondary-dark text-white font-bold text-xs tracking-wide transition shadow-md shadow-secondary/20 text-center"
             >
               Sign In to Creator Portal &rarr;
@@ -272,16 +252,42 @@ function CheckoutContent() {
     );
   }
 
+  if (wishlistPackages.length === 0) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center py-12 px-4 sm:px-6">
+        <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 sm:p-10 text-center space-y-6 shadow-xl">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-500 flex items-center justify-center text-3xl">
+            <BiHeart />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Your Wishlist is Empty</h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
+              Please browse our packages and add your preferred educational platform plan to your wishlist to proceed with checkout.
+            </p>
+          </div>
+          <div>
+            <Link
+              href="/packages"
+              className="inline-flex items-center justify-center py-3.5 px-6 rounded-2xl bg-secondary hover:bg-secondary-dark text-white font-bold text-xs uppercase tracking-wider transition shadow-md shadow-secondary/20"
+            >
+              Browse Packages &rarr;
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <Link
             href="/packages"
             className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
           >
             <BiArrowBack className="text-base" />
-            <span>Back to Plans</span>
+            <span>Browse Packages</span>
           </Link>
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-400 shadow-xs">
             <BiShieldQuarter className="text-sm text-secondary" />
@@ -292,13 +298,13 @@ function CheckoutContent() {
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/20 text-secondary text-xs font-bold uppercase tracking-wider">
             <BiStar className="text-sm" />
-            <span>Subscription Checkout</span>
+            <span>Wishlist Checkout</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Complete Your Package Order
+            Checkout Your Plan
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Review your institution package details, choose your preferred currency and billing cycle, and continue to payment.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            Review your wishlisted package in your saved currency ({activeCurrency}) and proceed to pay.
           </p>
         </div>
 
@@ -313,26 +319,24 @@ function CheckoutContent() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Select Package
+                Wishlisted Plan
               </label>
-              {wishlistPkgIds.length > 0 && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
-                  <BiHeart className="text-xs" />
-                  <span>Wishlisted items prioritized</span>
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
+                <BiHeart className="text-xs" />
+                <span>Wishlist</span>
+              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
-              {packages.map((pkg: any) => {
-                const isSelected = selectedPkgId === pkg.id;
-                const isWishlisted = wishlistPkgIds.includes(Number(pkg.id));
+              {wishlistPackages.map((pkg: any) => {
+                const pkgIdNumber = Number(pkg.package_id || pkg.id);
+                const isSelected = selectedPkgId === pkgIdNumber;
                 const itemMonthly = Number(pkg[currKey] ?? pkg.bdt_per_month ?? 0);
                 const itemPrice = isYearly ? itemMonthly * 12 : itemMonthly;
 
                 return (
                   <label
-                    key={pkg.id}
+                    key={pkgIdNumber}
                     className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
                       isSelected
                         ? 'border-secondary bg-secondary/5 dark:bg-secondary/10 ring-2 ring-secondary/20 shadow-md'
@@ -340,24 +344,24 @@ function CheckoutContent() {
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
-                      <input
-                        type="radio"
-                        name="packageSelection"
-                        checked={isSelected}
-                        onChange={() => setSelectedPkgId(pkg.id)}
-                        className="w-4 h-4 text-secondary focus:ring-secondary cursor-pointer"
-                      />
+                      {wishlistPackages.length > 1 && (
+                        <input
+                          type="radio"
+                          name="wishlistSelection"
+                          checked={isSelected}
+                          onChange={() => setSelectedPkgId(pkgIdNumber)}
+                          className="w-4 h-4 text-secondary focus:ring-secondary cursor-pointer"
+                        />
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900 dark:text-white text-sm">
                             {pkg.name}
                           </span>
-                          {isWishlisted && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-                              <BiHeart className="text-xs" />
-                              <span>From Wishlist</span>
-                            </span>
-                          )}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                            <BiHeart className="text-xs" />
+                            <span>In Wishlist</span>
+                          </span>
                           {pkg.is_popular && (
                             <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
                               Popular
@@ -365,13 +369,13 @@ function CheckoutContent() {
                           )}
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          {pkg.tagline || pkg.description || 'Dedicated multi-tenant institution platform'}
+                          {pkg.tagline || pkg.description || 'Institutional platform and website suite'}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                        {currencySymbol}{itemPrice.toLocaleString()}
+                        {currencySymbol}{itemPrice.toLocaleString()} {activeCurrency}
                       </span>
                       <span className="text-[10px] text-slate-400 block font-medium">
                         /{isYearly ? 'year' : 'month'}
@@ -416,23 +420,15 @@ function CheckoutContent() {
 
             <div className="space-y-2">
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Payment Currency
+                Saved Currency
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 bg-slate-50 dark:bg-slate-800/60 p-1 rounded-2xl border border-slate-200 dark:border-slate-800">
-                {SUPPORTED_CURRENCIES.map((c) => (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => setSelectedCurrency(c.code)}
-                    className={`py-2 px-1 rounded-xl text-[11px] font-semibold transition cursor-pointer text-center ${
-                      selectedCurrency === c.code
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {c.code}
-                  </button>
-                ))}
+              <div className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-900 dark:text-white font-mono">
+                  {activeCurrency} ({currencySymbol})
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  From site preferences
+                </span>
               </div>
             </div>
           </div>
@@ -521,7 +517,7 @@ function CheckoutContent() {
               <span className="text-slate-900 dark:text-white font-medium">{creator.email}</span>
             </div>
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
-              <span>Selected Plan</span>
+              <span>Wishlisted Plan</span>
               <span className="text-slate-900 dark:text-white font-medium">
                 {selectedPkg?.name || 'Standard'} ({isYearly ? 'Annual' : 'Monthly'})
               </span>
@@ -529,7 +525,7 @@ function CheckoutContent() {
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Package Subtotal</span>
               <span className="font-mono text-slate-900 dark:text-white font-semibold">
-                {currencySymbol}{baseAmount.toLocaleString()} {selectedCurrency}
+                {currencySymbol}{baseAmount.toLocaleString()} {activeCurrency}
               </span>
             </div>
 
@@ -537,7 +533,7 @@ function CheckoutContent() {
               <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
                 <span>Promo Discount ({appliedPromo.discount_percentage}%)</span>
                 <span className="font-mono font-bold">
-                  -{currencySymbol}{discountAmount.toLocaleString()} {selectedCurrency}
+                  -{currencySymbol}{discountAmount.toLocaleString()} {activeCurrency}
                 </span>
               </div>
             )}
@@ -545,7 +541,7 @@ function CheckoutContent() {
             <div className="border-t border-slate-200 dark:border-slate-700/80 pt-2.5 flex justify-between items-baseline font-bold text-slate-900 dark:text-white">
               <span className="text-sm">Total Payable</span>
               <span className="text-xl font-mono text-secondary">
-                {currencySymbol}{finalAmount.toLocaleString()} {selectedCurrency}
+                {currencySymbol}{finalAmount.toLocaleString()} {activeCurrency}
               </span>
             </div>
           </div>
@@ -558,7 +554,7 @@ function CheckoutContent() {
             {loading ? (
               <>
                 <BiLoaderAlt className="animate-spin text-base" />
-                <span>Creating Unpaid Purchase...</span>
+                <span>Creating Unpaid Invoice...</span>
               </>
             ) : (
               <span>Continue to Pay &rarr;</span>

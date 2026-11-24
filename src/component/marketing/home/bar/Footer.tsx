@@ -5,7 +5,15 @@ import { SITE_ADDRESS, SITE_CONTACT, SITE_MAIL, SITE_NAME, } from 'src/lib/datab
 import { Context } from 'src/component/helper/Context';
 import SubscribeForm from './SubscribeForm';
 const Footer = () => {
-    const { theme = 'light', toggleTheme, setTheme, creator } = useContext<any>(Context);
+    const {
+      theme = 'light',
+      toggleTheme,
+      setTheme,
+      creator,
+      currencies = [],
+      currency = 'BDT',
+      setCurrency,
+    } = useContext<any>(Context);
     const isDark = theme === 'dark';
     return (<footer className="w-full bg-slate-900 rounded-t-4xl dark:bg-slate-950 px-4 sm:px-6 lg:px-8 py-10 sm:py-14 text-slate-100 transition-colors border-t border-slate-800 dark:border-slate-800">
       <div className="w-full flex flex-col space-y-10">
@@ -142,7 +150,33 @@ const Footer = () => {
             &copy; {new Date().getFullYear()} {SITE_NAME}. All rights reserved.
           </p>
 
-          <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-3">
+          <div className="order-1 md:order-2 flex flex-wrap items-center justify-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-slate-400">Currency</span>
+              <select
+                value={currency}
+                onChange={(e) => typeof setCurrency === 'function' && setCurrency(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded px-2.5 py-1 focus:outline-none focus:border-emerald-500 cursor-pointer"
+              >
+                {currencies && currencies.length > 0 ? (
+                  currencies.map((c: any) => (
+                    <option key={c.code} value={c.code} className="bg-slate-900 text-white">
+                      {c.code} ({c.symbol}) - {c.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="BDT" className="bg-slate-900 text-white">BDT (৳) - Bangladeshi Taka</option>
+                    <option value="USD" className="bg-slate-900 text-white">USD ($) - US Dollar</option>
+                    <option value="EUR" className="bg-slate-900 text-white">EUR (€) - Euro</option>
+                    <option value="GBP" className="bg-slate-900 text-white">GBP (£) - British Pound</option>
+                    <option value="AUD" className="bg-slate-900 text-white">AUD (A$) - Australian Dollar</option>
+                    <option value="CAD" className="bg-slate-900 text-white">CAD (C$) - Canadian Dollar</option>
+                  </>
+                )}
+              </select>
+            </div>
+
             <div className="inline-flex items-center rounded border border-slate-700 bg-slate-950 p-0.5 text-xs">
               <button type="button" onClick={() => (typeof setTheme === 'function' ? setTheme('light') : typeof toggleTheme === 'function' ? toggleTheme() : null)} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${!isDark ? 'bg-white text-slate-900 font-semibold' : 'text-slate-400 hover:text-white'}`} title="Light Mode">
                 Light

@@ -23,7 +23,7 @@ export async function GET(request: any) {
       const singleRes = await queryDb(
         `SELECT pay.*, 
             (pay.amount * 100)::bigint AS amount_in_cents,
-            p.id AS package_id,
+            COALESCE(pay.package_id, pu.package_id) AS package_id,
             p.name AS package_name, 
             p.slug AS package_slug, 
             p.tagline AS package_tagline,
@@ -39,7 +39,7 @@ export async function GET(request: any) {
             COALESCE(p.max_students, 0) AS max_students,
             COALESCE(p.max_staff, 0) AS max_staff,
             COALESCE(p.max_storage_mb, 5120) AS max_storage_mb,
-            pu.billing_cycle AS billing_interval,
+            COALESCE(pay.billing_cycle, pu.billing_cycle, 'monthly') AS billing_interval,
             pu.period_start,
             pu.period_end,
             c.name AS creator_name,
@@ -49,7 +49,7 @@ export async function GET(request: any) {
             c.city AS creator_city
          FROM payments pay
          LEFT JOIN purchases pu ON pay.purchase_id = pu.id
-         LEFT JOIN packages p ON pu.package_id = p.id
+         LEFT JOIN packages p ON COALESCE(pay.package_id, pu.package_id) = p.id
          LEFT JOIN creators c ON pay.creator_id = c.id
          WHERE pay.id = $1 AND pay.creator_id = $2
          LIMIT 1`,
@@ -72,10 +72,10 @@ export async function GET(request: any) {
       `SELECT pay.*, 
           p.name AS package_name, 
           p.slug AS package_slug,
-          pu.billing_cycle AS billing_interval
+          COALESCE(pay.billing_cycle, pu.billing_cycle, 'monthly') AS billing_interval
        FROM payments pay
        LEFT JOIN purchases pu ON pay.purchase_id = pu.id
-       LEFT JOIN packages p ON pu.package_id = p.id
+       LEFT JOIN packages p ON COALESCE(pay.package_id, pu.package_id) = p.id
        WHERE pay.creator_id = $1
        ORDER BY pay.created_at DESC`,
       [creatorId]
@@ -107,8 +107,8 @@ export async function handlePaymentsAction(body: any, sessionCreator: any, reque
 
     const payRes = await queryDb(
       `SELECT pay.*, 
-          pu.package_id,
-          pu.billing_cycle,
+          COALESCE(pay.package_id, pu.package_id) AS package_id,
+          COALESCE(pay.billing_cycle, pu.billing_cycle, 'monthly') AS billing_cycle,
           p.name AS package_name, 
           p.bdt_per_month,
           p.usd_per_month,
@@ -123,7 +123,7 @@ export async function handlePaymentsAction(body: any, sessionCreator: any, reque
           c.city AS creator_city
        FROM payments pay
        LEFT JOIN purchases pu ON pay.purchase_id = pu.id
-       LEFT JOIN packages p ON pu.package_id = p.id
+       LEFT JOIN packages p ON COALESCE(pay.package_id, pu.package_id) = p.id
        LEFT JOIN creators c ON pay.creator_id = c.id
        WHERE pay.id = $1 AND pay.creator_id = $2
        LIMIT 1`,

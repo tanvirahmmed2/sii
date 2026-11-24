@@ -1,14 +1,29 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BiLoaderAlt, BiPackage, BiRefresh, BiCheckCircle, BiSupport, BiRocket, BiCheckShield, BiServer, BiMessageSquareDetail, BiPhoneCall, BiEnvelope, BiArrowBack, BiX, BiHeart, BiSolidHeart, } from 'react-icons/bi';
 import Package from 'src/component/marketing/home/cards/Package';
 import { SITE_MAIL, SITE_CONTACT } from 'src/lib/database/secret';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { Context } from 'src/component/helper/Context';
 export default function PackagesPage() {
     const router = useRouter();
-    const [currency, setCurrency] = useState<any>('USD');
+    const { currency: contextCurrency, setCurrency: setContextCurrency } = useContext<any>(Context) || {};
+    const [currency, setCurrency] = useState<any>(contextCurrency || 'BDT');
+
+    useEffect(() => {
+        if (contextCurrency) {
+            setCurrency(contextCurrency);
+        }
+    }, [contextCurrency]);
+
+    const handleSelectCurrency = (newCode: string) => {
+        setCurrency(newCode);
+        if (typeof setContextCurrency === 'function') {
+            setContextCurrency(newCode);
+        }
+    };
     const [billingCycle, setBillingCycle] = useState<any>('MONTHLY');
     const [packages, setPackages] = useState<any>([]);
     const [loading, setLoading] = useState<any>(true);
@@ -220,7 +235,7 @@ ${inquiryMessage}`,
               <button
                 key={c.code}
                 type="button"
-                onClick={() => setCurrency(c.code)}
+                onClick={() => handleSelectCurrency(c.code)}
                 className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer font-semibold ${
                   currency === c.code
                     ? 'bg-secondary text-white shadow-xs'
@@ -262,6 +277,21 @@ ${inquiryMessage}`,
             <span>Refresh Plans</span>
           </button>
         </div>) : (<div className="space-y-6">
+          {wishlistIds.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs shadow-xs">
+              <div className="flex items-center gap-2.5 text-emerald-900 dark:text-emerald-200 font-medium">
+                <BiSolidHeart className="text-rose-500 text-lg shrink-0" />
+                <span>You have a plan saved in your wishlist ready for checkout.</span>
+              </div>
+              <Link
+                href="/creator/checkout"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm shrink-0"
+              >
+                Go to Checkout &rarr;
+              </Link>
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 px-1">
             <span>
               Showing {sortedPackages.length} available {sortedPackages.length === 1 ? 'plan' : 'plans'} (arranged from lowest to highest)

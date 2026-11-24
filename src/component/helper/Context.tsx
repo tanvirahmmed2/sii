@@ -99,6 +99,54 @@ export const ContextProvider = ({ children }: any) => {
     const [creator, setCreator] = useState<any>(null);
     const [loading, setLoading] = useState<any>(true);
     const [reviews, setReviews] = useState<any>([]);
+    const [currencies, setCurrencies] = useState<any[]>([]);
+    const [currency, setCurrencyState] = useState<string>('BDT');
+    const [currencySymbol, setCurrencySymbol] = useState<string>('৳');
+
+    const CURRENCY_SYMBOLS: Record<string, string> = {
+        BDT: '৳',
+        USD: '$',
+        EUR: '€',
+        GBP: '£',
+        AUD: 'A$',
+        CAD: 'C$',
+    };
+
+    const setCurrency = useCallback((newCode: string) => {
+        const code = String(newCode || 'BDT').toUpperCase();
+        setCurrencyState(code);
+        setCurrencySymbol(CURRENCY_SYMBOLS[code] || '$');
+        try {
+            localStorage.setItem('preferred_currency', code);
+        } catch (_: any) {}
+    }, []);
+
+    useEffect(() => {
+        async function loadCurrencies() {
+            try {
+                const res = await fetch('/api/marketing/currencies');
+                const data = await res.json();
+                if (data.success && Array.isArray(data.currencies) && data.currencies.length > 0) {
+                    setCurrencies(data.currencies);
+                    const stored = typeof window !== 'undefined' ? localStorage.getItem('preferred_currency') : null;
+                    const matched = data.currencies.find((c: any) => c.code === stored);
+                    if (matched) {
+                        setCurrencyState(matched.code);
+                        setCurrencySymbol(matched.symbol || CURRENCY_SYMBOLS[matched.code] || '$');
+                    } else {
+                        const defaultCurr = data.currencies.find((c: any) => c.is_default) || data.currencies[0];
+                        setCurrencyState(defaultCurr.code);
+                        setCurrencySymbol(defaultCurr.symbol || CURRENCY_SYMBOLS[defaultCurr.code] || '$');
+                    }
+                }
+            } catch (_: any) {
+                const stored = typeof window !== 'undefined' ? localStorage.getItem('preferred_currency') || 'BDT' : 'BDT';
+                setCurrencyState(stored);
+                setCurrencySymbol(CURRENCY_SYMBOLS[stored] || '$');
+            }
+        }
+        loadCurrencies();
+    }, []);
     useEffect(() => {
         try {
             const storedTheme = localStorage.getItem('theme');
@@ -215,6 +263,11 @@ export const ContextProvider = ({ children }: any) => {
             theme,
             setTheme,
             toggleTheme,
+            currencies,
+            setCurrencies,
+            currency,
+            currencySymbol,
+            setCurrency,
         }}>
       {children}
     </Context.Provider>);

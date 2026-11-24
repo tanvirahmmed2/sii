@@ -38,13 +38,22 @@ export default function Package({ pkg, price, billingCycle = 'MONTHLY', currency
     const displayFeatures = combinedFeatures.length > 0
         ? combinedFeatures
         : ['Student Information Management', 'Attendance & Grade Tracking', 'Instant Subdomain Provisioning', '24/7 Creator Support Access'];
-    return (<div className={`relative rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 select-text ${isPopular
+    return (<div className={`relative rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 select-text ${isWishlisted
+            ? 'bg-white dark:bg-slate-900 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 ring-2 ring-emerald-500/20 z-10'
+            : isPopular
             ? 'bg-white dark:bg-slate-900 border-2 border-secondary shadow-xl shadow-secondary/15 ring-2 ring-secondary/20 z-10'
             : 'bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-secondary/40 dark:hover:border-secondary/40'}`}>
-      {isPopular && (<div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-linear-to-r from-secondary to-secondary-dark text-white text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5 z-20">
+      {isWishlisted ? (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5 z-20">
+          <BiSolidHeart className="text-xs text-rose-300"/>
+          <span>In Your Wishlist</span>
+        </div>
+      ) : isPopular ? (
+        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-linear-to-r from-secondary to-secondary-dark text-white text-[11px] font-bold uppercase tracking-wider shadow-lg flex items-center gap-1.5 z-20">
           <BiStar className="text-sm fill-current text-white"/>
           <span>Most Popular</span>
-        </div>)}
+        </div>
+      ) : null}
 
       <button type="button" onClick={(e: any) => {
             e.preventDefault();
@@ -134,12 +143,39 @@ export default function Package({ pkg, price, billingCycle = 'MONTHLY', currency
       </div>
 
       <div className="pt-7">
-        <Link href={`/creator/checkout?${pkg.id}&interval=${billingCycle.toLowerCase()}&currency=${currency}`} className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${isPopular
-            ? 'bg-secondary hover:bg-secondary-dark text-white shadow-secondary/25 ring-2 ring-secondary/30'
-            : 'bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-white border border-slate-800 dark:border-white/10 hover:border-secondary/40'}`}>
-          <span>{pkg.cta || `Get ${pkg.name}`}</span>
-          <BiRightArrowAlt className="text-base"/>
-        </Link>
+        {isWishlisted ? (
+          <Link
+            href="/creator/checkout"
+            className="w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25 ring-2 ring-emerald-500/30"
+          >
+            <span>Proceed to Check Out &rarr;</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={(e: any) => {
+              e.preventDefault();
+              if (onToggleWishlist) {
+                onToggleWishlist(pkg.id);
+              }
+            }}
+            disabled={wishlistLoading}
+            className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+              isPopular
+                ? 'bg-secondary hover:bg-secondary-dark text-white shadow-secondary/25 ring-2 ring-secondary/30'
+                : 'bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/20 text-white border border-slate-800 dark:border-white/10 hover:border-secondary/40'
+            }`}
+          >
+            {wishlistLoading ? (
+              <BiLoaderAlt className="animate-spin text-base" />
+            ) : (
+              <>
+                <BiHeart className="text-base" />
+                <span>{pkg.cta || `Add to Wishlist`}</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>);
 }

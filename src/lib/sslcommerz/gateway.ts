@@ -20,7 +20,7 @@ export function getSslcommerzConfig() {
 }
 
 export interface SslcommerzInitiateParams {
-  purchaseId: number | string;
+  purchaseId?: number | string | null;
   paymentId: number | string;
   creatorId: number | string;
   amount: number;
@@ -68,7 +68,7 @@ export async function initiateSslcommerzPayment(params: SslcommerzInitiateParams
   form.append('cus_country', 'Bangladesh');
   form.append('cus_phone', params.customerPhone || '01700000000');
 
-  form.append('value_a', String(params.purchaseId));
+  form.append('value_a', String(params.purchaseId || '0'));
   form.append('value_b', String(params.paymentId));
   form.append('value_c', String(params.creatorId));
 
@@ -145,9 +145,14 @@ export async function processSuccessfulPayment({
   manualNotes?: string;
 }) {
   const payRes = await queryDb(
-    `SELECT pay.*, pu.billing_cycle, pu.package_id, pu.id AS pur_id, pu.status AS pur_status
+    `SELECT pay.*, 
+            COALESCE(pay.billing_cycle, pu.billing_cycle, 'monthly') AS resolved_billing_cycle,
+            COALESCE(pay.package_id, pu.package_id) AS resolved_package_id,
+            pu.id AS pur_id, pu.status AS pur_status,
+            p.name AS package_name
      FROM payments pay
-     JOIN purchases pu ON pay.purchase_id = pu.id
+     LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+     LEFT JOIN packages p ON COALESCE(pay.package_id, pu.package_id) = p.id
      WHERE pay.id = $1 LIMIT 1`,
     [paymentId]
   );
@@ -157,16 +162,19 @@ export async function processSuccessfulPayment({
   }
 
   const payment = payRes.rows[0];
-  const pId = purchaseId || payment.purchase_id;
+  const pId = purchaseId || payment.purchase_id || payment.pur_id || null;
+  const targetPackageId = payment.resolved_package_id || payment.package_id;
+  const billingCycle = payment.resolved_billing_cycle || payment.billing_cycle || 'monthly';
 
   if (payment.status === 'successful') {
     return { success: true, message: 'Payment already processed successfully', payment };
   }
 
-  const isYearly = String(payment.billing_cycle).toLowerCase() === 'yearly';
+  const isYearly = String(billingCycle).toLowerCase() === 'yearly';
   const durationDays = isYearly ? 365 : 30;
   const payAmount = Number(payment.amount);
   const payCurrency = (payment.currency || 'BDT').toUpperCase();
+  const effectiveTranId = tranId || payment.transaction_id || `TXN-${Date.now()}`;
 
   await queryDb('BEGIN');
   try {
@@ -183,7 +191,7 @@ export async function processSuccessfulPayment({
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $7`,
       [
-        tranId || null,
+        effectiveTranId,
         valId || null,
         gatewayResponse ? JSON.stringify(gatewayResponse) : null,
         paymentMethod,
@@ -194,40 +202,73 @@ export async function processSuccessfulPayment({
     );
 
     await queryDb(
-      `UPDATE purchases
-       SET status = 'completed',
-           period_start = CURRENT_TIMESTAMP,
-           period_end = CURRENT_TIMESTAMP + ($1 || ' days')::interval,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [durationDays, pId]
+      `INSERT INTO payment_transactions (
+        payment_id, creator_id, transaction_id, amount, currency,
+        payment_gateway, payment_method, gateway_transaction_id,
+        gateway_order_id, gateway_response, processed_by_developer_id,
+        manual_payment_notes, status, paid_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8,
+        $9, $10, $11,
+        $12, 'successful', CURRENT_TIMESTAMP
+      )`,
+      [
+        paymentId,
+        payment.creator_id,
+        effectiveTranId,
+        payAmount,
+        payCurrency,
+        payment.payment_gateway || 'sslcommerz',
+        paymentMethod,
+        effectiveTranId,
+        valId || null,
+        gatewayResponse ? JSON.stringify(gatewayResponse) : null,
+        processedByDeveloperId || null,
+        manualNotes || null,
+      ]
     );
 
-    const subCheck = await queryDb(
-      `SELECT id FROM subscriptions WHERE creator_id = $1 AND package_id = $2 ORDER BY id DESC LIMIT 1`,
-      [payment.creator_id, payment.package_id]
-    );
-
-    if (subCheck.rows.length > 0) {
+    if (pId) {
       await queryDb(
-        `UPDATE subscriptions
-         SET status = 'active',
-             purchase_id = $1,
-             billing_cycle = $2,
-             current_period_start = CURRENT_TIMESTAMP,
-             current_period_end = CURRENT_TIMESTAMP + ($3 || ' days')::interval,
+        `UPDATE purchases
+         SET status = 'completed',
+             period_start = CURRENT_TIMESTAMP,
+             period_end = CURRENT_TIMESTAMP + ($1 || ' days')::interval,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $4`,
-        [pId, payment.billing_cycle, durationDays, subCheck.rows[0].id]
+         WHERE id = $2`,
+        [durationDays, pId]
       );
-    } else {
-      await queryDb(
-        `INSERT INTO subscriptions (
-          creator_id, package_id, purchase_id, status, billing_cycle,
-          current_period_start, current_period_end
-        ) VALUES ($1, $2, $3, 'active', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($5 || ' days')::interval)`,
-        [payment.creator_id, payment.package_id, pId, payment.billing_cycle, durationDays]
+    }
+
+    if (targetPackageId) {
+      const subCheck = await queryDb(
+        `SELECT id FROM subscriptions WHERE creator_id = $1 AND package_id = $2 ORDER BY id DESC LIMIT 1`,
+        [payment.creator_id, targetPackageId]
       );
+
+      if (subCheck.rows.length > 0) {
+        await queryDb(
+          `UPDATE subscriptions
+           SET status = 'active',
+               payment_id = $1,
+               purchase_id = $2,
+               billing_cycle = $3,
+               current_period_start = CURRENT_TIMESTAMP,
+               current_period_end = CURRENT_TIMESTAMP + ($4 || ' days')::interval,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $5`,
+          [paymentId, pId || null, billingCycle, durationDays, subCheck.rows[0].id]
+        );
+      } else {
+        await queryDb(
+          `INSERT INTO subscriptions (
+            creator_id, package_id, payment_id, purchase_id, status, billing_cycle,
+            current_period_start, current_period_end
+          ) VALUES ($1, $2, $3, $4, 'active', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($6 || ' days')::interval)`,
+          [payment.creator_id, targetPackageId, paymentId, pId || null, billingCycle, durationDays]
+        );
+      }
     }
 
     const balRes = await queryDb(
@@ -258,7 +299,7 @@ export async function processSuccessfulPayment({
         $8, $9
       )`,
       [
-        `Subscription Payment for Purchase #${pId}`,
+        `Subscription Payment for Invoice #${payment.invoice_no || paymentId}`,
         payAmount,
         payCurrency,
         newBalance,
@@ -267,17 +308,17 @@ export async function processSuccessfulPayment({
         processedByDeveloperId || null,
         paymentMethod,
         JSON.stringify({
-          purchase_id: pId,
-          package_id: payment.package_id,
-          billing_cycle: payment.billing_cycle,
-          tran_id: tranId,
+          payment_id: paymentId,
+          package_id: targetPackageId,
+          billing_cycle: billingCycle,
+          tran_id: effectiveTranId,
           val_id: valId,
         }),
       ]
     );
 
     await queryDb('COMMIT');
-    return { success: true, message: 'Payment successfully settled and recorded' };
+    return { success: true, message: 'Payment successfully settled, transaction recorded and subscription activated' };
   } catch (err: any) {
     await queryDb('ROLLBACK');
     throw err;

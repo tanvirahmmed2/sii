@@ -72,7 +72,7 @@ export default function PaymentGatewayCheckout({
         body: JSON.stringify({
           creatorId: Number(creatorId),
           paymentId: Number(payment.id),
-          purchaseId: Number(payment.purchase_id),
+          purchaseId: payment.purchase_id ? Number(payment.purchase_id) : null,
         }),
       });
 

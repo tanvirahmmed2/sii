@@ -18,21 +18,21 @@ export async function POST(request: any) {
     }
 
     let paymentId = body.paymentId ? Number(body.paymentId) : null;
-    let purchaseId = body.purchaseId ? Number(body.purchaseId) : null;
     let payment: any = null;
-    let purchase: any = null;
     let creator: any = null;
     let pkg: any = null;
 
     if (paymentId) {
       const payRes = await queryDb(
-        `SELECT pay.*, pu.billing_cycle, pu.package_id, pu.id AS pur_id,
+        `SELECT pay.*, 
+                COALESCE(pay.billing_cycle, pu.billing_cycle, 'monthly') AS resolved_billing_cycle,
+                COALESCE(pay.package_id, pu.package_id) AS resolved_package_id,
                 p.name AS package_name,
                 c.name AS creator_name, c.email AS creator_email, c.phone AS creator_phone,
                 c.address AS creator_address, c.city AS creator_city
          FROM payments pay
-         JOIN purchases pu ON pay.purchase_id = pu.id
-         JOIN packages p ON pu.package_id = p.id
+         LEFT JOIN purchases pu ON pay.purchase_id = pu.id
+         LEFT JOIN packages p ON COALESCE(pay.package_id, pu.package_id) = p.id
          JOIN creators c ON pay.creator_id = c.id
          WHERE pay.id = $1 AND pay.creator_id = $2
          LIMIT 1`,
@@ -42,7 +42,6 @@ export async function POST(request: any) {
         return NextResponse.json({ success: false, error: 'Payment invoice not found' }, { status: 404 });
       }
       payment = payRes.rows[0];
-      purchaseId = payment.purchase_id;
       creator = {
         name: payment.creator_name,
         email: payment.creator_email,
@@ -50,12 +49,11 @@ export async function POST(request: any) {
         address: payment.creator_address,
         city: payment.creator_city,
       };
-      pkg = { name: payment.package_name };
+      pkg = { name: payment.package_name || 'SaaS Subscription Plan' };
     } else {
       const packageId = Number(body.packageId);
       const billingCycle = String(body.billingCycle || 'monthly').toLowerCase() === 'yearly' ? 'yearly' : 'monthly';
       const requestedCurrency = String(body.currency || 'BDT').toUpperCase();
-      const websiteId = body.websiteId ? Number(body.websiteId) : null;
 
       if (!packageId) {
         return NextResponse.json({ success: false, error: 'packageId is required' }, { status: 400 });
@@ -132,59 +130,48 @@ export async function POST(request: any) {
       }
 
       const finalAmount = Math.max(0, Number((baseAmount - discountAmount).toFixed(2)));
-      const purchaseCode = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const durationDays = isYearly ? 365 : 30;
+      const invoiceNo = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const initTxId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       await queryDb('BEGIN');
       try {
-        const purRes = await queryDb(
-          `INSERT INTO purchases (
-            creator_id, website_id, package_id, promo_id, purchase_code, billing_cycle,
-            currency, base_amount, discount_amount, tax_amount, total_amount, status,
-            period_start, period_end
+        const payRes = await queryDb(
+          `INSERT INTO payments (
+            creator_id, package_id, promo_id, billing_cycle,
+            invoice_no, transaction_id, amount, base_amount, discount_amount,
+            currency, payment_method, payment_gateway, status,
+            payer_email, payer_phone
           ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, 0.00, $10, 'pending',
-            CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($11 || ' days')::interval
+            $1, $2, $3, $4,
+            $5, $6, $7, $8, $9,
+            $10, 'sslcommerz', 'sslcommerz', 'unpaid',
+            $11, $12
           ) RETURNING *`,
           [
             creatorId,
-            websiteId,
             packageId,
             promoRecord ? promoRecord.id : null,
-            purchaseCode,
             billingCycle,
-            currency,
+            invoiceNo,
+            initTxId,
+            finalAmount,
             baseAmount,
             discountAmount,
-            finalAmount,
-            durationDays,
+            currency,
+            creator.email,
+            creator.phone,
           ]
-        );
-        purchase = purRes.rows[0];
-        purchaseId = purchase.id;
-
-        if (promoRecord) {
-          await queryDb(
-            `INSERT INTO promo_usages (promo_id, creator_id, purchase_id, discount_amount)
-             VALUES ($1, $2, $3, $4)`,
-            [promoRecord.id, creatorId, purchaseId, discountAmount]
-          );
-        }
-
-        const initTxId = `TX-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        const payRes = await queryDb(
-          `INSERT INTO payments (
-            purchase_id, creator_id, transaction_id, amount, currency,
-            payment_method, payment_gateway, status, payer_email, payer_phone
-          ) VALUES (
-            $1, $2, $3, $4, $5,
-            'sslcommerz', 'sslcommerz', 'pending', $6, $7
-          ) RETURNING *`,
-          [purchaseId, creatorId, initTxId, finalAmount, currency, creator.email, creator.phone]
         );
         payment = payRes.rows[0];
         paymentId = payment.id;
+
+        if (promoRecord) {
+          await queryDb(
+            `INSERT INTO promo_usages (promo_id, creator_id, payment_id, discount_amount)
+             VALUES ($1, $2, $3, $4)`,
+            [promoRecord.id, creatorId, paymentId, discountAmount]
+          );
+        }
 
         await queryDb('COMMIT');
       } catch (err: any) {
@@ -196,19 +183,20 @@ export async function POST(request: any) {
     if (body.createOnly) {
       return NextResponse.json({
         success: true,
-        purchaseId,
         paymentId,
-        purchase,
+        invoiceNo: payment.invoice_no,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status || 'unpaid',
         payment,
       });
     }
 
-    if (!purchaseId || !paymentId) {
-      return NextResponse.json({ success: false, error: 'Failed to resolve purchase and payment ID' }, { status: 500 });
+    if (!paymentId) {
+      return NextResponse.json({ success: false, error: 'Failed to resolve payment ID' }, { status: 500 });
     }
 
     const sslSession = await initiateSslcommerzPayment({
-      purchaseId,
       paymentId,
       creatorId,
       amount: Number(payment.amount),
@@ -224,7 +212,6 @@ export async function POST(request: any) {
 
     return NextResponse.json({
       success: true,
-      purchaseId,
       paymentId,
       gatewayUrl: sslSession.gatewayUrl,
       sessionKey: sslSession.sessionKey,

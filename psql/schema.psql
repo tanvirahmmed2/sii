@@ -659,6 +659,17 @@ CREATE TRIGGER update_websites_updated_at
 -- ----------------------------------------------------------------------------
 -- 15. PURCHASES TABLE (Package Subscriptions & Module Purchases by Creators)
 -- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS currencies (
+    id BIGSERIAL PRIMARY KEY,
+    code VARCHAR(10) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    symbol VARCHAR(10) NOT NULL DEFAULT '',
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE OR REPLACE VIEW currency AS SELECT * FROM currencies;
+
 CREATE TABLE IF NOT EXISTS promos (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -704,6 +715,7 @@ CREATE TABLE IF NOT EXISTS promo_usages (
     id BIGSERIAL PRIMARY KEY,
     promo_id BIGINT NOT NULL REFERENCES promos(id) ON DELETE CASCADE,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    payment_id BIGINT REFERENCES payments(id) ON DELETE CASCADE,
     purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
     discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0.00),
     used_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -720,12 +732,18 @@ CREATE TRIGGER update_purchases_updated_at
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payments (
     id BIGSERIAL PRIMARY KEY,
-    purchase_id BIGINT NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+    purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    package_id BIGINT REFERENCES packages(id) ON DELETE SET NULL,
+    promo_id BIGINT REFERENCES promos(id) ON DELETE SET NULL,
+    billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
+    invoice_no VARCHAR(100),
     transaction_id VARCHAR(100) UNIQUE NOT NULL,
     amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
-    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
-    payment_method VARCHAR(100) NOT NULL DEFAULT 'surjopay',
+    base_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (base_amount >= 0.00),
+    discount_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (discount_amount >= 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    payment_method VARCHAR(100) NOT NULL DEFAULT 'sslcommerz',
     payment_gateway VARCHAR(100),
     gateway_order_id VARCHAR(150),
     payer_email VARCHAR(150),
@@ -735,8 +753,8 @@ CREATE TABLE IF NOT EXISTS payments (
     gateway_response JSONB,
     processed_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
     manual_payment_notes TEXT,
-    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'successful', 'failed', 'refunded', 'cancelled')),
-    payment_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'due', 'pending', 'successful', 'completed', 'failed', 'refunded', 'cancelled')),
+    payment_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -745,6 +763,36 @@ CREATE INDEX IF NOT EXISTS idx_tier1_payments_gw_order ON payments(gateway_order
 DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at
     BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS payment_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    transaction_id VARCHAR(100) NOT NULL,
+    amount DECIMAL(12, 2) NOT NULL CHECK (amount >= 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    payment_gateway VARCHAR(100) NOT NULL DEFAULT 'sslcommerz',
+    payment_method VARCHAR(100),
+    gateway_transaction_id VARCHAR(150),
+    gateway_order_id VARCHAR(150),
+    bank_tran_id VARCHAR(150),
+    card_type VARCHAR(100),
+    card_brand VARCHAR(100),
+    card_issuer VARCHAR(150),
+    gateway_response JSONB,
+    processed_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    manual_payment_notes TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'successful' CHECK (status IN ('successful', 'failed', 'refunded', 'cancelled')),
+    paid_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE OR REPLACE VIEW payment_transaction AS SELECT * FROM payment_transactions;
+
+DROP TRIGGER IF EXISTS update_payment_transactions_updated_at ON payment_transactions;
+CREATE TRIGGER update_payment_transactions_updated_at
+    BEFORE UPDATE ON payment_transactions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
@@ -783,6 +831,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
     website_id BIGINT REFERENCES websites(id) ON DELETE CASCADE,
     package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    payment_id BIGINT REFERENCES payments(id) ON DELETE SET NULL,
     purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trailing', 'past_due', 'cancelled', 'expired')),
     billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
