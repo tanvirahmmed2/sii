@@ -289,6 +289,11 @@ function expandModuleAliases(slugs: string[]): string[] {
     } else if (clean === 'packages' || clean === 'package') {
       result.add('packages');
       result.add('package');
+    } else if (clean === 'promos' || clean === 'promo' || clean === 'promo-codes' || clean === 'promo_usages') {
+      result.add('promos');
+      result.add('promo');
+      result.add('promo-codes');
+      result.add('promo_usages');
     } else if (clean === 'blogs' || clean === 'blog') {
       result.add('blogs');
       result.add('blog');

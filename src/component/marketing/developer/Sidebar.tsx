@@ -26,6 +26,7 @@ export const ADMIN_NAV_SECTIONS = [
         title: 'Commerce & Plans',
         links: [
             { href: '/developer/packages', label: 'Packages' },
+            { href: '/developer/promos', label: 'Promos & Discounts' },
             { href: '/developer/features', label: 'Features' },
             { href: '/developer/subscriptions', label: 'Subscriptions' },
             { href: '/developer/purchases', label: 'Purchases' },

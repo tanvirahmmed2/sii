@@ -27,9 +27,37 @@ export async function GET(request: any) {
       ORDER BY p.id DESC
     `);
 
+    const usagesRes = await queryDb(`
+      SELECT pu.id, pu.promo_id, pu.creator_id, pu.payment_id, pu.purchase_id,
+             pu.discount_amount, pu.used_at,
+             p.code AS promo_code, p.name AS promo_name, p.discount_percentage,
+             c.name AS creator_name, c.email AS creator_email, c.phone AS creator_phone,
+             pay.invoice_no, pay.amount AS payment_amount, pay.currency
+      FROM promo_usages pu
+      JOIN promos p ON pu.promo_id = p.id
+      JOIN creators c ON pu.creator_id = c.id
+      LEFT JOIN payments pay ON pu.payment_id = pay.id
+      ORDER BY pu.used_at DESC, pu.id DESC
+      LIMIT 250
+    `);
+
+    const promos = res.rows || [];
+    const usages = usagesRes.rows || [];
+
+    const stats = {
+      totalPromos: promos.length,
+      activePromos: promos.filter((p: any) => p.is_active).length,
+      publicPromos: promos.filter((p: any) => p.is_public).length,
+      privatePromos: promos.filter((p: any) => !p.is_public).length,
+      totalUsages: usages.length,
+      totalDiscountGranted: promos.reduce((sum: number, p: any) => sum + Number(p.total_discount_granted || 0), 0),
+    };
+
     return NextResponse.json({
       success: true,
-      promos: res.rows,
+      promos,
+      usages,
+      stats,
     });
   } catch (error: any) {
     console.error('Developer promos GET error:', error);
@@ -207,6 +235,107 @@ export async function PUT(request: any) {
     console.error('Developer promo PUT error:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to update promo code.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: any) {
+  try {
+    const auth = await requireDeveloperPermission(request, ['promos', 'packages', 'billing'], 'edit');
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Access denied' },
+        { status: auth.status || 403 }
+      );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const id = Number(body.id);
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Promo ID is required.' }, { status: 400 });
+    }
+
+    const existingRes = await queryDb('SELECT * FROM promos WHERE id = $1 LIMIT 1', [id]);
+    if (existingRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Promo code not found.' }, { status: 404 });
+    }
+    const current = existingRes.rows[0];
+
+    const nextActive = body.is_active !== undefined
+      ? Boolean(body.is_active)
+      : (body.toggleActive ? !current.is_active : current.is_active);
+
+    const nextPublic = body.is_public !== undefined
+      ? Boolean(body.is_public)
+      : (body.togglePublic ? !current.is_public : current.is_public);
+
+    const res = await queryDb(
+      `UPDATE promos
+       SET is_active = $1, is_public = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3
+       RETURNING *`,
+      [nextActive, nextPublic, id]
+    );
+
+    await invalidatePromosCache();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Promo status updated successfully.',
+      promo: res.rows[0],
+    });
+  } catch (error: any) {
+    console.error('Developer promo PATCH error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update promo status.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: any) {
+  try {
+    const auth = await requireDeveloperPermission(request, ['promos', 'packages', 'billing'], 'delete');
+    if (!auth.success) {
+      return NextResponse.json(
+        { success: false, error: auth.error || auth.message || 'Access denied' },
+        { status: auth.status || 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    let id = searchParams.get('id');
+    if (!id) {
+      const body = await request.json().catch(() => ({}));
+      id = body.id;
+    }
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Promo ID is required.' },
+        { status: 400 }
+      );
+    }
+
+    const res = await queryDb('DELETE FROM promos WHERE id = $1 RETURNING id, code, name', [Number(id)]);
+    if (res.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Promo code not found or already deleted.' },
+        { status: 404 }
+      );
+    }
+
+    await invalidatePromosCache();
+
+    return NextResponse.json({
+      success: true,
+      message: `Promo code "${res.rows[0].code}" deleted successfully.`,
+      deleted: res.rows[0],
+    });
+  } catch (error: any) {
+    console.error('Developer promo DELETE error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to delete promo code.' },
       { status: 500 }
     );
   }
