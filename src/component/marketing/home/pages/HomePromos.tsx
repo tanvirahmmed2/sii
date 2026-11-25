@@ -48,7 +48,7 @@ export default function HomePromos() {
   const handleCopy = (code: string) => {
     if (!code) return;
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(code).catch(() => {});
+      navigator.clipboard.writeText(code).catch(() => { });
     }
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(''), 3000);
@@ -66,7 +66,7 @@ export default function HomePromos() {
 
   return (
     <section
-      className="w-full relative overflow-hidden bg-slate-950 text-white select-text border-y border-slate-800/80 shadow-inner"
+      className="w-full relative overflow-hidden bg-secondary select-text border-y border-slate-800/80 shadow-inner"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
@@ -79,10 +79,10 @@ export default function HomePromos() {
         {promos.map((promo: any) => {
           const formattedDate = promo.ending_date
             ? new Date(promo.ending_date).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
             : null;
 
           return (
@@ -91,10 +91,10 @@ export default function HomePromos() {
               className="w-full shrink-0 grow-0 basis-full py-8 sm:py-10 px-4 sm:px-8 flex items-center justify-center"
             >
               <div className="w-full max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 text-left">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-linear-to-br from-secondary to-amber-500 p-0.5 shadow-lg shadow-secondary/25 shrink-0 flex items-center justify-center">
-                    <div className="w-full h-full bg-slate-950 rounded-[14px] flex flex-col items-center justify-center text-center p-1">
-                      <span className="text-xl sm:text-2xl font-black font-mono text-secondary leading-none">
+                <div className="flex flex-col items-center justify-center w-auto sm:flex-row sm:items-center gap-4 text-left">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white p-0.5 shadow-lg shadow-secondary/25 shrink-0 flex items-center justify-center">
+                    <div className="w-full h-full bg-slate-950 rounded-full flex flex-col items-center justify-center text-center p-1">
+                      <span className="text-xl sm:text-2xl text-white font-semibold font-mono text-secondary leading-none">
                         {promo.discount_percentage}%
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">
@@ -105,33 +105,27 @@ export default function HomePromos() {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/20 text-secondary border border-secondary/30">
-                        <BiStar className="text-xs" />
-                        <span>Public Promotion</span>
-                      </span>
+
                       {formattedDate && (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-white">
                           <BiTime className="text-xs" />
                           <span>Valid through {formattedDate}</span>
                         </span>
                       )}
                     </div>
 
-                    <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                    <h2 className="text-lg sm:text-2xl font-semibold text-white tracking-tight">
                       {promo.name}
                     </h2>
 
-                    <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
-                      {promo.description ||
-                        `Get ${promo.discount_percentage}% discount on our subscription packages with code ${promo.code}.`}
-                    </p>
+
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
                   <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 w-full sm:w-auto">
                     <div className="flex items-center gap-1.5">
-                      <BiTag className="text-secondary text-sm" />
+                      <BiTag className="text-white text-sm" />
                       <span className="font-mono font-black text-white text-sm sm:text-base tracking-wider uppercase">
                         {promo.code}
                       </span>
@@ -157,7 +151,7 @@ export default function HomePromos() {
 
                   <Link
                     href={`/packages?promo=${encodeURIComponent(promo.code)}`}
-                    className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-linear-to-r from-secondary to-amber-600 hover:from-secondary-dark hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-secondary/20 cursor-pointer w-full sm:w-auto"
+                    className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-secondary/20 cursor-pointer w-full sm:w-auto"
                   >
                     <span>Claim Deal</span>
                     <BiRightArrowAlt className="text-base" />
@@ -195,11 +189,10 @@ export default function HomePromos() {
                 key={idx}
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  currentIndex === idx
-                    ? 'w-6 bg-secondary'
-                    : 'w-1.5 bg-slate-700 hover:bg-slate-500'
-                }`}
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${currentIndex === idx
+                  ? 'w-6 bg-secondary'
+                  : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                  }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}

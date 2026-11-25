@@ -1,6 +1,12 @@
 import Redis from 'ioredis';
+import { createHash } from 'crypto';
 import { queryDb } from '../database/db';
 import { getCurrentYearMonth, getWebsiteMonthlyUsageAndLimits } from '../database/usageLimiter';
+import {
+  AllowedDeveloperModule,
+  filterDeveloperModules,
+  getAllowedDeveloperLinks,
+} from '../developer/navModules';
 
 let redisInstance: Redis | null = null;
 let isRedisAvailable: boolean = false;
@@ -558,10 +564,85 @@ export async function fetchDeveloperPermissions(
 
 export async function invalidateDeveloperPermissionsCache(devId?: number | string): Promise<void> {
   if (devId) {
-    await invalidateCache(`auth:dev:perms:${devId}:*`);
+    await Promise.all([
+      invalidateCache(`auth:dev:perms:${devId}:*`),
+      invalidateCache(`dev:modules:allowed:${devId}:*`),
+      invalidateCache(`dev:modules:search:${devId}:*`),
+    ]);
   } else {
-    await invalidateCache('auth:dev:perms:*');
+    await Promise.all([
+      invalidateCache('auth:dev:perms:*'),
+      invalidateCache('dev:modules:*'),
+    ]);
   }
+}
+
+function getDeveloperPermissionHash(user: any): string {
+  const perms = Array.isArray(user?.permissions)
+    ? [...user.permissions].map((p) => String(p).toLowerCase().trim()).sort()
+    : [];
+  const raw = `${user?.id || 'anon'}:${user?.roleId || 'norole'}:${perms.join(',')}`;
+  return createHash('sha1').update(raw).digest('hex').slice(0, 12);
+}
+
+/**
+ * Searches the developer's allowed modules using Redis-backed per-user module indexes and query caches,
+ * falling back to in-memory filtering if Redis is unavailable.
+ */
+export async function searchDeveloperModulesInRedis(
+  user: any,
+  query: string = ''
+): Promise<{ modules: AllowedDeveloperModule[]; source: 'redis' | 'memory'; cached: boolean }> {
+  const normalizedQuery = String(query || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const userId = user?.id || 'anon';
+  const permHash = getDeveloperPermissionHash(user);
+  const allowedKey = `dev:modules:allowed:${userId}:${permHash}`;
+  const queryKeySuffix = normalizedQuery
+    ? createHash('sha1').update(normalizedQuery).digest('hex').slice(0, 16)
+    : '_all';
+  const searchKey = `dev:modules:search:${userId}:${permHash}:${queryKeySuffix}`;
+
+  try {
+    const client = getRedisClient();
+    if (client && isRedisConnected()) {
+      const cachedSearch = await client.get(searchKey);
+      if (cachedSearch) {
+        try {
+          const parsed = JSON.parse(cachedSearch) as AllowedDeveloperModule[];
+          if (Array.isArray(parsed)) {
+            return { modules: parsed, source: 'redis', cached: true };
+          }
+        } catch { }
+      }
+
+      let allowedModules: AllowedDeveloperModule[] | null = null;
+      const cachedAllowed = await client.get(allowedKey);
+      if (cachedAllowed) {
+        try {
+          const parsed = JSON.parse(cachedAllowed) as AllowedDeveloperModule[];
+          if (Array.isArray(parsed)) {
+            allowedModules = parsed;
+          }
+        } catch { }
+      }
+
+      if (!allowedModules) {
+        allowedModules = getAllowedDeveloperLinks(user);
+        await client.set(allowedKey, JSON.stringify(allowedModules), 'EX', 300);
+      }
+
+      const filtered = filterDeveloperModules(allowedModules, normalizedQuery);
+      await client.set(searchKey, JSON.stringify(filtered), 'EX', 120);
+      return { modules: filtered, source: 'redis', cached: false };
+    }
+  } catch { }
+
+  const allowed = getAllowedDeveloperLinks(user);
+  return {
+    modules: filterDeveloperModules(allowed, normalizedQuery),
+    source: 'memory',
+    cached: false,
+  };
 }
 
 export async function fetchModulesList(fetcher: () => Promise<any>): Promise<any> {

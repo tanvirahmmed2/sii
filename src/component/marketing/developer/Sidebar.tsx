@@ -1,162 +1,121 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-export const ADMIN_NAV_SECTIONS = [
-    {
-        title: 'Workspace & Overview',
-        links: [
-            { href: '/developer', label: 'Developer Console', exact: true },
-            { href: '/developer/overview', label: 'Platform Overview' },
-            { href: '/developer/tasks', label: 'Tasks & Sprints' },
-            { href: '/developer/notices', label: 'Company Notices' },
-            { href: '/developer/notice-board', label: 'Notice Board' },
-            { href: '/developer/chats', label: 'Internal Chat' },
-        ],
-    },
-    {
-        title: 'Websites & Audience',
-        links: [
-            { href: '/developer/websites', label: 'Websites' },
-            { href: '/developer/creators', label: 'Creators' },
-            { href: '/developer/leads', label: 'Leads' },
-            { href: '/developer/subscribers', label: 'Subscribers' },
-        ],
-    },
-    {
-        title: 'Commerce & Plans',
-        links: [
-            { href: '/developer/packages', label: 'Packages' },
-            { href: '/developer/promos', label: 'Promos & Discounts' },
-            { href: '/developer/features', label: 'Features' },
-            { href: '/developer/subscriptions', label: 'Subscriptions' },
-            { href: '/developer/purchases', label: 'Purchases' },
-            { href: '/developer/payments', label: 'Payments' },
-        ],
-    },
-    {
-        title: 'Template Studio & Design',
-        links: [
-            { href: '/developer/templates/student-id-card', label: 'Student ID Cards' },
-            { href: '/developer/templates/teacher-id-card', label: 'Teacher ID Cards' },
-            { href: '/developer/templates/officer-id-card', label: 'Officer ID Cards' },
-            { href: '/developer/templates/tc', label: 'Transfer Certificates (TC)' },
-            { href: '/developer/templates/testimonial', label: 'Testimonials' },
-            { href: '/developer/templates/certificate', label: 'Academic Certificates' },
-            { href: '/developer/templates/payment-receipt', label: 'Payment Receipts' },
-        ],
-    },
-    {
-        title: 'Content & Policies',
-        links: [
-            { href: '/developer/blogs', label: 'Blogs' },
-            { href: '/developer/policies', label: 'Company Policies' },
-            { href: '/developer/updates', label: 'Product Updates' },
-            { href: '/developer/tutorials', label: 'Tutorials' },
-            { href: '/developer/faqs', label: 'FAQs' },
-        ],
-    },
-    {
-        title: 'Support & Comms',
-        links: [
-            { href: '/developer/support', label: 'Support Tickets' },
-            { href: '/developer/live-chats', label: 'Live Chats' },
-            { href: '/developer/contacts', label: 'Contacts' },
-            { href: '/developer/reports', label: 'Reports' },
-            { href: '/developer/reviews', label: 'Reviews' },
-        ],
-    },
-    {
-        title: 'Meta Channels',
-        links: [
-            { href: '/developer/facebook-messages', label: 'Facebook Messages' },
-            { href: '/developer/instagram-messages', label: 'Instagram Messages' },
-            { href: '/developer/whatsapp-messages', label: 'WhatsApp Messages' },
-        ],
-    },
-    {
-        title: 'Team & Organization',
-        links: [
-            { href: '/developer/developers', label: 'Developers Team' },
-            { href: '/developer/roles', label: 'Roles & Permissions' },
-            { href: '/developer/payroll', label: 'Payrolls', exact: true },
-            { href: '/developer/payroll/assign', label: 'Assign to Developer' },
-            { href: '/developer/payroll/payments', label: 'Payroll Payments' },
-            { href: '/developer/my-salaries', label: 'My Salaries' },
-        ],
-    },
-    {
-        title: 'Platform & Settings',
-        links: [
-            { href: '/developer/modules', label: 'Database Modules' },
-            { href: '/developer/spams', label: 'Spam Defense' },
-            { href: '/developer/settings', label: 'Settings' },
-            { href: '/developer/profile', label: 'My Profile' },
-        ],
-    },
-];
+import {
+    FiTerminal,
+    FiBarChart2,
+    FiCheckSquare,
+    FiBell,
+    FiClipboard,
+    FiMessageSquare,
+    FiGlobe,
+    FiUsers,
+    FiUserPlus,
+    FiMail,
+    FiPackage,
+    FiTag,
+    FiLayers,
+    FiRepeat,
+    FiShoppingBag,
+    FiCreditCard,
+    FiAward,
+    FiShield,
+    FiFileText,
+    FiStar,
+    FiEdit3,
+    FiBookOpen,
+    FiZap,
+    FiPlayCircle,
+    FiHelpCircle,
+    FiLifeBuoy,
+    FiMessageCircle,
+    FiInbox,
+    FiFlag,
+    FiShare2,
+    FiInstagram,
+    FiPhoneCall,
+    FiCode,
+    FiKey,
+    FiDollarSign,
+    FiUserCheck,
+    FiCheckCircle,
+    FiDatabase,
+    FiAlertOctagon,
+    FiSettings,
+    FiUser,
+    FiHome,
+    FiLogOut,
+    FiX,
+} from 'react-icons/fi';
+import {
+    DEVELOPER_NAV_SECTIONS_DATA,
+    isDeveloperLinkAllowed,
+    getAllowedDeveloperLinks,
+} from 'src/lib/developer/navModules';
+
+export const DEVELOPER_ICON_MAP: Record<string, any> = {
+    'terminal': FiTerminal,
+    'bar-chart': FiBarChart2,
+    'check-square': FiCheckSquare,
+    'bell': FiBell,
+    'clipboard': FiClipboard,
+    'message-square': FiMessageSquare,
+    'globe': FiGlobe,
+    'users': FiUsers,
+    'user-plus': FiUserPlus,
+    'mail': FiMail,
+    'package': FiPackage,
+    'tag': FiTag,
+    'layers': FiLayers,
+    'repeat': FiRepeat,
+    'shopping-bag': FiShoppingBag,
+    'credit-card': FiCreditCard,
+    'user-check': FiUserCheck,
+    'award': FiAward,
+    'shield': FiShield,
+    'file-text': FiFileText,
+    'star': FiStar,
+    'edit': FiEdit3,
+    'book-open': FiBookOpen,
+    'zap': FiZap,
+    'play-circle': FiPlayCircle,
+    'help-circle': FiHelpCircle,
+    'life-buoy': FiLifeBuoy,
+    'message-circle': FiMessageCircle,
+    'inbox': FiInbox,
+    'flag': FiFlag,
+    'share': FiShare2,
+    'instagram': FiInstagram,
+    'phone-call': FiPhoneCall,
+    'code': FiCode,
+    'key': FiKey,
+    'dollar-sign': FiDollarSign,
+    'check-circle': FiCheckCircle,
+    'database': FiDatabase,
+    'alert-octagon': FiAlertOctagon,
+    'settings': FiSettings,
+    'user': FiUser,
+};
+
+export function getDeveloperModuleIcon(iconKey?: string) {
+    return (iconKey && DEVELOPER_ICON_MAP[iconKey]) || FiTerminal;
+}
+
+export const ADMIN_NAV_SECTIONS = DEVELOPER_NAV_SECTIONS_DATA.map((section) => ({
+    ...section,
+    links: section.links.map((link) => ({
+        ...link,
+        icon: getDeveloperModuleIcon(link.iconKey),
+    })),
+}));
 export const DEVELOPER_NAV_SECTIONS = ADMIN_NAV_SECTIONS;
+
+export { isDeveloperLinkAllowed, getAllowedDeveloperLinks };
+
 export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }: any) {
     const pathname = usePathname();
     const router = useRouter();
-    const isSuperAdmin = Boolean(currentUser && (Number(currentUser.id) === 1 ||
-        String(currentUser.email).toLowerCase() === 'tanvir004006@gmail.com' ||
-        (Array.isArray(currentUser.permissions) && currentUser.permissions.includes('*'))));
-    const userPerms = Array.isArray(currentUser?.permissions) ? currentUser.permissions : [];
-    const allowedModules = userPerms.map((m: any) => String(m).toLowerCase().trim());
-    const ALIAS_MAP = {
-        'support': ['support', 'supports'],
-        'supports': ['support', 'supports'],
-        'live-chats': ['live-chats', 'live_chats', 'live-chat', 'live_chat'],
-        'live_chats': ['live-chats', 'live_chats', 'live-chat', 'live_chat'],
-        'contacts': ['contacts', 'contact'],
-        'contact': ['contacts', 'contact'],
-        'reports': ['reports', 'report'],
-        'report': ['reports', 'report'],
-        'reviews': ['reviews', 'review'],
-        'review': ['reviews', 'review'],
-        'faqs': ['faqs', 'faq'],
-        'faq': ['faqs', 'faq'],
-        'policies': ['policies', 'policy'],
-        'policy': ['policies', 'policy'],
-        'packages': ['packages', 'package'],
-        'package': ['packages', 'package'],
-        'blogs': ['blogs', 'blog'],
-        'blog': ['blogs', 'blog'],
-        'facebook-messages': ['facebook-messages', 'facebook_messages', 'facebook', 'meta'],
-        'facebook_messages': ['facebook-messages', 'facebook_messages', 'facebook', 'meta'],
-        'instagram-messages': ['instagram-messages', 'instagram_messages', 'instagram', 'meta'],
-        'instagram_messages': ['instagram-messages', 'instagram_messages', 'instagram', 'meta'],
-        'whatsapp-messages': ['whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
-        'whatsapp_messages': ['whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
-        'meta': ['facebook-messages', 'facebook_messages', 'facebook', 'instagram-messages', 'instagram_messages', 'instagram', 'whatsapp-messages', 'whatsapp_messages', 'whatsapp', 'meta'],
-        'websites': ['websites', 'website'],
-        'website': ['websites', 'website'],
-        'creators': ['creators', 'creator'],
-        'creator': ['creators', 'creator'],
-        'leads': ['leads', 'lead'],
-        'lead': ['leads', 'lead'],
-        'subscribers': ['subscribers', 'subscriber'],
-        'subscriber': ['subscribers', 'subscriber'],
-        'payroll': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
-        'payrolls': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
-        'my-salaries': ['my-salaries', 'my_salaries', 'payroll'],
-        'notice-board': ['notice-board', 'notices', 'notice'],
-    };
-    const isLinkAllowed = (link: any) => {
-        if (isSuperAdmin)
-            return true;
-        if (link.href === '/developer' || link.href === '/developer/profile' || link.href === '/developer/notice-board')
-            return true;
-        const rawPath = link.href.split('?')[0];
-        const segments = rawPath.split('/').filter(Boolean);
-        const moduleName = (segments[1] || '').toLowerCase().trim();
-        if (allowedModules.includes(moduleName))
-            return true;
-        const aliases = (ALIAS_MAP as Record<string, string[]>)[moduleName];
-        if (aliases && aliases.some((a: any) => allowedModules.includes(a)))
-            return true;
-        return false;
-    };
+    const isLinkAllowed = (link: any) => isDeveloperLinkAllowed(link, currentUser);
     const handleLogout = async () => {
         try {
             await fetch('/api/marketing/developer/me/logout', {
@@ -181,8 +140,9 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
     const navContent = (<div className="flex flex-col h-full overflow-y-auto">
       {onClose && (<div className="h-12 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:hidden sticky top-0 z-10">
           <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Navigation</span>
-          <button type="button" onClick={onClose} className="text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 cursor-pointer">
-            Close
+          <button type="button" onClick={onClose} className="inline-flex items-center gap-1 text-xs font-normal text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 cursor-pointer" aria-label="Close navigation">
+            <FiX className="w-3.5 h-3.5"/>
+            <span>Close</span>
           </button>
         </div>)}
 
@@ -197,10 +157,12 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
               </div>
               {visibleLinks.map((link: any) => {
                     const active = isLinkActive(link);
-                    return (<Link key={link.href} href={link.href} onClick={onClose} className={`block px-2.5 py-1.5 rounded text-xs transition-colors ${active
+                    const Icon = link.icon;
+                    return (<Link key={link.href} href={link.href} onClick={onClose} className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${active
                             ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 font-normal'}`}>
-                    {link.label}
+                    {Icon && <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}/>}
+                    <span className="truncate">{link.label}</span>
                   </Link>);
                 })}
             </div>);
@@ -208,11 +170,13 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
       </div>
 
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 sticky bottom-0">
-        <Link href="/" onClick={onClose} className="block text-center w-full py-1.5 px-3 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors">
-          Platform Home
+        <Link href="/" onClick={onClose} className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors">
+          <FiHome className="w-3.5 h-3.5 shrink-0"/>
+          <span>Platform Home</span>
         </Link>
-        <button type="button" onClick={handleLogout} className="w-full text-center py-1.5 px-3 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 text-xs font-normal transition-colors cursor-pointer">
-          Sign Out
+        <button type="button" onClick={handleLogout} className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 text-xs font-normal transition-colors cursor-pointer">
+          <FiLogOut className="w-3.5 h-3.5 shrink-0"/>
+          <span>Sign Out</span>
         </button>
       </div>
     </div>);
