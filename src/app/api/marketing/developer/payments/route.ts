@@ -235,6 +235,9 @@ export async function PUT(request: any) {
                     completedPurchase = updatedPuRes.rows[0];
                 }
 
+                const resolvedMethod = data.payment_method || existing.payment_method || 'directpay';
+                const resolvedGateway = resolvedMethod === 'directpay' ? 'directpay' : 'manual';
+
                 await queryDb(
                   `INSERT INTO payment_transactions (
                     payment_id, creator_id, transaction_id, amount, currency,
@@ -242,18 +245,19 @@ export async function PUT(request: any) {
                     manual_payment_notes, status, paid_at
                   ) VALUES (
                     $1, $2, $3, $4, $5,
-                    'manual', $6, $7,
-                    $8, 'successful', CURRENT_TIMESTAMP
+                    $6, $7, $8,
+                    $9, 'successful', CURRENT_TIMESTAMP
                   )`,
                   [
                     id,
                     existing.creator_id,
-                    existing.transaction_id || `MANUAL-${Date.now()}`,
+                    existing.transaction_id || `DIRECT-${Date.now()}`,
                     Number(existing.amount || 0),
                     (existing.currency || 'BDT').toUpperCase(),
-                    existing.payment_method || 'manual_cash',
+                    resolvedGateway,
+                    resolvedMethod,
                     developerId,
-                    body.manual_payment_notes || existing.manual_payment_notes || 'Manual approval by developer',
+                    body.manual_payment_notes || existing.manual_payment_notes || 'DirectPay settlement by developer',
                   ]
                 );
 
@@ -303,23 +307,23 @@ export async function PUT(request: any) {
                     reference_type, reference_id, creator_id, developer_id,
                     payment_method, metadata
                   ) VALUES (
-                    $1, 'subscription', 'inflow', $2, $3, $4,
+                    $1, 'package_sale', 'inflow', $2, $3, $4,
                     'payment', $5, $6, $7,
                     $8, $9
                   )`,
                   [
-                    `Manual Approval for Payment #${id}`,
+                    `DirectPay Settlement for Payment #${id}`,
                     payAmount,
                     payCurrency,
                     newBal,
                     id,
                     existing.creator_id,
                     developerId,
-                    'manual_cash',
+                    resolvedMethod,
                     JSON.stringify({
                       payment_id: id,
                       purchase_id: existing.purchase_id,
-                      notes: body.manual_payment_notes || 'Manual approval by developer',
+                      notes: body.manual_payment_notes || 'DirectPay approval by developer',
                     }),
                   ]
                 );
@@ -334,6 +338,9 @@ export async function PUT(request: any) {
             delete updateData.developer_email;
             if (isBecomingPaid) {
                 updateData.status = 'successful';
+                const resolvedMethod = data.payment_method || existing.payment_method || 'directpay';
+                updateData.payment_method = resolvedMethod;
+                updateData.payment_gateway = resolvedMethod === 'directpay' ? 'directpay' : 'manual';
                 if (developerId)
                     updateData.processed_by_developer_id = developerId;
                 if (!updateData.payment_date)

@@ -355,6 +355,30 @@ function expandModuleAliases(slugs: string[]): string[] {
     } else if (clean === 'subscribers' || clean === 'subscriber') {
       result.add('subscribers');
       result.add('subscriber');
+    } else if (clean === 'shareholders' || clean === 'shareholder' || clean === 'equity') {
+      result.add('shareholders');
+      result.add('shareholder');
+      result.add('equity');
+    } else if (clean === 'withdraws' || clean === 'withdraw' || clean === 'withdrawals') {
+      result.add('withdraws');
+      result.add('withdraw');
+      result.add('withdrawals');
+    } else if (clean === 'cashflow' || clean === 'cashflows' || clean === 'cash-flow') {
+      result.add('cashflow');
+      result.add('cashflows');
+      result.add('cash-flow');
+    } else if (clean === 'expenses' || clean === 'expense' || clean === 'expense-transactions') {
+      result.add('expenses');
+      result.add('expense');
+      result.add('expense-transactions');
+    } else if (clean === 'investments' || clean === 'investment' || clean === 'shares') {
+      result.add('investments');
+      result.add('investment');
+      result.add('shares');
+    } else if (clean === 'monthly-accounting' || clean === 'accounting' || clean === 'financial-reports') {
+      result.add('monthly-accounting');
+      result.add('accounting');
+      result.add('financial-reports');
     }
   }
   return Array.from(result);

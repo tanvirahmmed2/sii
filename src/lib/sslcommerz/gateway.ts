@@ -178,6 +178,8 @@ export async function processSuccessfulPayment({
 
   await queryDb('BEGIN');
   try {
+    const resolvedGateway = paymentMethod === 'directpay' ? 'directpay' : (payment.payment_gateway || 'sslcommerz');
+
     await queryDb(
       `UPDATE payments 
        SET status = 'successful',
@@ -185,16 +187,18 @@ export async function processSuccessfulPayment({
            gateway_order_id = COALESCE($2, gateway_order_id),
            gateway_response = COALESCE($3, gateway_response),
            payment_method = $4,
-           processed_by_developer_id = $5,
-           manual_payment_notes = COALESCE($6, manual_payment_notes),
+           payment_gateway = $5,
+           processed_by_developer_id = $6,
+           manual_payment_notes = COALESCE($7, manual_payment_notes),
            payment_date = CURRENT_TIMESTAMP,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7`,
+       WHERE id = $8`,
       [
         effectiveTranId,
         valId || null,
         gatewayResponse ? JSON.stringify(gatewayResponse) : null,
         paymentMethod,
+        resolvedGateway,
         processedByDeveloperId || null,
         manualNotes || null,
         paymentId,
@@ -219,7 +223,7 @@ export async function processSuccessfulPayment({
         effectiveTranId,
         payAmount,
         payCurrency,
-        payment.payment_gateway || 'sslcommerz',
+        resolvedGateway,
         paymentMethod,
         effectiveTranId,
         valId || null,
@@ -294,12 +298,12 @@ export async function processSuccessfulPayment({
         reference_type, reference_id, creator_id, developer_id,
         payment_method, metadata
       ) VALUES (
-        $1, 'subscription', 'inflow', $2, $3, $4,
+        $1, 'package_sale', 'inflow', $2, $3, $4,
         'payment', $5, $6, $7,
         $8, $9
       )`,
       [
-        `Subscription Payment for Invoice #${payment.invoice_no || paymentId}`,
+        `Package Sale: ${payment.package_name || 'Plan'} (Invoice #${payment.invoice_no || paymentId})`,
         payAmount,
         payCurrency,
         newBalance,

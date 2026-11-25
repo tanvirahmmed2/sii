@@ -23,25 +23,25 @@ const Sidebar = () => {
         checkClubMember();
     }, [getApiEndpoint]);
     const studentLinks = [
-        { label: 'Overview Dashboard', href: '/student' },
-        { label: 'My Classrooms & LMS', href: '/student/classrooms' },
-        { label: 'Assignments & Tasks', href: '/student/assignments' },
-        { label: 'Class Routine', href: '/student/routine' },
-        { label: 'Attendance Records', href: '/student/attendance' },
-        { label: 'Subjects & Syllabus', href: '/student/subjects' },
-        { label: 'Exam Schedules', href: '/student/exams' },
-        { label: 'Issued Cards & Passes', href: '/student/cards' },
-        { label: 'Student ID Card', href: '/student/id-card' },
-        { label: 'Payment Receipts', href: '/student/receipts' },
-        { label: 'Institutional Testimonial', href: '/student/testimonial' },
-        { label: 'Academic Certificates', href: '/student/certificates' },
-        { label: 'Transfer Certificate (TC)', href: '/student/tc' },
-        { label: 'Academic Results & Marks', href: '/student/results' },
-        { label: 'Tuition Fees & Invoices', href: '/student/fees' },
-        { label: 'Hostel Accommodation', href: '/student/residence' },
-        { label: 'Campus Clubs', href: '/student/clubs' },
-        { label: 'Campus Events', href: '/student/events' },
-        { label: 'Student Profile', href: '/student/profile' },
+        { label: 'Dashboard', href: '/student' },
+        { label: 'Classrooms', href: '/student/classrooms' },
+        { label: 'Assignments', href: '/student/assignments' },
+        { label: 'Routine', href: '/student/routine' },
+        { label: 'Attendance', href: '/student/attendance' },
+        { label: 'Subjects', href: '/student/subjects' },
+        { label: 'Exams', href: '/student/exams' },
+        { label: 'Cards', href: '/student/cards' },
+        { label: 'IDCard', href: '/student/id-card' },
+        { label: 'Receipts', href: '/student/receipts' },
+        { label: 'Testimonial', href: '/student/testimonial' },
+        { label: 'Certificates', href: '/student/certificates' },
+        { label: 'TC', href: '/student/tc' },
+        { label: 'Results', href: '/student/results' },
+        { label: 'Fees', href: '/student/fees' },
+        { label: 'Hostel', href: '/student/residence' },
+        { label: 'Clubs', href: '/student/clubs' },
+        { label: 'Events', href: '/student/events' },
+        { label: 'Profile', href: '/student/profile' },
     ];
     return (<>
       {studentSidebar && (<div className="fixed inset-0 top-14 bg-slate-950/60 backdrop-blur-xs z-30 md:hidden transition-opacity" onClick={() => setStudentSidebar(false)}/>)}
@@ -49,7 +49,7 @@ const Sidebar = () => {
       <aside className={`fixed md:sticky top-14 z-30 h-[calc(100vh-3.5rem)] w-60 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 ease-in-out md:translate-x-0 overflow-y-auto ${studentSidebar ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-3 space-y-1">
           <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-2 pb-1">
-            Student Portal Navigation
+            Student
           </p>
           <nav className="flex flex-col space-y-0.5">
             {studentLinks.map((link: any) => {
@@ -66,7 +66,7 @@ const Sidebar = () => {
 
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60">
           <Link href={tenantUrl('/')} className="w-full block text-center px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors">
-            Return to Campus Portal
+            Portal
           </Link>
         </div>
       </aside>

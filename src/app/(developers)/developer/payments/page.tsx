@@ -64,29 +64,29 @@ export default function AdminPaymentsPage() {
         setUpdatingId(confirmPaidTarget.id);
         setErrorMessage('');
         try {
-            const res = await fetch('/api/marketing/developer/payments', {
-                method: 'PUT',
+            const res = await fetch('/api/marketing/developer/payments/manual-approve', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    id: confirmPaidTarget.id,
-                    status: 'COMPLETED',
-                    manual_payment_notes: confirmPaidNotes || 'Manual payment approved and settled by developer',
+                    paymentId: confirmPaidTarget.id,
+                    payment_method: 'directpay',
+                    manual_payment_notes: confirmPaidNotes || 'DirectPay settlement verified by developer',
                 }),
             });
             const data = await res.json();
             if (data.success) {
-                setToastMessage(`Payment #${confirmPaidTarget.id} marked as PAID & subscription activated successfully.`);
+                setToastMessage(`Payment #${confirmPaidTarget.id} settled via DirectPay & subscription activated.`);
                 setConfirmPaidTarget(null);
                 setConfirmPaidNotes('');
                 fetchPayments();
                 setTimeout(() => setToastMessage(''), 5000);
             }
             else {
-                setErrorMessage(data.error || 'Failed to update payment status.');
+                setErrorMessage(data.error || 'Failed to settle payment via DirectPay.');
             }
         }
         catch {
-            setErrorMessage('Error marking payment as paid.');
+            setErrorMessage('Error processing DirectPay settlement.');
         }
         finally {
             setUpdatingId(null);
@@ -228,7 +228,10 @@ export default function AdminPaymentsPage() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             <div className="w-full sm:w-80">
-              <input type="text" aria-label="Filter payments by transaction ID, creator, or plan" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-600"/>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Search Payments
+              </label>
+              <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-hidden focus:border-indigo-600"/>
             </div>
 
             <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 text-xs">
@@ -329,9 +332,9 @@ export default function AdminPaymentsPage() {
                         <div className="inline-flex items-center gap-1.5">
                           {isUnpaid && (<button type="button" onClick={() => {
                         setConfirmPaidTarget(p);
-                        setConfirmPaidNotes(`Approved & verified manual payment by developer`);
+                        setConfirmPaidNotes(`DirectPay settlement verified by developer`);
                     }} className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer shadow-xs">
-                              Make Paid
+                              Mark DirectPay
                             </button>)}
 
                           <button type="button" onClick={() => {
@@ -357,9 +360,9 @@ export default function AdminPaymentsPage() {
       {confirmPaidTarget && (<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Confirm Manual Payment Collection</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Confirm DirectPay Settlement</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Marking Payment #{confirmPaidTarget.id} for Creator #{confirmPaidTarget.creator_id} as paid will immediately activate their subscription in the database.
+                Settling Payment #{confirmPaidTarget.id} for Creator #{confirmPaidTarget.creator_id} via DirectPay will record the transaction and immediately activate their subscription.
               </p>
             </div>
 

@@ -14,8 +14,8 @@ export async function POST(request: any) {
     const body = await request.json().catch(() => ({}));
     let paymentId = body.paymentId ? Number(body.paymentId) : null;
     const purchaseId = body.purchaseId ? Number(body.purchaseId) : null;
-    const notes = body.notes || body.manual_payment_notes || 'Manual payment approved by developer';
-    const paymentMethod = body.payment_method || body.paymentMethod || 'manual_cash';
+    const notes = body.notes || body.manual_payment_notes || 'DirectPay settlement approved by developer';
+    const paymentMethod = body.payment_method || body.paymentMethod || 'directpay';
 
     if (!paymentId && purchaseId) {
       const payRes = await queryDb(`SELECT id FROM payments WHERE purchase_id = $1 ORDER BY id DESC LIMIT 1`, [purchaseId]);

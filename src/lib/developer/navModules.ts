@@ -17,18 +17,18 @@ export interface AllowedDeveloperModule extends DeveloperNavLink {
 
 export const DEVELOPER_NAV_SECTIONS_DATA: DeveloperNavSection[] = [
     {
-        title: 'Workspace & Overview',
+        title: 'Workspace',
         links: [
-            { href: '/developer', label: 'Developer Console', exact: true, iconKey: 'terminal', keywords: 'home console dashboard' },
-            { href: '/developer/overview', label: 'Platform Overview', iconKey: 'bar-chart', keywords: 'stats analytics metrics' },
-            { href: '/developer/tasks', label: 'Tasks & Sprints', iconKey: 'check-square', keywords: 'sprint todo board' },
-            { href: '/developer/notices', label: 'Company Notices', iconKey: 'bell', keywords: 'announcements memos' },
-            { href: '/developer/notice-board', label: 'Notice Board', iconKey: 'clipboard', keywords: 'bulletin board updates' },
-            { href: '/developer/chats', label: 'Internal Chat', iconKey: 'message-square', keywords: 'team chat messaging' },
+            { href: '/developer', label: 'Console', exact: true, iconKey: 'terminal', keywords: 'home console dashboard developer' },
+            { href: '/developer/overview', label: 'Overview', iconKey: 'bar-chart', keywords: 'stats analytics metrics platform' },
+            { href: '/developer/tasks', label: 'Tasks', iconKey: 'check-square', keywords: 'sprint todo board sprints' },
+            { href: '/developer/notices', label: 'Notices', iconKey: 'bell', keywords: 'announcements memos company' },
+            { href: '/developer/notice-board', label: 'Noticeboard', iconKey: 'clipboard', keywords: 'bulletin board updates' },
+            { href: '/developer/chats', label: 'Chats', iconKey: 'message-square', keywords: 'team chat messaging internal' },
         ],
     },
     {
-        title: 'Websites & Audience',
+        title: 'Audience',
         links: [
             { href: '/developer/websites', label: 'Websites', iconKey: 'globe', keywords: 'tenants subdomains sites' },
             { href: '/developer/creators', label: 'Creators', iconKey: 'users', keywords: 'clients owners users' },
@@ -37,77 +37,80 @@ export const DEVELOPER_NAV_SECTIONS_DATA: DeveloperNavSection[] = [
         ],
     },
     {
-        title: 'Commerce & Plans',
+        title: 'Commerce',
         links: [
             { href: '/developer/packages', label: 'Packages', iconKey: 'package', keywords: 'pricing plans tiers' },
-            { href: '/developer/promos', label: 'Promos & Discounts', iconKey: 'tag', keywords: 'coupons codes offers' },
+            { href: '/developer/promos', label: 'Promos', iconKey: 'tag', keywords: 'coupons codes offers discounts' },
             { href: '/developer/features', label: 'Features', iconKey: 'layers', keywords: 'capabilities catalog' },
             { href: '/developer/subscriptions', label: 'Subscriptions', iconKey: 'repeat', keywords: 'recurring billing plans' },
             { href: '/developer/purchases', label: 'Purchases', iconKey: 'shopping-bag', keywords: 'orders addons' },
-            { href: '/developer/payments', label: 'Payments', iconKey: 'credit-card', keywords: 'transactions invoices revenue' },
+            { href: '/developer/payments', label: 'Payments', iconKey: 'credit-card', keywords: 'transactions invoices revenue directpay' },
         ],
     },
     {
-        title: 'Template Studio & Design',
+        title: 'Templates',
         links: [
-            { href: '/developer/templates/student-id-card', label: 'Student ID Cards', iconKey: 'user-check', keywords: 'templates id card student' },
-            { href: '/developer/templates/teacher-id-card', label: 'Teacher ID Cards', iconKey: 'award', keywords: 'templates id card teacher' },
-            { href: '/developer/templates/officer-id-card', label: 'Officer ID Cards', iconKey: 'shield', keywords: 'templates id card officer' },
-            { href: '/developer/templates/tc', label: 'Transfer Certificates (TC)', iconKey: 'file-text', keywords: 'templates tc certificate' },
+            { href: '/developer/templates/student-id-card', label: 'StudentID', iconKey: 'user-check', keywords: 'templates id card student' },
+            { href: '/developer/templates/teacher-id-card', label: 'TeacherID', iconKey: 'award', keywords: 'templates id card teacher' },
+            { href: '/developer/templates/officer-id-card', label: 'OfficerID', iconKey: 'shield', keywords: 'templates id card officer' },
+            { href: '/developer/templates/tc', label: 'TC', iconKey: 'file-text', keywords: 'templates tc transfer certificate' },
             { href: '/developer/templates/testimonial', label: 'Testimonials', iconKey: 'star', keywords: 'templates testimonial' },
-            { href: '/developer/templates/certificate', label: 'Academic Certificates', iconKey: 'award', keywords: 'templates academic certificate' },
-            { href: '/developer/templates/payment-receipt', label: 'Payment Receipts', iconKey: 'file-text', keywords: 'templates receipt invoice' },
+            { href: '/developer/templates/certificate', label: 'Certificates', iconKey: 'award', keywords: 'templates academic certificate' },
+            { href: '/developer/templates/payment-receipt', label: 'Receipts', iconKey: 'file-text', keywords: 'templates receipt invoice payment' },
         ],
     },
     {
-        title: 'Content & Policies',
+        title: 'Content',
         links: [
             { href: '/developer/blogs', label: 'Blogs', iconKey: 'edit', keywords: 'articles posts' },
-            { href: '/developer/policies', label: 'Company Policies', iconKey: 'book-open', keywords: 'privacy terms legal' },
-            { href: '/developer/updates', label: 'Product Updates', iconKey: 'zap', keywords: 'changelog releases' },
+            { href: '/developer/policies', label: 'Policies', iconKey: 'book-open', keywords: 'privacy terms legal company' },
+            { href: '/developer/updates', label: 'Updates', iconKey: 'zap', keywords: 'changelog releases product' },
             { href: '/developer/tutorials', label: 'Tutorials', iconKey: 'play-circle', keywords: 'guides videos docs' },
             { href: '/developer/faqs', label: 'FAQs', iconKey: 'help-circle', keywords: 'questions answers help' },
         ],
     },
     {
-        title: 'Support & Comms',
+        title: 'Support',
         links: [
-            { href: '/developer/support', label: 'Support Tickets', iconKey: 'life-buoy', keywords: 'helpdesk issues tickets' },
-            { href: '/developer/live-chats', label: 'Live Chats', iconKey: 'message-circle', keywords: 'visitor chat support' },
+            { href: '/developer/support', label: 'Support', iconKey: 'life-buoy', keywords: 'helpdesk issues tickets' },
+            { href: '/developer/live-chats', label: 'Livechats', iconKey: 'message-circle', keywords: 'visitor chat support' },
             { href: '/developer/contacts', label: 'Contacts', iconKey: 'inbox', keywords: 'contact form messages' },
             { href: '/developer/reports', label: 'Reports', iconKey: 'flag', keywords: 'abuse moderation violations' },
             { href: '/developer/reviews', label: 'Reviews', iconKey: 'star', keywords: 'ratings feedback' },
         ],
     },
     {
-        title: 'Meta Channels',
+        title: 'Meta',
         links: [
-            { href: '/developer/facebook-messages', label: 'Facebook Messages', iconKey: 'share', keywords: 'meta fb messenger' },
-            { href: '/developer/instagram-messages', label: 'Instagram Messages', iconKey: 'instagram', keywords: 'meta ig dm' },
-            { href: '/developer/whatsapp-messages', label: 'WhatsApp Messages', iconKey: 'phone-call', keywords: 'meta wa business' },
+            { href: '/developer/facebook-messages', label: 'Facebook', iconKey: 'share', keywords: 'meta fb messenger messages' },
+            { href: '/developer/instagram-messages', label: 'Instagram', iconKey: 'instagram', keywords: 'meta ig dm messages' },
+            { href: '/developer/whatsapp-messages', label: 'WhatsApp', iconKey: 'phone-call', keywords: 'meta wa business messages' },
         ],
     },
     {
-        title: 'Team & Organization',
+        title: 'Organization',
         links: [
-            { href: '/developer/developers', label: 'Developers Team', iconKey: 'code', keywords: 'staff engineers members' },
-            { href: '/developer/roles', label: 'Roles & Permissions', iconKey: 'key', keywords: 'rbac access control' },
-            { href: '/developer/shareholders', label: 'Shareholders & Equity', iconKey: 'award', keywords: 'equity dividend shares partners' },
-            { href: '/developer/withdraws', label: 'Withdrawals & Payouts', iconKey: 'shopping-bag', keywords: 'payouts dividends withdrawals' },
-            { href: '/developer/cashflow', label: 'Cash Flow & Ledgers', iconKey: 'bar-chart', keywords: 'financial transactions cash flow revenues' },
+            { href: '/developer/developers', label: 'Developers', iconKey: 'code', keywords: 'staff engineers members team' },
+            { href: '/developer/roles', label: 'Roles', iconKey: 'key', keywords: 'rbac access control permissions' },
+            { href: '/developer/shareholders', label: 'Shareholders', iconKey: 'award', keywords: 'equity dividend shares partners' },
+            { href: '/developer/investments', label: 'Investments', iconKey: 'layers', keywords: 'investments funding shares capital equity' },
+            { href: '/developer/expenses', label: 'Expenses', iconKey: 'file-text', keywords: 'expenses salary bills overhead accounting transactions' },
+            { href: '/developer/monthly-accounting', label: 'Accounting', iconKey: 'bar-chart', keywords: 'monthly accounting profit distribution dividends reinvest' },
+            { href: '/developer/withdraws', label: 'Withdrawals', iconKey: 'shopping-bag', keywords: 'payouts dividends withdrawals' },
+            { href: '/developer/cashflow', label: 'Cashflow', iconKey: 'bar-chart', keywords: 'financial transactions cash flow revenues ledgers' },
             { href: '/developer/payroll', label: 'Payrolls', exact: true, iconKey: 'dollar-sign', keywords: 'salary compensation' },
-            { href: '/developer/payroll/assign', label: 'Assign to Developer', iconKey: 'user-check', keywords: 'payroll allocation salary' },
-            { href: '/developer/payroll/payments', label: 'Payroll Payments', iconKey: 'check-circle', keywords: 'salary disbursement' },
-            { href: '/developer/my-salaries', label: 'My Salaries', iconKey: 'credit-card', keywords: 'payslip vouchers' },
+            { href: '/developer/payroll/assign', label: 'Allocations', iconKey: 'user-check', keywords: 'payroll allocation assign salary developer' },
+            { href: '/developer/payroll/payments', label: 'Disbursements', iconKey: 'check-circle', keywords: 'salary disbursement payroll payments' },
+            { href: '/developer/my-salaries', label: 'Salaries', iconKey: 'credit-card', keywords: 'payslip vouchers my salaries' },
         ],
     },
     {
-        title: 'Platform & Settings',
+        title: 'System',
         links: [
-            { href: '/developer/modules', label: 'Database Modules', iconKey: 'database', keywords: 'tables schema system' },
-            { href: '/developer/spams', label: 'Spam Defense', iconKey: 'alert-octagon', keywords: 'security blocklist rate limit' },
+            { href: '/developer/modules', label: 'Modules', iconKey: 'database', keywords: 'tables schema system database' },
+            { href: '/developer/spams', label: 'Spams', iconKey: 'alert-octagon', keywords: 'security blocklist rate limit defense' },
             { href: '/developer/settings', label: 'Settings', iconKey: 'settings', keywords: 'account password preferences' },
-            { href: '/developer/profile', label: 'My Profile', iconKey: 'user', keywords: 'account credentials bio' },
+            { href: '/developer/profile', label: 'Profile', iconKey: 'user', keywords: 'account credentials bio my profile' },
         ],
     },
 ];
@@ -156,11 +159,13 @@ export const DEVELOPER_MODULE_ALIAS_MAP: Record<string, string[]> = {
     'withdraw': ['withdraws', 'withdraw', 'withdrawals'],
     'cashflow': ['cashflow', 'cashflows', 'cash-flow'],
     'cashflows': ['cashflow', 'cashflows', 'cash-flow'],
+    'expenses': ['expenses', 'expense', 'expense-transactions'],
+    'expense': ['expenses', 'expense', 'expense-transactions'],
+    'investments': ['investments', 'investment', 'shares', 'shareholders'],
+    'investment': ['investments', 'investment', 'shares', 'shareholders'],
+    'monthly-accounting': ['monthly-accounting', 'accounting', 'financial-reports', 'cashflow'],
 };
 
-/**
- * Checks whether a developer navigation link is accessible to the given user.
- */
 export function isDeveloperLinkAllowed(link: { href: string }, currentUser: any = null): boolean {
     const isSuperAdmin = Boolean(
         currentUser &&
@@ -185,9 +190,6 @@ export function isDeveloperLinkAllowed(link: { href: string }, currentUser: any 
     return false;
 }
 
-/**
- * Returns the flat list of developer modules allowed for the given user.
- */
 export function getAllowedDeveloperLinks(currentUser: any = null): AllowedDeveloperModule[] {
     const items: AllowedDeveloperModule[] = [];
     for (const section of DEVELOPER_NAV_SECTIONS_DATA) {
@@ -203,9 +205,6 @@ export function getAllowedDeveloperLinks(currentUser: any = null): AllowedDevelo
     return items;
 }
 
-/**
- * Filters a list of developer modules by multi-token query matching label, section, path, and keywords.
- */
 export function filterDeveloperModules(modules: AllowedDeveloperModule[], query: string): AllowedDeveloperModule[] {
     const q = String(query || '').toLowerCase().trim();
     if (!q)

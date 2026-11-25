@@ -1461,7 +1461,9 @@ CREATE INDEX IF NOT EXISTS idx_cashflows_created_at ON cashflows(created_at DESC
 
 CREATE TABLE IF NOT EXISTS withdraws (
     id BIGSERIAL PRIMARY KEY,
-    requested_by_id BIGINT NOT NULL REFERENCES developers(id) ON DELETE CASCADE,
+    requested_by_id BIGINT REFERENCES developers(id) ON DELETE CASCADE,
+    shareholder_id BIGINT REFERENCES shareholders(id) ON DELETE RESTRICT,
+    withdraw_type VARCHAR(50) NOT NULL DEFAULT 'dividend' CHECK (withdraw_type IN ('developer_payout', 'dividend', 'capital_return', 'director_remuneration')),
     amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0.00),
     currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
     fee NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
@@ -1483,5 +1485,198 @@ CREATE TRIGGER update_withdraws_updated_at
 
 CREATE INDEX IF NOT EXISTS idx_withdraws_status ON withdraws(status);
 CREATE INDEX IF NOT EXISTS idx_withdraws_requested_by ON withdraws(requested_by_id);
+CREATE INDEX IF NOT EXISTS idx_withdraws_shareholder ON withdraws(shareholder_id);
 CREATE INDEX IF NOT EXISTS idx_withdraws_created_at ON withdraws(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS shareholders (
+    id BIGSERIAL PRIMARY KEY,
+    shareholder_code VARCHAR(50) UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    phone VARCHAR(50),
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    role_title VARCHAR(150) NOT NULL DEFAULT 'Shareholder',
+    shareholder_type VARCHAR(50) NOT NULL DEFAULT 'founder' CHECK (shareholder_type IN ('founder', 'individual', 'institutional', 'advisor', 'employee')),
+    share_percentage NUMERIC(6, 3) NOT NULL DEFAULT 0.000 CHECK (share_percentage >= 0.000 AND share_percentage <= 100.000),
+    total_shares BIGINT NOT NULL DEFAULT 0 CHECK (total_shares >= 0),
+    payout_method VARCHAR(50) NOT NULL DEFAULT 'bank_transfer',
+    account_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    total_invested NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (total_invested >= 0.00),
+    total_withdrawn NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (total_withdrawn >= 0.00),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TRIGGER IF EXISTS update_shareholders_updated_at ON shareholders;
+CREATE TRIGGER update_shareholders_updated_at
+    BEFORE UPDATE ON shareholders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_shareholders_email ON shareholders(email);
+CREATE INDEX IF NOT EXISTS idx_shareholders_active ON shareholders(is_active);
+CREATE INDEX IF NOT EXISTS idx_shareholders_share_pct ON shareholders(share_percentage DESC);
+
+CREATE TABLE IF NOT EXISTS share_classes (
+    id BIGSERIAL PRIMARY KEY,
+    class_name VARCHAR(100) NOT NULL,
+    class_code VARCHAR(50) NOT NULL UNIQUE,
+    par_value NUMERIC(12, 4) NOT NULL DEFAULT 1.0000 CHECK (par_value > 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    voting_power_per_share NUMERIC(5, 2) NOT NULL DEFAULT 1.00 CHECK (voting_power_per_share >= 0),
+    authorized_shares BIGINT NOT NULL DEFAULT 1000000 CHECK (authorized_shares > 0),
+    issued_shares BIGINT NOT NULL DEFAULT 0 CHECK (issued_shares >= 0),
+    is_dividend_bearing BOOLEAN NOT NULL DEFAULT true,
+    liquidation_preference_multiple NUMERIC(5, 2) NOT NULL DEFAULT 1.00,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_share_classes_code ON share_classes(class_code);
+
+CREATE TABLE IF NOT EXISTS shares (
+    id BIGSERIAL PRIMARY KEY,
+    certificate_number VARCHAR(100) NOT NULL UNIQUE,
+    shareholder_id BIGINT NOT NULL REFERENCES shareholders(id) ON DELETE RESTRICT,
+    share_class_id BIGINT NOT NULL REFERENCES share_classes(id) ON DELETE RESTRICT,
+    number_of_shares BIGINT NOT NULL CHECK (number_of_shares > 0),
+    issue_price_per_share NUMERIC(15, 4) NOT NULL CHECK (issue_price_per_share >= 0),
+    total_amount_paid NUMERIC(15, 2) NOT NULL CHECK (total_amount_paid >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    issue_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    vesting_start_date DATE,
+    vesting_months INT DEFAULT 0,
+    cliff_months INT DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'issued' CHECK (status IN ('issued', 'vesting', 'transferred', 'cancelled', 'repurchased')),
+    document_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_shares_shareholder ON shares(shareholder_id);
+CREATE INDEX IF NOT EXISTS idx_shares_class ON shares(share_class_id);
+CREATE INDEX IF NOT EXISTS idx_shares_status ON shares(status);
+
+CREATE TABLE IF NOT EXISTS investments (
+    id BIGSERIAL PRIMARY KEY,
+    round_name VARCHAR(100) NOT NULL,
+    shareholder_id BIGINT NOT NULL REFERENCES shareholders(id) ON DELETE RESTRICT,
+    share_class_id BIGINT REFERENCES share_classes(id) ON DELETE SET NULL,
+    investment_amount NUMERIC(15, 2) NOT NULL CHECK (investment_amount > 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    valuation_pre_money NUMERIC(15, 2) DEFAULT 0.00,
+    valuation_post_money NUMERIC(15, 2) DEFAULT 0.00,
+    shares_allocated BIGINT DEFAULT 0 CHECK (shares_allocated >= 0),
+    share_percentage NUMERIC(6, 3) DEFAULT 0.000 CHECK (share_percentage >= 0.000 AND share_percentage <= 100.000),
+    investment_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    payment_method VARCHAR(50) DEFAULT 'bank_transfer',
+    payment_reference VARCHAR(150),
+    cashflow_id BIGINT REFERENCES cashflows(id) ON DELETE SET NULL,
+    agreement_url TEXT,
+    is_dividend_reinvestment BOOLEAN NOT NULL DEFAULT false,
+    status VARCHAR(50) NOT NULL DEFAULT 'completed' CHECK (status IN ('committed', 'received', 'completed', 'cancelled')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_investments_shareholder ON investments(shareholder_id);
+CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(investment_date DESC);
+CREATE INDEX IF NOT EXISTS idx_investments_status ON investments(status);
+
+CREATE TABLE IF NOT EXISTS share_transfers (
+    id BIGSERIAL PRIMARY KEY,
+    transfer_number VARCHAR(100) NOT NULL UNIQUE,
+    from_shareholder_id BIGINT NOT NULL REFERENCES shareholders(id) ON DELETE RESTRICT,
+    to_shareholder_id BIGINT NOT NULL REFERENCES shareholders(id) ON DELETE RESTRICT,
+    share_class_id BIGINT NOT NULL REFERENCES share_classes(id) ON DELETE RESTRICT,
+    shares_transferred BIGINT NOT NULL CHECK (shares_transferred > 0),
+    percentage_transferred NUMERIC(6, 3) NOT NULL CHECK (percentage_transferred >= 0.000 AND percentage_transferred <= 100.000),
+    transfer_price_per_share NUMERIC(15, 4) NOT NULL DEFAULT 0.0000,
+    total_transfer_value NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    transfer_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    transfer_type VARCHAR(50) NOT NULL DEFAULT 'secondary_sale' CHECK (transfer_type IN ('secondary_sale', 'founder_grant', 'gift', 'company_buyback', 'inheritance', 'esop_exercise')),
+    board_resolution_reference VARCHAR(150),
+    approved_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'approved', 'completed', 'rejected', 'cancelled')),
+    deed_document_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_share_transfers_from ON share_transfers(from_shareholder_id);
+CREATE INDEX IF NOT EXISTS idx_share_transfers_to ON share_transfers(to_shareholder_id);
+CREATE INDEX IF NOT EXISTS idx_share_transfers_status ON share_transfers(status);
+
+CREATE TABLE IF NOT EXISTS dividend_declarations (
+    id BIGSERIAL PRIMARY KEY,
+    declaration_title VARCHAR(150) NOT NULL,
+    financial_period VARCHAR(100) NOT NULL,
+    total_declared_amount NUMERIC(15, 2) NOT NULL CHECK (total_declared_amount > 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    net_profit_reference NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    distribution_percentage NUMERIC(5, 2) NOT NULL DEFAULT 100.00 CHECK (distribution_percentage >= 0.00 AND distribution_percentage <= 100.00),
+    declared_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'declared' CHECK (status IN ('declared', 'approved', 'distributing', 'completed', 'cancelled')),
+    declared_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dividend_declarations_period ON dividend_declarations(financial_period);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id BIGSERIAL PRIMARY KEY,
+    expense_code VARCHAR(50) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'operational',
+    amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(50) NOT NULL DEFAULT 'recorded' CHECK (status IN ('recorded', 'partially_paid', 'paid', 'cancelled')),
+    payee_name VARCHAR(255) NOT NULL DEFAULT 'Vendor',
+    payee_type VARCHAR(50) NOT NULL DEFAULT 'vendor' CHECK (payee_type IN ('developer', 'shareholder', 'vendor', 'contractor', 'government', 'external')),
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    payroll_payment_id BIGINT REFERENCES payroll_payments(id) ON DELETE SET NULL,
+    created_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    receipt_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
+CREATE INDEX IF NOT EXISTS idx_expenses_payroll_payment ON expenses(payroll_payment_id);
+
+DROP TRIGGER IF EXISTS update_expenses_updated_at ON expenses;
+CREATE TRIGGER update_expenses_updated_at
+    BEFORE UPDATE ON expenses
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS expense_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    expense_id BIGINT NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+    transaction_number VARCHAR(100) NOT NULL UNIQUE,
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0.00),
+    currency VARCHAR(10) NOT NULL DEFAULT 'BDT',
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'bank_transfer',
+    payment_reference VARCHAR(150),
+    account_details JSONB DEFAULT '{}'::jsonb,
+    paid_by_developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    cashflow_id BIGINT REFERENCES cashflows(id) ON DELETE SET NULL,
+    transaction_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_expense_transactions_expense ON expense_transactions(expense_id);
+CREATE INDEX IF NOT EXISTS idx_expense_transactions_date ON expense_transactions(transaction_date DESC);
 

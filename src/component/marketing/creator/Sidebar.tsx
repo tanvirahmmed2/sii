@@ -8,22 +8,22 @@ export const CREATOR_NAV_SECTIONS = [
         title: 'Workspace',
         links: [
             { href: '', label: 'Overview', exact: true },
-            { href: '/workspace', label: 'My Websites' },
-            { href: '/subscription', label: 'My Subscription' },
-            { href: '/purchases', label: 'Packages & Plans' },
-            { href: '/payments', label: 'Billing & Invoices' },
+            { href: '/workspace', label: 'Websites' },
+            { href: '/subscription', label: 'Subscription' },
+            { href: '/purchases', label: 'Packages' },
+            { href: '/payments', label: 'Payments' },
         ],
     },
     {
-        title: 'Engagement & Comms',
+        title: 'Support',
         links: [
-            { href: '/tickets', label: 'Support Tickets' },
+            { href: '/tickets', label: 'Tickets' },
             { href: '/reviews', label: 'Reviews' },
             { href: '/updates', label: 'Updates' },
         ],
     },
     {
-        title: 'Account Settings',
+        title: 'Account',
         links: [
             { href: '/profile', label: 'Profile' },
             { href: '/settings', label: 'Security' },
@@ -66,7 +66,7 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
     const navContent = (<div className="flex flex-col h-full overflow-y-auto bg-white text-slate-800 text-xs">
       <div className="h-12 px-4 flex items-center justify-between border-b border-slate-200 bg-white sticky top-0 z-10">
         <Link href={basePath} className="font-semibold text-slate-900 tracking-tight text-sm">
-          Creator Panel
+          Creator
         </Link>
 
         {onClose && (<button type="button" onClick={onClose} className="md:hidden text-xs text-slate-500 hover:text-slate-900 px-2 py-1 border border-slate-200 rounded cursor-pointer" aria-label="Close menu">
@@ -117,10 +117,10 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
 
       <div className="p-2 border-t border-slate-200 bg-white space-y-1 sticky bottom-0">
         <Link href="/" onClick={onClose} className="w-full block text-center py-1.5 px-3 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors">
-          Platform Home
+          Home
         </Link>
         <button type="button" onClick={handleLogout} className="w-full block text-center border border-slate-300 text-slate-700 hover:bg-slate-100 py-1.5 px-3 rounded font-medium transition-colors text-xs cursor-pointer">
-          Sign Out
+          Logout
         </button>
       </div>
     </div>);

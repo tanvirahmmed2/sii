@@ -25,29 +25,29 @@ export default function OfficerSidebar({ isOpen, onClose }: any) {
         loadOfficerSession();
     }, [getApiEndpoint]);
     const coreLinks = [
-        { label: 'Workstation Overview', href: '/officer' },
-        { label: 'Officer ID Card', href: '/officer/id-card' },
+        { label: 'Overview', href: '/officer' },
+        { label: 'IDCard', href: '/officer/id-card' },
     ];
     const moduleLinks: any[] = [];
     const hasHall = permissions['hostel']?.can_view || permissions['residence']?.can_view || officer?.department === 'Hall';
     if (hasHall || officer?.department === 'Hall') {
-        moduleLinks.push({ label: 'Residential & Hall Desk', href: '/officer/residential' });
+        moduleLinks.push({ label: 'Residence', href: '/officer/residential' });
     }
     const hasLibrary = permissions['library']?.can_view || officer?.department === 'Library';
     if (hasLibrary || officer?.department === 'Library') {
-        moduleLinks.push({ label: 'Library Management', href: '/officer/library' });
+        moduleLinks.push({ label: 'Library', href: '/officer/library' });
     }
     const hasClub = permissions['club']?.can_view || officer?.department === 'Club';
     if (hasClub || officer?.department === 'Club') {
-        moduleLinks.push({ label: 'Clubs & Student Activities', href: '/officer/club' });
+        moduleLinks.push({ label: 'Clubs', href: '/officer/club' });
     }
     const hasEvents = permissions['events'] ? permissions['events']?.can_view : true;
     if (hasEvents) {
-        moduleLinks.push({ label: 'Campus Events & Applicants', href: '/officer/events' });
+        moduleLinks.push({ label: 'Events', href: '/officer/events' });
     }
     const accountLinks = [
-        { label: 'Officer Profile & Security', href: '/officer/profile' },
-        { label: 'Panel Preferences', href: '/officer/settings' },
+        { label: 'Profile', href: '/officer/profile' },
+        { label: 'Settings', href: '/officer/settings' },
     ];
     return (<>
       {isOpen && (<div className="fixed inset-0 top-14 bg-slate-950/60 backdrop-blur-xs z-30 md:hidden transition-opacity" onClick={onClose}/>)}
@@ -65,7 +65,7 @@ export default function OfficerSidebar({ isOpen, onClose }: any) {
 
           <div className="space-y-0.5">
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
-              General Operations
+              Operations
             </p>
             <nav className="flex flex-col space-y-0.5">
               {coreLinks.map((link: any) => {
@@ -82,7 +82,7 @@ export default function OfficerSidebar({ isOpen, onClose }: any) {
 
           {moduleLinks.length > 0 && (<div className="space-y-0.5 pt-1">
               <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
-                Assigned Modules
+                Modules
               </p>
               <nav className="flex flex-col space-y-0.5">
                 {moduleLinks.map((link: any) => {
@@ -99,7 +99,7 @@ export default function OfficerSidebar({ isOpen, onClose }: any) {
 
           <div className="space-y-0.5 pt-1">
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2.5 pt-1 pb-1">
-              Account & Desk
+              Account
             </p>
             <nav className="flex flex-col space-y-0.5">
               {accountLinks.map((link: any) => {

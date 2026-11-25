@@ -250,7 +250,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }: any) => {
                 <Link href="/staff-panel" onClick={closeMobile} className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded text-xs transition-colors cursor-pointer ${isDashboardActive
                 ? 'bg-primary/10 text-primary dark:text-primary-light font-semibold border-l-2 border-primary'
                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 font-medium'}`}>
-                  <span>Overview Dashboard</span>
+                  <span>Overview</span>
                   <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded font-semibold ${isDashboardActive
                 ? 'bg-primary text-white'
                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}>
@@ -276,7 +276,7 @@ const Sidebar = ({ allowedModules = null, isDevAdmin = false }: any) => {
 
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shrink-0">
           <Link href={typeof tenantUrl === 'function' ? tenantUrl('/') : '/'} className="w-full block text-center px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:border-primary/50 transition-colors">
-            Return to Campus Portal
+            Portal
           </Link>
         </div>
       </aside>

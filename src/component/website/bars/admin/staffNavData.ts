@@ -9,73 +9,73 @@ export const staffNavData = [
                 "path": "/departments"
             },
             {
-                "title": "Department Information",
+                "title": "Info",
                 "module": "routine",
                 "path": "/department-information"
             },
             {
-                "title": "Department Head",
+                "title": "Heads",
                 "module": "routine",
                 "path": "/department-head"
             },
             {
-                "title": "Class Information",
+                "title": "Classes",
                 "module": "routine",
                 "path": "/class-information"
             },
             {
-                "title": "Academic Year",
+                "title": "Year",
                 "module": "routine",
                 "path": "/academic-year"
             },
             {
-                "title": "Class Setup",
+                "title": "Setup",
                 "module": "routine",
                 "path": "/class-setup"
             },
             {
-                "title": "Class Section",
+                "title": "Sections",
                 "module": "routine",
                 "path": "/class-section"
             },
             {
-                "title": "Subject",
+                "title": "Subjects",
                 "module": "routine",
                 "path": "/subjects"
             },
             {
-                "title": "Class Subjects",
+                "title": "Syllabus",
                 "module": "routine",
                 "path": "/class-subject"
             },
             {
-                "title": "Class Routine",
+                "title": "Routine",
                 "module": "routine",
                 "path": "/class-routine"
             },
             {
-                "title": "Class Teacher",
+                "title": "Teachers",
                 "module": "routine",
                 "path": "/class-teacher"
             },
             {
-                "title": "Classrooms (LMS)",
+                "title": "Classrooms",
                 "module": "lms",
                 "path": "/classrooms"
             }
         ]
     },
     {
-        "title": "Student",
+        "title": "Students",
         "module": "sis",
         "children": [
             {
-                "title": "Students Data",
+                "title": "Directory",
                 "module": "sis",
                 "path": "/student-data"
             },
             {
-                "title": "Form Requirements & Fields",
+                "title": "Fields",
                 "module": "sis",
                 "path": "/student-form-fields"
             },
@@ -85,7 +85,7 @@ export const staffNavData = [
                 "path": "/student-registration"
             },
             {
-                "title": "Verify Student",
+                "title": "Verify",
                 "module": "sis",
                 "path": "/student-verify"
             },
@@ -94,22 +94,22 @@ export const staffNavData = [
                 "module": "sis",
                 "children": [
                     {
-                        "title": "Basic Info",
+                        "title": "Basic",
                         "module": "sis",
                         "path": "/student-basic-info"
                     },
                     {
-                        "title": "Academic Info",
+                        "title": "Academic",
                         "module": "sis",
                         "path": "/student-academic-info"
                     },
                     {
-                        "title": "Address Info",
+                        "title": "Address",
                         "module": "sis",
                         "path": "/student-address-info"
                     },
                     {
-                        "title": "Student Guardian Data",
+                        "title": "Guardians",
                         "module": "sis",
                         "path": "/student-guardian-data"
                     },
@@ -142,17 +142,17 @@ export const staffNavData = [
                 "path": "/student-delete"
             },
             {
-                "title": "Drop Out",
+                "title": "Dropout",
                 "module": "sis",
                 "path": "/student-drop-out"
             },
             {
-                "title": "Exit & Transfers",
+                "title": "Exits",
                 "module": "sis",
                 "path": "/student-exits"
             },
             {
-                "title": "ID Card",
+                "title": "IDCard",
                 "module": "sis",
                 "children": [
                     {
@@ -172,12 +172,12 @@ export const staffNavData = [
                 "module": "sis",
                 "children": [
                     {
-                        "title": "Single Student",
+                        "title": "Single",
                         "module": "sis",
                         "path": "/search-single-student"
                     },
                     {
-                        "title": "Filtered Student",
+                        "title": "Filtered",
                         "module": "sis",
                         "path": "/search-filtered-students"
                     }
@@ -190,52 +190,52 @@ export const staffNavData = [
         "module": "admissions",
         "children": [
             {
-                "title": "Circulars & Fees",
+                "title": "Circulars",
                 "module": "admissions",
                 "path": "/admission-circulars"
             },
             {
-                "title": "Form Requirements & Fields",
+                "title": "Fields",
                 "module": "admissions",
                 "path": "/admission-form-fields"
             },
             {
-                "title": "Admit Card Templates",
+                "title": "Admitcards",
                 "module": "admissions",
                 "path": "/admission-admit-card-templates"
             },
             {
-                "title": "Update Circular",
+                "title": "Update",
                 "module": "admissions",
                 "path": "/admission-circular-update"
             },
             {
-                "title": "Applicants Review",
+                "title": "Applicants",
                 "module": "admissions",
                 "path": "/admission-applicants"
             },
             {
-                "title": "Incomplete Submissions",
+                "title": "Incomplete",
                 "module": "admissions",
                 "path": "/admission-incomplete"
             },
             {
-                "title": "Exam Marks Upload",
+                "title": "Marks",
                 "module": "admissions",
                 "path": "/admission-exam-marks-upload"
             },
             {
-                "title": "Exam Selection & Cutoff",
+                "title": "Selection",
                 "module": "admissions",
                 "path": "/admission-exam-marks-process"
             },
             {
-                "title": "Merit Results",
+                "title": "Results",
                 "module": "admissions",
                 "path": "/admission-result"
             },
             {
-                "title": "Student Enrollment",
+                "title": "Enrollment",
                 "module": "admissions",
                 "path": "/admission-enrollment"
             },
@@ -247,7 +247,7 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Student Attendance",
+        "title": "Attendance",
         "module": "attendance",
         "children": [
             {
@@ -261,7 +261,7 @@ export const staffNavData = [
                 "path": "/class-periods"
             },
             {
-                "title": "Attendance",
+                "title": "Record",
                 "module": "attendance",
                 "children": [
                     {
@@ -275,7 +275,7 @@ export const staffNavData = [
                         "path": "/student-attendance-update"
                     },
                     {
-                        "title": "Leave Input",
+                        "title": "Leaves",
                         "module": "attendance",
                         "path": "/student-attendance-leave"
                     },
@@ -287,21 +287,21 @@ export const staffNavData = [
                 ]
             },
             {
-                "title": "Report",
+                "title": "Reports",
                 "module": "attendance",
                 "children": [
                     {
-                        "title": "Daily Details",
+                        "title": "Daily",
                         "module": "attendance",
                         "path": "/student-daily-attendance-report"
                     },
                     {
-                        "title": "Monthly Details",
+                        "title": "Monthly",
                         "module": "attendance",
                         "path": "/student-monthly-attendance-report"
                     },
                     {
-                        "title": "Yearly Details",
+                        "title": "Yearly",
                         "module": "attendance",
                         "path": "/student-yearly-attendance-report"
                     }
@@ -310,7 +310,7 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Teacher",
+        "title": "Teachers",
         "module": "staff-payroll",
         "children": [
             {
@@ -344,7 +344,7 @@ export const staffNavData = [
                 "path": "/teacher-qualifications"
             },
             {
-                "title": "ID Card",
+                "title": "IDCard",
                 "module": "staff-payroll",
                 "children": [
                     {
@@ -372,7 +372,7 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Teacher Attendance",
+        "title": "Timesheet",
         "module": "attendance",
         "children": [
             {
@@ -381,7 +381,7 @@ export const staffNavData = [
                 "path": "/teacher-class-periods"
             },
             {
-                "title": "Attendance",
+                "title": "Record",
                 "module": "attendance",
                 "children": [
                     {
@@ -395,7 +395,7 @@ export const staffNavData = [
                         "path": "/teacher-attendance-update"
                     },
                     {
-                        "title": "Leave Input",
+                        "title": "Leaves",
                         "module": "attendance",
                         "path": "/teacher-attendance-leave"
                     },
@@ -407,21 +407,21 @@ export const staffNavData = [
                 ]
             },
             {
-                "title": "Report",
+                "title": "Reports",
                 "module": "attendance",
                 "children": [
                     {
-                        "title": "Daily Details",
+                        "title": "Daily",
                         "module": "attendance",
                         "path": "/teacher-daily-attendance-report"
                     },
                     {
-                        "title": "Monthly Details",
+                        "title": "Monthly",
                         "module": "attendance",
                         "path": "/teacher-monthly-attendance-report"
                     },
                     {
-                        "title": "Yearly Details",
+                        "title": "Yearly",
                         "module": "attendance",
                         "path": "/teacher-yearly-attendance-report"
                     }
@@ -430,7 +430,7 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Exam",
+        "title": "Exams",
         "module": "exams",
         "children": [
             {
@@ -439,22 +439,22 @@ export const staffNavData = [
                 "path": "/exam-list"
             },
             {
-                "title": "Grade",
+                "title": "Grades",
                 "module": "exams",
                 "path": "/exam-grade"
             },
             {
-                "title": "Configuration",
+                "title": "Config",
                 "module": "exams",
                 "path": "/exam-configuration"
             },
             {
-                "title": "Admit Cards",
+                "title": "Admitcards",
                 "module": "exams",
                 "path": "/exam-admit-cards"
             },
             {
-                "title": "Download Admit Card",
+                "title": "Download",
                 "module": "exams",
                 "path": "/exam-admit-card-download"
             },
@@ -463,45 +463,45 @@ export const staffNavData = [
                 "module": "exams",
                 "children": [
                     {
-                        "title": "Mark Input",
+                        "title": "Input",
                         "module": "exams",
                         "path": "/exam-mark-input"
                     },
                     {
-                        "title": "Mark Update",
+                        "title": "Update",
                         "module": "exams",
                         "path": "/exam-mark-update"
                     }
                 ]
             },
             {
-                "title": "Result",
+                "title": "Results",
                 "module": "exams",
                 "children": [
                     {
-                        "title": "Result List",
+                        "title": "List",
                         "module": "exams",
                         "path": "/exam-result-list"
                     },
                     {
-                        "title": "Result Process",
+                        "title": "Process",
                         "module": "exams",
                         "path": "/exam-result-process"
                     },
                     {
-                        "title": "Result Publish",
+                        "title": "Publish",
                         "module": "exams",
                         "path": "/exam-result-publish"
                     }
                 ]
             },
             {
-                "title": "Mark Sheet",
+                "title": "Marksheet",
                 "module": "exams",
                 "path": "/exam-mark-sheet"
             },
             {
-                "title": "Mark Sheet Download",
+                "title": "Transcripts",
                 "module": "exams",
                 "path": "/exam-mark-sheet-download"
             },
@@ -524,11 +524,11 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "TC & Testimonials",
+        "title": "Documents",
         "module": "documents",
         "children": [
             {
-                "title": "Transfer Certificate (TC)",
+                "title": "TC",
                 "module": "documents",
                 "children": [
                     {
@@ -560,7 +560,7 @@ export const staffNavData = [
                 ]
             },
             {
-                "title": "Academic Certificates",
+                "title": "Certificates",
                 "module": "documents",
                 "children": [
                     {
@@ -576,7 +576,7 @@ export const staffNavData = [
                 ]
             },
             {
-                "title": "Payment Receipts",
+                "title": "Receipts",
                 "module": "documents",
                 "children": [
                     {
@@ -602,12 +602,12 @@ export const staffNavData = [
                 "module": "library",
                 "children": [
                     {
-                        "title": "Book Category",
+                        "title": "Categories",
                         "module": "library",
                         "path": "/library-book-category"
                     },
                     {
-                        "title": "Writer",
+                        "title": "Writers",
                         "module": "library",
                         "path": "/library-book-writer"
                     },
@@ -622,7 +622,7 @@ export const staffNavData = [
                         "path": "/library-books-publishers"
                     },
                     {
-                        "title": "Book Shelf",
+                        "title": "Shelves",
                         "module": "library",
                         "path": "/library-bookshelf"
                     }
@@ -633,12 +633,12 @@ export const staffNavData = [
                 "module": "library",
                 "children": [
                     {
-                        "title": "Book Issue",
+                        "title": "Issue",
                         "module": "library",
                         "path": "/library-student-issue"
                     },
                     {
-                        "title": "Book Return",
+                        "title": "Return",
                         "module": "library",
                         "path": "/library-student-return"
                     }
@@ -649,12 +649,12 @@ export const staffNavData = [
                 "module": "library",
                 "children": [
                     {
-                        "title": "Book Issue",
+                        "title": "Issue",
                         "module": "library",
                         "path": "/library-teacher-issue"
                     },
                     {
-                        "title": "Book Return",
+                        "title": "Return",
                         "module": "library",
                         "path": "/library-teacher-return"
                     }
@@ -672,7 +672,7 @@ export const staffNavData = [
                 "path": "/residence-list"
             },
             {
-                "title": "Room",
+                "title": "Rooms",
                 "module": "hostel",
                 "path": "/residence-room"
             },
@@ -701,7 +701,7 @@ export const staffNavData = [
                         "path": "/residence-report-fees"
                     },
                     {
-                        "title": "Report",
+                        "title": "Summary",
                         "module": "hostel",
                         "path": "/residence-report"
                     }
@@ -724,7 +724,7 @@ export const staffNavData = [
         "module": "clubs",
         "children": [
             {
-                "title": "Category",
+                "title": "Categories",
                 "module": "clubs",
                 "path": "/club-category"
             },
@@ -739,7 +739,7 @@ export const staffNavData = [
                 "path": "/club-list"
             },
             {
-                "title": "Moderator",
+                "title": "Moderators",
                 "module": "clubs",
                 "path": "/club-moderator"
             },
@@ -761,21 +761,21 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Website Posters",
+        "title": "Posters",
         "module": "website-builder,documents",
         "children": [
             {
-                "title": "Posters Hub",
+                "title": "Hub",
                 "module": "website-builder,documents",
                 "path": "/posters"
             },
             {
-                "title": "Design in Studio",
+                "title": "Studio",
                 "module": "website-builder,documents",
                 "path": "/posters/studio/new"
             },
             {
-                "title": "Base Templates",
+                "title": "Templates",
                 "module": "website-builder,documents",
                 "path": "/poster-templates"
             }
@@ -835,11 +835,11 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Institution Profile",
+        "title": "Institution",
         "module": "website-builder",
         "children": [
             {
-                "title": "About Sections",
+                "title": "About",
                 "module": "website-builder",
                 "path": "/institutional-about"
             },
@@ -859,7 +859,7 @@ export const staffNavData = [
                 "path": "/institutional-milestones"
             },
             {
-                "title": "Histories & Timeline",
+                "title": "History",
                 "module": "website-builder",
                 "path": "/histories"
             },
@@ -869,7 +869,7 @@ export const staffNavData = [
                 "path": "/institutional-infrastructure"
             },
             {
-                "title": "Campus Geography",
+                "title": "Campus",
                 "module": "website-builder",
                 "path": "/campus-data"
             },
@@ -879,12 +879,12 @@ export const staffNavData = [
                 "path": "/facilities"
             },
             {
-                "title": "Board Members",
+                "title": "Board",
                 "module": "website-builder",
                 "path": "/board-members"
             },
             {
-                "title": "Institutional Hub",
+                "title": "Hub",
                 "module": "website-builder",
                 "path": "/institutional"
             }
@@ -915,7 +915,7 @@ export const staffNavData = [
                 "path": "/officer-payroll"
             },
             {
-                "title": "ID Card",
+                "title": "IDCard",
                 "module": "officers",
                 "children": [
                     {
@@ -957,12 +957,12 @@ export const staffNavData = [
         "module": "communications",
         "children": [
             {
-                "title": "SMS Balance",
+                "title": "SMS",
                 "module": "communications",
                 "path": "/sms-balance"
             },
             {
-                "title": "Mail Balance",
+                "title": "Email",
                 "module": "communications",
                 "path": "/mail-balance"
             },
@@ -998,22 +998,22 @@ export const staffNavData = [
                 "path": "/salary-payrolls"
             },
             {
-                "title": "Teacher Salaries",
+                "title": "Teachers",
                 "module": "staff-payroll",
                 "path": "/salary-teacher"
             },
             {
-                "title": "Teacher Payments",
+                "title": "TeacherPay",
                 "module": "staff-payroll",
                 "path": "/salary-teacher-payments"
             },
             {
-                "title": "Officer Salaries",
+                "title": "Officers",
                 "module": "staff-payroll",
                 "path": "/salary-officers"
             },
             {
-                "title": "Officer Payments",
+                "title": "OfficerPay",
                 "module": "staff-payroll",
                 "path": "/salary-officer-payments"
             }
@@ -1024,7 +1024,7 @@ export const staffNavData = [
         "module": "fees",
         "children": [
             {
-                "title": "Education Fee",
+                "title": "Education",
                 "module": "fees",
                 "children": [
                     {
@@ -1129,7 +1129,7 @@ export const staffNavData = [
                 ]
             },
             {
-                "title": "Transactions & Split Audit",
+                "title": "Transactions",
                 "module": "fees",
                 "path": "/transactions"
             }
@@ -1184,57 +1184,57 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Enterprise Modules",
+        "title": "Enterprise",
         "module": null,
         "children": [
             {
-                "title": "Tenant Routing & Quotas",
+                "title": "Quotas",
                 "module": null,
                 "path": "/tenant-quotas"
             },
             {
-                "title": "Page Builder & CMS",
+                "title": "CMS",
                 "module": null,
                 "path": "/page-builder"
             },
             {
-                "title": "Online Exam (CBT) & Proctoring",
+                "title": "CBT",
                 "module": null,
                 "path": "/cbt-exams"
             },
             {
-                "title": "Double-Entry Fee Accounting",
+                "title": "Ledger",
                 "module": null,
                 "path": "/fee-accounting"
             },
             {
-                "title": "Progression & Biometrics",
+                "title": "Progression",
                 "module": null,
                 "path": "/academic-progression"
             },
             {
-                "title": "True LMS & Live Classes",
+                "title": "LMS",
                 "module": null,
                 "path": "/lms-courses"
             },
             {
-                "title": "Parent, Transport & Inventory",
+                "title": "Operations",
                 "module": null,
                 "path": "/parent-transport-inventory"
             },
             {
-                "title": "Security, Webhooks & Audit",
+                "title": "Security",
                 "module": null,
                 "path": "/security-audit"
             }
         ]
     },
     {
-        "title": "Configuration",
+        "title": "Config",
         "module": "settings",
         "children": [
             {
-                "title": "System Architecture",
+                "title": "Architecture",
                 "module": "settings",
                 "path": "/system"
             },
@@ -1251,12 +1251,12 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "System Architecture",
+        "title": "Architecture",
         "module": "settings",
         "path": "/system"
     },
     {
-        "title": "Modules Directory",
+        "title": "Directory",
         "module": "settings",
         "path": "/modules"
     },
@@ -1271,7 +1271,7 @@ export const staffNavData = [
         "path": "/staff-profile"
     },
     {
-        "title": "Staff Settings",
+        "title": "Preferences",
         "module": null,
         "path": "/staff-settings"
     }

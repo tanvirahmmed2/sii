@@ -172,11 +172,11 @@ export default function DeveloperSidebar({ isOpen, onClose, currentUser = null }
       <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2 sticky bottom-0">
         <Link href="/" onClick={onClose} className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-normal transition-colors">
           <FiHome className="w-3.5 h-3.5 shrink-0"/>
-          <span>Platform Home</span>
+          <span>Home</span>
         </Link>
         <button type="button" onClick={handleLogout} className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 text-xs font-normal transition-colors cursor-pointer">
           <FiLogOut className="w-3.5 h-3.5 shrink-0"/>
-          <span>Sign Out</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>);
