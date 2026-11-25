@@ -107,7 +107,7 @@ export async function POST(request: any, context: any) {
             teacher: teacherPayload,
             token,
         });
-        await setTeacherSessionCookie(response, token);
+        await setTeacherSessionCookie(response, token, request, website.subdomain || website.slug);
         return response;
     }
     catch (error: any) {

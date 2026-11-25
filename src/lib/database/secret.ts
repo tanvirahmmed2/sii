@@ -213,13 +213,94 @@ export const getWebsiteDomain = (request: any): string | null => {
   return cleanHost.replace(/^www\./, '');
 };
 
-export const DEVELOPER_TOKEN: string = cleanEnv(process.env.DEVELOPER_TOKEN)
-export const CREATOR_TOKEN: string = cleanEnv(process.env.CREATOR_TOKEN)
-export const TEACHER_TOKEN = 'hiesci-teacher';
-export const STAFF_TOKEN = 'hiesci-staff';
-export const OFFICER_TOKEN = 'hiesci-officer';
-export const STUDENT_TOKEN = 'hiesci-student';
-export const LIVE_CHAT_TOKEN: string = cleanEnv(process.env.LIVE_CHAT_TOKEN)
+const RESERVED_TENANT_PREFIXES = new Set([
+  'api', 'marketing', 'auth', 'payment', 'seed', 'developer', 'developer-auth',
+  'creator', 'admin', '_next', 'public', 'static', 'assets', 'favicon.ico',
+]);
+
+export function sanitizeDomainForToken(rawDomain: string | null | undefined): string {
+  if (!rawDomain) return '';
+  return String(rawDomain)
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .split('/')[0]
+    .split(':')[0]
+    .replace(/^www\./, '')
+    .replace(/[^a-z0-9.-]/g, '-');
+}
+
+export function resolveTenantDomainIdentifier(requestOrDomain?: any, explicitDomain?: string | null): string {
+  if (typeof requestOrDomain === 'string') {
+    const clean = sanitizeDomainForToken(requestOrDomain);
+    if (clean && !RESERVED_TENANT_PREFIXES.has(clean)) return clean;
+  }
+
+  if (requestOrDomain) {
+    const hostDomain = getWebsiteDomain(requestOrDomain);
+    if (hostDomain) {
+      const clean = sanitizeDomainForToken(hostDomain);
+      if (clean && !RESERVED_TENANT_PREFIXES.has(clean)) return clean;
+    }
+
+    const headerDomain =
+      requestOrDomain.headers?.get?.('x-website-domain') ||
+      requestOrDomain.headers?.get?.('x-domain');
+    if (headerDomain) {
+      const clean = sanitizeDomainForToken(headerDomain);
+      if (clean && !RESERVED_TENANT_PREFIXES.has(clean)) return clean;
+    }
+
+    const pathname =
+      requestOrDomain.nextUrl?.pathname ||
+      (requestOrDomain.url ? (() => { try { return new URL(requestOrDomain.url).pathname; } catch { return ''; } })() : '');
+    if (pathname) {
+      const parts = pathname.split('/').filter(Boolean);
+      if (parts[0] === 'api' && parts[1] && !RESERVED_TENANT_PREFIXES.has(parts[1].toLowerCase())) {
+        return sanitizeDomainForToken(parts[1]);
+      }
+      if (parts[0] && !RESERVED_TENANT_PREFIXES.has(parts[0].toLowerCase())) {
+        return sanitizeDomainForToken(parts[0]);
+      }
+    }
+
+    const cookieDomain =
+      requestOrDomain.cookies?.get?.('x-website-domain')?.value ||
+      requestOrDomain.cookies?.get?.('x-domain')?.value;
+    if (cookieDomain) {
+      const clean = sanitizeDomainForToken(cookieDomain);
+      if (clean && !RESERVED_TENANT_PREFIXES.has(clean)) return clean;
+    }
+  }
+
+  if (explicitDomain) {
+    const clean = sanitizeDomainForToken(explicitDomain);
+    if (clean && !RESERVED_TENANT_PREFIXES.has(clean)) return clean;
+  }
+
+  return '';
+}
+
+export function getTenantTokenKey(
+  role: 'teacher' | 'staff' | 'officer' | 'student',
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): string {
+  const domain = resolveTenantDomainIdentifier(requestOrDomain, explicitDomain);
+  return domain ? `${domain}-${role}` : `site-${role}`;
+}
+
+export const DEVELOPER_TOKEN: string = cleanEnv(process.env.DEVELOPER_TOKEN);
+export const CREATOR_TOKEN: string = cleanEnv(process.env.CREATOR_TOKEN);
+export const getTeacherToken = (requestOrDomain?: any, explicitDomain?: string | null): string =>
+  getTenantTokenKey('teacher', requestOrDomain, explicitDomain);
+export const getStaffToken = (requestOrDomain?: any, explicitDomain?: string | null): string =>
+  getTenantTokenKey('staff', requestOrDomain, explicitDomain);
+export const getOfficerToken = (requestOrDomain?: any, explicitDomain?: string | null): string =>
+  getTenantTokenKey('officer', requestOrDomain, explicitDomain);
+export const getStudentToken = (requestOrDomain?: any, explicitDomain?: string | null): string =>
+  getTenantTokenKey('student', requestOrDomain, explicitDomain);
+export const LIVE_CHAT_TOKEN: string = cleanEnv(process.env.LIVE_CHAT_TOKEN);
 
 export const META_APP_ID = process.env.META_APP_ID || '';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';

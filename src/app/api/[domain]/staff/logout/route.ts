@@ -10,7 +10,7 @@ export async function POST(request: any) {
             success: true,
             message: 'Logged out of staff portal successfully.',
         });
-        await clearStaffSessionCookie(response);
+        await clearStaffSessionCookie(response, request);
         return response;
     }
     catch (error: any) {
@@ -19,7 +19,7 @@ export async function POST(request: any) {
             success: true,
             message: 'Logged out.',
         });
-        await clearStaffSessionCookie(response);
+        await clearStaffSessionCookie(response, request);
         return response;
     }
 }

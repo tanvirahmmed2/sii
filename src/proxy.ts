@@ -214,7 +214,10 @@ export function proxy(request: any) {
     if (pathParts.length > 0) {
       const first = pathParts[0].toLowerCase();
       if (!PLATFORM_RESERVED.has(first)) {
-        const response = NextResponse.next();
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-website-domain', first);
+        requestHeaders.set('x-domain', first);
+        const response = NextResponse.next({ request: { headers: requestHeaders } });
         response.cookies.set('x-website-domain', first, { path: '/' });
         return response;
       }

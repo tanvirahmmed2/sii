@@ -108,7 +108,7 @@ export async function POST(request: any, context: any) {
             student: studentPayload,
             token,
         });
-        await setStudentSessionCookie(response, token);
+        await setStudentSessionCookie(response, token, request, website.subdomain || website.slug);
         return response;
     }
     catch (error: any) {

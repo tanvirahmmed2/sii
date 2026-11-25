@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { clearStudentSessionCookie, revokeStudentLoginSession, STUDENT_COOKIE_NAME } from 'src/lib/middleware/students';
+import { clearStudentSessionCookie, revokeStudentLoginSession, getStudentCookieName } from 'src/lib/middleware/students';
 export async function POST(request: any) {
     try {
-        const token = request.cookies?.get?.(STUDENT_COOKIE_NAME)?.value ||
-            request.cookies?.get?.('fit-student')?.value;
+        const cookieName = getStudentCookieName(request);
+        const token = request.cookies?.get?.(cookieName)?.value;
         if (token) {
             await revokeStudentLoginSession(token);
         }
@@ -11,7 +11,7 @@ export async function POST(request: any) {
             success: true,
             message: 'Logged out successfully.',
         });
-        await clearStudentSessionCookie(response);
+        await clearStudentSessionCookie(response, request);
         return response;
     }
     catch (error: any) {

@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query, queryDb } from '../database/db';
-import { JWT_SECRET, TEACHER_TOKEN } from '../database/secret';
+import { JWT_SECRET, getTeacherToken } from '../database/secret';
+import { getCookieStore, resolveTenantCookieName } from './tenantCookie';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
 import { sendSms } from '../database/smsSender';
 import {
@@ -16,18 +17,7 @@ import {
 } from '../security/shield';
 
 const DEFAULT_JWT_SECRET: string = JWT_SECRET || 'teacher_jwt_secret_key_2026';
-export const TEACHER_COOKIE_NAME = TEACHER_TOKEN;
-
-async function getCookieStore() {
-  try {
-    const nextHeaders = await import('next/headers');
-    if (nextHeaders && typeof nextHeaders.cookies === 'function') {
-      return await nextHeaders.cookies();
-    }
-  } catch {
-  }
-  return null;
-}
+export const getTeacherCookieName = getTeacherToken;
 
 export async function hashPassword(password: string): Promise<string> {
   if (!password) throw new Error('Password is required for hashing.');
@@ -61,7 +51,13 @@ export function verifyJWT(token: string): any {
   }
 }
 
-export async function setTeacherSessionCookie(response: any, token: string): Promise<void> {
+export async function setTeacherSessionCookie(
+  response: any,
+  token: string,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('teacher', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -71,16 +67,21 @@ export async function setTeacherSessionCookie(response: any, token: string): Pro
   };
 
   if (response && response.cookies) {
-    response.cookies.set(TEACHER_COOKIE_NAME, token, cookieOptions);
+    response.cookies.set(cookieName, token, cookieOptions);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.set(TEACHER_COOKIE_NAME, token, cookieOptions);
+      cookieStore?.set(cookieName, token, cookieOptions);
     } catch {}
   }
 }
 
-export async function clearTeacherSessionCookie(response: any): Promise<void> {
+export async function clearTeacherSessionCookie(
+  response: any,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('teacher', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -90,12 +91,12 @@ export async function clearTeacherSessionCookie(response: any): Promise<void> {
   };
 
   if (response && response.cookies) {
-    response.cookies.set(TEACHER_COOKIE_NAME, '', cookieOptions);
-    response.cookies.delete?.(TEACHER_COOKIE_NAME);
+    response.cookies.set(cookieName, '', cookieOptions);
+    response.cookies.delete?.(cookieName);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.delete(TEACHER_COOKIE_NAME);
+      cookieStore?.delete(cookieName);
     } catch {}
   }
 }
@@ -439,20 +440,21 @@ export async function authenticateTeacher({
 export async function getTeacherSession(request?: any): Promise<any> {
   try {
     let token: string | null = null;
+    const cookieName = await resolveTenantCookieName('teacher', request);
 
-    if (request) {
+    if (request && typeof request !== 'string') {
       const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
       } else if (request.cookies?.get) {
-        token = request.cookies.get(TEACHER_COOKIE_NAME)?.value || null;
+        token = request.cookies.get(cookieName)?.value || null;
       }
     }
 
     if (!token) {
       const cookieStore = await getCookieStore();
       if (cookieStore) {
-        token = cookieStore.get(TEACHER_COOKIE_NAME)?.value || null;
+        token = cookieStore.get(cookieName)?.value || null;
       }
     }
 
@@ -563,7 +565,7 @@ export async function requireTeacher(request?: any): Promise<any> {
 }
 
 const TeacherMiddleware = {
-  TEACHER_COOKIE_NAME,
+  getTeacherCookieName,
   authenticateTeacher,
   hashPassword,
   comparePassword,

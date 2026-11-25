@@ -101,7 +101,7 @@ export async function POST(request: any, context: any) {
             payload: { officer: officerData },
             paylod: { officer: officerData },
         });
-        await setOfficerSessionCookie(response, token);
+        await setOfficerSessionCookie(response, token, request, website.subdomain || website.slug);
         return response;
     }
     catch (error: any) {

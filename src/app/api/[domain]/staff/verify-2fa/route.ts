@@ -106,7 +106,7 @@ export async function POST(request: any, context: any) {
             payload: { staff: staffData },
             paylod: { staff: staffData },
         });
-        await setStaffSessionCookie(response, token);
+        await setStaffSessionCookie(response, token, request, website.subdomain || website.slug);
         const tenantSlug = website.subdomain || website.slug || '';
         if (tenantSlug) {
             response.cookies.set('x-website-domain', tenantSlug, { path: '/', maxAge: 7 * 86400 });

@@ -1,11 +1,12 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { queryDb } from '../database/db';
-import { JWT_SECRET, OFFICER_TOKEN } from '../database/secret';
+import { JWT_SECRET, getOfficerToken } from '../database/secret';
+import { getCookieStore, resolveTenantCookieName } from './tenantCookie';
 
 const DEFAULT_JWT_SECRET = JWT_SECRET || 'developer_superadmin_jwt_secret_key_2026';
 
-export const OFFICER_COOKIE_NAME = OFFICER_TOKEN || 'hiesci-officer';
+export const getOfficerCookieName = getOfficerToken;
 
 export async function hashPassword(password: string): Promise<string> {
   if (!password) throw new Error('Password is required for hashing.');
@@ -39,18 +40,13 @@ export function verifyJWT(token: string): any {
   }
 }
 
-async function getCookieStore() {
-  try {
-    const nextHeaders = await import('next/headers');
-    if (nextHeaders && typeof nextHeaders.cookies === 'function') {
-      return await nextHeaders.cookies();
-    }
-  } catch {
-  }
-  return null;
-}
-
-export async function setOfficerSessionCookie(response: any, token: string): Promise<void> {
+export async function setOfficerSessionCookie(
+  response: any,
+  token: string,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('officer', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -60,16 +56,21 @@ export async function setOfficerSessionCookie(response: any, token: string): Pro
   };
 
   if (response && response.cookies) {
-    response.cookies.set(OFFICER_COOKIE_NAME, token, cookieOptions);
+    response.cookies.set(cookieName, token, cookieOptions);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.set(OFFICER_COOKIE_NAME, token, cookieOptions);
+      cookieStore?.set(cookieName, token, cookieOptions);
     } catch {}
   }
 }
 
-export async function clearOfficerSessionCookie(response: any): Promise<void> {
+export async function clearOfficerSessionCookie(
+  response: any,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('officer', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -79,12 +80,12 @@ export async function clearOfficerSessionCookie(response: any): Promise<void> {
   };
 
   if (response && response.cookies) {
-    response.cookies.set(OFFICER_COOKIE_NAME, '', cookieOptions);
-    response.cookies.delete?.(OFFICER_COOKIE_NAME);
+    response.cookies.set(cookieName, '', cookieOptions);
+    response.cookies.delete?.(cookieName);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.delete(OFFICER_COOKIE_NAME);
+      cookieStore?.delete(cookieName);
     } catch {}
   }
 }
@@ -127,20 +128,21 @@ export async function createOfficerSession({ websiteId, officerId, token, reques
 export async function getOfficerSession(request?: any): Promise<any> {
   try {
     let token: string | null = null;
+    const cookieName = await resolveTenantCookieName('officer', request);
 
-    if (request) {
+    if (request && typeof request !== 'string') {
       const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
       } else if (request.cookies?.get) {
-        token = request.cookies.get(OFFICER_COOKIE_NAME)?.value || null;
+        token = request.cookies.get(cookieName)?.value || null;
       }
     }
 
     if (!token) {
       const cookieStore = await getCookieStore();
       if (cookieStore) {
-        token = cookieStore.get(OFFICER_COOKIE_NAME)?.value || null;
+        token = cookieStore.get(cookieName)?.value || null;
       }
     }
 
@@ -370,7 +372,7 @@ export async function revokeAllOfficerSessions(officerId: any, websiteId: any = 
 }
 
 const OfficerMiddleware = {
-  OFFICER_COOKIE_NAME,
+  getOfficerCookieName,
   ensureOfficerSchema,
   getOfficerSession,
   getOfficerUser,

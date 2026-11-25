@@ -10,7 +10,7 @@ export async function POST(request: any) {
             success: true,
             message: 'Logged out successfully.',
         });
-        await clearOfficerSessionCookie(response);
+        await clearOfficerSessionCookie(response, request);
         return response;
     }
     catch (error: any) {

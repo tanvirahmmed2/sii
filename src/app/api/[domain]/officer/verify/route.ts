@@ -124,7 +124,7 @@ export async function PUT(request: any, context: any) {
             payload: { officer: officerData },
             paylod: { officer: officerData },
         });
-        await setOfficerSessionCookie(response, sessionToken);
+        await setOfficerSessionCookie(response, sessionToken, request, website.subdomain || website.slug);
         return response;
     }
     catch (error: any) {

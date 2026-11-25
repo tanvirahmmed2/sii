@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 const StaffPanelLayout = async ({ children, params }: any) => {
   const resolvedParams = await params;
   const domain = resolvedParams?.domain;
-  const staffSession = await getStaffSession();
+  const staffSession = await getStaffSession(domain);
   let isCreatorAdmin = false;
   let creatorSession = null;
 

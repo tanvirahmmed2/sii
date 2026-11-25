@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { queryDb } from '../database/db';
-import { JWT_SECRET, STAFF_TOKEN } from '../database/secret';
+import { JWT_SECRET, getStaffToken } from '../database/secret';
+import { getCookieStore, resolveTenantCookieName } from './tenantCookie';
 import {
   checkAccountLockout,
   recordFailedLogin,
@@ -15,18 +16,7 @@ import { sendSms } from '../database/smsSender';
 
 const DEFAULT_JWT_SECRET: string = JWT_SECRET || 'staff_jwt_secret_key_2026';
 
-export const STAFF_COOKIE_NAME = STAFF_TOKEN;
-
-async function getCookieStore() {
-  try {
-    const nextHeaders = await import('next/headers');
-    if (nextHeaders && typeof nextHeaders.cookies === 'function') {
-      return await nextHeaders.cookies();
-    }
-  } catch {
-  }
-  return null;
-}
+export const getStaffCookieName = getStaffToken;
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
@@ -59,7 +49,13 @@ export function verifyJWT(token: string): any {
   }
 }
 
-export async function setStaffSessionCookie(response: any, token: string): Promise<void> {
+export async function setStaffSessionCookie(
+  response: any,
+  token: string,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('staff', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -69,16 +65,21 @@ export async function setStaffSessionCookie(response: any, token: string): Promi
   };
 
   if (response && response.cookies) {
-    response.cookies.set(STAFF_COOKIE_NAME, token, cookieOptions);
+    response.cookies.set(cookieName, token, cookieOptions);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.set(STAFF_COOKIE_NAME, token, cookieOptions);
+      cookieStore?.set(cookieName, token, cookieOptions);
     } catch {}
   }
 }
 
-export async function clearStaffSessionCookie(response: any): Promise<void> {
+export async function clearStaffSessionCookie(
+  response: any,
+  requestOrDomain?: any,
+  explicitDomain?: string | null
+): Promise<void> {
+  const cookieName = await resolveTenantCookieName('staff', requestOrDomain, explicitDomain);
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -88,12 +89,12 @@ export async function clearStaffSessionCookie(response: any): Promise<void> {
   };
 
   if (response && response.cookies) {
-    response.cookies.set(STAFF_COOKIE_NAME, '', cookieOptions);
-    response.cookies.delete?.(STAFF_COOKIE_NAME);
+    response.cookies.set(cookieName, '', cookieOptions);
+    response.cookies.delete?.(cookieName);
   } else {
     try {
       const cookieStore = await getCookieStore();
-      cookieStore?.delete(STAFF_COOKIE_NAME);
+      cookieStore?.delete(cookieName);
     } catch {}
   }
 }
@@ -101,20 +102,21 @@ export async function clearStaffSessionCookie(response: any): Promise<void> {
 export async function getStaffSession(request?: any): Promise<any> {
   try {
     let token: string | null = null;
+    const cookieName = await resolveTenantCookieName('staff', request);
 
-    if (request) {
+    if (request && typeof request !== 'string') {
       const authHeader = request.headers?.get?.('authorization') || request.headers?.get?.('Authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
       } else if (request.cookies?.get) {
-        token = request.cookies.get(STAFF_COOKIE_NAME)?.value || null;
+        token = request.cookies.get(cookieName)?.value || null;
       }
     }
 
     if (!token) {
       const cookieStore = await getCookieStore();
       if (cookieStore) {
-        token = cookieStore.get(STAFF_COOKIE_NAME)?.value || null;
+        token = cookieStore.get(cookieName)?.value || null;
       }
     }
 
@@ -761,7 +763,7 @@ export async function authenticateStaff({
 }
 
 const StaffMiddleware = {
-  STAFF_COOKIE_NAME,
+  getStaffCookieName,
   authenticateStaff,
   getStaffSession,
   getStaffUser,
