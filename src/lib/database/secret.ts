@@ -213,13 +213,13 @@ export const getWebsiteDomain = (request: any): string | null => {
   return cleanHost.replace(/^www\./, '');
 };
 
-export const DEVELOPER_TOKEN = 'hiesci-dev';
-export const CREATOR_TOKEN = 'hiesci-creator';
+export const DEVELOPER_TOKEN: string = cleanEnv(process.env.DEVELOPER_TOKEN)
+export const CREATOR_TOKEN: string = cleanEnv(process.env.CREATOR_TOKEN)
 export const TEACHER_TOKEN = 'hiesci-teacher';
 export const STAFF_TOKEN = 'hiesci-staff';
 export const OFFICER_TOKEN = 'hiesci-officer';
 export const STUDENT_TOKEN = 'hiesci-student';
-export const LIVE_CHAT_TOKEN = 'hiesci-live';
+export const LIVE_CHAT_TOKEN: string = cleanEnv(process.env.LIVE_CHAT_TOKEN)
 
 export const META_APP_ID = process.env.META_APP_ID || '';
 export const META_APP_SECRET = process.env.META_APP_SECRET || '';
