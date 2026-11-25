@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   BiMoneyWithdraw,
@@ -13,20 +13,28 @@ import {
   BiX,
   BiTrendingDown,
   BiBuildingHouse,
+  BiSearch,
+  BiAward,
+  BiFilter,
 } from 'react-icons/bi';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
 export default function DeveloperWithdrawsPage() {
   const [withdraws, setWithdraws] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
+  const [shareholders, setShareholders] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currencyFilter, setCurrencyFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [toastMessage, setToastMessage] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   const [showRequestModal, setShowRequestModal] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [withdrawType, setWithdrawType] = useState<string>('developer');
+  const [selectedShareholderId, setSelectedShareholderId] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [currency, setCurrency] = useState<string>('BDT');
   const [method, setMethod] = useState<string>('bank_transfer');
@@ -51,13 +59,23 @@ export default function DeveloperWithdrawsPage() {
       if (statusFilter !== 'ALL') params.set('status', statusFilter);
       if (currencyFilter !== 'ALL') params.set('currency', currencyFilter);
 
-      const res = await fetch(`/api/marketing/developer/withdraws?${params.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        setWithdraws(data.records || []);
-        setBalances(data.balances || []);
+      const [resW, resS] = await Promise.all([
+        fetch(`/api/marketing/developer/withdraws?${params.toString()}`),
+        fetch('/api/marketing/developer/shareholders?currency=BDT'),
+      ]);
+
+      const dataW = await resW.json();
+      const dataS = await resS.json();
+
+      if (dataW.success) {
+        setWithdraws(dataW.records || []);
+        setBalances(dataW.balances || []);
       } else {
-        setErrorMessage(data.error || 'Failed to fetch withdraw records');
+        setErrorMessage(dataW.error || 'Failed to fetch withdraw records');
+      }
+
+      if (dataS.success) {
+        setShareholders(dataS.shareholders || []);
       }
     } catch {
       setErrorMessage('Network error loading withdrawals');
@@ -70,6 +88,26 @@ export default function DeveloperWithdrawsPage() {
     fetchWithdraws();
   }, [statusFilter, currencyFilter]);
 
+  const handleShareholderSelect = (idStr: string) => {
+    setSelectedShareholderId(idStr);
+    const sh = shareholders.find((s) => String(s.id) === idStr);
+    if (sh) {
+      setMethod(sh.payout_method || 'bank_transfer');
+      const details = typeof sh.account_details === 'string'
+        ? (JSON.parse(sh.account_details || '{}') || {})
+        : (sh.account_details || {});
+      setBankName(details.bank_name || '');
+      setAccountNumber(details.account_number || '');
+      setAccountHolder(details.account_holder || sh.name || '');
+      setBranch(details.branch || '');
+      setRoutingNumber(details.routing_number || '');
+      setPhone(details.phone || sh.phone || '');
+      if (sh.eligible_dividend > 0) {
+        setAmount(String(Math.floor(sh.eligible_dividend)));
+      }
+    }
+  };
+
   const handleCreateWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || Number(amount) <= 0) {
@@ -77,27 +115,39 @@ export default function DeveloperWithdrawsPage() {
       return;
     }
 
+    if (withdrawType === 'dividend' && !selectedShareholderId) {
+      setErrorMessage('Please select a shareholder for dividend payout.');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage('');
 
     try {
+      const payload: any = {
+        amount: Number(amount),
+        currency,
+        method,
+        notes,
+        withdraw_type: withdrawType,
+        account_details: {
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_holder: accountHolder,
+          branch,
+          routing_number: routingNumber,
+          phone,
+        },
+      };
+
+      if (withdrawType === 'dividend') {
+        payload.shareholder_id = Number(selectedShareholderId);
+      }
+
       const res = await fetch('/api/marketing/developer/withdraws', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: Number(amount),
-          currency,
-          method,
-          notes,
-          account_details: {
-            bank_name: bankName,
-            account_number: accountNumber,
-            account_holder: accountHolder,
-            branch,
-            routing_number: routingNumber,
-            phone,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -107,6 +157,7 @@ export default function DeveloperWithdrawsPage() {
         setAmount('');
         setNotes('');
         setAccountNumber('');
+        setSelectedShareholderId('');
         fetchWithdraws();
         setTimeout(() => setToastMessage(''), 5000);
       } else {
@@ -156,6 +207,26 @@ export default function DeveloperWithdrawsPage() {
     }
   };
 
+  const filteredWithdraws = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
+    return withdraws.filter((w) => {
+      if (typeFilter === 'dividend' && w.withdraw_type !== 'dividend') return false;
+      if (typeFilter === 'payout' && w.withdraw_type === 'dividend') return false;
+
+      if (!q) return true;
+
+      const details = typeof w.account_details === 'string' ? JSON.parse(w.account_details || '{}') : (w.account_details || {});
+      const requesterMatch = (w.requester_name || '').toLowerCase().includes(q) || (w.requester_email || '').toLowerCase().includes(q);
+      const shareholderMatch = (w.shareholder_name || '').toLowerCase().includes(q) || (w.shareholder_email || '').toLowerCase().includes(q);
+      const bankMatch = (details.bank_name || '').toLowerCase().includes(q) || (details.account_number || '').toLowerCase().includes(q) || (details.phone || '').toLowerCase().includes(q);
+      const refMatch = (w.transaction_reference || '').toLowerCase().includes(q) || String(w.id).includes(q);
+      const notesMatch = (w.notes || '').toLowerCase().includes(q);
+      const methodMatch = (w.method || '').toLowerCase().includes(q);
+
+      return requesterMatch || shareholderMatch || bankMatch || refMatch || notesMatch || methodMatch;
+    });
+  }, [withdraws, searchTerm, typeFilter]);
+
   const bdtBal = balances.find((b) => b.currency === 'BDT');
   const usdBal = balances.find((b) => b.currency === 'USD');
 
@@ -197,14 +268,14 @@ export default function DeveloperWithdrawsPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Platform Withdrawals & Payouts
+              Platform Withdrawals &amp; Payouts
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
               Disbursements
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Process platform balance withdrawals, bank transfers, and MFS disbursements with automatic ledger synchronization.
+            Process platform balance withdrawals, shareholder dividends, bank transfers, and MFS disbursements with automatic ledger synchronization.
           </p>
         </div>
 
@@ -218,6 +289,13 @@ export default function DeveloperWithdrawsPage() {
             <span>Refresh</span>
           </button>
           <Link
+            href="/developer/shareholders"
+            className="px-3.5 py-2 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5"
+          >
+            <BiAward className="text-base" />
+            <span>Shareholders &amp; Equity</span>
+          </Link>
+          <Link
             href="/developer/cashflow"
             className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold flex items-center gap-1.5"
           >
@@ -226,7 +304,11 @@ export default function DeveloperWithdrawsPage() {
           </Link>
           <button
             type="button"
-            onClick={() => setShowRequestModal(true)}
+            onClick={() => {
+              setWithdrawType('developer');
+              setSelectedShareholderId('');
+              setShowRequestModal(true);
+            }}
             className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-bold cursor-pointer shadow-md shadow-secondary/20 flex items-center gap-1.5"
           >
             <BiPlus className="text-base" />
@@ -281,9 +363,37 @@ export default function DeveloperWithdrawsPage() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-slate-500 font-semibold text-xs">Filter Status:</span>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-full md:w-80">
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Search Withdrawals
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 font-medium"
+              />
+              <BiSearch className="absolute left-3 top-2.5 text-base text-slate-400 pointer-events-none" />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <BiX className="text-base" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+            <span className="text-slate-500 font-semibold text-xs flex items-center gap-1">
+              <BiFilter className="text-sm" />
+              <span>Filters:</span>
+            </span>
+
             <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
               {['ALL', 'pending', 'approved', 'processed', 'rejected'].map((s) => (
                 <button
@@ -297,6 +407,23 @@ export default function DeveloperWithdrawsPage() {
                   }`}
                 >
                   {s}
+                </button>
+              ))}
+            </div>
+
+            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
+              {['ALL', 'payout', 'dividend'].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold capitalize cursor-pointer transition ${
+                    typeFilter === t
+                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t}
                 </button>
               ))}
             </div>
@@ -317,16 +444,16 @@ export default function DeveloperWithdrawsPage() {
                 </button>
               ))}
             </div>
-          </div>
 
-          <span className="text-slate-400 font-medium">
-            Showing {withdraws.length} withdrawal records
-          </span>
+            <span className="text-slate-400 font-medium">
+              Showing {filteredWithdraws.length} records
+            </span>
+          </div>
         </div>
 
         {loading ? (
           <LoadingScreen fullScreen={false} label="Loading withdrawal records..." />
-        ) : withdraws.length === 0 ? (
+        ) : filteredWithdraws.length === 0 ? (
           <div className="py-12 text-center space-y-3">
             <BiMoneyWithdraw className="text-3xl mx-auto text-slate-400" />
             <h3 className="font-bold text-slate-700 dark:text-slate-300">No Withdrawal Records</h3>
@@ -339,19 +466,20 @@ export default function DeveloperWithdrawsPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">ID / Requested Date</th>
-                  <th className="py-3 px-3">Requester</th>
+                  <th className="py-3 px-3">ID / Date</th>
+                  <th className="py-3 px-3">Beneficiary / Type</th>
                   <th className="py-3 px-3 text-right">Amount</th>
-                  <th className="py-3 px-3">Disbursement Method</th>
+                  <th className="py-3 px-3">Method</th>
                   <th className="py-3 px-3">Account Information</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {withdraws.map((w) => {
+                {filteredWithdraws.map((w) => {
                   const sym = w.currency === 'BDT' ? '৳' : '$';
                   const details = typeof w.account_details === 'string' ? JSON.parse(w.account_details || '{}') : (w.account_details || {});
+                  const isDividend = w.withdraw_type === 'dividend' || Boolean(w.shareholder_name);
 
                   return (
                     <tr key={w.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
@@ -363,10 +491,21 @@ export default function DeveloperWithdrawsPage() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <span className="font-bold text-slate-900 dark:text-white block">
-                          {w.requester_name || `Dev #${w.requested_by_id}`}
-                        </span>
-                        <span className="text-[11px] text-slate-400">{w.requester_email}</span>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          {isDividend ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              DIVIDEND
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              PAYOUT
+                            </span>
+                          )}
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {w.shareholder_name ? `${w.shareholder_name}` : (w.requester_name || `Dev #${w.requested_by_id}`)}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400">{w.shareholder_email || w.requester_email}</span>
                       </td>
 
                       <td className="py-3.5 px-3 text-right">
@@ -378,7 +517,7 @@ export default function DeveloperWithdrawsPage() {
 
                       <td className="py-3.5 px-3">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {w.method.replace('_', ' ')}
+                          {w.method?.replace('_', ' ')}
                         </span>
                       </td>
 
@@ -399,6 +538,11 @@ export default function DeveloperWithdrawsPage() {
                         )}
                         {details.phone && (
                           <div className="font-mono text-slate-500">MFS: {details.phone}</div>
+                        )}
+                        {w.transaction_reference && (
+                          <div className="font-mono text-[10px] text-secondary">
+                            Ref: {w.transaction_reference}
+                          </div>
                         )}
                       </td>
 
@@ -443,7 +587,7 @@ export default function DeveloperWithdrawsPage() {
 
       {showRequestModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl space-y-5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Request Payout Withdrawal</h3>
               <button
@@ -456,6 +600,60 @@ export default function DeveloperWithdrawsPage() {
             </div>
 
             <form onSubmit={handleCreateWithdraw} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Withdrawal Category
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWithdrawType('developer');
+                      setSelectedShareholderId('');
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      withdrawType === 'developer'
+                        ? 'bg-secondary text-white border-secondary'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Developer Payout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawType('dividend')}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      withdrawType === 'dividend'
+                        ? 'bg-secondary text-white border-secondary'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Shareholder Dividend
+                  </button>
+                </div>
+              </div>
+
+              {withdrawType === 'dividend' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Select Shareholder Beneficiary
+                  </label>
+                  <select
+                    value={selectedShareholderId}
+                    onChange={(e) => handleShareholderSelect(e.target.value)}
+                    required
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
+                  >
+                    <option value="">-- Choose Shareholder --</option>
+                    {shareholders.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.share_percentage}% equity) - Eligible: ৳{Number(s.eligible_dividend || 0).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -467,7 +665,7 @@ export default function DeveloperWithdrawsPage() {
                     required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary font-mono"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary font-mono font-bold"
                   />
                 </div>
 
@@ -495,7 +693,7 @@ export default function DeveloperWithdrawsPage() {
                   onChange={(e) => setMethod(e.target.value)}
                   className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
                 >
-                  <option value="bank_transfer">Bank Transfer (EFT / RTGS)</option>
+                  <option value="bank_transfer">Bank Transfer (EFT / RTGS / NPSB)</option>
                   <option value="bkash">bKash Personal / Merchant</option>
                   <option value="nagad">Nagad Personal</option>
                   <option value="rocket">Rocket DBBL</option>
@@ -545,7 +743,7 @@ export default function DeveloperWithdrawsPage() {
                     </div>
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        Branch & Routing No.
+                        Branch &amp; Routing No.
                       </label>
                       <input
                         type="text"

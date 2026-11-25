@@ -173,8 +173,11 @@ export default function LiveChatDetailsPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row items-end sm:items-center justify-between gap-3">
         <div className="w-full sm:w-80">
+          <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+            Search Visitor Chats
+          </label>
           <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"/>
         </div>
 

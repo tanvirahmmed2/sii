@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   BiTrendingUp,
@@ -14,6 +14,8 @@ import {
   BiLoaderAlt,
   BiX,
   BiMoneyWithdraw,
+  BiSearch,
+  BiAward,
 } from 'react-icons/bi';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 
@@ -29,6 +31,7 @@ export default function DeveloperCashflowPage() {
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [reconciling, setReconciling] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [filterCurrency, setFilterCurrency] = useState<string>('ALL');
@@ -141,6 +144,21 @@ export default function DeveloperCashflowPage() {
   const bdtBal = balances.find((b) => b.currency === 'BDT');
   const usdBal = balances.find((b) => b.currency === 'USD');
 
+  const filteredCashflows = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
+    if (!q) return cashflows;
+    return cashflows.filter((cf) => {
+      const titleMatch = (cf.title || '').toLowerCase().includes(q);
+      const catMatch = (cf.category || '').toLowerCase().includes(q);
+      const refMatch = String(cf.reference_id || '').toLowerCase().includes(q) || String(cf.reference_type || '').toLowerCase().includes(q);
+      const creatorMatch = (cf.creator_name || '').toLowerCase().includes(q) || (cf.creator_email || '').toLowerCase().includes(q);
+      const devMatch = (cf.developer_name || '').toLowerCase().includes(q) || (cf.developer_email || '').toLowerCase().includes(q);
+      const notesMatch = (cf.notes || '').toLowerCase().includes(q);
+      const methodMatch = (cf.payment_method || '').toLowerCase().includes(q);
+      return titleMatch || catMatch || refMatch || creatorMatch || devMatch || notesMatch || methodMatch;
+    });
+  }, [cashflows, searchTerm]);
+
   return (
     <div className="w-full space-y-6 text-xs text-slate-800 dark:text-slate-200">
       {toastMessage && (
@@ -179,14 +197,14 @@ export default function DeveloperCashflowPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Platform Cashflow & Financial Ledger
+              Platform Cashflow &amp; Financial Ledger
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
               Live Balance
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Real-time multi-currency income stream, subscription inflows, developer manual approvals, and disbursements.
+            Real-time multi-currency income stream, package sales sync, manual approvals, and shareholder distributions.
           </p>
         </div>
 
@@ -208,6 +226,13 @@ export default function DeveloperCashflowPage() {
             {reconciling ? <BiLoaderAlt className="animate-spin text-base" /> : <BiDollarCircle className="text-base" />}
             <span>Reconcile Ledger</span>
           </button>
+          <Link
+            href="/developer/shareholders"
+            className="px-3.5 py-2 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5"
+          >
+            <BiAward className="text-base" />
+            <span>Shareholders &amp; Equity</span>
+          </Link>
           <Link
             href="/developer/withdraws"
             className="px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold flex items-center gap-1.5"
@@ -291,8 +316,32 @@ export default function DeveloperCashflowPage() {
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-full md:w-80">
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              Search Transactions
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 font-medium"
+              />
+              <BiSearch className="absolute left-3 top-2.5 text-base text-slate-400 pointer-events-none" />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <BiX className="text-base" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
             <span className="text-slate-500 font-semibold text-xs flex items-center gap-1">
               <BiFilter className="text-sm" />
               <span>Filters:</span>
@@ -333,7 +382,7 @@ export default function DeveloperCashflowPage() {
             </div>
 
             <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
-              {['ALL', 'subscription', 'withdrawal', 'manual_adjustment'].map((cat) => (
+              {['ALL', 'package_sale', 'subscription', 'withdrawal', 'manual_adjustment'].map((cat) => (
                 <button
                   key={cat}
                   type="button"
@@ -348,21 +397,21 @@ export default function DeveloperCashflowPage() {
                 </button>
               ))}
             </div>
-          </div>
 
-          <span className="text-slate-400 font-medium">
-            Showing {cashflows.length} cashflow entries
-          </span>
+            <span className="text-slate-400 font-medium">
+              Showing {filteredCashflows.length} entries
+            </span>
+          </div>
         </div>
 
         {loading ? (
           <LoadingScreen fullScreen={false} label="Loading cashflow ledger..." />
-        ) : cashflows.length === 0 ? (
+        ) : filteredCashflows.length === 0 ? (
           <div className="py-12 text-center space-y-3">
             <BiTrendingUp className="text-3xl mx-auto text-slate-400" />
             <h3 className="font-bold text-slate-700 dark:text-slate-300">No Cashflow Records Found</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Transactions will automatically appear here as creators subscribe via SSLCommerz or developers approve payments.
+              Transactions will automatically appear here as creators subscribe, purchase packages, or developers approve payments.
             </p>
           </div>
         ) : (
@@ -380,7 +429,7 @@ export default function DeveloperCashflowPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {cashflows.map((cf) => {
+                {filteredCashflows.map((cf) => {
                   const isInflow = cf.flow_type === 'inflow';
                   const sym = cf.currency === 'BDT' ? '৳' : '$';
 
@@ -511,6 +560,7 @@ export default function DeveloperCashflowPage() {
                     className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
                   >
                     <option value="adjustment">Adjustment</option>
+                    <option value="package_sale">Package Sale</option>
                     <option value="manual_payment">Manual Payment</option>
                     <option value="subscription">Subscription</option>
                     <option value="gateway_fee">Gateway Fee</option>

@@ -175,11 +175,14 @@ export default function AdminContactsPage() {
               </button>))}
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-end gap-3 w-full md:w-auto">
             <div className="w-full md:w-72">
+              <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                Search Inquiries
+              </label>
               <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-slate-800"/>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0 pb-1">
               <span className="font-semibold text-slate-800 dark:text-slate-200">{filtered.length}</span> of {contacts.length}
             </div>
           </div>

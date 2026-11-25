@@ -281,17 +281,25 @@ export default function AdminReportsPage() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded overflow-hidden">
         <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-800/20">
-          <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+          <div className="flex flex-wrap items-end gap-2 w-full sm:w-auto flex-1">
             <div className="w-full sm:w-72">
+              <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                Search Reports
+              </label>
               <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-slate-800"/>
             </div>
-            <select value={statusFilter} onChange={(e: any) => setStatusFilter(e.target.value)} className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800">
-              <option value="ALL">All Status</option>
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-            </select>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+                Status
+              </label>
+              <select value={statusFilter} onChange={(e: any) => setStatusFilter(e.target.value)} className="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-slate-800">
+                <option value="ALL">All Status</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+            </div>
           </div>
           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium self-end sm:self-center">
             Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{filtered.length}</span> of {reports.length} records

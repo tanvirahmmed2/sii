@@ -356,6 +356,9 @@ export default function DeveloperPayrollPaymentsPage() {
         </div>
 
         <div className="w-full sm:w-64">
+          <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+            Search Payments
+          </label>
           <input type="text" value={searchQuery} onChange={(e: any) => setSearchQuery(e.target.value)} className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-normal outline-hidden focus:border-slate-400"/>
         </div>
       </div>

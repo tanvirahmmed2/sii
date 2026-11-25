@@ -556,9 +556,14 @@ export default function DevelopersPage() {
             }} onCancel={() => setShowAddForm(false)}/>)}
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 space-y-3 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full sm:w-72 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
-          <div className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="w-full sm:w-72">
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+              Search Developers
+            </label>
+            <input type="text" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+          </div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 font-normal self-end sm:self-center">
             Showing {filteredDevelopers.length} of {developers.length} developers
           </div>
         </div>

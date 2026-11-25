@@ -10,6 +10,7 @@ export default function AdminReviewsPage() {
     const [reviews, setReviews] = useState<any>([]);
     const [loading, setLoading] = useState<any>(true);
     const [statusFilter, setStatusFilter] = useState<any>('ALL');
+    const [searchTerm, setSearchTerm] = useState<string>('');
     const [actionLoadingId, setActionLoadingId] = useState<any>(null);
     const [actionNotice, setActionNotice] = useState<any>({ text: '', type: '' });
     const fetchReviews = useCallback(async (showLoading: any = false) => {
@@ -144,15 +145,24 @@ export default function AdminReviewsPage() {
         }
     };
     const filteredReviews = reviews.filter((r: any) => {
-        if (statusFilter === 'ALL')
-            return true;
-        if (statusFilter === 'FEATURED')
-            return Boolean(r.is_featured);
-        if (statusFilter === 'APPROVED')
-            return Boolean(r.is_approved);
-        if (statusFilter === 'PENDING')
-            return !r.is_approved;
-        return String(r.status).toUpperCase() === statusFilter;
+        const matchesStatus =
+            statusFilter === 'ALL' ||
+            (statusFilter === 'FEATURED' && Boolean(r.is_featured)) ||
+            (statusFilter === 'APPROVED' && Boolean(r.is_approved)) ||
+            (statusFilter === 'PENDING' && !r.is_approved) ||
+            String(r.status).toUpperCase() === statusFilter;
+
+        const term = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+            !term ||
+            String(r.id || '').includes(term) ||
+            String(r.name || r.creator_name || '').toLowerCase().includes(term) ||
+            String(r.email || r.creator_email || '').toLowerCase().includes(term) ||
+            String(r.title || '').toLowerCase().includes(term) ||
+            String(r.comment || r.message || '').toLowerCase().includes(term) ||
+            String(r.rating || '').includes(term);
+
+        return matchesStatus && matchesSearch;
     });
     const totalCount = reviews.length;
     const pendingCount = reviews.filter((r: any) => !r.is_approved).length;
@@ -223,7 +233,7 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {[
             { key: 'ALL', label: 'All Reviews' },
@@ -237,9 +247,22 @@ export default function AdminReviewsPage() {
             </button>))}
         </div>
 
-        <span className="text-xs text-slate-400 font-medium">
-          Showing {filteredReviews.length} of {totalCount} reviews
-        </span>
+        <div className="flex items-center gap-3">
+          <div className="w-full sm:w-64">
+            <label className="block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-0.5">
+              Search Reviews
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e: any) => setSearchTerm(e.target.value)}
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
+            />
+          </div>
+          <span className="text-xs text-slate-400 font-medium shrink-0 self-end pb-1">
+            Showing {filteredReviews.length} of {totalCount} reviews
+          </span>
+        </div>
       </div>
 
       <div className="space-y-3">

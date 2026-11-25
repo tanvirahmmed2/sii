@@ -92,6 +92,9 @@ export const DEVELOPER_NAV_SECTIONS_DATA: DeveloperNavSection[] = [
         links: [
             { href: '/developer/developers', label: 'Developers Team', iconKey: 'code', keywords: 'staff engineers members' },
             { href: '/developer/roles', label: 'Roles & Permissions', iconKey: 'key', keywords: 'rbac access control' },
+            { href: '/developer/shareholders', label: 'Shareholders & Equity', iconKey: 'award', keywords: 'equity dividend shares partners' },
+            { href: '/developer/withdraws', label: 'Withdrawals & Payouts', iconKey: 'shopping-bag', keywords: 'payouts dividends withdrawals' },
+            { href: '/developer/cashflow', label: 'Cash Flow & Ledgers', iconKey: 'bar-chart', keywords: 'financial transactions cash flow revenues' },
             { href: '/developer/payroll', label: 'Payrolls', exact: true, iconKey: 'dollar-sign', keywords: 'salary compensation' },
             { href: '/developer/payroll/assign', label: 'Assign to Developer', iconKey: 'user-check', keywords: 'payroll allocation salary' },
             { href: '/developer/payroll/payments', label: 'Payroll Payments', iconKey: 'check-circle', keywords: 'salary disbursement' },
@@ -147,6 +150,12 @@ export const DEVELOPER_MODULE_ALIAS_MAP: Record<string, string[]> = {
     'payrolls': ['payroll', 'payrolls', 'developer-payrolls', 'payroll-payments'],
     'my-salaries': ['my-salaries', 'my_salaries', 'payroll'],
     'notice-board': ['notice-board', 'notices', 'notice'],
+    'shareholders': ['shareholders', 'shareholder', 'equity'],
+    'shareholder': ['shareholders', 'shareholder', 'equity'],
+    'withdraws': ['withdraws', 'withdraw', 'withdrawals'],
+    'withdraw': ['withdraws', 'withdraw', 'withdrawals'],
+    'cashflow': ['cashflow', 'cashflows', 'cash-flow'],
+    'cashflows': ['cashflow', 'cashflows', 'cash-flow'],
 };
 
 /**
