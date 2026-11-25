@@ -125,7 +125,7 @@ export default function MySalariesPage() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded shadow-xs overflow-hidden">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="w-full md:w-80">
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
                             Search Salary Records
                         </label>
                         <div className="relative">

@@ -1,751 +1,887 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  BiCalendar,
-  BiRefresh,
-  BiCheckCircle,
-  BiInfoCircle,
-  BiLoaderAlt,
-  BiX,
-  BiTrendingUp,
-  BiTrendingDown,
-  BiDollarCircle,
-  BiSearch,
-  BiAward,
-  BiMoneyWithdraw,
-  BiReceipt,
-  BiPieChartAlt2,
-  BiCertification,
-} from 'react-icons/bi';
-import LoadingScreen from 'src/component/common/LoadingScreen';
+  FiCalendar as CalendarRange,
+  FiSearch as Search,
+  FiRefreshCw as RefreshCw,
+  FiCheckCircle as CheckCircle2,
+  FiXCircle as XCircle,
+  FiTrendingUp as TrendingUp,
+  FiTrendingDown as TrendingDown,
+  FiPieChart as PieChart,
+  FiSend as Send,
+  FiX as X,
+  FiArrowUpRight as ArrowUpRight,
+  FiDollarSign as Coins
+} from 'react-icons/fi';
+
+interface MonthSummary {
+  month: string;
+  total_sales: number;
+  sales_count: number;
+  total_expenses: number;
+  salary_expenses: number;
+  custom_expenses: number;
+  external_investments: number;
+  reinvested_dividends: number;
+  net_operating_profit: number;
+  distributable_remaining: number;
+  dividends_paid: number;
+}
+
+interface ShareholderAllocation {
+  shareholder_id: number;
+  name: string;
+  email: string | null;
+  share_percentage: number;
+  invested_amount: number;
+  allocated_profit: number;
+  paid_or_reinvested: number;
+  remaining_allocation: number;
+}
+
+interface AccountingSale {
+  id: number;
+  package_name?: string;
+  creator_email?: string;
+  amount: number | string;
+  currency: string;
+  payment_method?: string;
+  status: string;
+  created_at: string;
+}
+
+interface AccountingInvestment {
+  id: number;
+  shareholder_name?: string;
+  amount: number | string;
+  currency: string;
+  investment_type?: string;
+  created_at: string;
+}
+
+interface AccountingExpense {
+  id: number;
+  title: string;
+  category: string;
+  amount: number | string;
+  currency: string;
+  status: string;
+  expense_date?: string;
+  created_at?: string;
+}
+
+interface AccountingDividend {
+  id: number;
+  shareholder_name?: string;
+  period?: string;
+  amount: number | string;
+  currency: string;
+  action: string;
+  method?: string;
+  created_at: string;
+}
+
+const FINANCE_TABS = [
+  { label: 'Shareholders', href: '/developer/shareholders' },
+  { label: 'Investments', href: '/developer/investments' },
+  { label: 'Expenses', href: '/developer/expenses' },
+  { label: 'Accounting', href: '/developer/monthly-accounting' },
+  { label: 'Withdrawals', href: '/developer/withdraws' },
+  { label: 'Cashflow', href: '/developer/cashflow' }
+];
 
 export default function MonthlyAccountingPage() {
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
-  const [currentMonthSummary, setCurrentMonthSummary] = useState<any>({});
-  const [monthlySummaries, setMonthlySummaries] = useState<any[]>([]);
-  const [allocations, setAllocations] = useState<any[]>([]);
-  const [details, setDetails] = useState<any>({ sales: [], investments: [], expenses: [], dividends: [] });
-  const [balances, setBalances] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'distribution' | 'history' | 'breakdown'>('distribution');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const currentMonthDefault = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthDefault);
+  const [summary, setSummary] = useState<MonthSummary | null>(null);
+  const [monthlyHistory, setMonthlyHistory] = useState<MonthSummary[]>([]);
+  const [allocations, setAllocations] = useState<ShareholderAllocation[]>([]);
+  const [sales, setSales] = useState<AccountingSale[]>([]);
+  const [investments, setInvestments] = useState<AccountingInvestment[]>([]);
+  const [expenses, setExpenses] = useState<AccountingExpense[]>([]);
+  const [dividends, setDividends] = useState<AccountingDividend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<
+    'allocations' | 'history' | 'sales' | 'expenses' | 'investments' | 'dividends'
+  >('allocations');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const [distModalTarget, setDistModalTarget] = useState<any>(null);
-  const [distAction, setDistAction] = useState<'payout' | 'reinvest'>('payout');
-  const [distAmount, setDistAmount] = useState<string>('');
-  const [distMethod, setDistMethod] = useState<string>('bank_transfer');
-  const [distNotes, setDistNotes] = useState<string>('');
-  const [distributing, setDistributing] = useState<boolean>(false);
+  const [distributingShareholder, setDistributingShareholder] =
+    useState<ShareholderAllocation | null>(null);
+  const [distributeAmount, setDistributeAmount] = useState('');
+  const [distributeAction, setDistributeAction] = useState<'payout' | 'reinvest'>('payout');
+  const [distributeMethod, setDistributeMethod] = useState('bank_transfer');
+  const [distributeNotes, setDistributeNotes] = useState('');
+  const [submittingDistribute, setSubmittingDistribute] = useState(false);
 
-  const fetchMonthlyData = async () => {
+  const fetchAccounting = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await fetch(`/api/marketing/developer/monthly-accounting?month=${encodeURIComponent(selectedMonth)}`);
+      const res = await fetch(
+        `/api/marketing/developer/monthly-accounting?month=${encodeURIComponent(selectedMonth)}`
+      );
       const data = await res.json();
       if (data.success) {
-        setCurrentMonthSummary(data.currentMonthSummary || {});
-        setMonthlySummaries(data.monthlySummaries || []);
+        setSummary(data.currentMonthSummary || null);
+        setMonthlyHistory(data.monthlySummaries || []);
         setAllocations(data.shareholderProfitAllocations || []);
-        setDetails(data.details || { sales: [], investments: [], expenses: [], dividends: [] });
-        setBalances(data.balances || []);
+        setSales(data.details?.sales || []);
+        setInvestments(data.details?.investments || []);
+        setExpenses(data.details?.expenses || []);
+        setDividends(data.details?.dividends || []);
       } else {
-        setErrorMessage(data.error || 'Failed to load monthly accounting data.');
+        setMessage({ type: 'error', text: data.error || 'Failed to load monthly accounting.' });
       }
     } catch {
-      setErrorMessage('Network error loading monthly accounting.');
+      setMessage({ type: 'error', text: 'Network error fetching monthly accounting.' });
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchMonthlyData();
   }, [selectedMonth]);
 
-  const openDistributeModal = (shareholder: any, initialAction: 'payout' | 'reinvest') => {
-    setDistModalTarget(shareholder);
-    setDistAction(initialAction);
-    const defaultAmt = shareholder.remaining_entitlement > 0 ? shareholder.remaining_entitlement : '';
-    setDistAmount(String(defaultAmt));
-    setDistMethod(shareholder.payout_method || 'bank_transfer');
-    setDistNotes(
-      initialAction === 'reinvest'
-        ? `Profit reinvestment for ${selectedMonth} into company shares`
-        : `Monthly profit dividend payout for ${selectedMonth}`
-    );
+  useEffect(() => {
+    fetchAccounting();
+  }, [fetchAccounting]);
+
+  const openDistributePanel = (alloc: ShareholderAllocation) => {
+    setDistributingShareholder(alloc);
+    setDistributeAmount(String(Math.max(0, Math.round(alloc.remaining_allocation || 0))));
+    setDistributeAction('payout');
+    setDistributeMethod('bank_transfer');
+    setDistributeNotes('');
   };
 
-  const handleConfirmDistribution = async (e: React.FormEvent) => {
+  const handleDistributeProfit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!distModalTarget || !distAmount || Number(distAmount) <= 0) {
-      setErrorMessage('Please enter a positive profit distribution amount.');
+    if (!distributingShareholder) return;
+    setMessage(null);
+    const parsedAmount = Number(distributeAmount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setMessage({ type: 'error', text: 'Distribution amount must be positive.' });
       return;
     }
 
-    setDistributing(true);
-    setErrorMessage('');
-
+    setSubmittingDistribute(true);
     try {
       const res = await fetch('/api/marketing/developer/dividends/distribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shareholder_id: distModalTarget.id,
+          shareholder_id: distributingShareholder.shareholder_id,
           period: selectedMonth,
-          amount: Number(distAmount),
-          action: distAction,
+          amount: parsedAmount,
+          action: distributeAction,
           currency: 'BDT',
-          method: distMethod,
-          notes: distNotes.trim(),
-        }),
+          method: distributeAction === 'reinvest' ? 'equity_reinvestment' : distributeMethod,
+          notes: distributeNotes.trim() || null
+        })
       });
-
       const data = await res.json();
       if (data.success) {
-        setToastMessage(data.message || 'Profit distribution executed.');
-        setDistModalTarget(null);
-        fetchMonthlyData();
-        setTimeout(() => setToastMessage(''), 5000);
+        setMessage({
+          type: 'success',
+          text:
+            distributeAction === 'reinvest'
+              ? 'Profit reinvested into shareholder equity and shares recalculated.'
+              : 'Profit payout recorded successfully.'
+        });
+        setDistributingShareholder(null);
+        fetchAccounting();
       } else {
-        setErrorMessage(data.error || 'Failed to distribute profit.');
+        setMessage({ type: 'error', text: data.error || 'Failed to distribute profit.' });
       }
     } catch {
-      setErrorMessage('Network error processing profit distribution.');
+      setMessage({ type: 'error', text: 'Error processing profit distribution.' });
     } finally {
-      setDistributing(false);
+      setSubmittingDistribute(false);
     }
   };
 
-  const filteredAllocations = useMemo(() => {
-    const q = searchTerm.toLowerCase().trim();
-    if (!q) return allocations;
-    return allocations.filter((s) => {
-      return (
-        (s.name || '').toLowerCase().includes(q) ||
-        (s.email || '').toLowerCase().includes(q) ||
-        (s.role_title || '').toLowerCase().includes(q)
-      );
-    });
-  }, [allocations, searchTerm]);
-
-  const filteredHistory = useMemo(() => {
-    const q = searchTerm.toLowerCase().trim();
-    if (!q) return monthlySummaries;
-    return monthlySummaries.filter((m) => (m.month || '').toLowerCase().includes(q));
-  }, [monthlySummaries, searchTerm]);
-
-  const bdtBal = balances.find((b) => b.currency === 'BDT');
+  const q = searchQuery.trim().toLowerCase();
+  const filteredAllocations = allocations.filter(
+    (a) =>
+      !q ||
+      a.name.toLowerCase().includes(q) ||
+      (a.email && a.email.toLowerCase().includes(q))
+  );
+  const filteredHistory = monthlyHistory.filter((h) => !q || h.month.toLowerCase().includes(q));
+  const filteredSales = sales.filter(
+    (s) =>
+      !q ||
+      (s.package_name && s.package_name.toLowerCase().includes(q)) ||
+      (s.creator_email && s.creator_email.toLowerCase().includes(q)) ||
+      s.status.toLowerCase().includes(q)
+  );
+  const filteredExpenses = expenses.filter(
+    (ex) =>
+      !q ||
+      ex.title.toLowerCase().includes(q) ||
+      ex.category.toLowerCase().includes(q) ||
+      ex.status.toLowerCase().includes(q)
+  );
+  const filteredInvestments = investments.filter(
+    (inv) =>
+      !q ||
+      (inv.shareholder_name && inv.shareholder_name.toLowerCase().includes(q)) ||
+      (inv.investment_type && inv.investment_type.toLowerCase().includes(q))
+  );
+  const filteredDividends = dividends.filter(
+    (div) =>
+      !q ||
+      (div.shareholder_name && div.shareholder_name.toLowerCase().includes(q)) ||
+      div.action.toLowerCase().includes(q)
+  );
 
   return (
-    <div className="w-full space-y-6 text-xs text-slate-800 dark:text-slate-200">
-      {toastMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BiCheckCircle className="text-base" />
-            <span>{toastMessage}</span>
+    <div className="w-full space-y-4 text-xs text-slate-800 dark:text-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <CalendarRange className="w-5 h-5" />
           </div>
-          <button
-            type="button"
-            onClick={() => setToastMessage('')}
-            className="text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BiInfoCircle className="text-base" />
-            <span>{errorMessage}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setErrorMessage('')}
-            className="text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Monthly Financial Accounting &amp; Profit Sharing
+          <div>
+            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
+              Monthly Financial Statements & Profit Allocation
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
-              {selectedMonth} Statement
-            </span>
+            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              Track monthly sales, salaries, custom expenses, investments, and shareholder profit sharing.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Segregated monthly tracking of package sales, investments, expenses, net operating profit, and dividend payouts or equity reinvestments.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
-            <BiCalendar className="text-base text-secondary" />
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Month</label>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="accountingMonthPicker"
+              className="text-[11px] font-medium text-slate-500 uppercase tracking-wider"
+            >
+              Month
+            </label>
             <input
+              id="accountingMonthPicker"
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+              className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
             />
           </div>
-
           <button
             type="button"
-            onClick={fetchMonthlyData}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold cursor-pointer flex items-center gap-1.5"
+            onClick={fetchAccounting}
+            disabled={loading}
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
           >
-            <BiRefresh className="text-base" />
-            <span>Refresh</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </button>
+        </div>
+      </div>
 
-          <Link
-            href="/developer/expenses"
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold flex items-center gap-1.5"
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+        {FINANCE_TABS.map((tab) => {
+          const isActive = tab.href === '/developer/monthly-accounting';
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                isActive
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {message && (
+        <div
+          className={`flex items-center justify-between gap-2 px-4 py-2.5 rounded border text-xs font-normal ${
+            message.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+              : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {message.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <XCircle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{message.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 cursor-pointer"
           >
-            <BiReceipt className="text-base" />
-            <span>Expenses</span>
-          </Link>
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-          <Link
-            href="/developer/investments"
-            className="px-3.5 py-2 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5"
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Package Sales</span>
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+          </div>
+          <div className="text-lg font-medium text-emerald-700 dark:text-emerald-400">
+            BDT {Number(summary?.total_sales || 0).toLocaleString()}
+          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            {summary?.sales_count || 0} completed orders
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Total Expenses</span>
+            <TrendingDown className="w-3.5 h-3.5 text-red-600" />
+          </div>
+          <div className="text-lg font-medium text-red-700 dark:text-red-400">
+            BDT {Number(summary?.total_expenses || 0).toLocaleString()}
+          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Salary: {Number(summary?.salary_expenses || 0).toLocaleString()} | Custom:{' '}
+            {Number(summary?.custom_expenses || 0).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">External Investments</span>
+            <Coins className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-lg font-medium text-slate-900 dark:text-white">
+            BDT {Number(summary?.external_investments || 0).toLocaleString()}
+          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Reinvested: BDT {Number(summary?.reinvested_dividends || 0).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Net Operating Profit</span>
+            <PieChart className="w-3.5 h-3.5" />
+          </div>
+          <div
+            className={`text-lg font-medium ${
+              Number(summary?.net_operating_profit || 0) >= 0
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-red-700 dark:text-red-400'
+            }`}
           >
-            <BiAward className="text-base" />
-            <span>Investments</span>
-          </Link>
+            BDT {Number(summary?.net_operating_profit || 0).toLocaleString()}
+          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Sales minus operating expenses
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Distributable Remaining</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </div>
+          <div className="text-lg font-medium text-slate-900 dark:text-white">
+            BDT {Number(summary?.distributable_remaining || 0).toLocaleString()}
+          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Distributed: BDT {Number(summary?.dividends_paid || 0).toLocaleString()}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Monthly Sales ({selectedMonth})</span>
-            <BiTrendingUp className="text-base text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
-            ৳{Number(currentMonthSummary.total_sales || 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Paid Orders:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{currentMonthSummary.sales_count || 0}</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Monthly Expenses</span>
-            <BiTrendingDown className="text-base text-rose-500" />
-          </div>
-          <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight">
-            ৳{Number(currentMonthSummary.total_expenses || 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Salaries: ৳{Number(currentMonthSummary.salary_expenses || 0).toLocaleString()}</span>
-            <span>Other: ৳{Number(currentMonthSummary.custom_expenses || 0).toLocaleString()}</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Monthly Investments</span>
-            <BiPieChartAlt2 className="text-base text-indigo-500" />
-          </div>
-          <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">
-            ৳{Number(currentMonthSummary.external_investments || 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Reinvested Profit:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              ৳{Number(currentMonthSummary.reinvested_dividends || 0).toLocaleString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Net Operating Profit</span>
-            <BiDollarCircle className="text-base text-secondary" />
-          </div>
-          <div className={`text-2xl font-black font-mono tracking-tight ${
-            Number(currentMonthSummary.net_operating_profit || 0) >= 0
-              ? 'text-slate-900 dark:text-white'
-              : 'text-rose-600 dark:text-rose-400'
-          }`}>
-            ৳{Number(currentMonthSummary.net_operating_profit || 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Undistributed Pool:</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              ৳{Number(currentMonthSummary.distributable_remaining || 0).toLocaleString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Platform Cash Balance</span>
-            <BiDollarCircle className="text-base text-amber-500" />
-          </div>
-          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight">
-            ৳{Number(bdtBal?.available_balance || 0).toLocaleString()}
-          </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Paid Dividends ({selectedMonth}):</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              ৳{Number(currentMonthSummary.dividends_paid || 0).toLocaleString()}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('distribution')}
-          className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
-            activeTab === 'distribution'
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
+      {distributingShareholder && (
+        <form
+          onSubmit={handleDistributeProfit}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-4"
         >
-          Profit Distribution &amp; Reinvestment ({allocations.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('history')}
-          className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
-            activeTab === 'history'
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          All-Months Segregated Ledger ({monthlySummaries.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('breakdown')}
-          className={`px-4 py-2 rounded-xl font-bold text-xs transition cursor-pointer ${
-            activeTab === 'breakdown'
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          {selectedMonth} Transaction Breakdown
-        </button>
-      </div>
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <h2 className="text-sm font-medium text-slate-900 dark:text-white">
+                Distribute Profit for {distributingShareholder.name} ({selectedMonth})
+              </h2>
+              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                Equity Share: {Number(distributingShareholder.share_percentage).toFixed(2)}% | Remaining Pool: BDT{' '}
+                {Number(distributingShareholder.remaining_allocation || 0).toLocaleString()}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDistributingShareholder(null)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-full md:w-80">
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Distribution Mode
+              </label>
+              <select
+                value={distributeAction}
+                onChange={(e) => setDistributeAction(e.target.value as 'payout' | 'reinvest')}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              >
+                <option value="payout">Cash Payout (Outflow)</option>
+                <option value="reinvest">Reinvest into Equity (Adjust Shares)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Amount (BDT)
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                required
+                value={distributeAmount}
+                onChange={(e) => setDistributeAmount(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              />
+            </div>
+
+            {distributeAction === 'payout' && (
+              <div>
+                <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                  Payout Method
+                </label>
+                <select
+                  value={distributeMethod}
+                  onChange={(e) => setDistributeMethod(e.target.value)}
+                  className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="bkash">bKash</option>
+                  <option value="nagad">Nagad</option>
+                  <option value="cash">Cash</option>
+                </select>
+              </div>
+            )}
+
+            <div className={distributeAction === 'reinvest' ? 'sm:col-span-2' : ''}>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Notes
+              </label>
+              <input
+                type="text"
+                value={distributeNotes}
+                onChange={(e) => setDistributeNotes(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setDistributingShareholder(null)}
+              className="px-3.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingDistribute}
+              className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-medium cursor-pointer disabled:opacity-50"
+            >
+              {submittingDistribute
+                ? 'Processing...'
+                : distributeAction === 'reinvest'
+                ? 'Reinvest into Capital'
+                : 'Confirm Payout'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
+          <div className="w-full lg:max-w-md">
+            <label
+              htmlFor="accountingSearch"
+              className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1"
+            >
               Search Financial Records
             </label>
             <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="accountingSearch"
                 type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 font-medium"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
               />
-              <BiSearch className="absolute left-3 top-2.5 text-base text-slate-400 pointer-events-none" />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <BiX className="text-base" />
-                </button>
-              )}
             </div>
           </div>
 
-          <div className="text-slate-400 font-medium">
-            Active Fiscal Month: <strong className="text-slate-700 dark:text-slate-200">{selectedMonth}</strong>
-          </div>
-        </div>
-
-        {loading ? (
-          <LoadingScreen fullScreen={false} label="Computing monthly accounting statements..." />
-        ) : activeTab === 'distribution' ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">Shareholder</th>
-                  <th className="py-3 px-3 text-right">Equity %</th>
-                  <th className="py-3 px-3 text-right">Invested Capital</th>
-                  <th className="py-3 px-3 text-right">Month Profit Share</th>
-                  <th className="py-3 px-3 text-right">Paid Cash ({selectedMonth})</th>
-                  <th className="py-3 px-3 text-right">Reinvested ({selectedMonth})</th>
-                  <th className="py-3 px-3 text-right">Remaining Profit</th>
-                  <th className="py-3 px-3 text-right">Distribution Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {filteredAllocations.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30">
-                    <td className="py-3.5 px-3">
-                      <div className="font-bold text-slate-900 dark:text-white">{s.name}</div>
-                      <div className="text-[10px] text-slate-400">{s.role_title}</div>
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-secondary">
-                      {Number(s.share_percentage || 0).toFixed(3)}%
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-slate-600 dark:text-slate-400">
-                      ৳{Number(s.total_invested || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                      ৳{Number(s.share_of_month_profit || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-rose-600 dark:text-rose-400">
-                      ৳{Number(s.paid_this_month || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-indigo-600 dark:text-indigo-400">
-                      ৳{Number(s.reinvested_this_month || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-black text-emerald-600 dark:text-emerald-400">
-                      ৳{Number(s.remaining_entitlement || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openDistributeModal(s, 'payout')}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] cursor-pointer flex items-center gap-1"
-                        >
-                          <BiMoneyWithdraw className="text-xs" />
-                          <span>Payout Cash</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openDistributeModal(s, 'reinvest')}
-                          className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] cursor-pointer flex items-center gap-1"
-                        >
-                          <BiCertification className="text-xs" />
-                          <span>Reinvest Equity</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : activeTab === 'history' ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">Calendar Month</th>
-                  <th className="py-3 px-3 text-right">Total Sales</th>
-                  <th className="py-3 px-3 text-right">Capital Invested</th>
-                  <th className="py-3 px-3 text-right">Reinvested Profits</th>
-                  <th className="py-3 px-3 text-right">Total Expenses</th>
-                  <th className="py-3 px-3 text-right">Net Operating Profit</th>
-                  <th className="py-3 px-3 text-right">Dividends Paid</th>
-                  <th className="py-3 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {filteredHistory.map((m) => (
-                  <tr key={m.month} className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/30 ${m.month === selectedMonth ? 'bg-secondary/5' : ''}`}>
-                    <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                      {m.month}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      ৳{Number(m.total_sales || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-indigo-600 dark:text-indigo-400">
-                      ৳{Number(m.external_investments || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-slate-600 dark:text-slate-400">
-                      ৳{Number(m.reinvested_dividends || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                      ৳{Number(m.total_expenses || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900 dark:text-white">
-                      ৳{Number(m.net_operating_profit || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono text-amber-600 dark:text-amber-400">
-                      ৳{Number(m.dividends_paid || 0).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedMonth(m.month);
-                          setActiveTab('breakdown');
-                        }}
-                        className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold cursor-pointer"
-                      >
-                        Inspect
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                Sales Revenue ({selectedMonth}) &middot; {details.sales.length} Settled Invoices
-              </h3>
-              {details.sales.length === 0 ? (
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-slate-400 text-xs">No package sales recorded in {selectedMonth}.</div>
-              ) : (
-                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800 rounded-2xl">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-bold uppercase text-slate-500">
-                      <tr>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Creator / Plan</th>
-                        <th className="py-2.5 px-3">Method</th>
-                        <th className="py-2.5 px-3 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {details.sales.map((s: any) => (
-                        <tr key={s.id}>
-                          <td className="py-2 px-3 font-mono text-slate-500">{new Date(s.settled_at).toLocaleDateString()}</td>
-                          <td className="py-2 px-3 font-semibold">{s.creator_name || 'Creator'} &middot; {s.package_name || 'Package'}</td>
-                          <td className="py-2 px-3 uppercase text-[10px] font-bold">{s.payment_method}</td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-emerald-600">+৳{Number(s.amount).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                Operating Expenses ({selectedMonth}) &middot; {details.expenses.length} Transactions
-              </h3>
-              {details.expenses.length === 0 ? (
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-slate-400 text-xs">No expense transactions recorded in {selectedMonth}.</div>
-              ) : (
-                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800 rounded-2xl">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-bold uppercase text-slate-500">
-                      <tr>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Expense Title &amp; Category</th>
-                        <th className="py-2.5 px-3">Payee</th>
-                        <th className="py-2.5 px-3 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {details.expenses.map((ex: any) => (
-                        <tr key={ex.id}>
-                          <td className="py-2 px-3 font-mono text-slate-500">{new Date(ex.transaction_date).toLocaleDateString()}</td>
-                          <td className="py-2 px-3 font-semibold">{ex.expense_title} ({ex.expense_category})</td>
-                          <td className="py-2 px-3">{ex.payee_name}</td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-rose-600">-৳{Number(ex.amount).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                Investments &amp; Equity Additions ({selectedMonth}) &middot; {details.investments.length} Entries
-              </h3>
-              {details.investments.length === 0 ? (
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-slate-400 text-xs">No capital investments recorded in {selectedMonth}.</div>
-              ) : (
-                <div className="overflow-x-auto border border-slate-100 dark:border-slate-800 rounded-2xl">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-bold uppercase text-slate-500">
-                      <tr>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Shareholder &amp; Round</th>
-                        <th className="py-2.5 px-3">Type</th>
-                        <th className="py-2.5 px-3 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {details.investments.map((inv: any) => (
-                        <tr key={inv.id}>
-                          <td className="py-2 px-3 font-mono text-slate-500">{new Date(inv.investment_date).toLocaleDateString()}</td>
-                          <td className="py-2 px-3 font-semibold">{inv.shareholder_name} &middot; {inv.round_name}</td>
-                          <td className="py-2 px-3 uppercase text-[10px] font-bold">
-                            {inv.is_dividend_reinvestment ? 'Dividend Reinvestment' : inv.payment_method}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-indigo-600">+৳{Number(inv.investment_amount).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {distModalTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                  Profit Distribution for {distModalTarget.name}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Fiscal Month: {selectedMonth} &middot; Equity Share: {distModalTarget.share_percentage}%
-                </p>
-              </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                { id: 'allocations', label: `Profit Share (${filteredAllocations.length})` },
+                { id: 'history', label: `Monthly History (${filteredHistory.length})` },
+                { id: 'sales', label: `Sales (${filteredSales.length})` },
+                { id: 'expenses', label: `Expenses (${filteredExpenses.length})` },
+                { id: 'investments', label: `Investments (${filteredInvestments.length})` },
+                { id: 'dividends', label: `Distributions (${filteredDividends.length})` }
+              ] as const
+            ).map((t) => (
               <button
+                key={t.id}
                 type="button"
-                onClick={() => setDistModalTarget(null)}
-                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                onClick={() => setActiveTab(t.id)}
+                className={`px-3 py-1.5 rounded text-xs font-medium cursor-pointer ${
+                  activeTab === t.id
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                    : 'border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
               >
-                <BiX className="text-xl" />
+                {t.label}
               </button>
-            </div>
-
-            <form onSubmit={handleConfirmDistribution} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Distribution Action
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDistAction('payout');
-                      setDistNotes(`Monthly profit dividend payout for ${selectedMonth}`);
-                    }}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      distAction === 'payout'
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Disburse Cash Payout
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDistAction('reinvest');
-                      setDistNotes(`Profit reinvestment for ${selectedMonth} into company shares`);
-                    }}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
-                      distAction === 'reinvest'
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    Reinvest into Equity
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Month Profit Entitlement:</span>
-                  <span className="font-mono font-bold">৳{Number(distModalTarget.share_of_month_profit || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Already Settled ({selectedMonth}):</span>
-                  <span className="font-mono">৳{Number(distModalTarget.settled_this_month || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-bold">Remaining Available:</span>
-                  <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
-                    ৳{Number(distModalTarget.remaining_entitlement || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Distribution Amount (BDT)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="1"
-                  required
-                  value={distAmount}
-                  onChange={(e) => setDistAmount(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono font-bold text-base"
-                />
-              </div>
-
-              {distAction === 'payout' && (
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    Payout Channel
-                  </label>
-                  <select
-                    value={distMethod}
-                    onChange={(e) => setDistMethod(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white cursor-pointer"
-                  >
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="bkash">bKash</option>
-                    <option value="nagad">Nagad</option>
-                    <option value="rocket">Rocket</option>
-                  </select>
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  Notes
-                </label>
-                <textarea
-                  rows={2}
-                  value={distNotes}
-                  onChange={(e) => setDistNotes(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setDistModalTarget(null)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={distributing}
-                  className={`px-5 py-2 rounded-xl text-white font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${
-                    distAction === 'reinvest' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                  }`}
-                >
-                  {distributing && <BiLoaderAlt className="animate-spin text-base" />}
-                  <span>{distAction === 'reinvest' ? 'Reinvest & Update Shares' : 'Confirm Cash Payout'}</span>
-                </button>
-              </div>
-            </form>
+            ))}
           </div>
         </div>
-      )}
+
+        <div className="overflow-x-auto border-t border-slate-100 dark:border-slate-800 pt-2">
+          {activeTab === 'allocations' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Shareholder</th>
+                  <th className="py-2.5 px-3 text-right">Share %</th>
+                  <th className="py-2.5 px-3 text-right">Capital Invested</th>
+                  <th className="py-2.5 px-3 text-right">Allocated Profit</th>
+                  <th className="py-2.5 px-3 text-right">Paid / Reinvested</th>
+                  <th className="py-2.5 px-3 text-right">Remaining</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 font-normal">
+                      Calculating profit allocations...
+                    </td>
+                  </tr>
+                ) : filteredAllocations.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 font-normal">
+                      No shareholder allocations found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredAllocations.map((alloc) => (
+                    <tr
+                      key={alloc.shareholder_id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3">
+                        <div className="font-medium text-slate-900 dark:text-white">
+                          {alloc.name}
+                        </div>
+                        <div className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                          {alloc.email || '-'}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
+                        {Number(alloc.share_percentage || 0).toFixed(2)}%
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
+                        BDT {Number(alloc.invested_amount || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
+                        BDT {Number(alloc.allocated_profit || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
+                        BDT {Number(alloc.paid_or_reinvested || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
+                        BDT {Number(alloc.remaining_allocation || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openDistributePanel(alloc)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium cursor-pointer"
+                        >
+                          <Send className="w-3 h-3" />
+                          Distribute
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'history' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Month</th>
+                  <th className="py-2.5 px-3 text-right">Sales</th>
+                  <th className="py-2.5 px-3 text-right">Expenses</th>
+                  <th className="py-2.5 px-3 text-right">Investments</th>
+                  <th className="py-2.5 px-3 text-right">Net Profit</th>
+                  <th className="py-2.5 px-3 text-right">Dividends Paid</th>
+                  <th className="py-2.5 px-3 text-right">Open</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 font-normal">
+                      No monthly summaries available.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredHistory.map((m) => (
+                    <tr
+                      key={m.month}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {m.month}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-emerald-700 dark:text-emerald-400">
+                        BDT {Number(m.total_sales || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-red-700 dark:text-red-400">
+                        BDT {Number(m.total_expenses || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
+                        BDT {Number(m.external_investments || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
+                        BDT {Number(m.net_operating_profit || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
+                        BDT {Number(m.dividends_paid || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMonth(m.month)}
+                          className="px-2.5 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium cursor-pointer"
+                        >
+                          Select
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'sales' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Package</th>
+                  <th className="py-2.5 px-3">Creator</th>
+                  <th className="py-2.5 px-3">Method</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-500 font-normal">
+                      No package sales recorded for {selectedMonth}.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSales.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
+                        {new Date(s.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {s.package_name || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300">
+                        {s.creator_email || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 uppercase">
+                        {s.payment_method || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
+                        {s.currency} {Number(s.amount || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium capitalize">
+                          {s.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'expenses' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Title</th>
+                  <th className="py-2.5 px-3">Category</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                  <th className="py-2.5 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500 font-normal">
+                      No expenses recorded for {selectedMonth}.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredExpenses.map((ex) => (
+                    <tr
+                      key={ex.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
+                        {ex.expense_date || ex.created_at
+                          ? new Date(ex.expense_date || ex.created_at || '').toLocaleDateString()
+                          : '-'}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {ex.title}
+                      </td>
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 capitalize">
+                        {ex.category}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-red-700 dark:text-red-400">
+                        {ex.currency} {Number(ex.amount || 0).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-normal capitalize">
+                          {ex.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'investments' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Shareholder</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredInvestments.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-500 font-normal">
+                      No capital investments recorded for {selectedMonth}.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredInvestments.map((inv) => (
+                    <tr
+                      key={inv.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
+                        {new Date(inv.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {inv.shareholder_name || '-'}
+                      </td>
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 capitalize">
+                        {(inv.investment_type || 'capital_injection').replace('_', ' ')}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
+                        {inv.currency} {Number(inv.amount || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {activeTab === 'dividends' && (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3">Shareholder</th>
+                  <th className="py-2.5 px-3">Action</th>
+                  <th className="py-2.5 px-3">Method</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                {filteredDividends.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500 font-normal">
+                      No profit distributions recorded for {selectedMonth}.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDividends.map((div) => (
+                    <tr
+                      key={div.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
+                        {new Date(div.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {div.shareholder_name || '-'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-medium capitalize">
+                          {div.action}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 capitalize">
+                        {(div.method || '-').replace('_', ' ')}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
+                        {div.currency} {Number(div.amount || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

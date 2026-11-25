@@ -1,636 +1,644 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  BiTrendingUp,
-  BiTrendingDown,
-  BiDollarCircle,
-  BiPlus,
-  BiRefresh,
-  BiFilter,
-  BiInfoCircle,
-  BiCheckCircle,
-  BiLoaderAlt,
-  BiX,
-  BiMoneyWithdraw,
-  BiSearch,
-  BiAward,
-} from 'react-icons/bi';
-import LoadingScreen from 'src/component/common/LoadingScreen';
+  FiRepeat as ArrowLeftRight,
+  FiPlus as Plus,
+  FiSearch as Search,
+  FiRefreshCw as RefreshCw,
+  FiCheckCircle as CheckCircle2,
+  FiXCircle as XCircle,
+  FiArrowUpRight as ArrowUpRight,
+  FiArrowDownLeft as ArrowDownLeft,
+  FiDollarSign as Wallet,
+  FiSliders as Scale,
+  FiX as X
+} from 'react-icons/fi';
 
-export default function DeveloperCashflowPage() {
-  const [cashflows, setCashflows] = useState<any[]>([]);
-  const [balances, setBalances] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({
+interface CashflowRecord {
+  id: number;
+  title: string;
+  flow_type: 'inflow' | 'outflow';
+  amount: number | string;
+  currency: string;
+  category: string;
+  reference_type?: string | null;
+  reference_id?: number | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+interface CompanyBalance {
+  currency: string;
+  available_balance: number | string;
+  total_inflow?: number | string;
+  total_outflow?: number | string;
+  updated_at?: string;
+}
+
+interface CashflowStats {
+  totalInflow: number;
+  totalOutflow: number;
+  netCashflow: number;
+  totalTransactions: number;
+  currency: string;
+}
+
+const FINANCE_TABS = [
+  { label: 'Shareholders', href: '/developer/shareholders' },
+  { label: 'Investments', href: '/developer/investments' },
+  { label: 'Expenses', href: '/developer/expenses' },
+  { label: 'Accounting', href: '/developer/monthly-accounting' },
+  { label: 'Withdrawals', href: '/developer/withdraws' },
+  { label: 'Cashflow', href: '/developer/cashflow' }
+];
+
+export default function CashflowPage() {
+  const [records, setRecords] = useState<CashflowRecord[]>([]);
+  const [balances, setBalances] = useState<CompanyBalance[]>([]);
+  const [stats, setStats] = useState<CashflowStats>({
     totalInflow: 0,
     totalOutflow: 0,
     netCashflow: 0,
     totalTransactions: 0,
-    currency: 'BDT',
+    currency: 'BDT'
   });
-  const [loading, setLoading] = useState<boolean>(true);
-  const [reconciling, setReconciling] = useState<boolean>(false);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('ALL');
-  const [filterCategory, setFilterCategory] = useState<string>('ALL');
-  const [filterCurrency, setFilterCurrency] = useState<string>('ALL');
-  const [toastMessage, setToastMessage] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [reconciling, setReconciling] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [flowFilter, setFlowFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [currencyFilter, setCurrencyFilter] = useState('BDT');
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [formTitle, setFormTitle] = useState<string>('');
-  const [formType, setFormType] = useState<'inflow' | 'outflow'>('inflow');
-  const [formAmount, setFormAmount] = useState<string>('');
-  const [formCurrency, setFormCurrency] = useState<string>('BDT');
-  const [formCategory, setFormCategory] = useState<string>('adjustment');
-  const [formNotes, setFormNotes] = useState<string>('');
+  const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [title, setTitle] = useState('');
+  const [flowType, setFlowType] = useState<'inflow' | 'outflow'>('inflow');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('BDT');
+  const [category, setCategory] = useState('operations');
+  const [notes, setNotes] = useState('');
 
-  const fetchCashflowData = async () => {
+  const fetchCashflow = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const params = new URLSearchParams();
-      if (filterType !== 'ALL') params.set('flow_type', filterType);
-      if (filterCategory !== 'ALL') params.set('category', filterCategory);
-      if (filterCurrency !== 'ALL') params.set('currency', filterCurrency);
+      if (flowFilter !== 'all') params.set('flow_type', flowFilter);
+      if (categoryFilter !== 'all') params.set('category', categoryFilter);
+      if (currencyFilter !== 'all') params.set('currency', currencyFilter);
 
       const res = await fetch(`/api/marketing/developer/cashflow?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
-        setCashflows(data.records || []);
+        setRecords(data.records || []);
         setBalances(data.balances || []);
         if (data.stats) setStats(data.stats);
       } else {
-        setErrorMessage(data.error || 'Failed to load cashflow records');
+        setMessage({ type: 'error', text: data.error || 'Failed to fetch cashflow ledger.' });
       }
     } catch {
-      setErrorMessage('Network error loading cashflows');
+      setMessage({ type: 'error', text: 'Network error loading cashflow ledger.' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [flowFilter, categoryFilter, currencyFilter]);
 
   useEffect(() => {
-    fetchCashflowData();
-  }, [filterType, filterCategory, filterCurrency]);
+    fetchCashflow();
+  }, [fetchCashflow]);
 
   const handleReconcile = async () => {
+    setReconciling(true);
+    setMessage(null);
     try {
-      setReconciling(true);
       const res = await fetch('/api/marketing/developer/balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reconcile' }),
+        body: JSON.stringify({ action: 'reconcile' })
       });
       const data = await res.json();
       if (data.success) {
-        setToastMessage('Platform balances successfully reconciled from ledger.');
-        fetchCashflowData();
-        setTimeout(() => setToastMessage(''), 5000);
+        setMessage({ type: 'success', text: 'Company treasury balances reconciled successfully.' });
+        fetchCashflow();
       } else {
-        setErrorMessage(data.error || 'Failed to reconcile balance.');
+        setMessage({ type: 'error', text: data.error || 'Reconciliation failed.' });
       }
     } catch {
-      setErrorMessage('Network error reconciling balances.');
+      setMessage({ type: 'error', text: 'Error reconciling balances.' });
     } finally {
       setReconciling(false);
     }
   };
 
-  const handleCreateAdjustment = async (e: React.FormEvent) => {
+  const handleCreateEntry = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formTitle || !formAmount || Number(formAmount) <= 0) {
-      setErrorMessage('Please provide a valid title and positive amount.');
+    setMessage(null);
+    const parsedAmount = Number(amount);
+    if (!title.trim() || !parsedAmount || parsedAmount <= 0) {
+      setMessage({ type: 'error', text: 'Title and a positive amount are required.' });
       return;
     }
 
     setSubmitting(true);
-    setErrorMessage('');
-
     try {
       const res = await fetch('/api/marketing/developer/cashflow', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: formTitle,
-          flow_type: formType,
-          amount: Number(formAmount),
-          currency: formCurrency,
-          category: formCategory,
-          notes: formNotes,
-        }),
+          title: title.trim(),
+          flow_type: flowType,
+          amount: parsedAmount,
+          currency,
+          category,
+          notes: notes.trim() || null
+        })
       });
-
       const data = await res.json();
       if (data.success) {
-        setToastMessage(`Cashflow ${formType} of ${formAmount} ${formCurrency} recorded.`);
-        setShowModal(false);
-        setFormTitle('');
-        setFormAmount('');
-        setFormNotes('');
-        fetchCashflowData();
-        setTimeout(() => setToastMessage(''), 5000);
+        setMessage({ type: 'success', text: 'Cashflow entry recorded.' });
+        setShowCreatePanel(false);
+        setTitle('');
+        setAmount('');
+        setNotes('');
+        fetchCashflow();
       } else {
-        setErrorMessage(data.error || 'Failed to record entry.');
+        setMessage({ type: 'error', text: data.error || 'Failed to record entry.' });
       }
     } catch {
-      setErrorMessage('Network error recording cashflow.');
+      setMessage({ type: 'error', text: 'Error recording cashflow entry.' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const bdtBal = balances.find((b) => b.currency === 'BDT');
-  const usdBal = balances.find((b) => b.currency === 'USD');
+  const filteredRecords = records.filter((rec) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      rec.title.toLowerCase().includes(q) ||
+      rec.category.toLowerCase().includes(q) ||
+      rec.flow_type.toLowerCase().includes(q) ||
+      (rec.notes && rec.notes.toLowerCase().includes(q))
+    );
+  });
 
-  const filteredCashflows = useMemo(() => {
-    const q = searchTerm.toLowerCase().trim();
-    if (!q) return cashflows;
-    return cashflows.filter((cf) => {
-      const titleMatch = (cf.title || '').toLowerCase().includes(q);
-      const catMatch = (cf.category || '').toLowerCase().includes(q);
-      const refMatch = String(cf.reference_id || '').toLowerCase().includes(q) || String(cf.reference_type || '').toLowerCase().includes(q);
-      const creatorMatch = (cf.creator_name || '').toLowerCase().includes(q) || (cf.creator_email || '').toLowerCase().includes(q);
-      const devMatch = (cf.developer_name || '').toLowerCase().includes(q) || (cf.developer_email || '').toLowerCase().includes(q);
-      const notesMatch = (cf.notes || '').toLowerCase().includes(q);
-      const methodMatch = (cf.payment_method || '').toLowerCase().includes(q);
-      return titleMatch || catMatch || refMatch || creatorMatch || devMatch || notesMatch || methodMatch;
-    });
-  }, [cashflows, searchTerm]);
+  const activeBalance =
+    balances.find((b) => b.currency === (currencyFilter === 'all' ? 'BDT' : currencyFilter)) ||
+    balances[0];
 
   return (
-    <div className="w-full space-y-6 text-xs text-slate-800 dark:text-slate-200">
-      {toastMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BiCheckCircle className="text-base" />
-            <span>{toastMessage}</span>
+    <div className="w-full space-y-4 text-xs text-slate-800 dark:text-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <ArrowLeftRight className="w-5 h-5" />
           </div>
-          <button
-            type="button"
-            onClick={() => setToastMessage('')}
-            className="text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 font-semibold flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BiInfoCircle className="text-base" />
-            <span>{errorMessage}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setErrorMessage('')}
-            className="text-rose-700 dark:text-rose-400 hover:underline cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Platform Cashflow &amp; Financial Ledger
+          <div>
+            <h1 className="text-xl sm:text-2xl font-medium text-slate-900 dark:text-white tracking-tight">
+              Treasury & Cashflow Ledger
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary border border-secondary/20">
-              Live Balance
-            </span>
+            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              Unified inflow/outflow ledger tracking package sales, investments, expenses, and withdrawals.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Real-time multi-currency income stream, package sales sync, manual approvals, and shareholder distributions.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={fetchCashflowData}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold cursor-pointer flex items-center gap-1.5"
-          >
-            <BiRefresh className="text-base" />
-            <span>Refresh</span>
-          </button>
-          <button
-            type="button"
             onClick={handleReconcile}
             disabled={reconciling}
-            className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
           >
-            {reconciling ? <BiLoaderAlt className="animate-spin text-base" /> : <BiDollarCircle className="text-base" />}
-            <span>Reconcile Ledger</span>
+            <Scale className={`w-3.5 h-3.5 ${reconciling ? 'animate-spin' : ''}`} />
+            {reconciling ? 'Reconciling...' : 'Reconcile Balance'}
           </button>
-          <Link
-            href="/developer/shareholders"
-            className="px-3.5 py-2 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold flex items-center gap-1.5"
-          >
-            <BiAward className="text-base" />
-            <span>Shareholders &amp; Equity</span>
-          </Link>
-          <Link
-            href="/developer/withdraws"
-            className="px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold flex items-center gap-1.5"
-          >
-            <BiMoneyWithdraw className="text-base" />
-            <span>Withdrawals</span>
-          </Link>
           <button
             type="button"
-            onClick={() => setShowModal(true)}
-            className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-bold cursor-pointer shadow-md shadow-secondary/20 flex items-center gap-1.5"
+            onClick={fetchCashflow}
+            disabled={loading}
+            className="px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-normal cursor-pointer flex items-center gap-1.5"
           >
-            <BiPlus className="text-base" />
-            <span>Record Adjustment</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreatePanel(!showCreatePanel)}
+            className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-medium cursor-pointer flex items-center gap-1.5"
+          >
+            {showCreatePanel ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+            {showCreatePanel ? 'Close Form' : 'Record Entry'}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>BDT Available Balance</span>
-            <BiDollarCircle className="text-base text-secondary" />
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+        {FINANCE_TABS.map((tab) => {
+          const isActive = tab.href === '/developer/cashflow';
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                isActive
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {message && (
+        <div
+          className={`flex items-center justify-between gap-2 px-4 py-2.5 rounded border text-xs font-normal ${
+            message.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+              : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/30 dark:border-red-800 dark:text-red-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {message.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <XCircle className="w-4 h-4 shrink-0" />
+            )}
+            <span>{message.text}</span>
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-            ৳{Number(bdtBal?.available_balance || 0).toLocaleString()}
+          <button
+            type="button"
+            onClick={() => setMessage(null)}
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Available Balance</span>
+            <Wallet className="w-3.5 h-3.5" />
           </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Total Revenue:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              ৳{Number(bdtBal?.total_revenue || 0).toLocaleString()}
-            </span>
+          <div className="text-lg font-medium text-slate-900 dark:text-white">
+            {activeBalance?.currency || stats.currency || 'BDT'}{' '}
+            {Number(activeBalance?.available_balance || 0).toLocaleString()}
           </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Current treasury liquidity
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>USD Available Balance</span>
-            <BiDollarCircle className="text-base text-secondary" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Total Inflow</span>
+            <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-            ${Number(usdBal?.available_balance || 0).toLocaleString()}
+          <div className="text-lg font-medium text-emerald-700 dark:text-emerald-400">
+            {stats.currency || 'BDT'} {Number(stats.totalInflow || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Total Revenue:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              ${Number(usdBal?.total_revenue || 0).toLocaleString()}
-            </span>
-          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Package sales & capital injections
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Total Inflows</span>
-            <BiTrendingUp className="text-base text-emerald-500" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Total Outflow</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-red-600" />
           </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
-            {stats.currency === 'BDT' ? '৳' : '$'}{Number(stats.totalInflow || 0).toLocaleString()}
+          <div className="text-lg font-medium text-red-700 dark:text-red-400">
+            {stats.currency || 'BDT'} {Number(stats.totalOutflow || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Active Filter:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">{stats.currency}</span>
-          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            Salaries, expenses & withdrawals
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-400 font-semibold text-[11px] uppercase tracking-wider">
-            <span>Total Outflows / Withdrawn</span>
-            <BiTrendingDown className="text-base text-rose-500" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-1">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-normal">Net Cashflow</span>
+            <ArrowLeftRight className="w-3.5 h-3.5" />
           </div>
-          <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono tracking-tight">
-            {stats.currency === 'BDT' ? '৳' : '$'}{Number(stats.totalOutflow || 0).toLocaleString()}
+          <div
+            className={`text-lg font-medium ${
+              Number(stats.netCashflow || 0) >= 0
+                ? 'text-slate-900 dark:text-white'
+                : 'text-red-700 dark:text-red-400'
+            }`}
+          >
+            {stats.currency || 'BDT'} {Number(stats.netCashflow || 0).toLocaleString()}
           </div>
-          <div className="text-[11px] text-slate-500 flex justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
-            <span>Disbursed:</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              ৳{Number(bdtBal?.total_withdrawn || 0).toLocaleString()}
-            </span>
-          </div>
+          <p className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+            {stats.totalTransactions} recorded movements
+          </p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="w-full md:w-80">
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+      {showCreatePanel && (
+        <form
+          onSubmit={handleCreateEntry}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-5 shadow-xs space-y-4"
+        >
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <h2 className="text-sm font-medium text-slate-900 dark:text-white">
+                Record Manual Cashflow Entry
+              </h2>
+              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                Add a direct adjustment or off-system cash inflow/outflow to the ledger.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCreatePanel(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Entry Title
+              </label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Flow Type
+              </label>
+              <select
+                value={flowType}
+                onChange={(e) => setFlowType(e.target.value as 'inflow' | 'outflow')}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              >
+                <option value="inflow">Inflow (Credit)</option>
+                <option value="outflow">Outflow (Debit)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Amount
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Currency
+              </label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              >
+                <option value="BDT">BDT</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              >
+                <option value="operations">Operations</option>
+                <option value="package_sale">Package Sale</option>
+                <option value="investment">Investment</option>
+                <option value="expense">Expense</option>
+                <option value="salary">Salary</option>
+                <option value="withdrawal">Withdrawal</option>
+                <option value="adjustment">Adjustment</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+                Notes
+              </label>
+              <input
+                type="text"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowCreatePanel(false)}
+              className="px-3.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-xs font-medium cursor-pointer disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Record Entry'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-xs space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <div className="lg:col-span-2">
+            <label
+              htmlFor="cashflowSearch"
+              className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1"
+            >
               Search Transactions
             </label>
             <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                id="cashflowSearch"
                 type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary/50 font-medium"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
               />
-              <BiSearch className="absolute left-3 top-2.5 text-base text-slate-400 pointer-events-none" />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <BiX className="text-base" />
-                </button>
-              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-            <span className="text-slate-500 font-semibold text-xs flex items-center gap-1">
-              <BiFilter className="text-sm" />
-              <span>Filters:</span>
-            </span>
+          <div>
+            <label
+              htmlFor="cashflowFlowFilter"
+              className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1"
+            >
+              Flow Type
+            </label>
+            <select
+              id="cashflowFlowFilter"
+              value={flowFilter}
+              onChange={(e) => setFlowFilter(e.target.value)}
+              className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+            >
+              <option value="all">All Flows</option>
+              <option value="inflow">Inflow Only</option>
+              <option value="outflow">Outflow Only</option>
+            </select>
+          </div>
 
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
-              {['ALL', 'inflow', 'outflow'].map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setFilterType(t)}
-                  className={`px-3 py-1 rounded-lg font-semibold capitalize cursor-pointer transition ${
-                    filterType === t
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+          <div>
+            <label
+              htmlFor="cashflowCategoryFilter"
+              className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1"
+            >
+              Category
+            </label>
+            <select
+              id="cashflowCategoryFilter"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+            >
+              <option value="all">All Categories</option>
+              <option value="package_sale">Package Sale</option>
+              <option value="investment">Investment</option>
+              <option value="expense">Expense</option>
+              <option value="salary">Salary</option>
+              <option value="withdrawal">Withdrawal</option>
+              <option value="dividend">Dividend</option>
+              <option value="operations">Operations</option>
+            </select>
+          </div>
 
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
-              {['ALL', 'BDT', 'USD'].map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setFilterCurrency(c)}
-                  className={`px-3 py-1 rounded-lg font-semibold cursor-pointer transition ${
-                    filterCurrency === c
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-
-            <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/50">
-              {['ALL', 'package_sale', 'subscription', 'withdrawal', 'manual_adjustment'].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setFilterCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg font-semibold capitalize cursor-pointer transition ${
-                    filterCategory === cat
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  {cat.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
-
-            <span className="text-slate-400 font-medium">
-              Showing {filteredCashflows.length} entries
-            </span>
+          <div>
+            <label
+              htmlFor="cashflowCurrencyFilter"
+              className="block text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1"
+            >
+              Currency
+            </label>
+            <select
+              id="cashflowCurrencyFilter"
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              className="w-full px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-normal text-slate-900 dark:text-white focus:outline-none focus:border-slate-400"
+            >
+              <option value="BDT">BDT</option>
+              <option value="USD">USD</option>
+              <option value="all">All Currencies</option>
+            </select>
           </div>
         </div>
 
-        {loading ? (
-          <LoadingScreen fullScreen={false} label="Loading cashflow ledger..." />
-        ) : filteredCashflows.length === 0 ? (
-          <div className="py-12 text-center space-y-3">
-            <BiTrendingUp className="text-3xl mx-auto text-slate-400" />
-            <h3 className="font-bold text-slate-700 dark:text-slate-300">No Cashflow Records Found</h3>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Transactions will automatically appear here as creators subscribe, purchase packages, or developers approve payments.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">ID / Date</th>
-                  <th className="py-3 px-3">Description</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Flow Type</th>
-                  <th className="py-3 px-3 text-right">Amount</th>
-                  <th className="py-3 px-3 text-right">Balance After</th>
-                  <th className="py-3 px-3">Reference / Actor</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                <th className="py-2.5 px-3">Date</th>
+                <th className="py-2.5 px-3">Description</th>
+                <th className="py-2.5 px-3">Category</th>
+                <th className="py-2.5 px-3">Type</th>
+                <th className="py-2.5 px-3 text-right">Amount</th>
+                <th className="py-2.5 px-3">Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500 font-normal">
+                    Loading cashflow transactions...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredCashflows.map((cf) => {
-                  const isInflow = cf.flow_type === 'inflow';
-                  const sym = cf.currency === 'BDT' ? '৳' : '$';
-
+              ) : filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500 font-normal">
+                    No cashflow transactions match your filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredRecords.map((rec) => {
+                  const isInflow = rec.flow_type === 'inflow';
                   return (
-                    <tr key={cf.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 px-3">
-                        <span className="font-mono font-bold text-slate-900 dark:text-white block">#{cf.id}</span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(cf.created_at).toLocaleDateString()} {new Date(cf.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <tr
+                      key={rec.id}
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {new Date(rec.created_at).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                        {rec.title}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-normal capitalize">
+                          {rec.category.replace('_', ' ')}
                         </span>
                       </td>
-
-                      <td className="py-3.5 px-3">
-                        <span className="font-bold text-slate-900 dark:text-white block">{cf.title}</span>
-                        <span className="text-[11px] text-slate-400 capitalize">
-                          Method: {cf.payment_method || 'sslcommerz'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {cf.category}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-3">
+                      <td className="py-2.5 px-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium capitalize ${
                             isInflow
-                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                              : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                              : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
                           }`}
                         >
-                          {isInflow ? <BiTrendingUp className="text-xs" /> : <BiTrendingDown className="text-xs" />}
-                          <span>{cf.flow_type}</span>
+                          {isInflow ? (
+                            <ArrowDownLeft className="w-3 h-3" />
+                          ) : (
+                            <ArrowUpRight className="w-3 h-3" />
+                          )}
+                          {rec.flow_type}
                         </span>
                       </td>
-
-                      <td className="py-3.5 px-3 text-right">
-                        <span
-                          className={`font-mono font-black text-sm ${
-                            isInflow ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                          }`}
-                        >
-                          {isInflow ? '+' : '-'}{sym}{Number(cf.amount).toLocaleString()}
-                        </span>
-                        <span className="block text-[10px] text-slate-400 font-bold uppercase">{cf.currency}</span>
+                      <td
+                        className={`py-2.5 px-3 text-right font-medium whitespace-nowrap ${
+                          isInflow
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-red-700 dark:text-red-400'
+                        }`}
+                      >
+                        {isInflow ? '+' : '-'} {rec.currency}{' '}
+                        {Number(rec.amount || 0).toLocaleString()}
                       </td>
-
-                      <td className="py-3.5 px-3 text-right font-mono font-bold text-slate-700 dark:text-slate-300">
-                        {sym}{Number(cf.balance_after).toLocaleString()}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-[11px] text-slate-500">
-                        {cf.creator_name ? (
-                          <div>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200 block">{cf.creator_name}</span>
-                            <span className="text-slate-400">{cf.creator_email}</span>
-                          </div>
-                        ) : cf.developer_name ? (
-                          <div>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200 block">Dev: {cf.developer_name}</span>
-                            <span className="text-slate-400">{cf.developer_email}</span>
-                          </div>
-                        ) : (
-                          <span className="font-mono text-slate-400">{cf.reference_type} #{cf.reference_id || ''}</span>
-                        )}
+                      <td className="py-2.5 px-3 font-normal text-slate-500 dark:text-slate-400 max-w-xs truncate">
+                        {rec.notes || '-'}
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Record Cashflow Entry</h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-              >
-                <BiX className="text-xl" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateAdjustment} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Transaction Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Flow Type
-                  </label>
-                  <select
-                    value={formType}
-                    onChange={(e: any) => setFormType(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
-                  >
-                    <option value="inflow">Inflow (Credit)</option>
-                    <option value="outflow">Outflow (Debit)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
-                  >
-                    <option value="adjustment">Adjustment</option>
-                    <option value="package_sale">Package Sale</option>
-                    <option value="manual_payment">Manual Payment</option>
-                    <option value="subscription">Subscription</option>
-                    <option value="gateway_fee">Gateway Fee</option>
-                    <option value="operational">Operational Expense</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Amount
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={formAmount}
-                    onChange={(e) => setFormAmount(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Currency
-                  </label>
-                  <select
-                    value={formCurrency}
-                    onChange={(e) => setFormCurrency(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary cursor-pointer"
-                  >
-                    <option value="BDT">BDT (৳)</option>
-                    <option value="USD">USD ($)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  rows={2}
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-secondary"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-secondary hover:bg-secondary-dark text-white font-bold cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? 'Saving...' : 'Record Entry'}
-                </button>
-              </div>
-            </form>
-          </div>
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 }

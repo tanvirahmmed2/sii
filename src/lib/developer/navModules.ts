@@ -88,20 +88,25 @@ export const DEVELOPER_NAV_SECTIONS_DATA: DeveloperNavSection[] = [
         ],
     },
     {
-        title: 'Organization',
+        title: 'Developers',
         links: [
             { href: '/developer/developers', label: 'Developers', iconKey: 'code', keywords: 'staff engineers members team' },
             { href: '/developer/roles', label: 'Roles', iconKey: 'key', keywords: 'rbac access control permissions' },
+            { href: '/developer/payroll', label: 'Payrolls', exact: true, iconKey: 'dollar-sign', keywords: 'salary compensation' },
+            { href: '/developer/payroll/assign', label: 'Allocations', iconKey: 'user-check', keywords: 'payroll allocation assign salary developer' },
+            { href: '/developer/payroll/payments', label: 'Disbursements', iconKey: 'check-circle', keywords: 'salary disbursement payroll payments' },
+            { href: '/developer/my-salaries', label: 'Salaries', iconKey: 'credit-card', keywords: 'payslip vouchers my salaries' },
+        ],
+    },
+    {
+        title: 'Finance',
+        links: [
             { href: '/developer/shareholders', label: 'Shareholders', iconKey: 'award', keywords: 'equity dividend shares partners' },
             { href: '/developer/investments', label: 'Investments', iconKey: 'layers', keywords: 'investments funding shares capital equity' },
             { href: '/developer/expenses', label: 'Expenses', iconKey: 'file-text', keywords: 'expenses salary bills overhead accounting transactions' },
             { href: '/developer/monthly-accounting', label: 'Accounting', iconKey: 'bar-chart', keywords: 'monthly accounting profit distribution dividends reinvest' },
             { href: '/developer/withdraws', label: 'Withdrawals', iconKey: 'shopping-bag', keywords: 'payouts dividends withdrawals' },
             { href: '/developer/cashflow', label: 'Cashflow', iconKey: 'bar-chart', keywords: 'financial transactions cash flow revenues ledgers' },
-            { href: '/developer/payroll', label: 'Payrolls', exact: true, iconKey: 'dollar-sign', keywords: 'salary compensation' },
-            { href: '/developer/payroll/assign', label: 'Allocations', iconKey: 'user-check', keywords: 'payroll allocation assign salary developer' },
-            { href: '/developer/payroll/payments', label: 'Disbursements', iconKey: 'check-circle', keywords: 'salary disbursement payroll payments' },
-            { href: '/developer/my-salaries', label: 'Salaries', iconKey: 'credit-card', keywords: 'payslip vouchers my salaries' },
         ],
     },
     {
