@@ -23,11 +23,12 @@ interface AudienceEmailManagerProps {
   subtitle: string;
 }
 
-const EMAIL_MODULE_TABS: Array<{ audience: EmailAudience; label: string; href: string }> = [
+const EMAIL_MODULE_TABS: Array<{ audience: string; label: string; href: string }> = [
   { audience: 'creators', label: 'Creators', href: '/developer/email-creators' },
   { audience: 'subscribers', label: 'Subscribers', href: '/developer/email-subscribers' },
   { audience: 'developers', label: 'Developers', href: '/developer/email-developers' },
   { audience: 'leads', label: 'Leads', href: '/developer/email-leads' },
+  { audience: 'custom-email', label: 'Custom Email', href: '/developer/custom-email' },
 ];
 
 export default function AudienceEmailManager({

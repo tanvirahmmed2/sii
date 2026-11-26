@@ -80,7 +80,7 @@ export default function ContactDetailPage({ params }: any) {
             });
             const data = await res.json();
             if (data.success) {
-                notify('Reply sent successfully via email and inquiry marked as Replied!');
+                notify('Reply sent successfully via email and inquiry closed.');
                 fetchContact(false);
             }
             else {
@@ -194,7 +194,8 @@ export default function ContactDetailPage({ params }: any) {
         </Link>
       </div>);
     }
-    const isReplied = ['replied', 'resolved'].includes(String(statusVal).toLowerCase());
+    const isClosed = String(statusVal).toLowerCase() === 'closed';
+    const isReplied = ['replied', 'resolved', 'closed'].includes(String(statusVal).toLowerCase());
     return (<div className="w-full space-y-4">
       {actionNotice.text && (<div className={`p-3 rounded flex items-center justify-between text-xs font-medium transition-all ${actionNotice.type === 'error'
                 ? 'bg-rose-50 border border-rose-200 text-rose-800 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300'
@@ -306,31 +307,38 @@ export default function ContactDetailPage({ params }: any) {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4">
             <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                {isReplied ? 'Previous Response / Send Follow-Up' : 'Compose Email Reply'}
+                {isClosed ? 'Sent Reply (Closed)' : isReplied ? 'Previous Response / Send Follow-Up' : 'Compose Email Reply'}
               </h3>
               {contact.replied_by_name && (<span className="text-[11px] text-slate-400">
-                  Last reply by: <strong className="text-slate-700 dark:text-slate-300">{contact.replied_by_name}</strong>
+                  Last reply by: <span className="font-medium text-slate-700 dark:text-slate-300">{contact.replied_by_name}</span>
                 </span>)}
             </div>
 
-            <form onSubmit={handleSendReply} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Email Message to {contact.email}
-                </label>
-                <textarea rows={5} required value={replyText} onChange={(e: any) => setReplyText(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800 resize-none"/>
-              </div>
+            {isClosed ? (<div className="space-y-3">
+                <div className="p-3 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  {contact.reply || 'This contact inquiry has been closed.'}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  This contact inquiry has been replied to and closed. Allowed developers can view this record in read-only mode.
+                </p>
+              </div>) : (<form onSubmit={handleSendReply} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Email Message to {contact.email}
+                  </label>
+                  <textarea rows={5} required value={replyText} onChange={(e: any) => setReplyText(e.target.value)} className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800 resize-none"/>
+                </div>
 
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <span className="text-[11px] text-slate-400">
-                  Sends formatted official email notification directly to user.
-                </span>
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <span className="text-[11px] text-slate-400">
+                    Automatically sends as: Dear {contact.name || 'Name'}, your message, - Disibin
+                  </span>
 
-                <button type="submit" disabled={replySending || !replyText.trim() || !canReply} className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-medium transition-colors cursor-pointer">
-                  {replySending ? 'Sending...' : 'Send Email Reply'}
-                </button>
-              </div>
-            </form>
+                  <button type="submit" disabled={replySending || !replyText.trim() || !canReply} className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-xs font-medium transition-colors cursor-pointer">
+                    {replySending ? 'Sending...' : 'Send Email Reply & Close'}
+                  </button>
+                </div>
+              </form>)}
           </div>
         </div>
       </div>

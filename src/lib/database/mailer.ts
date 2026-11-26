@@ -221,12 +221,21 @@ export async function logEmailAttempt({
   }
 }
 
+export interface EmailAttachment {
+  name: string;
+  content?: string;
+  url?: string;
+  type?: string;
+  size?: number;
+}
+
 export interface SendEmailParams {
   to: string;
   toName?: string | null;
   subject: string;
   html?: string | null;
   text?: string | null;
+  attachments?: EmailAttachment[] | null;
   fromEmail?: string | null;
   fromName?: string | null;
   websiteId?: string | number | null;
@@ -242,6 +251,7 @@ export async function sendEmail({
   subject,
   html,
   text,
+  attachments = null,
   fromEmail,
   fromName,
   websiteId = null,
@@ -321,6 +331,12 @@ export async function sendEmail({
   }
 
   try {
+    const brevoAttachments = Array.isArray(attachments)
+      ? attachments
+          .filter((a) => a && a.name && (a.content || a.url))
+          .map((a) => (a.content ? { name: String(a.name), content: String(a.content) } : { name: String(a.name), url: String(a.url) }))
+      : [];
+
     const payload: any = {
       sender: {
         name: effectiveFromName,
@@ -337,6 +353,9 @@ export async function sendEmail({
     };
     if (finalText) {
       payload.textContent = finalText;
+    }
+    if (brevoAttachments.length > 0) {
+      payload.attachment = brevoAttachments;
     }
 
     const res = await fetch(brevoEndpoint, {

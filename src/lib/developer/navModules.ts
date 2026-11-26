@@ -76,6 +76,7 @@ export const DEVELOPER_NAV_SECTIONS_DATA: DeveloperNavSection[] = [
             { href: '/developer/email-subscribers', label: 'Subscribers', iconKey: 'mail', keywords: 'email subscribers newsletter broadcast redis' },
             { href: '/developer/email-developers', label: 'Developers', iconKey: 'mail', keywords: 'email developers team broadcast redis' },
             { href: '/developer/email-leads', label: 'Leads', iconKey: 'mail', keywords: 'email leads prospects broadcast redis' },
+            { href: '/developer/custom-email', label: 'Custom Email', iconKey: 'mail', keywords: 'custom email compose attachment brevo direct mail' },
         ],
     },
     {
@@ -182,6 +183,7 @@ export const DEVELOPER_MODULE_ALIAS_MAP: Record<string, string[]> = {
     'email-subscribers': ['email-subscribers', 'emails', 'subscribers', 'marketing'],
     'email-developers': ['email-developers', 'emails', 'developers', 'marketing'],
     'email-leads': ['email-leads', 'emails', 'leads', 'marketing'],
+    'custom-email': ['custom-email', 'custom_email', 'custom-emails', 'emails'],
 };
 
 export function isDeveloperLinkAllowed(link: { href: string }, currentUser: any = null): boolean {

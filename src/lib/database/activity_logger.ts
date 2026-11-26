@@ -70,6 +70,8 @@ function deriveModuleAndTarget(pathname: string, searchParams: URLSearchParams, 
     moduleName = `email-${parts[1]}`;
   } else if (moduleName === 'contacts' && parts[1] === 'reply') {
     routeSubAction = 'REPLIED_TO_CONTACT';
+  } else if (moduleName === 'custom-email' && !parts[1]) {
+    routeSubAction = 'SENT_CUSTOM_EMAIL';
   } else if (moduleName === 'payments' && parts[1] === 'manual-approve') {
     routeSubAction = 'APPROVED_PAYMENT';
   } else if (moduleName === 'investments' && parts[1] === 'withdraw') {

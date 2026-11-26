@@ -73,7 +73,7 @@ export default function AdminContactsPage() {
     const totalCount = contacts.length;
     const newCount = contacts.filter((c: any) => String(c.status || '').toLowerCase() === 'new').length;
     const inProgressCount = contacts.filter((c: any) => String(c.status || '').toLowerCase() === 'in_progress').length;
-    const repliedCount = contacts.filter((c: any) => ['replied', 'resolved'].includes(String(c.status || '').toLowerCase())).length;
+    const repliedCount = contacts.filter((c: any) => ['replied', 'resolved', 'closed'].includes(String(c.status || '').toLowerCase())).length;
     const filtered = contacts.filter((c: any) => {
         const s = String(c.status || '').toUpperCase();
         if (statusFilter !== 'ALL' && s !== statusFilter)
@@ -153,7 +153,7 @@ export default function AdminContactsPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 space-y-1">
-          <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Replied</span>
+          <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Replied / Closed</span>
           <div className="text-xl font-semibold text-emerald-600 dark:text-emerald-400">{repliedCount}</div>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function AdminContactsPage() {
                   </td>
                 </tr>) : (filtered.map((c: any) => {
             const s = String(c.status || 'new').toLowerCase();
-            const isReplied = s === 'replied' || s === 'resolved';
+            const isReplied = s === 'replied' || s === 'resolved' || s === 'closed';
             return (<tr key={c.id} onClick={() => router.push(`/developer/contacts/${c.id}`)} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer">
                       <td className="px-4 py-2.5 font-mono font-medium text-slate-400">#{c.id}</td>
                       <td className="px-4 py-2.5">
@@ -259,7 +259,7 @@ export default function AdminContactsPage() {
         <div className="block md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {loading ? (<LoadingScreen fullScreen={false} size="sm" label="Loading contact inquiries..."/>) : filtered.length === 0 ? (<div className="py-12 text-center text-slate-400 text-xs">No records found.</div>) : (filtered.map((c: any) => {
             const s = String(c.status || 'new').toLowerCase();
-            const isReplied = s === 'replied' || s === 'resolved';
+            const isReplied = s === 'replied' || s === 'resolved' || s === 'closed';
             return (<div key={c.id} onClick={() => router.push(`/developer/contacts/${c.id}`)} className="p-4 space-y-2 active:bg-slate-50 dark:active:bg-slate-800/40 cursor-pointer">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-mono text-xs font-semibold text-slate-500">#{c.id}</span>

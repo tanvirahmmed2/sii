@@ -429,6 +429,10 @@ function expandModuleAliases(slugs: string[]): string[] {
       result.add('email-developers');
       result.add('email-leads');
       result.add('emails');
+    } else if (clean === 'custom-email' || clean === 'custom_email' || clean === 'custom-emails') {
+      result.add('custom-email');
+      result.add('custom_email');
+      result.add('custom-emails');
     } else if (clean === 'allocations' || clean === 'disbursements') {
       result.add('allocations');
       result.add('disbursements');

@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
-import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
+import { sendEmail } from 'src/lib/database/mailer';
 import { SITE_NAME } from 'src/lib/database/secret';
+
+function escapeHtml(text: string): string {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 export async function POST(request: any) {
     try {
         const auth = await hasModulePermission(request, 'contacts');
@@ -26,35 +35,42 @@ export async function POST(request: any) {
             return NextResponse.json({ success: false, error: 'Contact inquiry not found.' }, { status: 404 });
         }
         const contact = contactRes.rows[0];
+        if (String(contact.status || '').toLowerCase() === 'closed') {
+            return NextResponse.json({ success: false, error: 'This contact inquiry is already replied and closed.' }, { status: 400 });
+        }
         const dev = auth.user || auth.staff || {};
-        const emailSubject = `Re: ${contact.subject || 'Your Inquiry'} - ${SITE_NAME || 'Platform'}`;
-        const formattedReplyHtml = replyText
-            .split('\n')
-            .map((p: any) => p.trim())
-            .filter(Boolean)
-            .map((p: any) => `<p style="margin: 0 0 14px 0; line-height: 1.6; color: #334155; font-size: 15px;">${p}</p>`)
+        const siteName = SITE_NAME || 'Disibin';
+        const recipientName = String(contact.name || 'there').trim() || 'there';
+        const emailSubject = 'Thank you for contacting us!';
+        const replyParagraphs = replyText
+            .split(/\r?\n\s*\r?\n/)
+            .map((p: string) => p.trim())
+            .filter(Boolean);
+        const formattedReplyHtml = (replyParagraphs.length > 0 ? replyParagraphs : [replyText])
+            .map((p: string) => {
+                const linesHtml = p
+                    .split(/\r?\n/)
+                    .map((line: string) => escapeHtml(line))
+                    .join('<br/>');
+                return `<p style="margin: 0 0 14px 0;">${linesHtml}</p>`;
+            })
             .join('');
-        const emailHtml = buildStyledEmail({
-            title: `${SITE_NAME || 'Support'} Team Response`,
-            subtitle: `In response to: ${contact.subject}`,
-            recipientName: contact.name || 'there',
-            bodyParagraphs: [
-                replyText,
-            ],
-            extraHtml: `
-        <div style="margin-top: 18px; padding: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
-          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px;">Original Inquiry:</div>
-          <div style="font-size: 12px; color: #334155; line-height: 1.5; white-space: pre-line;">${contact.message}</div>
-        </div>
-      `,
-            footerNote: `Replied by ${dev.name || 'Support'} (${dev.role || 'Developer'}). If you have further questions, feel free to reply to this message.`,
-        });
+        const emailHtml = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.65; color: #1e293b; max-width: 600px;">
+  <p style="margin: 0 0 16px 0;">Dear ${escapeHtml(recipientName)},</p>
+  ${formattedReplyHtml}
+  <p style="margin: 20px 0 0 0; color: #334155;">- ${escapeHtml(siteName)}</p>
+</div>
+        `.trim();
+        const emailText = `Dear ${recipientName},\n\n${replyText}\n\n- ${siteName}`;
         try {
             await sendEmail({
                 to: contact.email,
+                toName: contact.name || null,
                 subject: emailSubject,
                 html: emailHtml,
-                text: `Hello ${contact.name},\n\n${replyText}\n\nBest regards,\n${dev.name || 'Support'} (${dev.role || 'Developer'})\n${SITE_NAME || 'Platform'}\n\n--- Your Original Message ---\n${contact.message}`,
+                text: emailText,
+                purpose: 'contact_reply',
             });
         }
         catch (mailErr: any) {
@@ -66,7 +82,7 @@ export async function POST(request: any) {
         }
         const updateRes = await queryDb(`UPDATE contacts
        SET admin_notes = $1,
-           status = 'replied',
+           status = 'closed',
            assigned_developer_id = $2,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
@@ -74,7 +90,7 @@ export async function POST(request: any) {
         const updated = updateRes.rows[0];
         return NextResponse.json({
             success: true,
-            message: 'Reply sent successfully and inquiry marked as replied.',
+            message: 'Reply sent successfully and inquiry closed.',
             record: {
                 ...updated,
                 reply: replyText,
