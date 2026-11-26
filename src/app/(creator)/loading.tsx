@@ -4,5 +4,5 @@ export const metadata: any = {
     title: 'Loading Creator Studio...',
 };
 export default function CreatorRootLoading() {
-    return <LoadingScreen fullScreen={true} label="Loading Creator Studio..."/>;
+    return <LoadingScreen fullScreen={false} label="Loading Creator Studio..."/>;
 }

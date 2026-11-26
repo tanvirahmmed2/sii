@@ -3,6 +3,11 @@ import jwt from 'jsonwebtoken';
 import { query, queryDb } from '../database/db';
 import { JWT_SECRET, getStudentToken } from '../database/secret';
 import { getCookieStore, resolveTenantCookieName } from './tenantCookie';
+import {
+  fetchPanelSession,
+  invalidatePanelSessionByToken,
+  invalidatePanelSessionsByTag,
+} from '../redis/redisClient';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
 import { sendSms } from '../database/smsSender';
 import {
@@ -122,6 +127,7 @@ export async function revokeStudentLoginSession(token: string): Promise<void> {
       `UPDATE website_student_login_sessions SET is_revoked = TRUE WHERE token = $1`,
       [token]
     );
+    await invalidatePanelSessionByToken('student', token);
   } catch (err) {
   }
 }
@@ -134,6 +140,7 @@ export async function revokeAllStudentSessions(websiteId: any, studentId: any): 
        WHERE website_id = $1 AND student_id = $2`,
       [websiteId, studentId]
     );
+    await invalidatePanelSessionsByTag('student', `student:${studentId}`);
   } catch (err) {
   }
 }
@@ -362,90 +369,101 @@ export async function getStudentSession(request?: any): Promise<any> {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const sessRes = await queryDb(
-      `SELECT id, is_revoked, expires_at 
-       FROM website_student_login_sessions 
-       WHERE token = $1 LIMIT 1`,
-      [token]
-    );
-    if (sessRes.rows.length > 0) {
-      const sess = sessRes.rows[0];
-      if (sess.is_revoked) return null;
-      if (sess.expires_at && new Date(sess.expires_at) < new Date()) return null;
-    }
+    const tags = [`student:${decoded.id}`];
+    if (decoded.websiteId) tags.push(`web:${decoded.websiteId}`);
 
-    let res = await queryDb(
-      `SELECT s.id, s.website_id,
-              COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
-              s.roll_no, s.student_unique_id,
-              s.class_id, s.section_id, s.session_id, s.is_active,
-              COALESCE(s.phone, s.number) AS phone, s.number,
-              COALESCE(s.name, i.data->>'name', 'Student') AS name,
-              COALESCE(s.email, i.data->>'email') AS email,
-              COALESCE(s.gender, i.data->>'gender') AS gender,
-              COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
-              COALESCE(s.date_of_birth, CASE WHEN i.data->>'date_of_birth' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'date_of_birth')::date ELSE NULL END) AS date_of_birth,
-              COALESCE(s.religion, i.data->>'religion') AS religion,
-              COALESCE(s.admission_date, CASE WHEN i.data->>'admission_date' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'admission_date')::date ELSE NULL END) AS admission_date,
-              COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
-              COALESCE(s.is_verified, FALSE) AS is_verified,
-              COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
-              COALESCE(c.name, i.data->>'class_name', 'General Enrollment') AS class_name,
-              sec.name AS section_name, ses.name AS session_name
-       FROM website_students s
-       LEFT JOIN website_student_info i ON s.id = i.student_id
-       LEFT JOIN website_classes c ON s.class_id = c.id
-       LEFT JOIN website_sections sec ON s.section_id = sec.id
-       LEFT JOIN website_sessions ses ON s.session_id = ses.id
-       WHERE s.id = $1 LIMIT 1`,
-      [decoded.id]
-    );
-
-    if (res.rows.length === 0) return null;
-    const student = res.rows[0];
-
-    if (!student.is_active || !student.is_registered || !student.is_verified) return null;
-
-    const studentData = {
-      id: student.id,
-      websiteId: student.website_id,
-      website_id: student.website_id,
-      name: student.name,
-      email: student.email,
-      registrationNumber: student.registration_no,
-      registration_no: student.registration_no,
-      roll_no: student.roll_no,
-      student_unique_id: student.student_unique_id,
-      phone: student.phone || student.number,
-      number: student.phone || student.number,
-      class_id: student.class_id,
-      section_id: student.section_id,
-      session_id: student.session_id,
-      class_name: student.class_name,
-      section_name: student.section_name,
-      session_name: student.session_name,
-      isActive: Boolean(student.is_active),
-      isRegistered: Boolean(student.is_registered),
-      isVerified: Boolean(student.is_verified),
-      verification_status: student.verification_status,
+    return await fetchPanelSession<any>(
+      'student',
       token,
-    };
+      tags,
+      async () => {
+        const sessRes = await queryDb(
+          `SELECT id, is_revoked, expires_at 
+           FROM website_student_login_sessions 
+           WHERE token = $1 LIMIT 1`,
+          [token]
+        );
+        if (sessRes.rows.length > 0) {
+          const sess = sessRes.rows[0];
+          if (sess.is_revoked) return null;
+          if (sess.expires_at && new Date(sess.expires_at) < new Date()) return null;
+        }
 
-    return {
-      student: studentData,
-      user: studentData,
-      id: student.id,
-      email: student.email,
-      name: student.name,
-      registrationNumber: student.registration_no,
-      registration_no: student.registration_no,
-      website_id: student.website_id,
-      websiteId: student.website_id,
-      isActive: Boolean(student.is_active),
-      isRegistered: Boolean(student.is_registered),
-      isVerified: Boolean(student.is_verified),
-      token,
-    };
+        const res = await queryDb(
+          `SELECT s.id, s.website_id,
+                  COALESCE(s.registration_no, s.student_unique_id, i.data->>'registration_no', i.data->>'registration_number') AS registration_no,
+                  s.roll_no, s.student_unique_id,
+                  s.class_id, s.section_id, s.session_id, s.is_active,
+                  COALESCE(s.phone, s.number) AS phone, s.number,
+                  COALESCE(s.name, i.data->>'name', 'Student') AS name,
+                  COALESCE(s.email, i.data->>'email') AS email,
+                  COALESCE(s.gender, i.data->>'gender') AS gender,
+                  COALESCE(s.blood_group, i.data->>'blood_group') AS blood_group,
+                  COALESCE(s.date_of_birth, CASE WHEN i.data->>'date_of_birth' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'date_of_birth')::date ELSE NULL END) AS date_of_birth,
+                  COALESCE(s.religion, i.data->>'religion') AS religion,
+                  COALESCE(s.admission_date, CASE WHEN i.data->>'admission_date' ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN (i.data->>'admission_date')::date ELSE NULL END) AS admission_date,
+                  COALESCE(i.is_registered, s.is_registered, FALSE) AS is_registered,
+                  COALESCE(s.is_verified, FALSE) AS is_verified,
+                  COALESCE(i.verification_status, s.verification_status, 'pending_setup') AS verification_status,
+                  COALESCE(c.name, i.data->>'class_name', 'General Enrollment') AS class_name,
+                  sec.name AS section_name, ses.name AS session_name
+           FROM website_students s
+           LEFT JOIN website_student_info i ON s.id = i.student_id
+           LEFT JOIN website_classes c ON s.class_id = c.id
+           LEFT JOIN website_sections sec ON s.section_id = sec.id
+           LEFT JOIN website_sessions ses ON s.session_id = ses.id
+           WHERE s.id = $1 LIMIT 1`,
+          [decoded.id]
+        );
+
+        if (res.rows.length === 0) return null;
+        const student = res.rows[0];
+
+        if (!student.is_active || !student.is_registered || !student.is_verified) return null;
+
+        const studentData = {
+          id: student.id,
+          websiteId: student.website_id,
+          website_id: student.website_id,
+          name: student.name,
+          email: student.email,
+          registrationNumber: student.registration_no,
+          registration_no: student.registration_no,
+          roll_no: student.roll_no,
+          student_unique_id: student.student_unique_id,
+          phone: student.phone || student.number,
+          number: student.phone || student.number,
+          class_id: student.class_id,
+          section_id: student.section_id,
+          session_id: student.session_id,
+          class_name: student.class_name,
+          section_name: student.section_name,
+          session_name: student.session_name,
+          isActive: Boolean(student.is_active),
+          isRegistered: Boolean(student.is_registered),
+          isVerified: Boolean(student.is_verified),
+          verification_status: student.verification_status,
+          token,
+        };
+
+        return {
+          student: studentData,
+          user: studentData,
+          id: student.id,
+          email: student.email,
+          name: student.name,
+          registrationNumber: student.registration_no,
+          registration_no: student.registration_no,
+          website_id: student.website_id,
+          websiteId: student.website_id,
+          isActive: Boolean(student.is_active),
+          isRegistered: Boolean(student.is_registered),
+          isVerified: Boolean(student.is_verified),
+          token,
+        };
+      },
+      180
+    );
   } catch (error) {
     return null;
   }

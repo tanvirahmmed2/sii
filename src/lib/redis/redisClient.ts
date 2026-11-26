@@ -8,45 +8,203 @@ import {
   getAllowedDeveloperLinks,
 } from '../developer/navModules';
 
-let redisInstance: Redis | null = null;
-let isRedisAvailable: boolean = false;
-let redisInitAttempted: boolean = false;
+interface CacheEntry {
+  value: string;
+  expiresAt: number;
+}
 
-export function getRedisClient(): Redis | null {
-  if (redisInitAttempted) return redisInstance;
-  redisInitAttempted = true;
+interface GlobalRedisState {
+  client: Redis | null;
+  available: boolean;
+  initAttempted: boolean;
+  lastAttemptAt: number;
+  connectPromise: Promise<boolean> | null;
+  l1Cache: Map<string, CacheEntry>;
+  l1TagIndex: Map<string, Set<string>>;
+  inFlight: Map<string, Promise<any>>;
+}
+
+const g = globalThis as typeof globalThis & { __platformRedisState?: GlobalRedisState };
+
+function getState(): GlobalRedisState {
+  if (!g.__platformRedisState) {
+    g.__platformRedisState = {
+      client: null,
+      available: false,
+      initAttempted: false,
+      lastAttemptAt: 0,
+      connectPromise: null,
+      l1Cache: new Map<string, CacheEntry>(),
+      l1TagIndex: new Map<string, Set<string>>(),
+      inFlight: new Map<string, Promise<any>>(),
+    };
+  }
+  return g.__platformRedisState;
+}
+
+const RECONNECT_COOLDOWN_MS = 15000;
+const L1_MAX_ENTRIES = 2500;
+
+function l1Get(key: string): string | null {
+  const state = getState();
+  const entry = state.l1Cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    state.l1Cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function l1Set(key: string, value: string, ttlSeconds: number): void {
+  const state = getState();
+  if (state.l1Cache.size >= L1_MAX_ENTRIES) {
+    const firstKey = state.l1Cache.keys().next().value;
+    if (firstKey !== undefined) {
+      state.l1Cache.delete(firstKey);
+    }
+  }
+  state.l1Cache.set(key, {
+    value,
+    expiresAt: Date.now() + Math.max(1, ttlSeconds) * 1000,
+  });
+}
+
+function l1Delete(patternOrKey: string): void {
+  const state = getState();
+  if (!patternOrKey.includes('*')) {
+    state.l1Cache.delete(patternOrKey);
+    return;
+  }
+  const escaped = patternOrKey.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  const regex = new RegExp(`^${escaped}$`);
+  for (const key of Array.from(state.l1Cache.keys())) {
+    if (regex.test(key)) {
+      state.l1Cache.delete(key);
+    }
+  }
+}
+
+function createRedisConnection(state: GlobalRedisState): Redis | null {
   try {
     const url = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-    redisInstance = new Redis(url, {
+    const client = new Redis(url, {
       maxRetriesPerRequest: 1,
-      connectTimeout: 2000,
+      connectTimeout: 1200,
       lazyConnect: true,
       enableOfflineQueue: false,
       retryStrategy: () => null,
     });
 
-    redisInstance.connect().then(() => {
-      isRedisAvailable = true;
-    }).catch(() => {
-      isRedisAvailable = false;
+    client.on('error', () => {
+      state.available = false;
     });
 
-    redisInstance.on('error', () => {
-      isRedisAvailable = false;
+    client.on('close', () => {
+      state.available = false;
     });
 
-    redisInstance.on('connect', () => {
-      isRedisAvailable = true;
+    client.on('end', () => {
+      state.available = false;
     });
+
+    client.on('ready', () => {
+      state.available = true;
+    });
+
+    client.on('connect', () => {
+      state.available = true;
+    });
+
+    return client;
   } catch {
-    redisInstance = null;
-    isRedisAvailable = false;
+    state.available = false;
+    return null;
   }
-  return redisInstance;
+}
+
+export async function ensureRedisReady(): Promise<Redis | null> {
+  const state = getState();
+  if (state.available && state.client && state.client.status === 'ready') {
+    return state.client;
+  }
+  if (state.connectPromise) {
+    await state.connectPromise;
+    return state.available ? state.client : null;
+  }
+  const now = Date.now();
+  if (state.initAttempted && now - state.lastAttemptAt < RECONNECT_COOLDOWN_MS) {
+    return state.available ? state.client : null;
+  }
+
+  state.initAttempted = true;
+  state.lastAttemptAt = now;
+
+  if (!state.client || state.client.status === 'end' || state.client.status === 'close') {
+    if (state.client) {
+      try {
+        state.client.disconnect();
+      } catch {}
+    }
+    state.client = createRedisConnection(state);
+  }
+
+  const client = state.client;
+  if (!client) return null;
+
+  state.connectPromise = new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => {
+      state.available = false;
+      resolve(false);
+    }, 900);
+
+    client
+      .connect()
+      .then(() => {
+        clearTimeout(timer);
+        state.available = true;
+        resolve(true);
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        state.available = false;
+        resolve(false);
+      });
+  }).finally(() => {
+    state.connectPromise = null;
+  });
+
+  await state.connectPromise;
+  return state.available ? state.client : null;
+}
+
+export function getRedisClient(): Redis | null {
+  const state = getState();
+  if (state.initAttempted) {
+    if (!state.available && Date.now() - state.lastAttemptAt >= RECONNECT_COOLDOWN_MS) {
+      ensureRedisReady().catch(() => {});
+    }
+    return state.client;
+  }
+  state.initAttempted = true;
+  state.lastAttemptAt = Date.now();
+  state.client = createRedisConnection(state);
+  if (state.client) {
+    state.client
+      .connect()
+      .then(() => {
+        state.available = true;
+      })
+      .catch(() => {
+        state.available = false;
+      });
+  }
+  return state.client;
 }
 
 export function isRedisConnected(): boolean {
-  return Boolean(isRedisAvailable && redisInstance);
+  const state = getState();
+  return Boolean(state.available && state.client && state.client.status === 'ready');
 }
 
 export interface RecordSentSmsParams {
@@ -470,13 +628,18 @@ export async function getMonthlyMailAnalytics(websiteId: string | number, target
   };
 }
 
+export function hashSessionToken(token: string): string {
+  return createHash('sha1').update(String(token || '')).digest('hex').slice(0, 24);
+}
+
 export async function fetchWithCache<T>(
   key: string,
   fetcher: () => Promise<T>,
   ttlSeconds: number = 300
 ): Promise<T> {
+  const ttl = Math.max(1, Number(ttlSeconds) || 300);
   try {
-    const client = getRedisClient();
+    const client = await ensureRedisReady();
     if (client && isRedisConnected()) {
       const cached = await client.get(key);
       if (cached !== null && cached !== undefined) {
@@ -486,27 +649,49 @@ export async function fetchWithCache<T>(
           return cached as unknown as T;
         }
       }
+    } else {
+      const memCached = l1Get(key);
+      if (memCached !== null) {
+        try {
+          return JSON.parse(memCached) as T;
+        } catch {
+          return memCached as unknown as T;
+        }
+      }
     }
   } catch {}
 
-  const result = await fetcher();
-
-  if (result !== undefined && result !== null) {
-    try {
-      const client = getRedisClient();
-      if (client && isRedisConnected()) {
-        const payload = typeof result === 'string' ? result : JSON.stringify(result);
-        await client.set(key, payload, 'EX', ttlSeconds);
-      }
-    } catch {}
+  const state = getState();
+  const existingPromise = state.inFlight.get(key);
+  if (existingPromise) {
+    return existingPromise as Promise<T>;
   }
 
-  return result;
+  const runPromise = (async () => {
+    const result = await fetcher();
+    if (result !== undefined && result !== null) {
+      const payload = typeof result === 'string' ? result : JSON.stringify(result);
+      l1Set(key, payload, ttl);
+      try {
+        const client = await ensureRedisReady();
+        if (client && isRedisConnected()) {
+          await client.set(key, payload, 'EX', ttl);
+        }
+      } catch {}
+    }
+    return result;
+  })().finally(() => {
+    state.inFlight.delete(key);
+  });
+
+  state.inFlight.set(key, runPromise);
+  return runPromise;
 }
 
 export async function invalidateCache(patternOrKey: string): Promise<void> {
+  l1Delete(patternOrKey);
   try {
-    const client = getRedisClient();
+    const client = await ensureRedisReady();
     if (!client || !isRedisConnected()) return;
     if (patternOrKey.includes('*')) {
       const keys = await client.keys(patternOrKey);
@@ -517,6 +702,114 @@ export async function invalidateCache(patternOrKey: string): Promise<void> {
       await client.del(patternOrKey);
     }
   } catch {}
+}
+
+export async function shouldTouchSessionActivity(
+  scope: string,
+  token: string,
+  intervalSeconds: number = 300
+): Promise<boolean> {
+  if (!token) return false;
+  const key = `sess:touch:${scope}:${hashSessionToken(token)}`;
+  const cached = l1Get(key);
+  if (cached !== null) return false;
+  try {
+    const client = await ensureRedisReady();
+    if (client && isRedisConnected()) {
+      const res = await client.set(key, '1', 'EX', intervalSeconds, 'NX');
+      if (res === null) {
+        l1Set(key, '1', Math.min(intervalSeconds, 60));
+        return false;
+      }
+      l1Set(key, '1', intervalSeconds);
+      return true;
+    }
+  } catch {}
+  l1Set(key, '1', intervalSeconds);
+  return true;
+}
+
+function registerL1Tag(tagKey: string, sessionKey: string): void {
+  const state = getState();
+  let set = state.l1TagIndex.get(tagKey);
+  if (!set) {
+    set = new Set<string>();
+    state.l1TagIndex.set(tagKey, set);
+  }
+  set.add(sessionKey);
+}
+
+export async function fetchPanelSession<T>(
+  panel: 'developer' | 'creator' | 'staff' | 'teacher' | 'student',
+  token: string,
+  indexTags: string[],
+  fetcher: () => Promise<T | null>,
+  ttlSeconds: number = 180
+): Promise<T | null> {
+  if (!token) return null;
+  const tokenHash = hashSessionToken(token);
+  const sessionKey = `auth:panel:${panel}:tok:${tokenHash}`;
+  const result = await fetchWithCache<T | null>(sessionKey, fetcher, ttlSeconds);
+  if (result) {
+    const normalizedTags = (indexTags || []).filter(Boolean);
+    for (const tag of normalizedTags) {
+      const tagKey = `auth:panel:${panel}:tag:${tag}`;
+      registerL1Tag(tagKey, sessionKey);
+      try {
+        const client = getRedisClient();
+        if (client && isRedisConnected()) {
+          client.sadd(tagKey, sessionKey).catch(() => {});
+          client.expire(tagKey, Math.max(ttlSeconds * 2, 600)).catch(() => {});
+        }
+      } catch {}
+    }
+  }
+  return result;
+}
+
+export async function invalidatePanelSessionByToken(
+  panel: 'developer' | 'creator' | 'staff' | 'teacher' | 'student',
+  token: string
+): Promise<void> {
+  if (!token) return;
+  const key = `auth:panel:${panel}:tok:${hashSessionToken(token)}`;
+  await invalidateCache(key);
+}
+
+export async function invalidatePanelSessionsByTag(
+  panel: 'developer' | 'creator' | 'staff' | 'teacher' | 'student',
+  tag: string
+): Promise<void> {
+  if (!tag) return;
+  const state = getState();
+  const tagKey = `auth:panel:${panel}:tag:${tag}`;
+  const l1Keys = state.l1TagIndex.get(tagKey);
+  if (l1Keys) {
+    for (const k of l1Keys) {
+      state.l1Cache.delete(k);
+    }
+    state.l1TagIndex.delete(tagKey);
+  }
+  try {
+    const client = await ensureRedisReady();
+    if (client && isRedisConnected()) {
+      const members = await client.smembers(tagKey);
+      if (members && members.length > 0) {
+        for (const k of members) {
+          state.l1Cache.delete(k);
+        }
+        await client.del(...members, tagKey);
+      } else {
+        await client.del(tagKey);
+      }
+    }
+  } catch {}
+}
+
+export async function clearPanelSessions(
+  panel: 'developer' | 'creator' | 'staff' | 'teacher' | 'student'
+): Promise<void> {
+  await invalidateCache(`auth:panel:${panel}:*`);
 }
 
 export async function fetchCreatorCredential(identifier: string, fetcher: () => Promise<any>): Promise<any> {
@@ -562,17 +855,48 @@ export async function fetchDeveloperPermissions(
   return fetchWithCache(cacheKey, fetcher, 300);
 }
 
+export async function fetchDeveloperLoginSessionActive(
+  devId: number | string,
+  token: string,
+  fetcher: () => Promise<{ active: boolean } | null>
+): Promise<{ active: boolean } | null> {
+  const tokenHash = hashSessionToken(token);
+  const cacheKey = `auth:dev:sess:${devId}:${tokenHash}`;
+  return fetchWithCache(cacheKey, fetcher, 180);
+}
+
+export async function invalidateDeveloperLoginSessionCache(devId?: number | string, token?: string): Promise<void> {
+  if (devId && token) {
+    await invalidateCache(`auth:dev:sess:${devId}:${hashSessionToken(token)}`);
+  } else if (devId) {
+    await invalidateCache(`auth:dev:sess:${devId}:*`);
+  } else if (token) {
+    await invalidateCache(`auth:dev:sess:*:${hashSessionToken(token)}`);
+  } else {
+    await invalidateCache('auth:dev:sess:*');
+  }
+}
+
+export async function fetchActiveModuleSlugs(fetcher: () => Promise<string[]>): Promise<string[]> {
+  return fetchWithCache('marketing:modules:active_slugs', fetcher, 300);
+}
+
 export async function invalidateDeveloperPermissionsCache(devId?: number | string): Promise<void> {
   if (devId) {
     await Promise.all([
+      invalidateCache(`auth:developer:id:${devId}`),
       invalidateCache(`auth:dev:perms:${devId}:*`),
       invalidateCache(`dev:modules:allowed:${devId}:*`),
       invalidateCache(`dev:modules:search:${devId}:*`),
+      invalidatePanelSessionsByTag('developer', `dev:${devId}`),
     ]);
   } else {
     await Promise.all([
+      invalidateCache('auth:developer:*'),
       invalidateCache('auth:dev:perms:*'),
       invalidateCache('dev:modules:*'),
+      invalidateCache('marketing:modules:*'),
+      clearPanelSessions('developer'),
     ]);
   }
 }
@@ -602,14 +926,26 @@ export async function searchDeveloperModulesInRedis(
     : '_all';
   const searchKey = `dev:modules:search:${userId}:${permHash}:${queryKeySuffix}`;
 
+  const state = getState();
+  const l1Search = l1Get(searchKey);
+  if (l1Search && !isRedisConnected()) {
+    try {
+      const parsed = JSON.parse(l1Search) as AllowedDeveloperModule[];
+      if (Array.isArray(parsed)) {
+        return { modules: parsed, source: 'memory', cached: true };
+      }
+    } catch {}
+  }
+
   try {
-    const client = getRedisClient();
+    const client = await ensureRedisReady();
     if (client && isRedisConnected()) {
       const cachedSearch = await client.get(searchKey);
       if (cachedSearch) {
         try {
           const parsed = JSON.parse(cachedSearch) as AllowedDeveloperModule[];
           if (Array.isArray(parsed)) {
+            l1Set(searchKey, cachedSearch, 120);
             return { modules: parsed, source: 'redis', cached: true };
           }
         } catch { }
@@ -628,19 +964,36 @@ export async function searchDeveloperModulesInRedis(
 
       if (!allowedModules) {
         allowedModules = getAllowedDeveloperLinks(user);
-        await client.set(allowedKey, JSON.stringify(allowedModules), 'EX', 300);
+        const payload = JSON.stringify(allowedModules);
+        l1Set(allowedKey, payload, 300);
+        await client.set(allowedKey, payload, 'EX', 300);
       }
 
       const filtered = filterDeveloperModules(allowedModules, normalizedQuery);
-      await client.set(searchKey, JSON.stringify(filtered), 'EX', 120);
+      const filteredPayload = JSON.stringify(filtered);
+      l1Set(searchKey, filteredPayload, 120);
+      await client.set(searchKey, filteredPayload, 'EX', 120);
       return { modules: filtered, source: 'redis', cached: false };
     }
   } catch { }
 
-  const allowed = getAllowedDeveloperLinks(user);
+  let allowed: AllowedDeveloperModule[] | null = null;
+  const l1Allowed = l1Get(allowedKey);
+  if (l1Allowed) {
+    try {
+      const parsed = JSON.parse(l1Allowed) as AllowedDeveloperModule[];
+      if (Array.isArray(parsed)) allowed = parsed;
+    } catch {}
+  }
+  if (!allowed) {
+    allowed = getAllowedDeveloperLinks(user);
+    l1Set(allowedKey, JSON.stringify(allowed), 300);
+  }
+  const filteredMem = filterDeveloperModules(allowed, normalizedQuery);
+  l1Set(searchKey, JSON.stringify(filteredMem), 120);
   return {
-    modules: filterDeveloperModules(allowed, normalizedQuery),
-    source: 'memory',
+    modules: filteredMem,
+    source: state.l1Cache.has(allowedKey) ? 'memory' : 'memory',
     cached: false,
   };
 }

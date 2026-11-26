@@ -16,6 +16,9 @@ import {
   fetchDeveloperCredential,
   fetchDeveloperSessionById,
   fetchDeveloperPermissions,
+  fetchDeveloperLoginSessionActive,
+  fetchActiveModuleSlugs,
+  shouldTouchSessionActivity,
   invalidateDeveloperCache,
   invalidateDeveloperPermissionsCache,
 } from '../redis/redisClient';
@@ -140,8 +143,10 @@ export async function getDeveloperSession(request?: any): Promise<any> {
     const dev = await fetchDeveloperSessionById(decoded.id, async () => {
       const res = await query(
         `SELECT d.id, d.name, d.email, d.phone, d.role_id, d.bio,
-                d.github_profile, d.linkedin_profile, d.is_active, d.email_verified
+                d.github_profile, d.linkedin_profile, d.is_active, d.email_verified,
+                r.name AS role_name, r.slug AS role_slug
          FROM developers d
+         LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.id = $1 LIMIT 1`,
         [decoded.id]
       );
@@ -151,23 +156,31 @@ export async function getDeveloperSession(request?: any): Promise<any> {
     if (!dev || !dev.is_active) return null;
 
     try {
-      const sessRes = await query(
-        `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 AND developer_id = $2 LIMIT 1`,
-        [token, dev.id]
-      );
+      const sessionState = await fetchDeveloperLoginSessionActive(dev.id, token, async () => {
+        const sessRes = await query(
+          `SELECT is_active, expires_at FROM developer_login_sessions WHERE token = $1 AND developer_id = $2 LIMIT 1`,
+          [token, dev.id]
+        );
 
-      if (sessRes.rows.length === 0) {
-        await query(
-          `INSERT INTO developer_login_sessions (developer_id, token, ip_address, user_agent, expires_at, is_active)
-           VALUES ($1, $2, '127.0.0.1', 'Active Session', CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
-           ON CONFLICT (token) DO UPDATE SET is_active = TRUE, expires_at = CURRENT_TIMESTAMP + INTERVAL '7 days', last_active_at = CURRENT_TIMESTAMP`,
-          [dev.id, token]
-        ).catch(() => {});
-      } else {
+        if (sessRes.rows.length === 0) {
+          await query(
+            `INSERT INTO developer_login_sessions (developer_id, token, ip_address, user_agent, expires_at, is_active)
+             VALUES ($1, $2, '127.0.0.1', 'Active Session', CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
+             ON CONFLICT (token) DO UPDATE SET is_active = TRUE, expires_at = CURRENT_TIMESTAMP + INTERVAL '7 days', last_active_at = CURRENT_TIMESTAMP`,
+            [dev.id, token]
+          ).catch(() => {});
+          return { active: true };
+        }
+
         const s = sessRes.rows[0];
-        if (s.is_active === false) return null;
-        if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
+        if (s.is_active === false) return { active: false };
+        if (s.expires_at && new Date(s.expires_at) < new Date()) return { active: false };
+        return { active: true };
+      });
 
+      if (!sessionState || sessionState.active === false) return null;
+
+      if (await shouldTouchSessionActivity('dev', token, 300)) {
         query(
           `UPDATE developer_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
           [token]
@@ -177,10 +190,10 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       console.warn('Notice verifying developer session against database:', e.message);
     }
 
-    const rawPermRows = await fetchDeveloperPermissions(dev.id, dev.role_id, async () => {
-      let permRes: { rows: any[] } = { rows: [] };
+    const permBundle = await fetchDeveloperPermissions(dev.id, dev.role_id, async () => {
+      let roleRes: { rows: any[] } = { rows: [] };
       if (dev.role_id) {
-        permRes = await queryDb(
+        roleRes = await queryDb(
           `SELECT m.slug AS module_slug, drp.can_view, drp.can_create, drp.can_edit, drp.can_delete
            FROM developer_role_permissions drp
            JOIN modules m ON drp.module_id = m.id
@@ -189,26 +202,31 @@ export async function getDeveloperSession(request?: any): Promise<any> {
         ).catch(() => ({ rows: [] }));
       }
 
-      if (!permRes.rows || permRes.rows.length === 0) {
-        permRes = await queryDb(
-          `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
-           FROM module_permissions mp
-           JOIN modules m ON mp.module_id = m.id
-           WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
-          [dev.id]
-        ).catch(() => ({ rows: [] }));
-      }
+      const directRes = await queryDb(
+        `SELECT m.slug AS module_slug, mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
+         FROM module_permissions mp
+         JOIN modules m ON mp.module_id = m.id
+         WHERE mp.developer_id = $1 AND m.is_active = TRUE`,
+        [dev.id]
+      ).catch(() => ({ rows: [] }));
 
-      return permRes.rows || [];
+      return {
+        roleRows: roleRes.rows || [],
+        directRows: directRes.rows || [],
+      };
     });
 
-    let permissions = (rawPermRows || [])
+    const roleRows = Array.isArray(permBundle) ? permBundle : (permBundle?.roleRows || []);
+    const directRows = Array.isArray(permBundle) ? [] : (permBundle?.directRows || []);
+    const primaryRows = roleRows.length > 0 ? roleRows : directRows;
+
+    let permissions = primaryRows
       .filter((r: any) => r.can_view)
       .map((r: any) => r.module_slug);
 
     const isOwner = Number(dev.id) === 1 || String(dev.email).toLowerCase() === 'tanvir004006@gmail.com';
     const permissionsMap: Record<string, any> = {};
-    for (const r of (rawPermRows || [])) {
+    for (const r of primaryRows) {
       permissionsMap[r.module_slug] = {
         can_view: Boolean(r.can_view),
         can_create: Boolean(r.can_create),
@@ -217,11 +235,27 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       };
     }
 
+    const directPermissionsMap: Record<string, any> = {};
+    for (const r of directRows) {
+      directPermissionsMap[r.module_slug] = {
+        can_view: Boolean(r.can_view),
+        can_create: Boolean(r.can_create),
+        can_edit: Boolean(r.can_edit),
+        can_delete: Boolean(r.can_delete),
+      };
+      if (r.can_view && !permissions.includes(r.module_slug)) {
+        permissions.push(r.module_slug);
+      }
+    }
+
     if (isOwner) {
-      const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
-      permissions = Array.from(new Set([...permissions, ...allMods.rows.map((r: any) => r.slug)]));
-      for (const m of allMods.rows) {
-        permissionsMap[m.slug] = {
+      const allSlugs = await fetchActiveModuleSlugs(async () => {
+        const allMods = await queryDb(`SELECT slug FROM modules WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
+        return (allMods.rows || []).map((r: any) => r.slug);
+      });
+      permissions = Array.from(new Set([...permissions, ...allSlugs]));
+      for (const slug of allSlugs) {
+        permissionsMap[slug] = {
           can_view: true,
           can_create: true,
           can_edit: true,
@@ -236,6 +270,8 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       email: dev.email,
       phone: dev.phone,
       roleId: dev.role_id,
+      role: dev.role_slug || null,
+      roleName: dev.role_name || null,
       bio: dev.bio,
       githubProfile: dev.github_profile,
       linkedinProfile: dev.linkedin_profile,
@@ -243,6 +279,7 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       isVerified: Boolean(dev.email_verified),
       permissions,
       permissionsMap,
+      directPermissionsMap,
       token,
     };
   } catch (error) {
@@ -379,6 +416,18 @@ function expandModuleAliases(slugs: string[]): string[] {
       result.add('monthly-accounting');
       result.add('accounting');
       result.add('financial-reports');
+    } else if (clean === 'email-creators' || clean === 'email-subscribers' || clean === 'email-developers' || clean === 'email-leads' || clean === 'emails') {
+      result.add('email-creators');
+      result.add('email-subscribers');
+      result.add('email-developers');
+      result.add('email-leads');
+      result.add('emails');
+    } else if (clean === 'allocations' || clean === 'disbursements') {
+      result.add('allocations');
+      result.add('disbursements');
+    } else if (clean === 'roles' || clean === 'developers') {
+      result.add('roles');
+      result.add('developers');
     }
   }
   return Array.from(result);
@@ -449,50 +498,43 @@ export async function hasModulePermission(request: any, moduleSlug: any, action 
       }
     }
 
-    const permRes = await queryDb(
-      `SELECT mp.can_view, mp.can_create, mp.can_edit, mp.can_delete
-       FROM module_permissions mp
-       JOIN modules m ON mp.module_id = m.id
-       WHERE mp.developer_id = $1 AND LOWER(m.slug) = ANY($2::text[])
-       LIMIT 1`,
-      [session.id, slugs]
-    ).catch(() => ({ rows: [] }));
+    for (const slug of slugs) {
+      const p = session.directPermissionsMap?.[slug];
+      if (p) {
+        const hasAction = action === 'edit' || action === 'update'
+          ? Boolean(p.can_edit)
+          : action === 'create'
+          ? Boolean(p.can_create)
+          : action === 'delete'
+          ? Boolean(p.can_delete)
+          : Boolean(p.can_view);
 
-    if (permRes.rows.length > 0) {
-      const p = permRes.rows[0];
-      const hasAction = action === 'edit' || action === 'update'
-        ? Boolean(p.can_edit)
-        : action === 'create'
-        ? Boolean(p.can_create)
-        : action === 'delete'
-        ? Boolean(p.can_delete)
-        : Boolean(p.can_view);
-
-      if (hasAction) {
+        if (hasAction) {
+          return {
+            success: true,
+            user: session,
+            staff: session,
+            developer: session,
+            canView: Boolean(p.can_view),
+            canCreate: Boolean(p.can_create),
+            canEdit: Boolean(p.can_edit),
+            canDelete: Boolean(p.can_delete),
+            canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
+          };
+        }
         return {
-          success: true,
+          success: false,
           user: session,
           staff: session,
           developer: session,
+          message: `Permission denied: ${action} privilege required for module.`,
+          status: 403,
           canView: Boolean(p.can_view),
           canCreate: Boolean(p.can_create),
           canEdit: Boolean(p.can_edit),
           canDelete: Boolean(p.can_delete),
-          canManage: Boolean(p.can_create && p.can_edit && p.can_delete),
         };
       }
-      return {
-        success: false,
-        user: session,
-        staff: session,
-        developer: session,
-        message: `Permission denied: ${action} privilege required for module.`,
-        status: 403,
-        canView: Boolean(p.can_view),
-        canCreate: Boolean(p.can_create),
-        canEdit: Boolean(p.can_edit),
-        canDelete: Boolean(p.can_delete),
-      };
     }
 
     if (action === 'view') {

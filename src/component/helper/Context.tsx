@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, usePathname } from "next/navigation";
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useState, useEffect, useCallback, useRef } from "react";
 export const Context = createContext<any>(null);
 const PLATFORM_RESERVED = new Set([
     '',
@@ -194,13 +194,23 @@ export const ContextProvider = ({ children }: any) => {
     const goBack = () => {
         router.back();
     };
+    const pathnameRef = useRef<string>(pathname || '');
+    pathnameRef.current = pathname || '';
+    const lastScopeRef = useRef<'tenant' | 'platform' | null>(null);
+    const hasFetchedPlatformRef = useRef<boolean>(false);
+    const prevPathnameRef = useRef<string>(pathname || '');
+
     const fetchCurrentUser = useCallback(async () => {
-        if (isTenantScope(pathname)) {
+        const currentPath = pathnameRef.current || '';
+        if (isTenantScope(currentPath)) {
             setUser(null);
             setCreator(null);
             setLoading(false);
+            lastScopeRef.current = 'tenant';
+            hasFetchedPlatformRef.current = false;
             return;
         }
+        lastScopeRef.current = 'platform';
         try {
             const [devRes, creatorRes] = await Promise.all([
                 fetch('/api/marketing/developer/me').catch(() => null),
@@ -234,6 +244,7 @@ export const ContextProvider = ({ children }: any) => {
             else {
                 setCreator(null);
             }
+            hasFetchedPlatformRef.current = true;
         }
         catch (_: any) {
             setUser(null);
@@ -242,10 +253,26 @@ export const ContextProvider = ({ children }: any) => {
         finally {
             setLoading(false);
         }
-    }, [pathname]);
+    }, []);
     useEffect(() => {
-        fetchCurrentUser();
-    }, [fetchCurrentUser]);
+        const currentPath = pathname || '';
+        const prevPath = prevPathnameRef.current || '';
+        prevPathnameRef.current = currentPath;
+        const tenant = isTenantScope(currentPath);
+        const currentScope: 'tenant' | 'platform' = tenant ? 'tenant' : 'platform';
+        if (tenant) {
+            if (lastScopeRef.current !== 'tenant') {
+                fetchCurrentUser();
+            }
+            return;
+        }
+        const cameFromAuth =
+            (prevPath.startsWith('/developer-auth') && currentPath.startsWith('/developer')) ||
+            (prevPath.startsWith('/creator/login') && currentPath.startsWith('/creator'));
+        if (!hasFetchedPlatformRef.current || lastScopeRef.current !== currentScope || cameFromAuth) {
+            fetchCurrentUser();
+        }
+    }, [pathname, fetchCurrentUser]);
     return (<Context.Provider value={{
             goBack,
             sidebar,

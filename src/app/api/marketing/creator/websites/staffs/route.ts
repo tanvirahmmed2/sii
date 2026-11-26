@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
+import { invalidatePanelSessionsByTag } from 'src/lib/redis/redisClient';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { sendSms } from 'src/lib/database/smsSender';
 import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
@@ -427,6 +428,7 @@ export async function PUT(request: any) {
             can_delete = EXCLUDED.can_delete,
             updated_at = CURRENT_TIMESTAMP`, [websiteId, staffId, ctrlIds, views, creates, edits, deletes]);
             }
+            await invalidatePanelSessionsByTag('staff', `staff:${staffId}`);
             return NextResponse.json({
                 success: true,
                 message: 'Module permissions updated successfully.',

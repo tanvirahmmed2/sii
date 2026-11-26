@@ -4,6 +4,7 @@ import { hashPassword, hasModulePermission } from 'src/lib/middleware/developer'
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import { generateRandomHex, generateRandomCode } from 'src/lib/utils/random';
+import { invalidateDeveloperPermissionsCache, invalidateDeveloperCache } from 'src/lib/redis/redisClient';
 async function handleCreateAdmin(d: any, request: any) {
     const data = d || {};
     const name = data.name?.trim();
@@ -187,6 +188,7 @@ export async function PUT(request: any) {
                     ]);
                 }
             }
+            await invalidateDeveloperPermissionsCache(targetId);
             return NextResponse.json({
                 success: true,
                 message: 'Developer module permissions updated successfully.',
@@ -195,6 +197,7 @@ export async function PUT(request: any) {
         if (action === 'change_role' || body.role_id !== undefined || body.roleId !== undefined) {
             const nextRoleId = body.role_id !== undefined ? body.role_id : body.roleId;
             await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [nextRoleId || null, targetId]);
+            await invalidateDeveloperPermissionsCache(targetId);
             if (action === 'change_role') {
                 return NextResponse.json({
                     success: true,
@@ -229,6 +232,7 @@ export async function PUT(request: any) {
          LEFT JOIN developer_roles r ON d.role_id = r.id
          WHERE d.id = $1 LIMIT 1`, [targetId]);
             const record = fullRes.rows[0] || res.rows[0];
+            await invalidateDeveloperPermissionsCache(targetId);
             return NextResponse.json({
                 success: true,
                 record: { ...record, is_verified: true },
@@ -275,6 +279,8 @@ export async function PUT(request: any) {
        LEFT JOIN developer_roles r ON d.role_id = r.id
        WHERE d.id = $1 LIMIT 1`, [targetId]);
         const record = fullRes.rows[0] || res.rows[0];
+        await invalidateDeveloperCache(targetId, record?.email);
+        await invalidateDeveloperPermissionsCache(targetId);
         return NextResponse.json({
             success: true,
             record: { ...record, is_verified: true },
@@ -305,6 +311,8 @@ export async function DELETE(request: any) {
             return NextResponse.json({ success: false, error: guard.error }, { status: guard.status });
         }
         await queryDb('DELETE FROM developers WHERE id = $1', [id]);
+        await invalidateDeveloperCache(id);
+        await invalidateDeveloperPermissionsCache(id);
         return NextResponse.json({ success: true, message: 'Developer account deleted successfully.' });
     }
     catch (error: any) {

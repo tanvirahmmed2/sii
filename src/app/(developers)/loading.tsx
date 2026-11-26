@@ -4,5 +4,5 @@ export const metadata: any = {
     title: 'Loading Developer Console...',
 };
 export default function DevelopersRootLoading() {
-    return <LoadingScreen fullScreen={true} label="Loading Developer Console..."/>;
+    return <LoadingScreen fullScreen={false} label="Loading Developer Console..."/>;
 }

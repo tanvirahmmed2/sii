@@ -6,6 +6,7 @@ import { Context } from 'src/component/helper/Context';
 import Navbar from 'src/component/marketing/developer/Navbar';
 import Sidebar from 'src/component/marketing/developer/Sidebar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { isDeveloperLinkAllowed } from 'src/lib/developer/navModules';
 export const ROLE_PERMISSIONS: any = {};
 export default function DeveloperLayout({ children }: any) {
     const { user, loading } = useContext<any>(Context);
@@ -25,15 +26,7 @@ export default function DeveloperLayout({ children }: any) {
     }
     const segments = pathname.split('/').filter(Boolean);
     const moduleName = (segments[1] || '').toLowerCase();
-    const isSuperAdmin = Boolean(user && (Number(user.id) === 1 ||
-        String(user.email).toLowerCase() === 'tanvir004006@gmail.com' ||
-        (Array.isArray(user.permissions) && user.permissions.includes('*'))));
-    const userPerms = Array.isArray(user?.permissions) ? user.permissions : [];
-    const allowedModules = userPerms.map((m: any) => String(m).toLowerCase().trim());
-    const isAllowed = isSuperAdmin ||
-        !segments[1] ||
-        moduleName === 'profile' ||
-        allowedModules.includes(moduleName);
+    const isAllowed = !segments[1] || isDeveloperLinkAllowed({ href: pathname }, user);
     if (!isAllowed) {
         return (<div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} currentUser={user}/>

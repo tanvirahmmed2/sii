@@ -13,6 +13,12 @@ import {
 } from '../security/shield';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
 import { sendSms } from '../database/smsSender';
+import {
+  fetchPanelSession,
+  invalidatePanelSessionByToken,
+  invalidatePanelSessionsByTag,
+  shouldTouchSessionActivity,
+} from '../redis/redisClient';
 
 const DEFAULT_JWT_SECRET: string = JWT_SECRET || 'staff_jwt_secret_key_2026';
 
@@ -125,159 +131,176 @@ export async function getStaffSession(request?: any): Promise<any> {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    let sessRes = await queryDb(
-      `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
-              ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
-              ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
-              ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
-              ws.bio, ws.username,
-              w.name AS website_name,
-              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
-              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
-       FROM staff_sessions ss
-       JOIN website_staffs ws ON ws.id = ss.staff_id
-       JOIN websites w ON w.id = ss.website_id
-       WHERE ss.token = $1 AND ss.is_active = TRUE AND ss.expires_at > CURRENT_TIMESTAMP AND ws.is_active = TRUE
-       LIMIT 1`,
-      [token]
-    );
+    const tags = [`staff:${decoded.id}`];
+    if (decoded.websiteId) tags.push(`web:${decoded.websiteId}`);
 
-    if (sessRes.rows.length === 0) {
-      const staffCheck = await queryDb(
-        `SELECT ws.*, w.id AS web_id, w.name AS website_name,
-                COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
-                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
-         FROM website_staffs ws
-         JOIN websites w ON w.id = ws.website_id
-         WHERE ws.id = $1 AND ws.is_active = TRUE
-         LIMIT 1`,
-        [decoded.id]
-      );
-
-      if (staffCheck.rows.length > 0) {
-        const staffRow = staffCheck.rows[0];
-        try {
-          await queryDb(
-            `INSERT INTO staff_sessions (website_id, staff_id, token, expires_at, is_active)
-             VALUES ($1, $2, $3, CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
-             ON CONFLICT (token) DO UPDATE SET is_active = TRUE, expires_at = CURRENT_TIMESTAMP + INTERVAL '7 days'`,
-            [staffRow.web_id, staffRow.id, token]
-          );
-
-          sessRes = await queryDb(
-            `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
-                    ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
-                    ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
-                    ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
-                    ws.bio, ws.username,
-                    w.name AS website_name,
-              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
-              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
-             FROM staff_sessions ss
-             JOIN website_staffs ws ON ws.id = ss.staff_id
-             JOIN websites w ON w.id = ss.website_id
-             WHERE ss.token = $1 AND ss.is_active = TRUE LIMIT 1`,
-            [token]
-          );
-        } catch {
-        }
-      }
-    }
-
-    if (sessRes.rows.length === 0) return null;
-    const row = sessRes.rows[0];
-
-    queryDb(
-      `UPDATE staff_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE id = $1`,
-      [row.session_id]
-    ).catch(() => {});
-
-    const permsRes = await queryDb(
-      `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
-              wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
-              cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
-       FROM website_modules_permissions wmp
-       JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
-       JOIN websites w ON w.id = wmp.website_id
-       LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
-       WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND cm.is_active = TRUE
-         AND (
-           EXISTS (
-             SELECT 1 FROM package_control_modules pcm 
-             WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
-           )
-           OR s.package_id IS NULL
-         )`,
-      [row.id, row.website_id]
-    );
-
-    const permissions: Record<string, any> = {};
-    const allowedModules: string[] = [];
-
-    for (const p of permsRes.rows) {
-      permissions[p.module_slug] = {
-        can_view: Boolean(p.can_view),
-        can_create: Boolean(p.can_create),
-        can_edit: Boolean(p.can_edit),
-        can_delete: Boolean(p.can_delete),
-        module_name: p.module_name,
-        website_module_id: p.website_module_id,
-        module_icon: p.module_icon,
-      };
-      if (p.can_view) {
-        allowedModules.push(p.module_slug);
-      }
-    }
-
-    const staffUser = {
-      id: row.id,
-      staff_id: row.id,
-      websiteId: row.website_id,
-      website_id: row.website_id,
-      name: row.name,
-      email: row.email,
-      number: row.phone || row.number,
-      phone: row.phone || row.number,
-      address: row.address,
-      isActive: Boolean(row.staff_active),
-      isRegistered: Boolean(row.is_registered),
-      isTwoFactorEnabled: Boolean(row.is_two_factor_enabled),
-      image: row.image,
-      imageId: row.image_id,
-      gradeId: row.grade_id,
-      dateOfBirth: row.date_of_birth,
-      nationality: row.nationality,
-      bloodGroup: row.blood_group,
-      gender: row.gender,
-      nidNumber: row.nid_number,
-      bio: row.bio,
-      username: row.username,
-      websiteName: row.website_name,
-      websiteSubdomain: row.website_subdomain,
-      websiteCustomDomain: row.website_custom_domain,
-      permissions,
-      allowedModules,
+    const sessionPayload = await fetchPanelSession<any>(
+      'staff',
       token,
-      sessionId: row.session_id,
-    };
+      tags,
+      async () => {
+        let sessRes = await queryDb(
+          `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
+                  ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
+                  ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
+                  ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
+                  ws.bio, ws.username,
+                  w.name AS website_name,
+                  COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
+           FROM staff_sessions ss
+           JOIN website_staffs ws ON ws.id = ss.staff_id
+           JOIN websites w ON w.id = ss.website_id
+           WHERE ss.token = $1 AND ss.is_active = TRUE AND ss.expires_at > CURRENT_TIMESTAMP AND ws.is_active = TRUE
+           LIMIT 1`,
+          [token]
+        );
 
-    return {
-      staff: staffUser,
-      user: staffUser,
-      website_id: row.website_id,
-      websiteId: row.website_id,
-      staff_id: row.id,
-      staffId: row.id,
-      session: {
-        id: row.session_id,
-        websiteId: row.website_id,
-        website_id: row.website_id,
-        token,
-        expiresAt: row.expires_at,
+        if (sessRes.rows.length === 0) {
+          const staffCheck = await queryDb(
+            `SELECT ws.*, w.id AS web_id, w.name AS website_name,
+                    COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                    (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
+             FROM website_staffs ws
+             JOIN websites w ON w.id = ws.website_id
+             WHERE ws.id = $1 AND ws.is_active = TRUE
+             LIMIT 1`,
+            [decoded.id]
+          );
+
+          if (staffCheck.rows.length > 0) {
+            const staffRow = staffCheck.rows[0];
+            try {
+              await queryDb(
+                `INSERT INTO staff_sessions (website_id, staff_id, token, expires_at, is_active)
+                 VALUES ($1, $2, $3, CURRENT_TIMESTAMP + INTERVAL '7 days', TRUE)
+                 ON CONFLICT (token) DO UPDATE SET is_active = TRUE, expires_at = CURRENT_TIMESTAMP + INTERVAL '7 days'`,
+                [staffRow.web_id, staffRow.id, token]
+              );
+
+              sessRes = await queryDb(
+                `SELECT ss.id AS session_id, ss.website_id, ss.staff_id, ss.is_active, ss.expires_at,
+                        ws.id, ws.name, ws.email, ws.number, ws.phone, ws.address, ws.is_active AS staff_active,
+                        ws.is_registered, ws.is_two_factor_enabled, ws.image, ws.image_id, ws.grade_id,
+                        ws.date_of_birth, ws.nationality, ws.blood_group, ws.gender, ws.nid_number,
+                        ws.bio, ws.username,
+                        w.name AS website_name,
+                  COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
+                 FROM staff_sessions ss
+                 JOIN website_staffs ws ON ws.id = ss.staff_id
+                 JOIN websites w ON w.id = ss.website_id
+                 WHERE ss.token = $1 AND ss.is_active = TRUE LIMIT 1`,
+                [token]
+              );
+            } catch {
+            }
+          }
+        }
+
+        if (sessRes.rows.length === 0) return null;
+        const row = sessRes.rows[0];
+
+        const permsRes = await queryDb(
+          `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
+                  wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
+                  cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
+           FROM website_modules_permissions wmp
+           JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
+           JOIN websites w ON w.id = wmp.website_id
+           LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
+           WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND cm.is_active = TRUE
+             AND (
+               EXISTS (
+                 SELECT 1 FROM package_control_modules pcm 
+                 WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
+               )
+               OR s.package_id IS NULL
+             )`,
+          [row.id, row.website_id]
+        );
+
+        const permissions: Record<string, any> = {};
+        const allowedModules: string[] = [];
+
+        for (const p of permsRes.rows) {
+          permissions[p.module_slug] = {
+            can_view: Boolean(p.can_view),
+            can_create: Boolean(p.can_create),
+            can_edit: Boolean(p.can_edit),
+            can_delete: Boolean(p.can_delete),
+            module_name: p.module_name,
+            website_module_id: p.website_module_id,
+            module_icon: p.module_icon,
+          };
+          if (p.can_view) {
+            allowedModules.push(p.module_slug);
+          }
+        }
+
+        const staffUser = {
+          id: row.id,
+          staff_id: row.id,
+          websiteId: row.website_id,
+          website_id: row.website_id,
+          name: row.name,
+          email: row.email,
+          number: row.phone || row.number,
+          phone: row.phone || row.number,
+          address: row.address,
+          isActive: Boolean(row.staff_active),
+          isRegistered: Boolean(row.is_registered),
+          isTwoFactorEnabled: Boolean(row.is_two_factor_enabled),
+          image: row.image,
+          imageId: row.image_id,
+          gradeId: row.grade_id,
+          dateOfBirth: row.date_of_birth,
+          nationality: row.nationality,
+          bloodGroup: row.blood_group,
+          gender: row.gender,
+          nidNumber: row.nid_number,
+          bio: row.bio,
+          username: row.username,
+          websiteName: row.website_name,
+          websiteSubdomain: row.website_subdomain,
+          websiteCustomDomain: row.website_custom_domain,
+          permissions,
+          allowedModules,
+          token,
+          sessionId: row.session_id,
+        };
+
+        return {
+          staff: staffUser,
+          user: staffUser,
+          website_id: row.website_id,
+          websiteId: row.website_id,
+          staff_id: row.id,
+          staffId: row.id,
+          session: {
+            id: row.session_id,
+            websiteId: row.website_id,
+            website_id: row.website_id,
+            token,
+            expiresAt: row.expires_at,
+          },
+          permissions,
+          allowedModules,
+        };
       },
-      permissions,
-      allowedModules,
-    };
+      180
+    );
+
+    if (!sessionPayload) return null;
+
+    if (sessionPayload?.session?.id && await shouldTouchSessionActivity('staff', token, 300)) {
+      queryDb(
+        `UPDATE staff_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [sessionPayload.session.id]
+      ).catch(() => {});
+    }
+
+    return sessionPayload;
   } catch (err) {
     console.error('Error fetching staff session:', err);
     return null;
@@ -362,6 +385,7 @@ export async function revokeStaffSession(token: string): Promise<boolean> {
   try {
     if (!token) return false;
     await queryDb(`UPDATE staff_sessions SET is_active = FALSE WHERE token = $1`, [token]);
+    await invalidatePanelSessionByToken('staff', token);
     return true;
   } catch (err) {
     console.error('Error revoking staff session:', err);
@@ -380,6 +404,7 @@ export async function revokeAllStaffSessions(staffId: any, websiteId: any = null
     } else {
       await queryDb(`UPDATE staff_sessions SET is_active = FALSE WHERE staff_id = $1`, [staffId]);
     }
+    await invalidatePanelSessionsByTag('staff', `staff:${staffId}`);
     return true;
   } catch (err) {
     console.error('Error revoking all staff sessions:', err);

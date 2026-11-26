@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { invalidateDeveloperPermissionsCache } from 'src/lib/redis/redisClient';
 function slugify(text: any) {
     return String(text || '')
         .toLowerCase()
@@ -114,6 +115,7 @@ export async function POST(request: any) {
                     Boolean(p?.can_delete ?? p?.delete ?? false),
                 ]);
             }
+            await invalidateDeveloperPermissionsCache();
             return NextResponse.json({
                 success: true,
                 message: 'Role module permissions updated successfully.',
@@ -126,6 +128,7 @@ export async function POST(request: any) {
                 return NextResponse.json({ success: false, error: 'Developer ID is required.' }, { status: 400 });
             }
             await queryDb('UPDATE developers SET role_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [roleId || null, developerId]);
+            await invalidateDeveloperPermissionsCache(developerId);
             return NextResponse.json({
                 success: true,
                 message: 'Developer role assignment updated successfully.',
@@ -206,6 +209,7 @@ export async function PUT(request: any) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5
        RETURNING *`, [name, current.is_system ? null : slug, description, isActive, id]);
+        await invalidateDeveloperPermissionsCache();
         return NextResponse.json({
             success: true,
             role: updateRes.rows[0],
@@ -239,6 +243,7 @@ export async function DELETE(request: any) {
         await queryDb('UPDATE developers SET role_id = NULL WHERE role_id = $1', [id]);
         await queryDb('DELETE FROM developer_role_permissions WHERE role_id = $1', [id]);
         await queryDb('DELETE FROM developer_roles WHERE id = $1', [id]);
+        await invalidateDeveloperPermissionsCache();
         return NextResponse.json({
             success: true,
             message: `Role "${role.name}" deleted successfully.`,

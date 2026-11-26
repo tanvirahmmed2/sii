@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import { query, queryDb } from '../database/db';
 import { JWT_SECRET, getTeacherToken } from '../database/secret';
 import { getCookieStore, resolveTenantCookieName } from './tenantCookie';
+import {
+  fetchPanelSession,
+  invalidatePanelSessionsByTag,
+} from '../redis/redisClient';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
 import { sendSms } from '../database/smsSender';
 import {
@@ -135,6 +139,7 @@ export async function revokeAllTeacherSessions(websiteId: any, teacherId: any): 
        WHERE website_id = $1 AND teacher_id = $2`,
       [websiteId, teacherId]
     );
+    await invalidatePanelSessionsByTag('teacher', `teacher:${teacherId}`);
   } catch (error) {
   }
 }
@@ -463,80 +468,91 @@ export async function getTeacherSession(request?: any): Promise<any> {
     const decoded = verifyJWT(token);
     if (!decoded || !decoded.id) return null;
 
-    const res = await queryDb(
-      `SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
-              COALESCE(wt.phone, wt.number) AS phone, wt.emergency_contact, wt.gender, wt.blood_group,
-              wt.date_of_birth, wt.religion, wt.address, wt.permanent_address, wt.joining_date,
-              wt.salary, wt.photo_url, wt.photo_id, wt.is_active, wt.is_registered, wt.created_at,
-              wd.title AS designation_title,
-              dept.name AS department_name, dept.code AS department_code,
-              w.name AS website_name,
-              COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
-              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
-       FROM website_teachers wt
-       LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
-       LEFT JOIN website_departments dept ON dept.id = wt.department_id
-       LEFT JOIN websites w ON w.id = wt.website_id
-       WHERE wt.id = $1 LIMIT 1`,
-      [decoded.id]
-    );
+    const tags = [`teacher:${decoded.id}`];
+    if (decoded.websiteId) tags.push(`web:${decoded.websiteId}`);
 
-    if (res.rows.length === 0) return null;
-    const teacher = res.rows[0];
-
-    if (!teacher.is_active || !teacher.is_registered) return null;
-
-    try {
-      const sessRes = await queryDb(
-        `SELECT id, is_revoked, expires_at 
-         FROM website_teacher_login_sessions 
-         WHERE token = $1 LIMIT 1`,
-        [token]
-      );
-      if (sessRes.rows.length > 0) {
-        const sess = sessRes.rows[0];
-        if (sess.is_revoked) return null;
-        if (sess.expires_at && new Date(sess.expires_at) < new Date()) return null;
-      }
-    } catch {}
-
-    const teacherData = {
-      id: teacher.id,
-      websiteId: teacher.website_id,
-      website_id: teacher.website_id,
-      name: teacher.name,
-      email: teacher.email,
-      number: teacher.phone || teacher.number,
-      phone: teacher.phone || teacher.number,
-      address: teacher.address,
-      permanentAddress: teacher.permanent_address,
-      emergencyContact: teacher.emergency_contact,
-      designation: teacher.designation_title || 'Teacher',
-      designationId: teacher.designation_id,
-      departmentId: teacher.department_id,
-      departmentName: teacher.department_name,
-      departmentCode: teacher.department_code,
-      photoUrl: teacher.photo_url,
-      photoId: teacher.photo_id,
-      isActive: Boolean(teacher.is_active),
-      isRegistered: Boolean(teacher.is_registered),
-      websiteName: teacher.website_name,
-      websiteSubdomain: teacher.website_subdomain,
-      websiteCustomDomain: teacher.website_custom_domain,
-    };
-
-    return {
-      teacher: teacherData,
-      user: teacherData,
-      id: teacher.id,
-      email: teacher.email,
-      name: teacher.name,
-      website_id: teacher.website_id,
-      websiteId: teacher.website_id,
-      isActive: Boolean(teacher.is_active),
-      isRegistered: Boolean(teacher.is_registered),
+    return await fetchPanelSession<any>(
+      'teacher',
       token,
-    };
+      tags,
+      async () => {
+        const res = await queryDb(
+          `SELECT wt.id, wt.website_id, wt.department_id, wt.designation_id, wt.name, wt.email, wt.number,
+                  COALESCE(wt.phone, wt.number) AS phone, wt.emergency_contact, wt.gender, wt.blood_group,
+                  wt.date_of_birth, wt.religion, wt.address, wt.permanent_address, wt.joining_date,
+                  wt.salary, wt.photo_url, wt.photo_id, wt.is_active, wt.is_registered, wt.created_at,
+                  wd.title AS designation_title,
+                  dept.name AS department_name, dept.code AS department_code,
+                  w.name AS website_name,
+                  COALESCE((SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1), w.slug) AS website_subdomain,
+                  (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS website_custom_domain
+           FROM website_teachers wt
+           LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
+           LEFT JOIN website_departments dept ON dept.id = wt.department_id
+           LEFT JOIN websites w ON w.id = wt.website_id
+           WHERE wt.id = $1 LIMIT 1`,
+          [decoded.id]
+        );
+
+        if (res.rows.length === 0) return null;
+        const teacher = res.rows[0];
+
+        if (!teacher.is_active || !teacher.is_registered) return null;
+
+        try {
+          const sessRes = await queryDb(
+            `SELECT id, is_revoked, expires_at 
+             FROM website_teacher_login_sessions 
+             WHERE token = $1 LIMIT 1`,
+            [token]
+          );
+          if (sessRes.rows.length > 0) {
+            const sess = sessRes.rows[0];
+            if (sess.is_revoked) return null;
+            if (sess.expires_at && new Date(sess.expires_at) < new Date()) return null;
+          }
+        } catch {}
+
+        const teacherData = {
+          id: teacher.id,
+          websiteId: teacher.website_id,
+          website_id: teacher.website_id,
+          name: teacher.name,
+          email: teacher.email,
+          number: teacher.phone || teacher.number,
+          phone: teacher.phone || teacher.number,
+          address: teacher.address,
+          permanentAddress: teacher.permanent_address,
+          emergencyContact: teacher.emergency_contact,
+          designation: teacher.designation_title || 'Teacher',
+          designationId: teacher.designation_id,
+          departmentId: teacher.department_id,
+          departmentName: teacher.department_name,
+          departmentCode: teacher.department_code,
+          photoUrl: teacher.photo_url,
+          photoId: teacher.photo_id,
+          isActive: Boolean(teacher.is_active),
+          isRegistered: Boolean(teacher.is_registered),
+          websiteName: teacher.website_name,
+          websiteSubdomain: teacher.website_subdomain,
+          websiteCustomDomain: teacher.website_custom_domain,
+        };
+
+        return {
+          teacher: teacherData,
+          user: teacherData,
+          id: teacher.id,
+          email: teacher.email,
+          name: teacher.name,
+          website_id: teacher.website_id,
+          websiteId: teacher.website_id,
+          isActive: Boolean(teacher.is_active),
+          isRegistered: Boolean(teacher.is_registered),
+          token,
+        };
+      },
+      180
+    );
   } catch (error) {
     return null;
   }

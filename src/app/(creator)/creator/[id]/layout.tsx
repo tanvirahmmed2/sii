@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import CreatorNavbar from 'src/component/marketing/creator/Navbar';
 import CreatorSidebar from 'src/component/marketing/creator/Sidebar';
@@ -33,8 +33,11 @@ export default function CreatorLayout({ children, params }: any) {
     });
     const [loading, setLoading] = useState<any>(true);
     const [loadError, setLoadError] = useState<any>(null);
+    const hasLoadedRef = useRef<boolean>(false);
     const fetchData = useCallback(async () => {
-        setLoading(true);
+        if (!hasLoadedRef.current) {
+            setLoading(true);
+        }
         setLoadError(null);
         try {
             const url = creatorId ? `/api/marketing/creator?creatorId=${creatorId}` : '/api/marketing/creator';
@@ -55,6 +58,7 @@ export default function CreatorLayout({ children, params }: any) {
                     router.replace(json.redirectUrl || `/creator/${loggedInId}`);
                 }
                 setData(json);
+                hasLoadedRef.current = true;
             }
             else {
                 router.replace('/creator/login');

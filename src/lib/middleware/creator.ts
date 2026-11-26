@@ -21,6 +21,8 @@ import {
 import {
   fetchCreatorCredential,
   fetchCreatorSessionById,
+  fetchPanelSession,
+  shouldTouchSessionActivity,
   invalidateCreatorCache,
 } from '../redis/redisClient';
 
@@ -132,21 +134,34 @@ export async function getCreatorSession(request?: any): Promise<any> {
     if (!c || !c.is_active) return null;
 
     try {
-      const sessRes = await query(
-        `SELECT is_active, expires_at FROM creator_login_sessions WHERE token = $1 AND creator_id = $2 LIMIT 1`,
-        [token, c.id]
+      const sessState = await fetchPanelSession<{ active: boolean }>(
+        'creator',
+        token,
+        [`creator:${c.id}`],
+        async () => {
+          const sessRes = await query(
+            `SELECT is_active, expires_at FROM creator_login_sessions WHERE token = $1 AND creator_id = $2 LIMIT 1`,
+            [token, c.id]
+          );
+          if (sessRes.rows.length === 0) {
+            return { active: false };
+          }
+          const s = sessRes.rows[0];
+          if (s.is_active === false) return { active: false };
+          if (s.expires_at && new Date(s.expires_at) < new Date()) return { active: false };
+          return { active: true };
+        },
+        180
       );
-      if (sessRes.rows.length === 0) {
-        return null;
-      }
-      const s = sessRes.rows[0];
-      if (s.is_active === false) return null;
-      if (s.expires_at && new Date(s.expires_at) < new Date()) return null;
 
-      query(
-        `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
-        [token]
-      ).catch(() => {});
+      if (!sessState || !sessState.active) return null;
+
+      if (await shouldTouchSessionActivity('creator', token, 300)) {
+        query(
+          `UPDATE creator_login_sessions SET last_active_at = CURRENT_TIMESTAMP WHERE token = $1`,
+          [token]
+        ).catch(() => {});
+      }
     } catch (e) {
       console.error('Error verifying creator session against database:', e);
       return null;
