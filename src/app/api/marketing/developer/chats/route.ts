@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
+import { emitInternalChatUpdated } from 'src/lib/realtime/socketServer';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, 'chats');
@@ -101,6 +102,7 @@ export async function POST(request: any) {
             const chatRes = await queryDb(`INSERT INTO internal_chats (type, created_by_developer_id) VALUES ('DIRECT', $1) RETURNING id`, [currentDevId]);
             const newChatId = chatRes.rows[0].id;
             await queryDb(`INSERT INTO chat_participants (chat_id, developer_id) VALUES ($1, $2), ($1, $3)`, [newChatId, currentDevId, recipient_developer_id]);
+            emitInternalChatUpdated({ chatId: newChatId });
             return NextResponse.json({
                 success: true,
                 chatId: newChatId,
@@ -120,6 +122,7 @@ export async function POST(request: any) {
             }
             await queryDb(`INSERT INTO chat_messages (chat_id, sender_developer_id, message, is_system)
          VALUES ($1, $2, $3, TRUE)`, [newChatId, currentDevId, `${currentDev?.name || 'Developer'} created the group "${title.trim()}".`]);
+            emitInternalChatUpdated({ chatId: newChatId });
             return NextResponse.json({
                 success: true,
                 chatId: newChatId,

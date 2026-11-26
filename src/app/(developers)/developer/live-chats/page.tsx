@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 
 export default function AdminLiveChatsPage() {
   const router = useRouter();
@@ -102,15 +103,50 @@ export default function AdminLiveChatsPage() {
     }
   }, [activeChatId, fetchActiveChatDetails]);
 
+  const { connected: socketConnected } = useSocketRooms(
+    ['live_chats:list', activeChatId ? `live_chat:${activeChatId}` : null],
+    {
+      'live_chat:message': (payload: any) => {
+        if (payload?.message && String(payload.chatId) === String(activeChatId)) {
+          setMessages((prev: any[]) =>
+            prev.some((m: any) => String(m.id) === String(payload.message.id))
+              ? prev
+              : [...prev, payload.message]
+          );
+        }
+        if (payload?.chat && String(payload.chatId) === String(activeChatId)) {
+          setActiveChat((prev: any) => (prev ? { ...prev, ...payload.chat } : prev));
+        }
+        fetchChats(false);
+      },
+      'live_chat:updated': (payload: any) => {
+        if (payload?.chat && String(payload.chatId) === String(activeChatId)) {
+          if (payload.chat.deleted) {
+            setActiveChatId(null);
+            setActiveChat(null);
+            setMessages([]);
+          } else {
+            setActiveChat((prev: any) => (prev ? { ...prev, ...payload.chat } : prev));
+          }
+        }
+        fetchChats(false);
+      },
+      'live_chat:started': () => {
+        fetchChats(false);
+      },
+    }
+  );
+
   useEffect(() => {
+    if (socketConnected) return;
     const interval = setInterval(() => {
       fetchChats(false);
       if (activeChatId) {
         fetchActiveChatDetails(activeChatId, false);
       }
-    }, 3000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [activeChatId, fetchChats, fetchActiveChatDetails]);
+  }, [socketConnected, activeChatId, fetchChats, fetchActiveChatDetails]);
 
   const handleSendReply = async (e: any) => {
     if (e) e.preventDefault();
@@ -130,7 +166,11 @@ export default function AdminLiveChatsPage() {
       if (data.success) {
         setReplyMessage('');
         if (data.messageRecord) {
-          setMessages((prev: any) => [...prev, data.messageRecord]);
+          setMessages((prev: any) =>
+            prev.some((m: any) => String(m.id) === String(data.messageRecord.id))
+              ? prev
+              : [...prev, data.messageRecord]
+          );
         }
         await fetchChats(false);
       } else {

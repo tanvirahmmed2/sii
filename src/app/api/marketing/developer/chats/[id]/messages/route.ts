@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { queryDb } from 'src/lib/database/db';
+import { emitInternalChatMessage } from 'src/lib/realtime/socketServer';
 export async function GET(request: any, { params }: any) {
     try {
         const auth = await hasModulePermission(request, 'chats');
@@ -90,16 +91,18 @@ export async function POST(request: any, { params }: any) {
         }
         await queryDb('UPDATE internal_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
         await queryDb('UPDATE chat_participants SET last_read_at = CURRENT_TIMESTAMP WHERE chat_id = $1 AND developer_id = $2', [id, currentDevId]);
+        const fullMessage = {
+            ...newMsg,
+            sender_id: currentDev.id,
+            sender_name: currentDev.name,
+            sender_email: currentDev.email,
+            sender_role: 'developer',
+            images: savedImages,
+        };
+        emitInternalChatMessage({ chatId: id, message: fullMessage });
         return NextResponse.json({
             success: true,
-            message: {
-                ...newMsg,
-                sender_id: currentDev.id,
-                sender_name: currentDev.name,
-                sender_email: currentDev.email,
-                sender_role: 'developer',
-                images: savedImages,
-            },
+            message: fullMessage,
         });
     }
     catch (error: any) {

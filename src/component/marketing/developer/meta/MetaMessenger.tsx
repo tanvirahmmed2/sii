@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from '../ChatUsersSwipeBar';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 
 export default function MetaMessenger({
   platform = 'facebook',
@@ -121,15 +122,48 @@ export default function MetaMessenger({
     }
   }, [selectedConv?.id, fetchMessages]);
 
+  const { connected: socketConnected } = useSocketRooms(
+    [`meta:${platform}`, selectedConv?.id ? `meta:conv:${selectedConv.id}` : null],
+    {
+      'meta:message': (payload: any) => {
+        if (payload?.platform !== platform) return;
+        if (payload?.record && String(payload.conversationId) === String(selectedConv?.id)) {
+          setMessages((prev: any[]) =>
+            prev.some((m: any) => String(m.id) === String(payload.record.id))
+              ? prev
+              : [...prev, payload.record]
+          );
+        }
+        fetchConversations(true);
+      },
+      'meta:conversation_updated': (payload: any) => {
+        if (payload?.platform !== platform) return;
+        if (payload?.record && String(payload.conversationId) === String(selectedConv?.id)) {
+          setSelectedConv((prev: any) => (prev ? { ...prev, ...payload.record } : prev));
+        }
+        fetchConversations(true);
+      },
+      'meta:conversation_deleted': (payload: any) => {
+        if (payload?.platform !== platform) return;
+        if (String(payload.conversationId) === String(selectedConv?.id)) {
+          setSelectedConv(null);
+          setMessages([]);
+        }
+        fetchConversations(true);
+      },
+    }
+  );
+
   useEffect(() => {
+    if (socketConnected) return;
     const interval = setInterval(() => {
       fetchConversations(true);
       if (selectedConv?.id) {
         fetchMessages(selectedConv.id, true);
       }
-    }, 4000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [selectedConv?.id, fetchConversations, fetchMessages]);
+  }, [socketConnected, selectedConv?.id, fetchConversations, fetchMessages]);
 
   const handleSendMessage = async (e: any) => {
     if (e) e.preventDefault();
@@ -150,7 +184,9 @@ export default function MetaMessenger({
       const data = await res.json();
       if (data.success && data.record) {
         setInputText('');
-        setMessages((prev: any) => [...prev, data.record]);
+        setMessages((prev: any) =>
+          prev.some((m: any) => String(m.id) === String(data.record.id)) ? prev : [...prev, data.record]
+        );
         if (data.apiNotice || data.warning) {
           setApiNotice(data.apiNotice || data.warning);
         }
@@ -258,6 +294,16 @@ export default function MetaMessenger({
             <h1 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h1>
             <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 uppercase">
               Meta Graph API
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded border ${
+                socketConnected
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              {socketConnected ? 'Live' : 'Syncing'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>

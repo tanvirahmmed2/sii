@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function SingleSupportTicketPage() {
     const params: any = useParams();
     const router = useRouter();
@@ -80,14 +81,40 @@ export default function SingleSupportTicketPage() {
     useEffect(() => {
         fetchTicketDetails();
     }, [fetchTicketDetails]);
+    const { connected: socketConnected } = useSocketRooms(
+        [ticket?.id ? `support:ticket:${ticket.id}` : ticketId ? `support:ticket:${ticketId}` : null, 'support:list'],
+        {
+            'support:message': (payload: any) => {
+                if (
+                    payload?.message &&
+                    (String(payload.ticketId) === String(ticket?.id || ticketId) ||
+                        String(payload.ticketNumber) === String(ticketId))
+                ) {
+                    setMessages((prev: any[]) =>
+                        prev.some((m: any) => String(m.id) === String(payload.message.id))
+                            ? prev
+                            : [...prev, payload.message]
+                    );
+                }
+                if (payload?.ticket && String(payload.ticket.id) === String(ticket?.id || ticketId)) {
+                    setTicket((prev: any) => (prev ? { ...prev, ...payload.ticket } : prev));
+                }
+            },
+            'support:ticket_updated': (payload: any) => {
+                if (payload?.ticket && String(payload.ticket.id) === String(ticket?.id || ticketId)) {
+                    setTicket((prev: any) => (prev ? { ...prev, ...payload.ticket } : prev));
+                }
+            },
+        }
+    );
     useEffect(() => {
-        if (!ticketId)
+        if (!ticketId || socketConnected)
             return;
         const interval = setInterval(() => {
             fetchTicketDetails();
-        }, 5000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [ticketId, fetchTicketDetails]);
+    }, [ticketId, socketConnected, fetchTicketDetails]);
     const handleManualRefresh = async () => {
         if (!ticketId || refreshing)
             return;

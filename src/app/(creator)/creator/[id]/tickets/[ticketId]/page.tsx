@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function CreatorSingleTicketPage() {
     const params: any = useParams();
     const creatorId = params?.id;
@@ -50,14 +51,53 @@ export default function CreatorSingleTicketPage() {
     useEffect(() => {
         fetchTicketThread();
     }, [fetchTicketThread]);
+    const [agentTyping, setAgentTyping] = useState<string | null>(null);
+    const typingTimerRef = useRef<any>(null);
+    const ticketRoom = ticket?.id ? `support:ticket:${ticket.id}` : ticketId ? `support:ticket:${ticketId}` : null;
+    const { connected: socketConnected, emitTyping } = useSocketRooms(
+        [ticketRoom],
+        {
+            'support:message': (payload: any) => {
+                if (
+                    payload?.message &&
+                    (String(payload.ticketId) === String(ticket?.id || ticketId) ||
+                        String(payload.ticketNumber) === String(ticketId))
+                ) {
+                    setMessages((prev: any[]) =>
+                        prev.some((m: any) => String(m.id) === String(payload.message.id))
+                            ? prev
+                            : [...prev, payload.message]
+                    );
+                    setAgentTyping(null);
+                }
+                if (payload?.ticket) {
+                    setTicket((prev: any) => (prev ? { ...prev, ...payload.ticket } : prev));
+                }
+            },
+            'support:ticket_updated': (payload: any) => {
+                if (payload?.ticket && String(payload.ticket.id) === String(ticket?.id || ticketId)) {
+                    setTicket((prev: any) => (prev ? { ...prev, ...payload.ticket } : prev));
+                }
+            },
+            typing: (payload: any) => {
+                if (payload?.room === ticketRoom && payload?.senderType === 'developer') {
+                    setAgentTyping(payload.isTyping ? payload.senderName || 'Support Agent' : null);
+                    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+                    if (payload.isTyping) {
+                        typingTimerRef.current = setTimeout(() => setAgentTyping(null), 3000);
+                    }
+                }
+            },
+        }
+    );
     useEffect(() => {
-        if (!ticketId)
+        if (!ticketId || socketConnected)
             return;
         const interval = setInterval(() => {
             fetchTicketThread();
-        }, 4000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [ticketId, fetchTicketThread]);
+    }, [ticketId, socketConnected, fetchTicketThread]);
     const handleManualRefresh = async () => {
         setRefreshing(true);
         await fetchTicketThread(false);
@@ -244,6 +284,8 @@ export default function CreatorSingleTicketPage() {
           <div ref={messagesEndRef}/>
         </div>
 
+        {agentTyping && (<p className="text-[11px] text-slate-500">{agentTyping} is typing...</p>)}
+
         {selectedImage && imagePreview && (<div className="p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-3 animate-in fade-in duration-150">
             <div className="flex items-center gap-2.5 overflow-hidden">
               <img src={imagePreview} alt="Selected" className="w-12 h-12 object-cover rounded border border-slate-300 flex-shrink-0"/>
@@ -267,7 +309,16 @@ export default function CreatorSingleTicketPage() {
             </svg>
           </label>
 
-          <input type="text" aria-label="Reply message" value={replyMessage} onPaste={handlePaste} onChange={(e: any) => setReplyMessage(e.target.value)} className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"/>
+          <input type="text" aria-label="Reply message" value={replyMessage} onPaste={handlePaste} onChange={(e: any) => {
+            setReplyMessage(e.target.value);
+            if (ticketRoom) {
+                emitTyping(ticketRoom, {
+                    senderName: ticket?.creator_name || 'Creator',
+                    senderType: 'creator',
+                    isTyping: Boolean(e.target.value.trim()),
+                });
+            }
+        }} className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-slate-800"/>
 
           <button type="submit" disabled={sendingReply || (!replyMessage.trim() && !selectedImage)} className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5 min-w-[60px]">
             {sendingReply ? (<div className="loader loader-sm loader-white"/>) : ('Send')}

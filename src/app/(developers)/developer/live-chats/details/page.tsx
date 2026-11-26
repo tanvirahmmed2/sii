@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function LiveChatDetailsPage() {
     const router = useRouter();
     const [chats, setChats] = useState<any>([]);
@@ -51,12 +52,19 @@ export default function LiveChatDetailsPage() {
             ignore = true;
         };
     }, []);
+    const { connected: socketConnected } = useSocketRooms(['live_chats:list'], {
+        'live_chat:message': () => fetchChats(false),
+        'live_chat:updated': () => fetchChats(false),
+        'live_chat:started': () => fetchChats(false),
+    });
     useEffect(() => {
+        if (socketConnected)
+            return;
         const interval = setInterval(() => {
             fetchChats(false);
-        }, 4000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [fetchChats]);
+    }, [socketConnected, fetchChats]);
     const handleDelete = async (id: any, e: any) => {
         if (e)
             e.stopPropagation();

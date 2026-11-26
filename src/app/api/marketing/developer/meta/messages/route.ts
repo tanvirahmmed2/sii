@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { pool } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { sendPlatformMessage } from 'src/lib/meta/graph';
+import { emitMetaMessage } from 'src/lib/realtime/socketServer';
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'meta'];
 export async function GET(request: any) {
     try {
@@ -98,9 +99,16 @@ export async function POST(request: any) {
             errorMessage,
         ]);
         const savedMessage = insertRes.rows[0];
-        await pool.query(`UPDATE meta_conversations
+        const convUpdateRes = await pool.query(`UPDATE meta_conversations
        SET last_message = $1, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`, [cleanText, conv.id]);
+       WHERE id = $2
+       RETURNING *`, [cleanText, conv.id]);
+        emitMetaMessage({
+            platform: conv.platform,
+            conversationId: conv.id,
+            record: savedMessage,
+            conversation: convUpdateRes.rows[0] || null,
+        });
         return NextResponse.json({
             success: true,
             record: savedMessage,

@@ -3,6 +3,7 @@ import { generateRandomHex, generateToken } from 'src/lib/utils/random';
 import { cookies } from 'next/headers';
 import { queryDb } from 'src/lib/database/db';
 import { LIVE_CHAT_TOKEN, SITE_NAME } from 'src/lib/database/secret';
+import { emitLiveChatStarted, emitLiveChatMessage, emitLiveChatUpdated } from 'src/lib/realtime/socketServer';
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
 const COOKIE_MAX_AGE = 60 * 60 * 24;
 function parseCookieData(cookieVal: any) {
@@ -144,6 +145,7 @@ export async function POST(request: any) {
                 });
             }
             catch (_: any) { }
+            emitLiveChatStarted({ chat, messages: [welcomeMsg] });
             const response = NextResponse.json({
                 success: true,
                 chat,
@@ -178,7 +180,8 @@ export async function POST(request: any) {
             const msgRes = await queryDb(`INSERT INTO live_chat_messages (chat_id, sender_type, sender_name, message)
          VALUES ($1, 'VISITOR', $2, $3)
          RETURNING *`, [chatId, senderName, message]);
-            await queryDb('UPDATE live_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [chatId]);
+            const updatedChatRes = await queryDb('UPDATE live_chats SET updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *', [chatId]);
+            emitLiveChatMessage({ chatId, message: msgRes.rows[0], chat: updatedChatRes.rows[0] });
             return NextResponse.json({
                 success: true,
                 message: msgRes.rows[0],
@@ -187,7 +190,10 @@ export async function POST(request: any) {
         if (action === 'end_chat' || action === 'clear') {
             const chatId = body.chat_id ? Number(body.chat_id) : null;
             if (chatId) {
-                await queryDb("UPDATE live_chats SET status = 'CLOSED', ended_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1", [chatId]);
+                const closedRes = await queryDb("UPDATE live_chats SET status = 'CLOSED', ended_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [chatId]);
+                if (closedRes.rows[0]) {
+                    emitLiveChatUpdated({ chatId, chat: closedRes.rows[0] });
+                }
             }
             try {
                 cookieStore.delete(COOKIE_NAME);

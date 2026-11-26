@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { uploadImage } from 'src/lib/database/cloudinary';
+import { emitSupportMessage } from 'src/lib/realtime/socketServer';
 export async function GET(request: any, context: any) {
     try {
         const params = await context?.params;
@@ -164,12 +165,19 @@ export async function POST(request: any, context: any) {
       WHERE id = $1
       RETURNING *
     `, [ticket.id]);
+        const payloadMessage = {
+            ...newMsg,
+            images: attachedImages,
+        };
+        emitSupportMessage({
+            ticketId: ticket.id,
+            ticketNumber: ticket.ticket_number,
+            message: payloadMessage,
+            ticket: updateRes.rows[0],
+        });
         return NextResponse.json({
             success: true,
-            message: {
-                ...newMsg,
-                images: attachedImages,
-            },
+            message: payloadMessage,
             ticket: updateRes.rows[0],
         });
     }

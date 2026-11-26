@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiSearch, FiSend, FiRefreshCw, FiCheck, FiCheckCircle, FiAlertCircle, FiTrash2, FiExternalLink, FiUser } from 'react-icons/fi';
 import { FaFacebook } from 'react-icons/fa';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function MessageFacebookPage() {
     const params: any = useParams();
     const domain = params?.domain || '';
@@ -11,6 +12,7 @@ export default function MessageFacebookPage() {
     const [conversations, setConversations] = useState<any>([]);
     const [stats, setStats] = useState<any>({ totalThreads: 0, openThreads: 0, totalUnread: 0 });
     const [metaConfig, setMetaConfig] = useState<any>(null);
+    const [websiteId, setWebsiteId] = useState<any>(null);
     const [selectedConv, setSelectedConv] = useState<any>(null);
     const [messages, setMessages] = useState<any>([]);
     const [messagesLoading, setMessagesLoading] = useState<any>(false);
@@ -31,6 +33,43 @@ export default function MessageFacebookPage() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+    useSocketRooms(
+        [
+            websiteId ? `meta:website:${websiteId}:facebook` : null,
+            selectedConv?.id ? `meta:website_conv:${selectedConv.id}` : null,
+        ],
+        {
+            'website_meta:message': (payload: any) => {
+                if (payload?.platform !== 'facebook')
+                    return;
+                if (payload?.record && String(payload.conversationId) === String(selectedConv?.id)) {
+                    setMessages((prev: any[]) => {
+                        if (prev.some((m: any) => String(m.id) === String(payload.record.id))) {
+                            return prev;
+                        }
+                        const filtered = prev.filter(
+                            (m: any) =>
+                                !(
+                                    String(m.id).startsWith('temp_') &&
+                                    m.delivery_status === 'SENDING' &&
+                                    m.message_text === payload.record.message_text
+                                )
+                        );
+                        return [...filtered, payload.record];
+                    });
+                }
+                fetchConversations();
+            },
+            'website_meta:conversation_updated': (payload: any) => {
+                if (payload?.platform !== 'facebook')
+                    return;
+                if (payload?.record && String(payload.conversationId) === String(selectedConv?.id)) {
+                    setSelectedConv((prev: any) => (prev ? { ...prev, ...payload.record } : prev));
+                }
+                fetchConversations();
+            },
+        }
+    );
     const fetchConversations = async () => {
         setLoading(true);
         setActionError(null);
@@ -41,6 +80,8 @@ export default function MessageFacebookPage() {
                 setConversations(data.conversations || []);
                 setStats(data.stats || { totalThreads: 0, openThreads: 0, totalUnread: 0 });
                 setMetaConfig(data.metaConfig || null);
+                if (data.websiteId)
+                    setWebsiteId(data.websiteId);
                 if (!selectedConv && data.conversations?.length > 0) {
                     setSelectedConv(data.conversations[0]);
                 }
@@ -104,7 +145,11 @@ export default function MessageFacebookPage() {
             if (!res.ok || !data.success) {
                 throw new Error(data.error || 'Failed to dispatch message to Facebook.');
             }
-            setMessages((prev: any) => prev.map((m: any) => (m.id === tempMessage.id ? data.message : m)));
+            setMessages((prev: any) =>
+                prev.some((m: any) => String(m.id) === String(data.message?.id))
+                    ? prev.filter((m: any) => m.id !== tempMessage.id)
+                    : prev.map((m: any) => (m.id === tempMessage.id ? data.message : m))
+            );
             setConversations((prev: any) => prev.map((c: any) => c.id === selectedConv.id
                 ? { ...c, last_message: textToSend, last_message_at: new Date().toISOString() }
                 : c));

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { pool } from 'src/lib/database/db';
 import { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } from 'src/lib/database/secret';
 import { parseIncomingMetaWebhook, verifyMetaWebhookSignature } from 'src/lib/meta/graph';
+import { emitMetaMessage, emitWebsiteMetaMessage } from 'src/lib/realtime/socketServer';
 const MAX_PAYLOAD_BYTES = 1024 * 1024;
 export async function GET(request: any) {
     try {
@@ -101,7 +102,7 @@ export async function POST(request: any) {
              unread_count = meta_conversations.unread_count + 1,
              updated_at = CURRENT_TIMESTAMP,
              recipient_name = COALESCE(NULLIF(EXCLUDED.recipient_name, 'Customer'), meta_conversations.recipient_name)
-           RETURNING id`, [
+           RETURNING *`, [
                     safePlatform,
                     safeConvId,
                     safeRecipientId,
@@ -110,13 +111,15 @@ export async function POST(request: any) {
                     safeText,
                     evt.timestamp || new Date(),
                 ]);
-                const convId = convUpsert.rows[0]?.id;
+                const convRow = convUpsert.rows[0];
+                const convId = convRow?.id;
                 if (convId) {
-                    await pool.query(`INSERT INTO meta_messages (
+                    const insertedMsg = await pool.query(`INSERT INTO meta_messages (
                conversation_id, platform, sender_type, sender_id, sender_name,
                message_text, external_message_id, delivery_status, created_at
              )
-             VALUES ($1, $2, 'CUSTOMER', $3, $4, $5, $6, 'DELIVERED', $7)`, [
+             VALUES ($1, $2, 'CUSTOMER', $3, $4, $5, $6, 'DELIVERED', $7)
+             RETURNING *`, [
                         convId,
                         safePlatform,
                         safeRecipientId,
@@ -125,6 +128,12 @@ export async function POST(request: any) {
                         safeMsgId,
                         evt.timestamp || new Date(),
                     ]);
+                    emitMetaMessage({
+                        platform: safePlatform,
+                        conversationId: convId,
+                        record: insertedMsg.rows[0],
+                        conversation: convRow,
+                    });
                 }
                 try {
                     const webMetaRes = await pool.query(`SELECT website_id FROM website_meta
@@ -149,7 +158,7 @@ export async function POST(request: any) {
                  unread_count = website_meta_conversations.unread_count + 1,
                  updated_at = CURRENT_TIMESTAMP,
                  recipient_name = COALESCE(NULLIF(EXCLUDED.recipient_name, 'Customer'), website_meta_conversations.recipient_name)
-               RETURNING id`, [
+               RETURNING *`, [
                             webId,
                             safePlatform,
                             safeConvId,
@@ -159,13 +168,15 @@ export async function POST(request: any) {
                             safeText,
                             evt.timestamp || new Date(),
                         ]);
-                        const wConvId = wConvUpsert.rows[0]?.id;
+                        const wConvRow = wConvUpsert.rows[0];
+                        const wConvId = wConvRow?.id;
                         if (wConvId) {
-                            await pool.query(`INSERT INTO website_meta_messages (
+                            const insertedWMsg = await pool.query(`INSERT INTO website_meta_messages (
                    website_id, conversation_id, platform, sender_type, sender_id, sender_name,
                    message_text, external_message_id, delivery_status, created_at
                  )
-                 VALUES ($1, $2, $3, 'CUSTOMER', $4, $5, $6, $7, 'DELIVERED', $8)`, [
+                 VALUES ($1, $2, $3, 'CUSTOMER', $4, $5, $6, $7, 'DELIVERED', $8)
+                 RETURNING *`, [
                                 webId,
                                 wConvId,
                                 safePlatform,
@@ -175,6 +186,13 @@ export async function POST(request: any) {
                                 safeMsgId,
                                 evt.timestamp || new Date(),
                             ]);
+                            emitWebsiteMetaMessage({
+                                websiteId: webId,
+                                platform: safePlatform,
+                                conversationId: wConvId,
+                                record: insertedWMsg.rows[0],
+                                conversation: wConvRow,
+                            });
                         }
                     }
                 }

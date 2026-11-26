@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BiMessageRoundedDots, BiX, BiMinus, BiSend, BiSupport, BiPowerOff, BiLoaderAlt, BiTime, } from 'react-icons/bi';
 import { SITE_NAME, LIVE_CHAT_TOKEN } from 'src/lib/database/secret';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 const COOKIE_NAME = LIVE_CHAT_TOKEN || 'hiesci-live';
 const COOKIE_EXPIRY_MS = 24 * 60 * 60 * 1000;
 function getLiveCookie() {
@@ -276,10 +277,47 @@ export default function LiveChatPopup() {
             isMounted = false;
         };
     }, []);
+    const { connected: socketConnected } = useSocketRooms(
+        [chatSession?.id ? `live_chat:${chatSession.id}` : null],
+        {
+            'live_chat:message': (payload: any) => {
+                if (payload?.message && String(payload.chatId) === String(chatSession?.id)) {
+                    const sanitizedMsg = {
+                        ...payload.message,
+                        sender_name: payload.message.sender_type === 'ADMIN' ? 'Support' : payload.message.sender_name,
+                    };
+                    setMessages((prev: any[]) => {
+                        if (prev.some((m: any) => String(m.id) === String(sanitizedMsg.id))) {
+                            return prev;
+                        }
+                        const updated = [...prev, sanitizedMsg];
+                        lastMessageCountRef.current = updated.length;
+                        if (!isOpen) {
+                            setUnreadCount((c: any) => c + 1);
+                        }
+                        return updated;
+                    });
+                }
+                if (payload?.chat && String(payload.chatId) === String(chatSession?.id)) {
+                    setChatSession(payload.chat);
+                }
+            },
+            'live_chat:updated': (payload: any) => {
+                if (payload?.chat && String(payload.chatId) === String(chatSession?.id)) {
+                    if (payload.chat.status === 'CLOSED' || payload.chat.deleted) {
+                        setChatSession(null);
+                        clearLiveCookie();
+                    } else {
+                        setChatSession(payload.chat);
+                    }
+                }
+            },
+        }
+    );
     useEffect(() => {
-        if (!chatSession?.id)
+        if (!chatSession?.id || socketConnected)
             return;
-        const intervalTime = isOpen ? 3000 : 5000;
+        const intervalTime = isOpen ? 5000 : 10000;
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`/api/marketing/live_chats?chatId=${chatSession.id}`);
@@ -308,7 +346,7 @@ export default function LiveChatPopup() {
             catch (_: any) { }
         }, intervalTime);
         return () => clearInterval(interval);
-    }, [chatSession, isOpen]);
+    }, [chatSession, isOpen, socketConnected]);
     const handleStartChat = async (e: any) => {
         e.preventDefault();
         if (!visitorName.trim())

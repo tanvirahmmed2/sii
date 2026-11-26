@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { emitMetaConversationUpdated, emitMetaConversationDeleted } from 'src/lib/realtime/socketServer';
 const ALLOWED_PLATFORMS = ['facebook', 'instagram', 'whatsapp'];
 const ALLOWED_STATUSES = ['OPEN', 'RESOLVED', 'SPAM'];
 const META_PERMISSIONS = ['facebook-messages', 'instagram-messages', 'whatsapp-messages', 'chats', 'meta'];
@@ -89,6 +90,11 @@ export async function PATCH(request: any) {
         if (rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
         }
+        emitMetaConversationUpdated({
+            platform: rows[0].platform,
+            conversationId: rows[0].id,
+            record: rows[0],
+        });
         return NextResponse.json({ success: true, record: rows[0] });
     }
     catch (error: any) {
@@ -109,10 +115,14 @@ export async function DELETE(request: any) {
         if (isNaN(convId) || convId <= 0) {
             return NextResponse.json({ success: false, error: 'Valid integer conversation ID is required' }, { status: 400 });
         }
-        const deleteRes = await pool.query('DELETE FROM meta_conversations WHERE id = $1 RETURNING id', [convId]);
+        const deleteRes = await pool.query('DELETE FROM meta_conversations WHERE id = $1 RETURNING id, platform', [convId]);
         if (deleteRes.rowCount === 0) {
             return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
         }
+        emitMetaConversationDeleted({
+            platform: deleteRes.rows[0].platform,
+            conversationId: deleteRes.rows[0].id,
+        });
         return NextResponse.json({ success: true, message: 'Conversation deleted successfully' });
     }
     catch (error: any) {
@@ -148,6 +158,11 @@ export async function POST(request: any) {
          message_text, delivery_status, created_at
        )
        VALUES ($1, $2, 'CUSTOMER', $3, $4, $5, 'DELIVERED', CURRENT_TIMESTAMP)`, [conv.id, cleanPlatform, safeRecipientId, safeName, safeText]);
+        emitMetaConversationUpdated({
+            platform: cleanPlatform,
+            conversationId: conv.id,
+            record: conv,
+        });
         return NextResponse.json({ success: true, record: conv });
     }
     catch (error: any) {

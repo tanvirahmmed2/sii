@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { generateToken } from 'src/lib/utils/random';
+import { emitLiveChatMessage, emitLiveChatUpdated, emitLiveChatStarted } from 'src/lib/realtime/socketServer';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, 'live-chats');
@@ -86,6 +87,7 @@ export async function POST(request: any) {
             const newChatRes = await queryDb(`INSERT INTO live_chats (visitor_name, visitor_email, session_id, status, ip_address, assigned_developer_id, started_at)
          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
          RETURNING *`, [visitorName, visitorEmail, sessionId, status, ip, auth.user?.id || null]);
+            emitLiveChatStarted({ chat: newChatRes.rows[0], messages: [] });
             return NextResponse.json({ success: true, record: newChatRes.rows[0] });
         }
         if (action === 'create_record' && body.table === 'live_chat_messages') {
@@ -100,11 +102,13 @@ export async function POST(request: any) {
             const msgRes = await queryDb(`INSERT INTO live_chat_messages (chat_id, sender_type, sender_id, sender_name, message)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`, [chatId, senderType, senderId, senderName, message]);
-            await queryDb(`UPDATE live_chats 
+            const updatedChatRes = await queryDb(`UPDATE live_chats 
          SET updated_at = CURRENT_TIMESTAMP, 
              status = CASE WHEN status = 'CLOSED' THEN 'OPEN' ELSE status END,
              assigned_developer_id = COALESCE(assigned_developer_id, $2)
-         WHERE id = $1`, [chatId, auth.user?.id || null]);
+         WHERE id = $1
+         RETURNING *`, [chatId, auth.user?.id || null]);
+            emitLiveChatMessage({ chatId, message: msgRes.rows[0], chat: updatedChatRes.rows[0] });
             return NextResponse.json({ success: true, record: msgRes.rows[0] });
         }
         const chatId = Number(data.chat_id || data.chatId);
@@ -124,11 +128,13 @@ export async function POST(request: any) {
         const msgRes = await queryDb(`INSERT INTO live_chat_messages (chat_id, sender_type, sender_id, sender_name, message)
        VALUES ($1, 'ADMIN', $2, $3, $4)
        RETURNING *`, [chatId, staffId, staffName, message]);
-        await queryDb(`UPDATE live_chats 
+        const updatedChatRes = await queryDb(`UPDATE live_chats 
        SET updated_at = CURRENT_TIMESTAMP, 
            status = 'ACTIVE', 
            assigned_developer_id = COALESCE(assigned_developer_id, $2)
-       WHERE id = $1`, [chatId, staffId]);
+       WHERE id = $1
+       RETURNING *`, [chatId, staffId]);
+        emitLiveChatMessage({ chatId, message: msgRes.rows[0], chat: updatedChatRes.rows[0] });
         return NextResponse.json({
             success: true,
             record: msgRes.rows[0],
@@ -183,6 +189,9 @@ export async function PUT(request: any) {
          WHERE id = $2 
          RETURNING *`, [assignedDevId, id]);
         }
+        if (updateRes?.rows[0]) {
+            emitLiveChatUpdated({ chatId: id, chat: updateRes.rows[0] });
+        }
         return NextResponse.json({
             success: true,
             record: updateRes?.rows[0] || null,
@@ -208,6 +217,7 @@ export async function DELETE(request: any) {
         if (!id)
             return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
         await queryDb('DELETE FROM live_chats WHERE id = $1', [Number(id)]);
+        emitLiveChatUpdated({ chatId: Number(id), chat: { id: Number(id), deleted: true } });
         return NextResponse.json({ success: true, message: 'Chat session deleted successfully.' });
     }
     catch (error: any) {

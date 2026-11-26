@@ -3,6 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { getStaffSession } from 'src/lib/middleware/staff';
 import { sendWebsiteMetaMessage, getWebsiteMetaConfig } from 'src/lib/meta/graph';
+import { emitWebsiteMetaMessage, emitWebsiteMetaConversationUpdated } from 'src/lib/realtime/socketServer';
 async function verifyStaffAccess(request: any, context: any) {
     const website = await resolveWebsiteFromRequest(request, context);
     if (!website) {
@@ -46,6 +47,7 @@ export async function GET(request: any, context: any) {
          LIMIT 300`, [convId, auth.website.id]);
             return NextResponse.json({
                 success: true,
+                websiteId: auth.website.id,
                 conversation: convRes.rows[0],
                 messages: msgRes.rows,
                 metaConfig
@@ -66,6 +68,7 @@ export async function GET(request: any, context: any) {
        WHERE website_id = $1 AND platform = $2`, [auth.website.id, platform]);
         return NextResponse.json({
             success: true,
+            websiteId: auth.website.id,
             platform,
             conversations: convsRes.rows,
             stats: {
@@ -140,9 +143,17 @@ export async function POST(request: any, context: any) {
             deliveryStatus,
             errorMessage
         ]);
-        await queryDb(`UPDATE website_meta_conversations
+        const convUpdateRes = await queryDb(`UPDATE website_meta_conversations
        SET last_message = $1, last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND website_id = $3`, [cleanText, conv.id, auth.website.id]);
+       WHERE id = $2 AND website_id = $3
+       RETURNING *`, [cleanText, conv.id, auth.website.id]);
+        emitWebsiteMetaMessage({
+            websiteId: auth.website.id,
+            platform: conv.platform,
+            conversationId: conv.id,
+            record: insertRes.rows[0],
+            conversation: convUpdateRes.rows[0] || null,
+        });
         return NextResponse.json({
             success: true,
             message: insertRes.rows[0],
@@ -177,6 +188,12 @@ export async function PUT(request: any, context: any) {
         if (updateRes.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Conversation not found.' }, { status: 404 });
         }
+        emitWebsiteMetaConversationUpdated({
+            websiteId: auth.website.id,
+            platform: updateRes.rows[0].platform,
+            conversationId: updateRes.rows[0].id,
+            record: updateRes.rows[0],
+        });
         return NextResponse.json({
             success: true,
             conversation: updateRes.rows[0],

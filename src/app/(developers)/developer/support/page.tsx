@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 
 export default function SupportChatPage() {
   const router = useRouter();
@@ -115,15 +116,70 @@ export default function SupportChatPage() {
     }
   }, [activeTicketId, fetchTicketDetails]);
 
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const typingTimeoutRef = useRef<any>(null);
+
+  const { connected: socketConnected, emitTyping } = useSocketRooms(
+    ['support:list', activeTicketId ? `support:ticket:${activeTicketId}` : null],
+    {
+      'support:message': (payload: any) => {
+        if (payload?.message && String(payload.ticketId) === String(activeTicketId)) {
+          setMessages((prev: any[]) =>
+            prev.some((m: any) => String(m.id) === String(payload.message.id))
+              ? prev
+              : [...prev, payload.message]
+          );
+          setTypingUser(null);
+        }
+        if (payload?.ticket) {
+          setActiveTicket((prev: any) =>
+            prev && String(prev.id) === String(payload.ticket.id) ? { ...prev, ...payload.ticket } : prev
+          );
+        }
+        fetchTickets(false);
+      },
+      'support:ticket_updated': (payload: any) => {
+        if (payload?.ticket && String(payload.ticketId) === String(activeTicketId)) {
+          setActiveTicket((prev: any) => (prev ? { ...prev, ...payload.ticket } : prev));
+        }
+        fetchTickets(false);
+      },
+      'support:ticket_created': () => {
+        fetchTickets(false);
+      },
+      'support:ticket_deleted': (payload: any) => {
+        if (String(payload?.ticketId) === String(activeTicketId)) {
+          setActiveTicketId(null);
+          setActiveTicket(null);
+          setMessages([]);
+        }
+        fetchTickets(false);
+      },
+      typing: (payload: any) => {
+        if (
+          payload?.room === `support:ticket:${activeTicketId}` &&
+          payload?.senderType !== 'developer'
+        ) {
+          setTypingUser(payload.isTyping ? payload.senderName || 'Creator' : null);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          if (payload.isTyping) {
+            typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 3000);
+          }
+        }
+      },
+    }
+  );
+
   useEffect(() => {
+    if (socketConnected) return;
     const interval = setInterval(() => {
       fetchTickets(false);
       if (activeTicketId) {
         fetchTicketDetails(activeTicketId, false);
       }
-    }, 4000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [activeTicketId, fetchTickets, fetchTicketDetails]);
+  }, [socketConnected, activeTicketId, fetchTickets, fetchTicketDetails]);
 
   const handleImageSelect = (e: any) => {
     const file = e.target.files?.[0];
@@ -267,6 +323,16 @@ export default function SupportChatPage() {
             </h1>
             <span className="text-[9px] font-medium px-1.5 py-0.5 rounded border bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
               Support &amp; Comms
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded border ${
+                socketConnected
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              {socketConnected ? 'Live' : 'Syncing'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -529,6 +595,12 @@ export default function SupportChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {typingUser && (
+            <div className="px-4 py-1 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50/40 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
+              {typingUser} is typing...
+            </div>
+          )}
+
           {selectedImage && imagePreview && (
             <div className="mx-3 mt-2 p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 overflow-hidden">
@@ -590,7 +662,16 @@ export default function SupportChatPage() {
               aria-label="Reply message"
               value={replyMessage}
               onPaste={handlePaste}
-              onChange={(e: any) => setReplyMessage(e.target.value)}
+              onChange={(e: any) => {
+                setReplyMessage(e.target.value);
+                if (activeTicketId) {
+                  emitTyping(`support:ticket:${activeTicketId}`, {
+                    senderName: user?.name || 'Support Staff',
+                    senderType: 'developer',
+                    isTyping: Boolean(e.target.value.trim()),
+                  });
+                }
+              }}
               disabled={sendingReply || !canReply}
               className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />

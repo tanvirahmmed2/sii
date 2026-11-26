@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { uploadImage } from 'src/lib/database/cloudinary';
+import { emitSupportTicketCreated, emitSupportMessage } from 'src/lib/realtime/socketServer';
 export async function GET(request: any) {
     try {
         const sessionCreator = await getCreatorSession(request);
@@ -75,6 +76,7 @@ export async function handleSupportAction(body: any, sessionCreator: any) {
                 console.error('Error inserting initial ticket support image:', err);
             });
         }
+        emitSupportTicketCreated({ ticket, creatorId });
         return NextResponse.json({ success: true, ticket });
     }
     if (action === 'add_message') {
@@ -86,6 +88,10 @@ export async function handleSupportAction(body: any, sessionCreator: any) {
        VALUES ($1, 'creator', $2, $3)
        RETURNING *`, [Number(ticketId), creatorId, message.trim()]);
         await queryDb(`UPDATE supports SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [Number(ticketId)]);
+        emitSupportMessage({
+            ticketId: Number(ticketId),
+            message: msgRes.rows[0],
+        });
         return NextResponse.json({ success: true, message: msgRes.rows[0] });
     }
     return NextResponse.json({ success: false, error: `Unknown support action: ${action}` }, { status: 400 });

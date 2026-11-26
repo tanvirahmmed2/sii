@@ -4,6 +4,7 @@ import { hasModulePermission } from 'src/lib/middleware/developer';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { SITE_NAME } from 'src/lib/database/secret';
 import { uploadImage } from 'src/lib/database/cloudinary';
+import { emitSupportMessage } from 'src/lib/realtime/socketServer';
 export async function POST(request: any, context: any) {
     try {
         const auth = await hasModulePermission(request, 'support');
@@ -122,15 +123,22 @@ export async function POST(request: any, context: any) {
                 console.warn('Notice sending ticket email notification:', err.message);
             });
         }
+        const payloadMessage = {
+            ...newMsg,
+            sender_name: dev.name,
+            developer_name: dev.name,
+            developer_role: dev.role,
+            images: attachedImages,
+        };
+        emitSupportMessage({
+            ticketId: ticket.id,
+            ticketNumber: ticket.ticket_number,
+            message: payloadMessage,
+            ticket: updateRes.rows[0],
+        });
         return NextResponse.json({
             success: true,
-            message: {
-                ...newMsg,
-                sender_name: dev.name,
-                developer_name: dev.name,
-                developer_role: dev.role,
-                images: attachedImages,
-            },
+            message: payloadMessage,
             ticket: updateRes.rows[0],
         });
     }

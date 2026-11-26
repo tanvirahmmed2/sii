@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function SupportDetailsPage() {
     const router = useRouter();
     const { user } = useContext<any>(Context);
@@ -38,12 +39,20 @@ export default function SupportDetailsPage() {
     useEffect(() => {
         fetchTickets(true);
     }, [fetchTickets]);
+    const { connected: socketConnected } = useSocketRooms(['support:list'], {
+        'support:message': () => fetchTickets(false),
+        'support:ticket_updated': () => fetchTickets(false),
+        'support:ticket_created': () => fetchTickets(false),
+        'support:ticket_deleted': () => fetchTickets(false),
+    });
     useEffect(() => {
+        if (socketConnected)
+            return;
         const interval = setInterval(() => {
             fetchTickets(false);
-        }, 5000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [fetchTickets]);
+    }, [socketConnected, fetchTickets]);
     const handleDelete = async (id: any, e: any) => {
         if (e)
             e.stopPropagation();

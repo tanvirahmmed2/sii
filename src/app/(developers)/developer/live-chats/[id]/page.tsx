@@ -4,6 +4,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import ChatUsersSwipeBar from 'src/component/marketing/developer/ChatUsersSwipeBar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function SingleLiveChatPage() {
     const params: any = useParams();
     const router = useRouter();
@@ -79,15 +80,42 @@ export default function SingleLiveChatPage() {
         fetchChatDetails(true);
         fetchAllChats();
     }, [fetchChatDetails, fetchAllChats]);
+    const { connected: socketConnected } = useSocketRooms(
+        ['live_chats:list', chatId ? `live_chat:${chatId}` : null],
+        {
+            'live_chat:message': (payload: any) => {
+                if (payload?.message && String(payload.chatId) === String(chatId)) {
+                    setMessages((prev: any[]) =>
+                        prev.some((m: any) => String(m.id) === String(payload.message.id))
+                            ? prev
+                            : [...prev, payload.message]
+                    );
+                }
+                if (payload?.chat && String(payload.chatId) === String(chatId)) {
+                    setChat((prev: any) => (prev ? { ...prev, ...payload.chat } : prev));
+                }
+                fetchAllChats();
+            },
+            'live_chat:updated': (payload: any) => {
+                if (payload?.chat && String(payload.chatId) === String(chatId)) {
+                    setChat((prev: any) => (prev ? { ...prev, ...payload.chat } : prev));
+                }
+                fetchAllChats();
+            },
+            'live_chat:started': () => {
+                fetchAllChats();
+            },
+        }
+    );
     useEffect(() => {
-        if (!chatId)
+        if (!chatId || socketConnected)
             return;
         const interval = setInterval(() => {
             fetchChatDetails(false);
             fetchAllChats();
-        }, 4000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [chatId, fetchChatDetails, fetchAllChats]);
+    }, [chatId, socketConnected, fetchChatDetails, fetchAllChats]);
     const handleManualRefresh = async () => {
         if (!chatId || refreshing)
             return;
@@ -114,7 +142,11 @@ export default function SingleLiveChatPage() {
             });
             const data = await res.json();
             if (data.success && data.record) {
-                setMessages((prev: any) => [...prev, data.record]);
+                setMessages((prev: any) =>
+                    prev.some((m: any) => String(m.id) === String(data.record.id))
+                        ? prev
+                        : [...prev, data.record]
+                );
                 if (chat) {
                     setChat((prev: any) => prev
                         ? {

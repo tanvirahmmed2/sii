@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { emitSupportTicketUpdated, emitSupportTicketDeleted } from 'src/lib/realtime/socketServer';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, 'support');
@@ -116,6 +117,11 @@ export async function PUT(request: any) {
         if (res.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Support ticket not found.' }, { status: 404 });
         }
+        emitSupportTicketUpdated({
+            ticketId: res.rows[0].id,
+            ticketNumber: res.rows[0].ticket_number,
+            ticket: res.rows[0],
+        });
         return NextResponse.json({ success: true, record: res.rows[0], ticket: res.rows[0] });
     }
     catch (error: any) {
@@ -139,10 +145,14 @@ export async function DELETE(request: any) {
         if (!id) {
             return NextResponse.json({ success: false, error: 'ID is required.' }, { status: 400 });
         }
-        const res = await queryDb('DELETE FROM supports WHERE id = $1 RETURNING id', [id]);
+        const res = await queryDb('DELETE FROM supports WHERE id = $1 RETURNING id, ticket_number', [id]);
         if (res.rowCount === 0) {
             return NextResponse.json({ success: false, error: 'Ticket not found.' }, { status: 404 });
         }
+        emitSupportTicketDeleted({
+            ticketId: res.rows[0].id,
+            ticketNumber: res.rows[0].ticket_number,
+        });
         return NextResponse.json({ success: true, message: 'Ticket deleted successfully.' });
     }
     catch (error: any) {

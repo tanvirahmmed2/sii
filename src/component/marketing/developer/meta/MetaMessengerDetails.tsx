@@ -3,6 +3,7 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Context } from 'src/component/helper/Context';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function MetaMessengerDetails({ platform = 'facebook', title = 'Facebook Messenger', subtitle = 'Manage customer conversations and direct replies via Meta Graph API', }: any) {
     const router = useRouter();
     const { user } = useContext<any>(Context);
@@ -58,12 +59,28 @@ export default function MetaMessengerDetails({ platform = 'facebook', title = 'F
         fetchConfig();
         fetchConversations(true);
     }, [fetchConfig, fetchConversations]);
+    const { connected: socketConnected } = useSocketRooms([`meta:${platform}`], {
+        'meta:message': (payload: any) => {
+            if (payload?.platform === platform)
+                fetchConversations(false);
+        },
+        'meta:conversation_updated': (payload: any) => {
+            if (payload?.platform === platform)
+                fetchConversations(false);
+        },
+        'meta:conversation_deleted': (payload: any) => {
+            if (payload?.platform === platform)
+                fetchConversations(false);
+        },
+    });
     useEffect(() => {
+        if (socketConnected)
+            return;
         const interval = setInterval(() => {
             fetchConversations(false);
-        }, 5000);
+        }, 8000);
         return () => clearInterval(interval);
-    }, [fetchConversations]);
+    }, [socketConnected, fetchConversations]);
     const handleCreateTestConversation = async () => {
         try {
             setCreatingTestConv(true);

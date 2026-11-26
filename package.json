@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.mjs --dev",
+    "dev:next": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.mjs --prod",
     "lint": "eslint",
     "seed": "node --experimental-strip-types seed/index.ts"
   },
@@ -29,6 +30,8 @@
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.7.0",
     "slugify": "^1.6.9",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

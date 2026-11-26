@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Context } from 'src/component/helper/Context';
 import LoadingScreen from 'src/component/common/LoadingScreen';
 import { FiMessageSquare, FiUserPlus, FiUsers, FiSearch, FiSend, FiImage, FiX, FiShield, FiArrowLeft, FiRefreshCw } from 'react-icons/fi';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export default function DeveloperChatsPage() {
     const { user } = useContext<any>(Context);
     const permissions = Array.isArray(user?.permissions) ? user.permissions : [];
@@ -77,6 +78,29 @@ export default function DeveloperChatsPage() {
             fetchMessages(selectedChat.id);
         }
     }, [selectedChat]);
+    useSocketRooms(
+        ['internal_chats:list', selectedChat?.id ? `internal_chat:${selectedChat.id}` : null],
+        {
+            'internal_chat:message': (payload: any) => {
+                if (payload?.message && String(payload.chatId) === String(selectedChat?.id)) {
+                    setMessages((prev: any[]) =>
+                        prev.some((m: any) => String(m.id) === String(payload.message.id))
+                            ? prev
+                            : [...prev, payload.message]
+                    );
+                    setTimeout(scrollToBottom, 50);
+                }
+                if (isAuthorized) {
+                    fetchChats();
+                }
+            },
+            'internal_chat:updated': () => {
+                if (isAuthorized) {
+                    fetchChats();
+                }
+            },
+        }
+    );
     const handleSendMessage = async (e: any) => {
         e.preventDefault();
         if (!selectedChat)
@@ -98,7 +122,11 @@ export default function DeveloperChatsPage() {
             });
             const data = await res.json();
             if (data.success) {
-                setMessages((prev: any) => [...prev, data.message]);
+                setMessages((prev: any) =>
+                    prev.some((m: any) => String(m.id) === String(data.message.id))
+                        ? prev
+                        : [...prev, data.message]
+                );
                 setTextInput('');
                 setImageUrlInput('');
                 setShowImageInput(false);
