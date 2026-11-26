@@ -4,6 +4,143 @@ import { queryDb } from 'src/lib/database/db';
 
 export const dynamic = 'force-dynamic';
 
+const MODULE_LABELS: Record<string, string> = {
+    'overview': 'Overview',
+    'tasks': 'Tasks',
+    'notices': 'Notices',
+    'notice-board': 'Noticeboard',
+    'chats': 'Internal Chats',
+    'websites': 'Websites',
+    'creators': 'Creators',
+    'leads': 'Leads',
+    'subscribers': 'Subscribers',
+    'packages': 'Packages',
+    'promos': 'Promos',
+    'features': 'Features',
+    'subscriptions': 'Subscriptions',
+    'purchases': 'Purchases',
+    'payments': 'Payments',
+    'blogs': 'Blogs',
+    'policies': 'Policies',
+    'updates': 'Updates',
+    'tutorials': 'Tutorials',
+    'faqs': 'FAQs',
+    'support': 'Support Tickets',
+    'live_chats': 'Live Chats',
+    'live-chats': 'Live Chats',
+    'contacts': 'Contacts',
+    'reports': 'Reports',
+    'reviews': 'Reviews',
+    'spams': 'Spams',
+    'devs': 'Developers',
+    'developers': 'Developers',
+    'roles': 'Roles & Permissions',
+    'permissions': 'Permissions',
+    'payroll': 'Payroll',
+    'payroll-allocations': 'Payroll Allocations',
+    'payroll-payments': 'Payroll Payments',
+    'shareholders': 'Shareholders',
+    'investments': 'Investments',
+    'expenses': 'Expenses',
+    'withdraws': 'Withdrawals',
+    'cashflow': 'Cashflow',
+    'monthly-accounting': 'Monthly Accounting',
+    'balance': 'Balance',
+    'email-creators': 'Email Creators',
+    'email-subscribers': 'Email Subscribers',
+    'email-developers': 'Email Developers',
+    'email-leads': 'Email Leads',
+    'emails': 'Emails',
+    'meta-conversations': 'Meta Conversations',
+    'meta-messages': 'Meta Messages',
+    'templates': 'Templates',
+    'tenant-modules': 'Tenant Modules',
+    'profile': 'Profile',
+    'sessions': 'Sessions',
+    'auth-logout': 'Authentication',
+    'careers': 'Careers',
+};
+
+function formatModuleLabel(mod: string): string {
+    const clean = String(mod || '').toLowerCase().trim();
+    if (MODULE_LABELS[clean]) return MODULE_LABELS[clean];
+    return clean
+        .split(/[-_]+/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ') || 'System';
+}
+
+function formatReadableAction(row: any): string {
+    const endpoint = String(row?.endpoint || '').toLowerCase();
+    const rawAction = String(row?.action || '').toUpperCase().trim();
+    const modLabel = formatModuleLabel(row?.module || '');
+    const singularMod = modLabel.endsWith('s') && !modLabel.endsWith('ss') ? modLabel.slice(0, -1) : modLabel;
+    const detailsObj = row?.details && typeof row.details === 'object' ? row.details : {};
+    const body = detailsObj.body && typeof detailsObj.body === 'object' ? detailsObj.body : detailsObj;
+    const subjectLabel =
+        body?.title ||
+        body?.name ||
+        body?.subject ||
+        body?.email ||
+        body?.slug ||
+        body?.data?.title ||
+        body?.data?.name ||
+        body?.data?.email ||
+        '';
+
+    let baseAction = '';
+    if (endpoint.endsWith('/contacts/reply') || rawAction === 'REPLIED_TO_CONTACT') {
+        baseAction = 'Replied to contact';
+    } else if (endpoint.endsWith('/payments/manual-approve') || rawAction === 'APPROVED_PAYMENT') {
+        baseAction = 'Approved payment';
+    } else if (endpoint.endsWith('/investments/withdraw') || rawAction === 'RECORDED_INVESTMENT_WITHDRAWAL') {
+        baseAction = 'Recorded investment withdrawal';
+    } else if (endpoint.endsWith('/dividends/distribute') || rawAction === 'DISTRIBUTED_PROFIT') {
+        baseAction = 'Distributed shareholder profit';
+    } else if (/\/support\/[^/]+\/messages$/.test(endpoint) || rawAction === 'REPLIED_TO_TICKET') {
+        baseAction = 'Replied to support ticket';
+    } else if (/\/chats\/[^/]+\/messages$/.test(endpoint) || rawAction === 'SENT_INTERNAL_MESSAGE') {
+        baseAction = 'Sent internal chat message';
+    } else if (/\/tasks\/[^/]+\/comments$/.test(endpoint) || rawAction === 'COMMENTED_ON_TASK') {
+        baseAction = 'Commented on task';
+    } else if (rawAction === 'LOGOUT') {
+        baseAction = 'Signed out';
+    } else if (rawAction === 'UPDATE_PERMISSIONS') {
+        baseAction = `Updated ${singularMod.toLowerCase()} permissions`;
+    } else if (rawAction === 'CREATE_ROLE') {
+        baseAction = 'Created developer role';
+    } else if (rawAction === 'ASSIGN_DEVELOPER') {
+        baseAction = 'Assigned role to developer';
+    } else if (rawAction === 'TOGGLE_STATUS') {
+        baseAction = `Toggled ${singularMod.toLowerCase()} status`;
+    } else if (rawAction === 'CHANGE_ROLE') {
+        baseAction = 'Changed developer role';
+    } else if (rawAction.startsWith('CREATE_')) {
+        baseAction = `Created ${singularMod.toLowerCase()}`;
+    } else if (rawAction.startsWith('UPDATE_')) {
+        baseAction = `Updated ${singularMod.toLowerCase()}`;
+    } else if (rawAction.startsWith('DELETE_')) {
+        baseAction = `Deleted ${singularMod.toLowerCase()}`;
+    } else if (rawAction) {
+        baseAction = rawAction
+            .toLowerCase()
+            .split('_')
+            .filter(Boolean)
+            .map((w, i) => (i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+            .join(' ');
+    } else {
+        baseAction = 'Updated record';
+    }
+
+    const cleanTarget = row?.target_id && !['reply', 'manual-approve', 'withdraw', 'distribute'].includes(String(row.target_id).toLowerCase())
+        ? `#${row.target_id}`
+        : '';
+    if (subjectLabel) return `${baseAction} (${String(subjectLabel).slice(0, 48)})`;
+    if (cleanTarget) return `${baseAction} ${cleanTarget}`;
+    return baseAction;
+}
+
 export async function GET(request: any) {
     try {
         const session = await getDeveloperSession(request);
@@ -14,6 +151,7 @@ export async function GET(request: any) {
         const devId = Number(session.id);
         const currentToken = session.token || '';
         const roleName = session.roleName || session.role || 'Developer';
+        const isOwner = devId === 1 || String(session.email).toLowerCase() === 'tanvir004006@gmail.com';
 
         const [
             devRes,
@@ -22,7 +160,7 @@ export async function GET(request: any) {
             noticesRes,
             pendingChatsRes,
             tasksRes,
-            legacyLogsRes,
+            devActivityRes,
             derivedLogsRes,
         ] = await Promise.all([
             queryDb(
@@ -129,10 +267,13 @@ export async function GET(request: any) {
                 [devId]
             ).catch(() => ({ rows: [] })),
             queryDb(
-                `SELECT id, user_type, user_name, action, entity_type, entity_id, details, created_at
-                 FROM activity_logs
+                `SELECT id, developer_id, developer_name, developer_email, role_name,
+                        method, module, action, endpoint, target_id, ip_address, details, created_at
+                 FROM developer_activity_logs
+                 WHERE ($2 = TRUE OR developer_id = $1)
                  ORDER BY id DESC
-                 LIMIT 15`
+                 LIMIT 30`,
+                [devId, isOwner]
             ).catch(() => ({ rows: [] })),
             queryDb(
                 `SELECT * FROM (
@@ -154,19 +295,10 @@ export async function GET(request: any) {
                           n.created_at AS created_at
                    FROM notices n
                    LEFT JOIN developers d ON n.created_by_developer_id = d.id
-                   UNION ALL
-                   SELECT ('login-' || dla.id) AS id,
-                          'auth' AS entity_type,
-                          CASE WHEN dla.status = 'Success' THEN 'LOGIN' ELSE 'FAILED_LOGIN' END AS action,
-                          COALESCE(dla.failure_reason, 'Login via ' || COALESCE(dla.ip_address, 'unknown IP')) AS details,
-                          $2 AS actor,
-                          COALESCE(dla.login_time, dla.created_at) AS created_at
-                   FROM developer_login_activities dla
-                   WHERE dla.developer_id = $1
                  ) logs
                  ORDER BY created_at DESC
-                 LIMIT 20`,
-                [devId, session.name || 'Developer']
+                 LIMIT 15`,
+                [devId]
             ).catch(() => ({ rows: [] })),
         ]);
 
@@ -189,18 +321,25 @@ export async function GET(request: any) {
             created_at: devRow.created_at || null,
         };
 
-        const legacyLogs = (legacyLogsRes.rows || []).map((row: any) => ({
-            id: `log-${row.id}`,
-            action: row.action || 'EVENT',
-            entity_type: row.entity_type || row.user_type || 'system',
-            details: row.details || '',
-            actor: row.user_name || 'System',
+        const trackedLogs = (devActivityRes.rows || []).map((row: any) => ({
+            id: `dal-${row.id}`,
+            action_name: formatReadableAction(row),
+            module_label: formatModuleLabel(row.module),
+            done_by: row.developer_name || row.developer_email || 'Developer',
+            role_name: row.role_name || 'Developer',
             created_at: row.created_at,
         }));
 
-        const activityLogs = [...legacyLogs, ...(derivedLogsRes.rows || [])]
-            .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
-            .slice(0, 20);
+        const fallbackLogs = (derivedLogsRes.rows || []).map((row: any) => ({
+            id: row.id,
+            action_name: formatReadableAction(row),
+            module_label: formatModuleLabel(row.entity_type),
+            done_by: row.actor || 'Developer',
+            role_name: 'Developer',
+            created_at: row.created_at,
+        }));
+
+        const activityLogs = trackedLogs.length > 0 ? trackedLogs : fallbackLogs;
 
         return NextResponse.json({
             success: true,

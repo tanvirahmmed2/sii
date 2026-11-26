@@ -373,33 +373,40 @@ export default function DeveloperConsolePage() {
                             {activityLogs.length} events
                         </span>
                     </div>
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto">
                         {activityLogs.length === 0 ? (
-                            <div className="p-6 text-center text-slate-500">No recent activity recorded.</div>
+                            <div className="p-6 text-center text-slate-500">No developer activity recorded yet.</div>
                         ) : (
-                            activityLogs.map((log: any, idx: number) => (
-                                <div key={`act-${log.id ?? idx}`} className="p-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 space-y-1">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border uppercase shrink-0 ${statusClass(log.action)}`}>
-                                                {String(log.action || 'EVENT').replace(/_/g, ' ')}
-                                            </span>
-                                            <span className="text-[10px] uppercase text-slate-400 dark:text-slate-500 shrink-0">
-                                                {log.entity_type}
-                                            </span>
-                                        </div>
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 font-mono">
-                                            {formatDateTime(log.created_at)}
-                                        </span>
-                                    </div>
-                                    <div className="text-[11px] text-slate-700 dark:text-slate-300 truncate">
-                                        {log.details || '-'}
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                                        Actor: {log.actor || 'System'}
-                                    </div>
-                                </div>
-                            ))
+                            <table className="w-full text-left border-collapse">
+                                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-medium text-slate-500 dark:text-slate-400">
+                                    <tr>
+                                        <th className="py-2 px-3">Action</th>
+                                        <th className="py-2 px-3">Module</th>
+                                        <th className="py-2 px-3">Done By</th>
+                                        <th className="py-2 px-3 text-right">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                                    {activityLogs.map((log: any, idx: number) => (
+                                        <tr key={`act-${log.id ?? idx}`} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
+                                                {log.action_name || log.action || '-'}
+                                            </td>
+                                            <td className="py-2.5 px-3">
+                                                <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                    {log.module_label || log.module || log.entity_type || '-'}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                {log.done_by || log.actor || 'Developer'}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                                {formatDateTime(log.created_at)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         )}
                     </div>
                 </section>

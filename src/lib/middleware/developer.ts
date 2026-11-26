@@ -4,6 +4,7 @@ import { JWT_SECRET, DEVELOPER_TOKEN, SITE_NAME } from '../database/secret';
 import { query, queryDb } from '../database/db';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
 import { sendSms, maskPhoneNumber } from '../database/smsSender';
+import { recordDeveloperHttpActivity } from '../database/activity_logger';
 import {
   checkAccountLockout,
   recordFailedLogin,
@@ -264,7 +265,7 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       }
     }
 
-    return {
+    const sessionPayload = {
       id: dev.id,
       name: dev.name,
       email: dev.email,
@@ -282,6 +283,12 @@ export async function getDeveloperSession(request?: any): Promise<any> {
       directPermissionsMap,
       token,
     };
+
+    if (request) {
+      recordDeveloperHttpActivity(request, sessionPayload);
+    }
+
+    return sessionPayload;
   } catch (error) {
     console.error('Error fetching developer session:', error);
     return null;

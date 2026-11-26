@@ -202,6 +202,30 @@ CREATE TRIGGER update_developer_login_sessions_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 7B. DEVELOPER ACTIVITY LOGS TABLE (Every Developer POST/PUT/PATCH/DELETE)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS developer_activity_logs (
+    id BIGSERIAL PRIMARY KEY,
+    developer_id BIGINT REFERENCES developers(id) ON DELETE SET NULL,
+    developer_name VARCHAR(255),
+    developer_email VARCHAR(255),
+    role_name VARCHAR(150),
+    method VARCHAR(10) NOT NULL CHECK (method IN ('POST', 'PUT', 'PATCH', 'DELETE')),
+    module VARCHAR(120) NOT NULL,
+    action VARCHAR(150) NOT NULL,
+    endpoint TEXT NOT NULL,
+    target_id VARCHAR(120),
+    ip_address VARCHAR(100),
+    user_agent TEXT,
+    details JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dev_activity_logs_dev ON developer_activity_logs(developer_id);
+CREATE INDEX IF NOT EXISTS idx_dev_activity_logs_module ON developer_activity_logs(module);
+CREATE INDEX IF NOT EXISTS idx_dev_activity_logs_created ON developer_activity_logs(created_at DESC);
+
+-- ----------------------------------------------------------------------------
 -- 8. PACKAGES TABLE (Subscription Pricing Plans for Schools/Clients)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS packages (
