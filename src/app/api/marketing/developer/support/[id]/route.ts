@@ -68,13 +68,14 @@ export async function GET(request: any, context: any) {
     `, [ticket.id]).catch(() => ({ rows: [] }));
         const imagesByMessage: any = {};
         (imagesRes.rows || []).forEach((img: any) => {
-            if (!imagesByMessage[img.message_id])
-                imagesByMessage[img.message_id] = [];
-            imagesByMessage[img.message_id].push(img);
+            const key = String(img.message_id);
+            if (!imagesByMessage[key])
+                imagesByMessage[key] = [];
+            imagesByMessage[key].push(img);
         });
         const messagesWithImages = messagesRes.rows.map((m: any) => ({
             ...m,
-            images: imagesByMessage[m.id] || [],
+            images: imagesByMessage[String(m.id)] || [],
         }));
         const devsRes = await queryDb(`
       SELECT d.id, d.name, d.email, d.role_id, COALESCE(r.name, 'Developer') AS role_name 

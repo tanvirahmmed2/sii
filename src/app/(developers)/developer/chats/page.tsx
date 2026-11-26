@@ -396,15 +396,20 @@ export default function DeveloperChatsPage() {
                           </span>
                         </div>
 
-                        <div className={`max-w-[75%] rounded p-2.5 text-xs ${isMe
+                        <div className={`${Array.isArray(msg.images) && msg.images.length > 0 ? 'w-full sm:w-[380px] max-w-[75%]' : 'max-w-[75%]'} rounded p-2.5 text-xs ${isMe
                         ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
                         : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'}`}>
                           <p className="whitespace-pre-wrap leading-relaxed">{msg.message}</p>
 
-                          {Array.isArray(msg.images) && msg.images.length > 0 && (<div className="pt-2 flex flex-wrap gap-2">
-                              {msg.images.map((img: any, i: any) => (<a key={i} href={img.image_url} target="_blank" rel="noopener noreferrer" className="block">
-                                  <img src={img.image_url} alt={img.file_name || 'Attachment'} className="max-h-40 rounded object-cover border border-white/20"/>
-                                </a>))}
+                          {Array.isArray(msg.images) && msg.images.length > 0 && (<div className="pt-2 space-y-2 w-full">
+                              {msg.images.map((img: any, i: any) => {
+                        const src = typeof img === 'string' ? img : (img.image_url || img.url);
+                        if (!src)
+                            return null;
+                        return (<a key={i} href={src} target="_blank" rel="noopener noreferrer" className="block w-full rounded border border-white/20">
+                                  <img src={src} alt={img.file_name || 'Attachment'} className="w-full h-auto block rounded"/>
+                                </a>);
+                    })}
                             </div>)}
                         </div>
                       </div>);

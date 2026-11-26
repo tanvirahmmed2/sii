@@ -29,6 +29,9 @@ export default function SupportChatPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [replyMessage, setReplyMessage] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [previewModalImage, setPreviewModalImage] = useState<string | null>(null);
   const [sendingReply, setSendingReply] = useState<boolean>(false);
   const [actionNotice, setActionNotice] = useState<{ text: string; type: string }>({ text: '', type: '' });
 
@@ -36,13 +39,14 @@ export default function SupportChatPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   const messagesEndRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, imagePreview]);
 
   const notify = (text: string, type: string = 'success') => {
     setActionNotice({ text, type });
@@ -121,23 +125,75 @@ export default function SupportChatPage() {
     return () => clearInterval(interval);
   }, [activeTicketId, fetchTickets, fetchTicketDetails]);
 
+  const handleImageSelect = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      notify('Please select a valid image file (PNG, JPG, WEBP, GIF).', 'error');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      notify('Image size exceeds 10MB limit.', 'error');
+      return;
+    }
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = (event: any) => {
+      setImagePreview(event.target?.result || null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveSelectedImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handlePaste = (e: any) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          setSelectedImage(file);
+          const reader = new FileReader();
+          reader.onload = (event: any) => {
+            setImagePreview(event.target?.result || null);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    }
+  };
+
   const handleSendReply = async (e: any) => {
     if (e) e.preventDefault();
     const text = replyMessage.trim();
-    if (!text || !activeTicketId || sendingReply || !canReply) return;
+    if ((!text && !selectedImage) || !activeTicketId || sendingReply || !canReply) return;
     setSendingReply(true);
     try {
-      const res = await fetch(`/api/marketing/developer/support/${activeTicketId}`, {
+      const formData = new FormData();
+      formData.append('message', text);
+      if (activeTicket?.status === 'resolved') {
+        formData.append('status', 'in_progress');
+      }
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+      const res = await fetch(`/api/marketing/developer/support/${activeTicketId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          status: activeTicket?.status === 'resolved' ? 'in_progress' : undefined,
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
         setReplyMessage('');
+        handleRemoveSelectedImage();
         await fetchTicketDetails(activeTicketId, false);
         await fetchTickets(false);
       } else {
@@ -378,15 +434,20 @@ export default function SupportChatPage() {
             <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-4 text-xs space-y-1.5">
               <div className="flex items-center justify-between text-[11px] text-slate-400">
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {activeTicket.requester_name || activeTicket.creator_name || 'Requester'} (Original Inquiry)
+                  {activeTicket.requester_name || activeTicket.creator_name || 'Requester'} (Ticket {activeTicket.ticket_number || `#${activeTicket.id}`})
                 </span>
                 <span>
                   {activeTicket.created_at ? new Date(activeTicket.created_at).toLocaleDateString() : ''}
                 </span>
               </div>
-              <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                {activeTicket.message}
+              <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-medium">
+                {activeTicket.subject}
               </p>
+              {activeTicket.message && (
+                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  {activeTicket.message}
+                </p>
+              )}
             </div>
 
             {loadingMessages && messages.length === 0 ? (
@@ -395,8 +456,13 @@ export default function SupportChatPage() {
               </div>
             ) : (
               messages.map((m: any) => {
-                const isStaff =
-                  m.sender_type === 'developer' || m.sender_type === 'admin' || m.sender_type === 'staff';
+                const sType = String(m.sender_type || '').toLowerCase();
+                const isStaff = sType === 'developer' || sType === 'admin' || sType === 'staff';
+                const messageImages = Array.isArray(m.images) && m.images.length > 0
+                  ? m.images
+                  : m.image_url
+                  ? [{ image_url: m.image_url }]
+                  : [];
                 return (
                   <div
                     key={m.id}
@@ -404,19 +470,21 @@ export default function SupportChatPage() {
                   >
                     {!isStaff && (
                       <div className="w-7 h-7 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center font-semibold text-[10px] shrink-0 mb-1">
-                        {(m.sender_name || 'C').charAt(0).toUpperCase()}
+                        {(m.sender_name || activeTicket.requester_name || 'C').charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div
-                      className={`max-w-[75%] sm:max-w-md rounded p-3 text-xs leading-relaxed ${
+                      className={`${
+                        messageImages.length > 0 ? 'w-full sm:w-[440px] max-w-[85%]' : 'max-w-[75%] sm:max-w-md'
+                      } rounded p-3 text-xs leading-relaxed space-y-2 ${
                         isStaff
                           ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                           : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 mb-1 text-[10px] opacity-75">
+                      <div className="flex items-center gap-1.5 text-[10px] opacity-75">
                         <span className="font-semibold">
-                          {m.sender_name || (isStaff ? 'Support Staff' : 'Creator')}
+                          {m.sender_name || (isStaff ? 'Support Staff' : activeTicket.requester_name || 'Creator')}
                         </span>
                         <span>•</span>
                         <span>
@@ -428,7 +496,31 @@ export default function SupportChatPage() {
                             : ''}
                         </span>
                       </div>
-                      <p className="whitespace-pre-wrap break-words">{m.message}</p>
+                      {m.message && <p className="whitespace-pre-wrap break-words">{m.message}</p>}
+                      {messageImages.length > 0 && (
+                        <div className="space-y-2 pt-1 w-full">
+                          {messageImages.map((img: any, idx: number) => {
+                            const src = typeof img === 'string' ? img : img.image_url || img.url;
+                            if (!src) return null;
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => setPreviewModalImage(src)}
+                                className="relative group w-full rounded border border-black/15 bg-black/5 dark:bg-white/5 cursor-pointer"
+                              >
+                                <img
+                                  src={src}
+                                  alt={img.file_name || 'Attachment'}
+                                  className="w-full h-auto block rounded"
+                                />
+                                <div className="absolute inset-0 rounded bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-medium pointer-events-none">
+                                  <span>Click to enlarge</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -437,27 +529,109 @@ export default function SupportChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {selectedImage && imagePreview && (
+            <div className="mx-3 mt-2 p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <img
+                  src={imagePreview}
+                  alt="Selected"
+                  className="w-12 h-12 object-cover rounded border border-slate-300 dark:border-slate-600 shrink-0"
+                />
+                <div className="truncate text-left">
+                  <p className="text-[11px] font-medium text-slate-800 dark:text-slate-100 truncate">
+                    {selectedImage.name}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    {(selectedImage.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleRemoveSelectedImage}
+                className="text-slate-400 hover:text-rose-600 p-1.5 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                title="Remove image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           <form
             onSubmit={handleSendReply}
             className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center gap-2"
           >
             <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+              id="support-hub-image-input"
+            />
+            <label
+              htmlFor="support-hub-image-input"
+              className="p-2 rounded border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center shrink-0"
+              title="Attach image (or paste image with Ctrl+V)"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </label>
+            <input
               type="text"
+              aria-label="Reply message"
               value={replyMessage}
+              onPaste={handlePaste}
               onChange={(e: any) => setReplyMessage(e.target.value)}
               disabled={sendingReply || !canReply}
               className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-800"
             />
             <button
               type="submit"
-              disabled={!replyMessage.trim() || sendingReply || !canReply}
+              disabled={(!replyMessage.trim() && !selectedImage) || sendingReply || !canReply}
               className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
             >
-              Send
+              {sendingReply ? 'Sending...' : 'Send'}
             </button>
           </form>
         </div>
       ) : null}
+
+      {previewModalImage && (
+        <div className="bg-white dark:bg-slate-900 rounded p-3 space-y-2 border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between pb-2 px-1 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-xs font-medium text-slate-800 dark:text-slate-100">Attachment Preview</span>
+            <div className="flex items-center gap-3">
+              <a
+                href={previewModalImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium inline-flex items-center gap-1"
+              >
+                <span>Open in New Tab</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewModalImage(null)}
+                className="px-2 py-1 rounded text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <div className="p-2 max-h-[75vh] overflow-y-auto bg-slate-50 dark:bg-slate-950/50 rounded">
+            <img src={previewModalImage} alt="Enlarged attachment" className="w-full h-auto block rounded" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,31 +2,64 @@
 import { useContext } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+    FiBarChart2,
+    FiGlobe,
+    FiRepeat,
+    FiPackage,
+    FiCreditCard,
+    FiLifeBuoy,
+    FiStar,
+    FiZap,
+    FiUser,
+    FiShield,
+    FiHome,
+    FiLogOut,
+    FiX,
+} from 'react-icons/fi';
 import { Context } from 'src/component/helper/Context';
+
+export const CREATOR_ICON_MAP: Record<string, any> = {
+    'bar-chart': FiBarChart2,
+    'globe': FiGlobe,
+    'repeat': FiRepeat,
+    'package': FiPackage,
+    'credit-card': FiCreditCard,
+    'life-buoy': FiLifeBuoy,
+    'star': FiStar,
+    'zap': FiZap,
+    'user': FiUser,
+    'shield': FiShield,
+};
+
+export function getCreatorModuleIcon(iconKey?: string) {
+    return (iconKey && CREATOR_ICON_MAP[iconKey]) || FiBarChart2;
+}
+
 export const CREATOR_NAV_SECTIONS = [
     {
         title: 'Workspace',
         links: [
-            { href: '', label: 'Overview', exact: true },
-            { href: '/workspace', label: 'Websites' },
-            { href: '/subscription', label: 'Subscription' },
-            { href: '/purchases', label: 'Packages' },
-            { href: '/payments', label: 'Payments' },
+            { href: '', label: 'Overview', exact: true, iconKey: 'bar-chart', icon: FiBarChart2 },
+            { href: '/workspace', label: 'Websites', iconKey: 'globe', icon: FiGlobe },
+            { href: '/subscription', label: 'Subscription', iconKey: 'repeat', icon: FiRepeat },
+            { href: '/purchases', label: 'Packages', iconKey: 'package', icon: FiPackage },
+            { href: '/payments', label: 'Payments', iconKey: 'credit-card', icon: FiCreditCard },
         ],
     },
     {
         title: 'Support',
         links: [
-            { href: '/tickets', label: 'Tickets' },
-            { href: '/reviews', label: 'Reviews' },
-            { href: '/updates', label: 'Updates' },
+            { href: '/tickets', label: 'Tickets', iconKey: 'life-buoy', icon: FiLifeBuoy },
+            { href: '/reviews', label: 'Reviews', iconKey: 'star', icon: FiStar },
+            { href: '/updates', label: 'Updates', iconKey: 'zap', icon: FiZap },
         ],
     },
     {
         title: 'Account',
         links: [
-            { href: '/profile', label: 'Profile' },
-            { href: '/settings', label: 'Security' },
+            { href: '/profile', label: 'Profile', iconKey: 'user', icon: FiUser },
+            { href: '/settings', label: 'Security', iconKey: 'shield', icon: FiShield },
         ],
     },
 ];
@@ -69,8 +102,9 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
           Creator
         </Link>
 
-        {onClose && (<button type="button" onClick={onClose} className="md:hidden text-xs text-slate-500 hover:text-slate-900 px-2 py-1 border border-slate-200 rounded cursor-pointer" aria-label="Close menu">
-            Close
+        {onClose && (<button type="button" onClick={onClose} className="md:hidden inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 px-2 py-1 border border-slate-200 rounded cursor-pointer" aria-label="Close menu">
+            <FiX className="w-3.5 h-3.5" />
+            <span>Close</span>
           </button>)}
       </div>
 
@@ -82,10 +116,14 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
             {section.links.map((link: any) => {
                 const active = isLinkActive(link);
                 const targetHref = `${basePath}${link.href}`;
-                return (<Link key={link.label} href={targetHref} onClick={onClose} className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors ${active
+                const Icon = link.icon || getCreatorModuleIcon(link.iconKey);
+                return (<Link key={link.label} href={targetHref} onClick={onClose} className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${active
                         ? 'bg-slate-100 text-slate-900 font-semibold border-l-2 border-slate-900'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-normal'}`}>
-                  <span>{link.label}</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    {Icon && <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? 'text-slate-900' : 'text-slate-400'}`} />}
+                    <span className="truncate">{link.label}</span>
+                  </span>
 
                   {(link.href === '/workspace' || link.href === '/webites') && websitesCount > 0 && (<span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                       {websitesCount}
@@ -116,11 +154,13 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
       </div>
 
       <div className="p-2 border-t border-slate-200 bg-white space-y-1 sticky bottom-0">
-        <Link href="/" onClick={onClose} className="w-full block text-center py-1.5 px-3 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors">
-          Home
+        <Link href="/" onClick={onClose} className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors">
+          <FiHome className="w-3.5 h-3.5 shrink-0" />
+          <span>Home</span>
         </Link>
-        <button type="button" onClick={handleLogout} className="w-full block text-center border border-slate-300 text-slate-700 hover:bg-slate-100 py-1.5 px-3 rounded font-medium transition-colors text-xs cursor-pointer">
-          Logout
+        <button type="button" onClick={handleLogout} className="w-full flex items-center justify-center gap-1.5 border border-slate-300 text-slate-700 hover:bg-slate-100 py-1.5 px-3 rounded font-medium transition-colors text-xs cursor-pointer">
+          <FiLogOut className="w-3.5 h-3.5 shrink-0" />
+          <span>Logout</span>
         </button>
       </div>
     </div>);

@@ -406,19 +406,19 @@ export default function SingleSupportTicketPage() {
                         </span>
                       </div>
 
-                      <div className={`max-w-[85%] sm:max-w-xl rounded-xl p-3 text-xs leading-relaxed space-y-2 ${isStaff
+                      <div className={`${messageImages.length > 0 ? 'w-full sm:w-[440px] max-w-[85%]' : 'max-w-[85%] sm:max-w-xl'} rounded-xl p-3 text-xs leading-relaxed space-y-2 ${isStaff
                     ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
                     : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700'}`}>
                         {m.message && (<p className="whitespace-pre-wrap break-words">{m.message}</p>)}
 
-                        {messageImages.length > 0 && (<div className="space-y-2 pt-1">
+                        {messageImages.length > 0 && (<div className="space-y-2 pt-1 w-full">
                             {messageImages.map((img: any, idx: any) => {
-                        const src = typeof img === 'string' ? img : img.image_url;
+                        const src = typeof img === 'string' ? img : (img.image_url || img.url);
                         if (!src)
                             return null;
-                        return (<div key={idx} onClick={() => setPreviewModalImage(src)} className="relative group rounded-lg overflow-hidden border border-black/15 bg-black/5 dark:bg-white/5 cursor-pointer max-w-sm">
-                                  <img src={src} alt="Attachment" className="w-full max-h-72 object-cover rounded-lg group-hover:scale-[1.02] transition-transform duration-200" loading="lazy"/>
-                                  <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-medium gap-1">
+                        return (<div key={idx} onClick={() => setPreviewModalImage(src)} className="relative group w-full rounded-lg border border-black/15 bg-black/5 dark:bg-white/5 cursor-pointer">
+                                  <img src={src} alt={img.file_name || 'Attachment'} className="w-full h-auto block rounded-lg"/>
+                                  <div className="absolute inset-0 rounded-lg bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-medium gap-1 pointer-events-none">
                                     <span>Click to enlarge</span>
                                   </div>
                                 </div>);
@@ -489,8 +489,8 @@ export default function SingleSupportTicketPage() {
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-center p-2 max-h-[500px] overflow-auto bg-slate-50 dark:bg-slate-950/50 rounded">
-            <img src={previewModalImage} alt="Enlarged attachment" className="max-h-[460px] max-w-full object-contain rounded"/>
+          <div className="p-2 max-h-[75vh] overflow-y-auto bg-slate-50 dark:bg-slate-950/50 rounded">
+            <img src={previewModalImage} alt="Enlarged attachment" className="w-full h-auto block rounded"/>
           </div>
         </div>)}
     </div>);

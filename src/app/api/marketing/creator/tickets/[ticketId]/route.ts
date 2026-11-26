@@ -17,10 +17,11 @@ export async function GET(request: any, context: any) {
         c.email AS creator_email,
         NULL::text AS creator_avatar,
         d.name AS assigned_developer_name,
-        COALESCE(d.designation, 'developer') AS assigned_developer_role
+        COALESCE(dr.name, 'developer') AS assigned_developer_role
       FROM supports s
       LEFT JOIN creators c ON s.creator_id = c.id
       LEFT JOIN developers d ON s.assigned_developer_id = d.id
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE ${isNumeric ? '(s.id = $1::bigint OR s.ticket_number = $1::text)' : 's.ticket_number = $1'}
       LIMIT 1
     `, [ticketId]);
@@ -37,9 +38,10 @@ export async function GET(request: any, context: any) {
         m.message,
         m.created_at,
         d.name AS developer_name,
-        COALESCE(d.designation, 'developer') AS developer_role
+        COALESCE(dr.name, 'developer') AS developer_role
       FROM support_messages m
       LEFT JOIN developers d ON (m.sender_type = 'developer' AND m.sender_id = d.id)
+      LEFT JOIN developer_roles dr ON d.role_id = dr.id
       WHERE m.support_id = $1
       ORDER BY m.created_at ASC
     `, [ticket.id]);
@@ -52,13 +54,14 @@ export async function GET(request: any, context: any) {
     `, [ticket.id]).catch(() => ({ rows: [] }));
         const imagesByMessage: any = {};
         (imagesRes.rows || []).forEach((img: any) => {
-            if (!imagesByMessage[img.message_id])
-                imagesByMessage[img.message_id] = [];
-            imagesByMessage[img.message_id].push(img);
+            const key = String(img.message_id);
+            if (!imagesByMessage[key])
+                imagesByMessage[key] = [];
+            imagesByMessage[key].push(img);
         });
         const messagesWithImages = messagesRes.rows.map((m: any) => ({
             ...m,
-            images: imagesByMessage[m.id] || [],
+            images: imagesByMessage[String(m.id)] || [],
         }));
         return NextResponse.json({
             success: true,

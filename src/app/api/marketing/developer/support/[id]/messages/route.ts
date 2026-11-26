@@ -109,7 +109,7 @@ export async function POST(request: any, context: any) {
                 recipientName: ticket.requester_name || 'Creator',
                 bodyParagraphs: [
                     `New reply from ${dev.name} (${dev.role || 'Staff'}):`,
-                    cleanMessage,
+                    cleanMessage || 'Sent an image attachment.',
                 ],
                 footerNote: `Status: ${targetStatus}. You can reply directly in your creator dashboard tickets tab.`,
             });
@@ -117,7 +117,7 @@ export async function POST(request: any, context: any) {
                 to: ticket.requester_email,
                 subject: emailSubject,
                 html: emailHtml,
-                text: `Hello ${ticket.requester_name},\n\nNew reply from ${dev.name} on ticket ${ticket.ticket_number} (${ticket.subject}):\n\n${cleanMessage}\n\nStatus: ${targetStatus}`,
+                text: `Hello ${ticket.requester_name},\n\nNew reply from ${dev.name} on ticket ${ticket.ticket_number} (${ticket.subject}):\n\n${cleanMessage || 'Sent an image attachment.'}\n\nStatus: ${targetStatus}`,
             }).catch((err: any) => {
                 console.warn('Notice sending ticket email notification:', err.message);
             });
