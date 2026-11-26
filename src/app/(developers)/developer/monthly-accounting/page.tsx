@@ -32,14 +32,19 @@ interface MonthSummary {
 }
 
 interface ShareholderAllocation {
-  shareholder_id: number;
+  id?: number;
+  shareholder_id?: number;
   name: string;
   email: string | null;
   share_percentage: number;
-  invested_amount: number;
-  allocated_profit: number;
-  paid_or_reinvested: number;
-  remaining_allocation: number;
+  invested_amount?: number;
+  total_invested?: number;
+  allocated_profit?: number;
+  share_of_month_profit?: number;
+  paid_or_reinvested?: number;
+  settled_this_month?: number;
+  remaining_allocation?: number;
+  remaining_entitlement?: number;
 }
 
 interface AccountingSale {
@@ -149,7 +154,8 @@ export default function MonthlyAccountingPage() {
 
   const openDistributePanel = (alloc: ShareholderAllocation) => {
     setDistributingShareholder(alloc);
-    setDistributeAmount(String(Math.max(0, Math.round(alloc.remaining_allocation || 0))));
+    const rem = alloc.remaining_allocation ?? alloc.remaining_entitlement ?? 0;
+    setDistributeAmount(String(Math.max(0, Math.round(Number(rem)))));
     setDistributeAction('payout');
     setDistributeMethod('bank_transfer');
     setDistributeNotes('');
@@ -171,7 +177,7 @@ export default function MonthlyAccountingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shareholder_id: distributingShareholder.shareholder_id,
+          shareholder_id: distributingShareholder.shareholder_id ?? distributingShareholder.id,
           period: selectedMonth,
           amount: parsedAmount,
           action: distributeAction,
@@ -214,14 +220,14 @@ export default function MonthlyAccountingPage() {
       !q ||
       (s.package_name && s.package_name.toLowerCase().includes(q)) ||
       (s.creator_email && s.creator_email.toLowerCase().includes(q)) ||
-      s.status.toLowerCase().includes(q)
+      String(s.status || '').toLowerCase().includes(q)
   );
   const filteredExpenses = expenses.filter(
-    (ex) =>
+    (ex: any) =>
       !q ||
-      ex.title.toLowerCase().includes(q) ||
-      ex.category.toLowerCase().includes(q) ||
-      ex.status.toLowerCase().includes(q)
+      String(ex.title || ex.expense_title || '').toLowerCase().includes(q) ||
+      String(ex.category || ex.expense_category || '').toLowerCase().includes(q) ||
+      String(ex.status || '').toLowerCase().includes(q)
   );
   const filteredInvestments = investments.filter(
     (inv) =>
@@ -230,10 +236,10 @@ export default function MonthlyAccountingPage() {
       (inv.investment_type && inv.investment_type.toLowerCase().includes(q))
   );
   const filteredDividends = dividends.filter(
-    (div) =>
+    (div: any) =>
       !q ||
       (div.shareholder_name && div.shareholder_name.toLowerCase().includes(q)) ||
-      div.action.toLowerCase().includes(q)
+      String(div.action || div.withdraw_type || '').toLowerCase().includes(q)
   );
 
   return (
@@ -412,7 +418,7 @@ export default function MonthlyAccountingPage() {
               </h2>
               <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
                 Equity Share: {Number(distributingShareholder.share_percentage).toFixed(2)}% | Remaining Pool: BDT{' '}
-                {Number(distributingShareholder.remaining_allocation || 0).toLocaleString()}
+                {Number(distributingShareholder.remaining_allocation ?? distributingShareholder.remaining_entitlement ?? 0).toLocaleString()}
               </p>
             </div>
             <button
@@ -584,9 +590,9 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAllocations.map((alloc) => (
+                  filteredAllocations.map((alloc, idx) => (
                     <tr
-                      key={alloc.shareholder_id}
+                      key={`alloc-${alloc.shareholder_id ?? alloc.id ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3">
@@ -601,16 +607,16 @@ export default function MonthlyAccountingPage() {
                         {Number(alloc.share_percentage || 0).toFixed(2)}%
                       </td>
                       <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
-                        BDT {Number(alloc.invested_amount || 0).toLocaleString()}
+                        BDT {Number(alloc.invested_amount ?? alloc.total_invested ?? 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
-                        BDT {Number(alloc.allocated_profit || 0).toLocaleString()}
+                        BDT {Number(alloc.allocated_profit ?? alloc.share_of_month_profit ?? 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-normal text-slate-600 dark:text-slate-300">
-                        BDT {Number(alloc.paid_or_reinvested || 0).toLocaleString()}
+                        BDT {Number(alloc.paid_or_reinvested ?? alloc.settled_this_month ?? 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
-                        BDT {Number(alloc.remaining_allocation || 0).toLocaleString()}
+                        BDT {Number(alloc.remaining_allocation ?? alloc.remaining_entitlement ?? 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button
@@ -650,9 +656,9 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredHistory.map((m) => (
+                  filteredHistory.map((m, idx) => (
                     <tr
-                      key={m.month}
+                      key={`hist-${m.month ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
@@ -709,13 +715,13 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredSales.map((s) => (
+                  filteredSales.map((s: any, idx) => (
                     <tr
-                      key={s.id}
+                      key={`sale-${s.id ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
-                        {new Date(s.created_at).toLocaleDateString()}
+                        {new Date(s.created_at || s.settled_at || Date.now()).toLocaleDateString()}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
                         {s.package_name || '-'}
@@ -727,11 +733,11 @@ export default function MonthlyAccountingPage() {
                         {s.payment_method || '-'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
-                        {s.currency} {Number(s.amount || 0).toLocaleString()}
+                        {s.currency || 'BDT'} {Number(s.amount || 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium capitalize">
-                          {s.status}
+                          {s.status || 'completed'}
                         </span>
                       </td>
                     </tr>
@@ -760,28 +766,28 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredExpenses.map((ex) => (
+                  filteredExpenses.map((ex: any, idx) => (
                     <tr
-                      key={ex.id}
+                      key={`exp-${ex.id ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
-                        {ex.expense_date || ex.created_at
-                          ? new Date(ex.expense_date || ex.created_at || '').toLocaleDateString()
+                        {ex.expense_date || ex.transaction_date || ex.created_at
+                          ? new Date(ex.expense_date || ex.transaction_date || ex.created_at || '').toLocaleDateString()
                           : '-'}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
-                        {ex.title}
+                        {ex.title || ex.expense_title || '-'}
                       </td>
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 capitalize">
-                        {ex.category}
+                        {ex.category || ex.expense_category || '-'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-red-700 dark:text-red-400">
-                        {ex.currency} {Number(ex.amount || 0).toLocaleString()}
+                        {ex.currency || 'BDT'} {Number(ex.amount || 0).toLocaleString()}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-normal capitalize">
-                          {ex.status}
+                          {ex.status || 'recorded'}
                         </span>
                       </td>
                     </tr>
@@ -809,13 +815,13 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredInvestments.map((inv) => (
+                  filteredInvestments.map((inv: any, idx) => (
                     <tr
-                      key={inv.id}
+                      key={`inv-${inv.id ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
-                        {new Date(inv.created_at).toLocaleDateString()}
+                        {new Date(inv.investment_date || inv.created_at || Date.now()).toLocaleDateString()}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
                         {inv.shareholder_name || '-'}
@@ -824,7 +830,7 @@ export default function MonthlyAccountingPage() {
                         {(inv.investment_type || 'capital_injection').replace('_', ' ')}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-emerald-700 dark:text-emerald-400">
-                        {inv.currency} {Number(inv.amount || 0).toLocaleString()}
+                        {inv.currency || 'BDT'} {Number(inv.amount ?? inv.investment_amount ?? 0).toLocaleString()}
                       </td>
                     </tr>
                   ))
@@ -852,27 +858,27 @@ export default function MonthlyAccountingPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredDividends.map((div) => (
+                  filteredDividends.map((div: any, idx) => (
                     <tr
-                      key={div.id}
+                      key={`div-${div.id ?? idx}`}
                       className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-400">
-                        {new Date(div.created_at).toLocaleDateString()}
+                        {new Date(div.created_at || Date.now()).toLocaleDateString()}
                       </td>
                       <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">
                         {div.shareholder_name || '-'}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[11px] font-medium capitalize">
-                          {div.action}
+                          {div.action || div.withdraw_type || 'dividend'}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 font-normal text-slate-600 dark:text-slate-300 capitalize">
                         {(div.method || '-').replace('_', ' ')}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium text-slate-900 dark:text-white">
-                        {div.currency} {Number(div.amount || 0).toLocaleString()}
+                        {div.currency || 'BDT'} {Number(div.amount || 0).toLocaleString()}
                       </td>
                     </tr>
                   ))

@@ -10,7 +10,12 @@ export default function CreatorNavbar({ creator, websites = [], activeSubscripti
     const [websiteDropdownOpen, setWebsiteDropdownOpen] = useState<any>(false);
     const creatorId = creator?.id;
     const primaryWebsite = websites[0] || null;
-    const hasActiveSub = Boolean(activeSubscription && (activeSubscription.status === 'active' || activeSubscription.status === 'ACTIVE'));
+    const hasActiveSub = Boolean(
+        activeSubscription &&
+        (activeSubscription.is_active ?? ['active', 'completed'].includes(String(activeSubscription.status || '').toLowerCase())) &&
+        (!activeSubscription.current_period_end || new Date(activeSubscription.current_period_end) > new Date()) &&
+        (activeSubscription.websitesUsed ?? activeSubscription.websites_count ?? 0) < (activeSubscription.websitesAllowed ?? activeSubscription.max_websites ?? 1)
+    );
     const handleLogout = async () => {
         try {
             await fetch('/api/marketing/creator', {

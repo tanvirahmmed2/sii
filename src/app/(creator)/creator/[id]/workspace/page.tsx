@@ -41,7 +41,12 @@ function WorkspaceContent() {
     const [baseDomain, setBaseDomain] = useState<any>(typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000');
     const activeSubs = activeSubscriptions.length > 0
         ? activeSubscriptions
-        : subscriptions.filter((s: any) => s.is_active || ['active', 'completed'].includes(String(s.status || '').toLowerCase()));
+        : subscriptions.filter((s: any) => s.is_active === true);
+    const hasAvailableSlot = activeSubs.some((s: any) => {
+        const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
+        const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
+        return used < allowed;
+    });
     const [showCreateModal, setShowCreateModal] = useState<any>(false);
     const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<any>(targetSubParam || '');
     const [name, setName] = useState<any>('');
@@ -127,11 +132,11 @@ function WorkspaceContent() {
         }
     }, [creatorId]);
     useEffect(() => {
-        if (setupParam === 'true') {
+        if (setupParam === 'true' && hasAvailableSlot) {
             const timer = setTimeout(() => setShowCreateModal(true), 0);
             return () => clearTimeout(timer);
         }
-    }, [setupParam]);
+    }, [setupParam, hasAvailableSlot]);
     useEffect(() => {
         if (!showCreateModal)
             return;
@@ -221,9 +226,8 @@ function WorkspaceContent() {
         }, 220);
         return () => clearTimeout(timeout);
     }, [editCustomDomain, editingWebsite, baseDomain]);
-    const maxWebsites = stats?.maxWebsites || activeSubscription?.max_websites || activeSubscription?.max_portfolios || 1;
-    const hasActivePackage = Boolean(activeSubscription &&
-        (stats?.daysRemaining > 0 || !activeSubscription.expires_at || new Date(activeSubscription.expires_at) > new Date()));
+    const maxWebsites = stats?.maxWebsites ?? activeSubs.reduce((sum: number, s: any) => sum + Number(s.websitesAllowed ?? s.max_websites ?? 1), 0);
+    const hasActivePackage = activeSubs.length > 0;
     const handleNameChange = (val: any) => {
         setName(val);
         if (!domainTouched) {
@@ -510,12 +514,18 @@ function WorkspaceContent() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link href={`/creator/${creatorId}/workspace/new`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all cursor-pointer">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Create Website
-          </Link>
+          {hasAvailableSlot ? (
+            <Link href={`/creator/${creatorId}/workspace/new`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all cursor-pointer">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Create Website
+            </Link>
+          ) : (
+            <Link href="/packages" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-sm transition-all">
+              {hasActivePackage ? 'Upgrade / Buy Package' : 'Purchase Package'}
+            </Link>
+          )}
           <Link href={`/creator/${creatorId}/subscription`} className="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium transition-colors">
             Subscription Details
           </Link>
@@ -608,9 +618,11 @@ function WorkspaceContent() {
               Direct access links, live institutional subdomains, and management portals.
             </p>
           </div>
-          <Link href={`/creator/${creatorId}/workspace/new`} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800">
-            + New Website
-          </Link>
+          {hasAvailableSlot && (
+            <Link href={`/creator/${creatorId}/workspace/new`} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800">
+              + New Website
+            </Link>
+          )}
         </div>
 
         {deleteBanner && !deleteTarget && (<div className={`p-3 rounded-lg border text-xs flex items-center justify-between ${deleteBanner.type === 'success'
@@ -629,15 +641,25 @@ function WorkspaceContent() {
               </svg>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-slate-900">No Websites Created Yet</h3>
+              <h3 className="text-sm font-semibold text-slate-900">
+                {hasAvailableSlot ? 'No Websites Created Yet' : 'No Active Package Subscription'}
+              </h3>
               <p className="text-slate-500 text-xs max-w-sm mx-auto">
-                Launch your educational institution with instant domain routing, student portals, and notice boards.
+                {hasAvailableSlot
+                    ? 'Launch your educational institution with instant domain routing, student portals, and notice boards.'
+                    : 'Purchase a paid subscription package first to provision your educational website.'}
               </p>
             </div>
             <div className="pt-2">
-              <Link href={`/creator/${creatorId}/workspace/new`} className="inline-block px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors cursor-pointer">
-                Create First Website
-              </Link>
+              {hasAvailableSlot ? (
+                <Link href={`/creator/${creatorId}/workspace/new`} className="inline-block px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors cursor-pointer">
+                  Create First Website
+                </Link>
+              ) : (
+                <Link href="/packages" className="inline-block px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-sm transition-colors">
+                  Browse Packages
+                </Link>
+              )}
             </div>
           </div>) : (<div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">

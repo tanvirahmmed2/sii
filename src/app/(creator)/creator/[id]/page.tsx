@@ -4,8 +4,8 @@ import { useCreator } from './layout';
 export default function CreatorOverviewPage() {
     const { creator, creatorId, activeSubscription, websites = [], payments = [], stats = {}, } = useCreator();
     const daysRemaining = stats?.daysRemaining || 0;
-    const hasActivePackage = stats?.hasActivePackage ?? Boolean(activeSubscription);
-    const maxWebsites = stats?.maxWebsites || activeSubscription?.max_websites || activeSubscription?.max_portfolios || 1;
+    const hasActivePackage = stats?.hasActivePackage ?? Boolean(activeSubscription?.is_active);
+    const maxWebsites = stats?.maxWebsites ?? (activeSubscription?.is_active ? (activeSubscription?.max_websites ?? activeSubscription?.max_portfolios ?? 1) : 0);
     const { spentUsd, spentBdt } = payments.reduce((acc: any, p: any) => {
         if (['successful', 'completed'].includes(p.status?.toLowerCase())) {
             const amt = Number(p.amount || 0);

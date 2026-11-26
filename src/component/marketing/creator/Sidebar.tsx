@@ -63,14 +63,16 @@ export const CREATOR_NAV_SECTIONS = [
         ],
     },
 ];
-export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscription, websites = [], stats = {}, unreadUpdatesCount = 0 }: any) {
+export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscription, subscriptions = [], purchases = [], websites = [], stats = {}, unreadUpdatesCount = 0 }: any) {
     const pathname = usePathname();
     const router = useRouter();
     const { setCreator, fetchCurrentUser } = useContext<any>(Context) || {};
     const creatorId = creator?.id;
     const basePath = creatorId ? `/creator/${creatorId}` : '/creator/login';
+    const hasActivePlan = Boolean(stats?.hasActivePackage || activeSubscription?.is_active);
+    const hasPurchaseHistory = (stats?.totalPurchases ?? purchases.length) > 0 || (stats?.totalSubscriptions ?? subscriptions.length) > 0;
     const daysRemaining = stats?.daysRemaining ?? (activeSubscription?.current_period_end ? 30 : 0);
-    const maxWebsites = stats?.maxWebsites ?? activeSubscription?.max_websites ?? activeSubscription?.max_portfolios ?? 1;
+    const maxWebsites = stats?.maxWebsites ?? (activeSubscription?.is_active ? (activeSubscription?.max_websites ?? activeSubscription?.max_portfolios ?? 1) : 0);
     const websitesCount = websites.length;
     const isLinkActive = (link: any) => {
         const fullHref = `${basePath}${link.href}`;
@@ -145,14 +147,26 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
         </div>
         <div className="w-full h-1 bg-slate-200 rounded-sm overflow-hidden">
           <div className="h-full bg-slate-800 rounded-sm" style={{
-            width: `${Math.min(100, Math.round((websitesCount / (maxWebsites || 1)) * 100))}%`,
+            width: `${maxWebsites > 0 ? Math.min(100, Math.round((websitesCount / maxWebsites) * 100)) : 0}%`,
         }}/>
         </div>
         <div className="flex items-center justify-between text-[10px] pt-0.5 text-slate-500">
-          <span>{daysRemaining > 0 ? `${daysRemaining}d remaining` : 'No active plan'}</span>
-          <Link href={`${basePath}/purchases`} className="text-slate-800 font-semibold hover:underline">
-            Renew / Change
-          </Link>
+          <span>
+            {hasActivePlan
+                ? (daysRemaining > 0 ? `${daysRemaining}d remaining` : 'Active')
+                : hasPurchaseHistory
+                    ? 'Plan expired'
+                    : 'No purchases'}
+          </span>
+          {hasActivePlan || hasPurchaseHistory ? (
+            <Link href={`${basePath}/purchases`} className="text-slate-800 font-semibold hover:underline">
+              Renew / Change
+            </Link>
+          ) : (
+            <Link href="/packages" className="text-slate-800 font-semibold hover:underline">
+              Purchase Plan
+            </Link>
+          )}
         </div>
       </div>
 

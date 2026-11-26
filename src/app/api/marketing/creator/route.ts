@@ -189,7 +189,7 @@ export async function GET(request: any) {
             };
         });
         const activeSubscriptions = allSubscriptions.filter((s: any) => s.is_active);
-        const activeSub = activeSubscriptions[0] || allSubscriptions[0] || null;
+        const activeSub = activeSubscriptions[0] || null;
         const pendingSub = pendingSubRes.rows[0] ||
             (pendingPurchaseRes?.rows[0]
                 ? {
@@ -223,6 +223,7 @@ export async function GET(request: any) {
             }
         }
         const maxWebsitesTotal = activeSubscriptions.reduce((acc: any, s: any) => acc + (s.websitesAllowed || 1), 0);
+        const availableWebsiteSlots = activeSubscriptions.reduce((acc: any, s: any) => acc + Math.max(0, (s.websitesAllowed || 1) - (s.websitesUsed || 0)), 0);
         return NextResponse.json({
             success: true,
             creator,
@@ -242,9 +243,11 @@ export async function GET(request: any) {
             creators: [],
             stats: {
                 totalWebsites: websites.length,
-                maxWebsites: activeSub?.websitesAllowed ?? activeSub?.max_websites ?? 1,
-                maxWebsitesTotal: maxWebsitesTotal || 1,
+                maxWebsites: maxWebsitesTotal,
+                maxWebsitesTotal,
+                availableWebsiteSlots,
                 totalSubscriptions: allSubscriptions.length,
+                totalPurchases: purchases.length,
                 activeSubscriptionsCount: activeSubscriptions.length,
                 daysRemaining: activeSub?.daysRemaining || 0,
                 totalSpentUsd,

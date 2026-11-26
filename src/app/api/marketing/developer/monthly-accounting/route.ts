@@ -63,7 +63,8 @@ export async function GET(request: any) {
         GROUP BY month_key
       `),
       queryDb(`
-        SELECT pay.id, pay.transaction_id, pay.amount, pay.currency, pay.payment_method,
+        SELECT pay.id, pay.transaction_id, pay.amount, pay.currency, pay.payment_method, pay.status,
+               COALESCE(pay.payment_date, pay.created_at) AS created_at,
                COALESCE(pay.payment_date, pay.created_at) AS settled_at,
                c.name AS creator_name, c.email AS creator_email,
                pkg.name AS package_name
@@ -75,7 +76,7 @@ export async function GET(request: any) {
         ORDER BY settled_at DESC
       `, [targetMonth]),
       queryDb(`
-        SELECT i.*, s.name AS shareholder_name, s.shareholder_code
+        SELECT i.*, COALESCE(i.investment_amount, 0) AS amount, s.name AS shareholder_name, s.shareholder_code
         FROM investments i
         JOIN shareholders s ON i.shareholder_id = s.id
         WHERE i.status != 'cancelled'
@@ -83,7 +84,7 @@ export async function GET(request: any) {
         ORDER BY i.investment_date DESC, i.id DESC
       `, [targetMonth]),
       queryDb(`
-        SELECT et.*, e.title AS expense_title, e.expense_code, e.category AS expense_category, e.payee_name
+        SELECT et.*, e.title AS title, e.title AS expense_title, e.expense_code, e.category AS category, e.category AS expense_category, e.status AS status, e.payee_name
         FROM expense_transactions et
         JOIN expenses e ON et.expense_id = e.id
         WHERE TO_CHAR(et.transaction_date, 'YYYY-MM') = $1
@@ -177,6 +178,11 @@ export async function GET(request: any) {
 
       return {
         ...s,
+        shareholder_id: s.id,
+        invested_amount: Number(s.total_invested ?? s.invested_amount ?? 0),
+        allocated_profit: totalShareOfProfit,
+        paid_or_reinvested: settledThisMonth,
+        remaining_allocation: remainingEntitlement,
         share_of_month_profit: totalShareOfProfit,
         paid_this_month: paidThisMonth,
         reinvested_this_month: reinvestedThisMonth,

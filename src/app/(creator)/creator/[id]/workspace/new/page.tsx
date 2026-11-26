@@ -31,7 +31,12 @@ export default function CreateWebsitePage() {
     const creatorId = routeParams?.id || contextCreatorId;
     const activeSubs = activeSubscriptions.length > 0
         ? activeSubscriptions
-        : subscriptions.filter((s: any) => s.is_active || ['active', 'completed'].includes(String(s.status || '').toLowerCase()));
+        : subscriptions.filter((s: any) => s.is_active === true);
+    const hasAvailableSlot = activeSubs.some((s: any) => {
+        const allowed = Number(s.websitesAllowed ?? s.max_websites ?? 1);
+        const used = Number(s.websitesUsed ?? s.websites_count ?? 0);
+        return used < allowed;
+    });
     const [currentStep, setCurrentStep] = useState<any>(1);
     const [baseDomain, setBaseDomain] = useState<any>(typeof window !== 'undefined' && window.location?.host ? window.location.host : 'localhost:3000');
     const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<any>(querySubId || '');
@@ -576,6 +581,27 @@ export default function CreateWebsitePage() {
         </div>
       </div>
 
+      {!hasAvailableSlot ? (
+        <div className="bg-amber-50 border border-amber-200 rounded p-6 text-center space-y-3">
+          <h2 className="text-sm font-semibold text-amber-900">
+            {activeSubs.length === 0 ? 'Active Subscription Package Required' : 'Website Quota Reached'}
+          </h2>
+          <p className="text-xs text-amber-800 max-w-md mx-auto">
+            {activeSubs.length === 0
+                ? 'You currently have no active paid subscription. Please purchase a package before creating an educational website.'
+                : 'All active subscription packages in your account have reached their website limits. Purchase an additional package to provision another site.'}
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-1">
+            <Link href="/packages" className="px-4 py-2 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs transition-colors">
+              Browse Packages
+            </Link>
+            <Link href={`/creator/${creatorId}/purchases`} className="px-4 py-2 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium text-xs transition-colors">
+              View Purchases
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="bg-white border border-slate-200 rounded p-3">
         <div className="grid grid-cols-3 gap-2">
           <div onClick={() => setCurrentStep(1)} className={`p-2.5 rounded border text-center transition-all cursor-pointer ${currentStep === 1
@@ -1204,5 +1230,7 @@ export default function CreateWebsitePage() {
             </div>
           </form>
         </div>)}
+        </>
+      )}
     </div>);
 }

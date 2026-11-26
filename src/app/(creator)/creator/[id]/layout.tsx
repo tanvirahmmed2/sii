@@ -129,7 +129,7 @@ export default function CreatorLayout({ children, params }: any) {
     };
     return (<CreatorContext.Provider value={contextValue}>
       <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex">
-        <CreatorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} creator={data.creator} activeSubscription={data.activeSubscription} websites={data.websites} stats={data.stats} unreadUpdatesCount={data.stats?.unreadUpdatesCount || 0}/>
+        <CreatorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} creator={data.creator} activeSubscription={data.activeSubscription} subscriptions={data.subscriptions} purchases={data.purchases} websites={data.websites} stats={data.stats} unreadUpdatesCount={data.stats?.unreadUpdatesCount || 0}/>
 
         <div className="flex-1 flex flex-col min-w-0 w-full">
           <CreatorNavbar creator={data.creator} websites={data.websites} activeSubscription={data.activeSubscription} unreadUpdatesCount={data.stats?.unreadUpdatesCount || 0} onToggleSidebar={() => setSidebarOpen((p: any) => !p)} onOpenCreateWebsite={() => {
