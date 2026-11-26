@@ -147,11 +147,21 @@ export async function GET(request: any) {
          LEFT JOIN packages p ON pu.package_id = p.id
          WHERE pu.creator_id = $1
          ORDER BY pu.id DESC LIMIT 20`, [creatorId]).catch(() => ({ rows: [] })),
-            queryDb(`SELECT id, version, title, slug, description, release_date, created_at
-         FROM updates
-         WHERE is_published = TRUE
-         ORDER BY release_date DESC, id DESC
-         LIMIT 10`).catch(() => ({ rows: [] })),
+            queryDb(`SELECT u.id, u.version, u.title, u.slug, u.description, u.changelog, u.release_date, u.created_at,
+                COALESCE(cu.is_read, FALSE) AS is_read,
+                cu.read_at,
+                cu.emailed_at
+         FROM updates u
+         LEFT JOIN creator_updates cu ON cu.update_id = u.id AND cu.creator_id = $1
+         WHERE COALESCE(u.is_published, TRUE) = TRUE
+         ORDER BY COALESCE(u.release_date, u.created_at::date) DESC, u.id DESC
+         LIMIT 25`, [creatorId]).catch(() =>
+                queryDb(`SELECT id, version, title, slug, description, changelog, release_date, created_at, FALSE AS is_read
+                 FROM updates
+                 WHERE COALESCE(is_published, TRUE) = TRUE
+                 ORDER BY COALESCE(release_date, created_at::date) DESC, id DESC
+                 LIMIT 25`).catch(() => ({ rows: [] }))
+            ),
         ]);
         const now = new Date();
         const rawSubs = allSubsRes.rows || [];
@@ -241,6 +251,7 @@ export async function GET(request: any) {
                 totalSpentBdt,
                 hasActivePackage: activeSubscriptions.length > 0,
                 hasPendingSubscription: Boolean(pendingSub),
+                unreadUpdatesCount: updates.filter((u: any) => !u.is_read).length,
             },
         });
     }

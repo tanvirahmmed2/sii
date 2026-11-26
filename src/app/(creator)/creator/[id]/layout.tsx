@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import CreatorNavbar from 'src/component/marketing/creator/Navbar';
 import CreatorSidebar from 'src/component/marketing/creator/Sidebar';
 import LoadingScreen from 'src/component/common/LoadingScreen';
+import { useSocketRooms } from 'src/lib/realtime/useSocket';
 export const CreatorContext = createContext<any>(null);
 export function useCreator() {
     const ctx = useContext<any>(CreatorContext);
@@ -69,6 +70,31 @@ export default function CreatorLayout({ children, params }: any) {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+    const liveCreatorId = creatorId || data.creator?.id;
+    useSocketRooms(
+        ['creator:updates', liveCreatorId ? `creator:${liveCreatorId}` : null],
+        {
+            'creator:update_published': (payload: any) => {
+                if (!payload?.update)
+                    return;
+                setData((prev: any) => {
+                    const existing = Array.isArray(prev.updates) ? prev.updates : [];
+                    if (existing.some((u: any) => String(u.id) === String(payload.update.id))) {
+                        return prev;
+                    }
+                    const nextUpdates = [{ ...payload.update, is_read: false }, ...existing];
+                    return {
+                        ...prev,
+                        updates: nextUpdates,
+                        stats: {
+                            ...(prev.stats || {}),
+                            unreadUpdatesCount: (prev.stats?.unreadUpdatesCount || 0) + 1,
+                        },
+                    };
+                });
+            },
+        }
+    );
     if (loadError) {
         return (<div className="w-full min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center text-xs text-slate-700">
         <div className="max-w-sm w-full bg-white border border-slate-200 p-5 rounded space-y-3">
@@ -99,10 +125,10 @@ export default function CreatorLayout({ children, params }: any) {
     };
     return (<CreatorContext.Provider value={contextValue}>
       <div className="min-h-screen w-full bg-slate-50 text-slate-800 flex">
-        <CreatorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} creator={data.creator} activeSubscription={data.activeSubscription} websites={data.websites} stats={data.stats}/>
+        <CreatorSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} creator={data.creator} activeSubscription={data.activeSubscription} websites={data.websites} stats={data.stats} unreadUpdatesCount={data.stats?.unreadUpdatesCount || 0}/>
 
         <div className="flex-1 flex flex-col min-w-0 w-full">
-          <CreatorNavbar creator={data.creator} websites={data.websites} activeSubscription={data.activeSubscription} onToggleSidebar={() => setSidebarOpen((p: any) => !p)} onOpenCreateWebsite={() => {
+          <CreatorNavbar creator={data.creator} websites={data.websites} activeSubscription={data.activeSubscription} unreadUpdatesCount={data.stats?.unreadUpdatesCount || 0} onToggleSidebar={() => setSidebarOpen((p: any) => !p)} onOpenCreateWebsite={() => {
             router.push(`/creator/${effectiveCreatorId}/workspace?setup=true`);
         }}/>
 

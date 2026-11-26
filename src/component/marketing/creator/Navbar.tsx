@@ -3,7 +3,7 @@ import { useState, useContext } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Context } from 'src/component/helper/Context';
-export default function CreatorNavbar({ creator, websites = [], activeSubscription = null, onToggleSidebar, onOpenCreateWebsite, }: any) {
+export default function CreatorNavbar({ creator, websites = [], activeSubscription = null, unreadUpdatesCount = 0, onToggleSidebar, onOpenCreateWebsite, }: any) {
     const router = useRouter();
     const { setCreator, fetchCurrentUser } = useContext<any>(Context) || {};
     const [profileDropdownOpen, setProfileDropdownOpen] = useState<any>(false);
@@ -90,8 +90,13 @@ export default function CreatorNavbar({ creator, websites = [], activeSubscripti
             Live Site
           </a>)}
 
-        <Link href={`/creator/${creatorId}/updates`} className="px-2 py-1 rounded border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors" title="Product Updates">
-          Updates
+        <Link href={`/creator/${creatorId}/updates`} className="px-2 py-1 rounded border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5" title="Product Updates">
+          <span>Updates</span>
+          {unreadUpdatesCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-medium">
+              {unreadUpdatesCount}
+            </span>
+          )}
         </Link>
 
         <div className="relative">

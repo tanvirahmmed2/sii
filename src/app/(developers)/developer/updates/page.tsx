@@ -18,6 +18,7 @@ export default function DeveloperUpdatesPage() {
         description: '',
         changelog: '',
         is_published: true,
+        notify_creators: true,
     });
     const [submitting, setSubmitting] = useState<any>(false);
     const [deletingId, setDeletingId] = useState<any>(null);
@@ -72,6 +73,7 @@ export default function DeveloperUpdatesPage() {
             description: '',
             changelog: '',
             is_published: true,
+            notify_creators: true,
         });
         setFeedback({ type: '', message: '' });
         setIsEditorOpen(true);
@@ -91,6 +93,7 @@ export default function DeveloperUpdatesPage() {
             description: update.description || '',
             changelog: update.changelog || '',
             is_published: update.is_published !== false,
+            notify_creators: false,
         });
         setFeedback({ type: '', message: '' });
         setIsEditorOpen(true);
@@ -108,6 +111,7 @@ export default function DeveloperUpdatesPage() {
             description: '',
             changelog: '',
             is_published: true,
+            notify_creators: true,
         });
     };
     const handleSubmit = async (e: any) => {
@@ -128,6 +132,7 @@ export default function DeveloperUpdatesPage() {
                 description: formData.description.trim(),
                 changelog: formData.changelog.trim(),
                 is_published: Boolean(formData.is_published),
+                notify_creators: Boolean(formData.notify_creators),
             };
             const res = await fetch('/api/marketing/developer/updates', {
                 method,
@@ -138,7 +143,7 @@ export default function DeveloperUpdatesPage() {
             if (data.success) {
                 setFeedback({
                     type: 'success',
-                    message: editingUpdate ? 'Update saved successfully.' : 'Product update published successfully.',
+                    message: data.message || (editingUpdate ? 'Update saved successfully.' : 'Product update published successfully.'),
                 });
                 closeEditor();
                 fetchUpdates();
@@ -291,13 +296,21 @@ export default function DeveloperUpdatesPage() {
                 <input type="date" value={formData.release_date} onChange={(e: any) => setFormData({ ...formData, release_date: e.target.value })} className="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"/>
               </div>
 
-              <div className="sm:col-span-4 flex items-end pb-1">
+              <div className="sm:col-span-4 flex flex-col justify-end gap-1.5 pb-1">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={formData.is_published} onChange={(e: any) => setFormData({ ...formData, is_published: e.target.checked })} className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"/>
                   <span className="text-xs text-slate-700 font-normal">
                     Publish publicly on platform
                   </span>
                 </label>
+                {formData.is_published && (
+                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={Boolean(formData.notify_creators)} onChange={(e: any) => setFormData({ ...formData, notify_creators: e.target.checked })} className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer"/>
+                    <span className="text-xs text-slate-700 font-normal">
+                      Deliver &amp; email all active creators (Redis)
+                    </span>
+                  </label>
+                )}
               </div>
             </div>
 

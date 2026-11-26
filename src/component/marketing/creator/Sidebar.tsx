@@ -63,7 +63,7 @@ export const CREATOR_NAV_SECTIONS = [
         ],
     },
 ];
-export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscription, websites = [], stats = {}, }: any) {
+export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscription, websites = [], stats = {}, unreadUpdatesCount = 0 }: any) {
     const pathname = usePathname();
     const router = useRouter();
     const { setCreator, fetchCurrentUser } = useContext<any>(Context) || {};
@@ -127,6 +127,9 @@ export default function CreatorSidebar({ isOpen, onClose, creator, activeSubscri
 
                   {(link.href === '/workspace' || link.href === '/webites') && websitesCount > 0 && (<span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                       {websitesCount}
+                    </span>)}
+                  {link.href === '/updates' && unreadUpdatesCount > 0 && (<span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {unreadUpdatesCount}
                     </span>)}
                 </Link>);
             })}

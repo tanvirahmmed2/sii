@@ -2,6 +2,87 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import slugify from 'slugify';
+import { getBaseUrl } from 'src/lib/database/secret';
+import { emitCreatorUpdatePublished } from 'src/lib/realtime/socketServer';
+import {
+    dispatchAudienceEmailCampaign,
+    fetchAudienceRecipients,
+} from 'src/lib/redis/platformEmailQueue';
+import { invalidateCache } from 'src/lib/redis/redisClient';
+
+async function ensureCreatorUpdatesTable() {
+    await queryDb(`
+        CREATE TABLE IF NOT EXISTS creator_updates (
+            id BIGSERIAL PRIMARY KEY,
+            creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+            update_id BIGINT NOT NULL REFERENCES updates(id) ON DELETE CASCADE,
+            is_read BOOLEAN DEFAULT FALSE,
+            read_at TIMESTAMPTZ,
+            emailed_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(creator_id, update_id)
+        )
+    `).catch(() => {});
+}
+
+async function deliverUpdateToCreators(updateRow: any, shouldEmail: boolean, createdBy: string) {
+    if (!updateRow?.id || updateRow.is_published === false) {
+        return { creatorNotifiedCount: 0, emailResult: null };
+    }
+    await ensureCreatorUpdatesTable();
+    const insertRes = await queryDb(
+        `INSERT INTO creator_updates (creator_id, update_id)
+         SELECT id, $1 FROM creators WHERE is_active = TRUE
+         ON CONFLICT (creator_id, update_id) DO NOTHING
+         RETURNING creator_id`,
+        [Number(updateRow.id)]
+    ).catch(() => ({ rows: [] }));
+
+    const allCreatorsRes = await queryDb(`SELECT id FROM creators WHERE is_active = TRUE`).catch(() => ({ rows: [] }));
+    const creatorIds = allCreatorsRes.rows.map((r: any) => Number(r.id)).filter(Boolean);
+
+    await invalidateCache('platform:updates:*');
+    emitCreatorUpdatePublished({ update: updateRow, creatorIds });
+
+    let emailResult: any = null;
+    if (shouldEmail) {
+        const { recipients } = await fetchAudienceRecipients('creators', true);
+        const activeRecipients = recipients.filter((r) => r.is_active);
+        if (activeRecipients.length > 0) {
+            const parts: string[] = [];
+            if (updateRow.description) parts.push(String(updateRow.description).trim());
+            if (updateRow.changelog) parts.push(`Changelog:\n${String(updateRow.changelog).trim()}`);
+            const bodyText = parts.length > 0 ? parts.join('\n\n') : `Platform update ${updateRow.version} is now live.`;
+            const ctaUrl = updateRow.slug ? `${getBaseUrl()}/updates/${updateRow.slug}` : `${getBaseUrl()}/updates`;
+
+            emailResult = await dispatchAudienceEmailCampaign({
+                audience: 'creators',
+                recipients: activeRecipients,
+                subject: `[${updateRow.version}] ${updateRow.title}`,
+                message: bodyText,
+                purpose: 'platform_update',
+                ctaLabel: 'View Release Notes',
+                ctaUrl,
+                createdBy,
+            }).catch((err: any) => {
+                console.warn('Creator update email dispatch notice:', err?.message);
+                return null;
+            });
+
+            if (emailResult && emailResult.sentCount > 0) {
+                await queryDb(
+                    `UPDATE creator_updates SET emailed_at = CURRENT_TIMESTAMP WHERE update_id = $1 AND emailed_at IS NULL`,
+                    [Number(updateRow.id)]
+                ).catch(() => {});
+            }
+        }
+    }
+
+    return {
+        creatorNotifiedCount: insertRes.rows.length || creatorIds.length,
+        emailResult,
+    };
+}
 function formatSlug(text: any) {
     return slugify(text || '', {
         lower: true,
@@ -73,6 +154,7 @@ export async function POST(request: any) {
         const changelog = body.changelog?.trim() || null;
         const releaseDate = body.release_date ? body.release_date : new Date().toISOString().split('T')[0];
         const isPublished = body.is_published !== undefined ? Boolean(body.is_published) : true;
+        const notifyCreators = body.notify_creators !== undefined ? Boolean(body.notify_creators) : true;
         if (!version || !title) {
             return NextResponse.json({ success: false, error: 'Both version (e.g. v1.0.0) and title are required.' }, { status: 400 });
         }
@@ -80,7 +162,18 @@ export async function POST(request: any) {
         const res = await queryDb(`INSERT INTO updates (version, title, slug, description, changelog, release_date, is_published) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING id, version, title, slug, description, changelog, release_date, is_published, created_at, updated_at`, [version, title, slug, description, changelog, releaseDate, isPublished]);
-        return NextResponse.json({ success: true, record: res.rows[0], update: res.rows[0], message: 'Update published successfully.' }, { status: 201 });
+        const createdUpdate = res.rows[0];
+        const senderName = authCheck.staff?.name || authCheck.user?.name || 'Developer';
+        const delivery = await deliverUpdateToCreators(createdUpdate, isPublished && notifyCreators, senderName);
+        return NextResponse.json({
+            success: true,
+            record: createdUpdate,
+            update: createdUpdate,
+            delivery,
+            message: isPublished
+                ? `Update published${delivery.emailResult ? ` and sent to ${delivery.emailResult.sentCount} creator(s)` : ' to creators'}.`
+                : 'Update saved as draft.',
+        }, { status: 201 });
     }
     catch (error: any) {
         console.error('Error creating update:', error);
@@ -117,6 +210,10 @@ export async function PUT(request: any) {
        SET version = $1, title = $2, slug = $3, description = $4, changelog = $5, release_date = $6, is_published = $7, updated_at = CURRENT_TIMESTAMP 
        WHERE id = $8 
        RETURNING id, version, title, slug, description, changelog, release_date, is_published, created_at, updated_at`, [version, title, slug, description, changelog, releaseDate, isPublished, current.id]);
+        if (isPublished && !current.is_published) {
+            const senderName = authCheck.staff?.name || authCheck.user?.name || 'Developer';
+            await deliverUpdateToCreators(res.rows[0], body.notify_creators !== false, senderName);
+        }
         return NextResponse.json({
             success: true,
             record: res.rows[0],
@@ -145,6 +242,10 @@ export async function PATCH(request: any) {
             const res = await queryDb(`UPDATE updates SET is_published = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *`, [activeState, Number(id)]);
             if (res.rows.length === 0) {
                 return NextResponse.json({ success: false, error: 'Update not found.' }, { status: 404 });
+            }
+            if (activeState) {
+                const senderName = authCheck.staff?.name || authCheck.user?.name || 'Developer';
+                await deliverUpdateToCreators(res.rows[0], body.notify_creators !== false, senderName);
             }
             return NextResponse.json({
                 success: true,

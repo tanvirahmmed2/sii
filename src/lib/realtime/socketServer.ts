@@ -152,3 +152,16 @@ export function emitWebsiteMetaConversationUpdated(params: {
     params
   );
 }
+
+export function emitCreatorUpdatePublished(params: {
+  update: unknown;
+  creatorIds?: Array<string | number>;
+}): void {
+  const rooms = ['creator:updates'];
+  if (Array.isArray(params.creatorIds)) {
+    for (const id of params.creatorIds) {
+      rooms.push(`creator:${id}`);
+    }
+  }
+  emitToRooms(rooms, 'creator:update_published', params);
+}

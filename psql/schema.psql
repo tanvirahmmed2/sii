@@ -1008,6 +1008,20 @@ CREATE TRIGGER update_updates_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 21.1b CREATOR UPDATES TABLE (In-Account Update Delivery & Read Tracking)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS creator_updates (
+    id BIGSERIAL PRIMARY KEY,
+    creator_id BIGINT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,
+    update_id BIGINT NOT NULL REFERENCES updates(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
+    emailed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(creator_id, update_id)
+);
+
+-- ----------------------------------------------------------------------------
 -- 21.2 TUTORIALS TABLE (Video Guides, Platform Walkthroughs & Documentation)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tutorials (
@@ -1288,6 +1302,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_participants_dev ON chat_participants(develo
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_developer_id);
 CREATE INDEX IF NOT EXISTS idx_chat_images_message ON chat_images(message_id);
+CREATE INDEX IF NOT EXISTS idx_creator_updates_creator ON creator_updates(creator_id);
+CREATE INDEX IF NOT EXISTS idx_creator_updates_update ON creator_updates(update_id);
+CREATE INDEX IF NOT EXISTS idx_email_logs_user_type ON email_logs(user_type, created_at DESC);
 
 -- ----------------------------------------------------------------------------
 -- 31. META CONVERSATIONS TABLE (Facebook, Instagram & WhatsApp Threads)
