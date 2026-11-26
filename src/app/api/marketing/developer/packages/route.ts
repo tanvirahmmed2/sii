@@ -2,25 +2,26 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import { invalidatePackagesCache } from 'src/lib/redis/redisClient';
-import slugify from 'slugify';
-async function generateUniqueSlug(name: any, excludeId: any = null) {
-    const baseSlug = slugify(name || 'package', { lower: true, strict: true, trim: true }) || 'package';
-    let slug = baseSlug;
-    let counter = 1;
-    while (true) {
-        const params = excludeId ? [slug, Number(excludeId)] : [slug];
-        const query = excludeId
-            ? 'SELECT id FROM packages WHERE slug = $1 AND id != $2 LIMIT 1'
-            : 'SELECT id FROM packages WHERE slug = $1 LIMIT 1';
-        const check = await queryDb(query, params);
-        if (check.rows.length === 0)
-            return slug;
-        counter++;
-        slug = `${baseSlug}-${counter}`;
-    }
-}
+import { generateUniquePackageSlug, syncPackageFeatures } from 'src/lib/packages/packageFeatures';
 async function fetchPackageById(id: any) {
     const res = await queryDb(`SELECT p.*,
+            COALESCE(
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'id', pf.id,
+                    'package_id', pf.package_id,
+                    'title', pf.title,
+                    'slug', pf.slug,
+                    'display_order', pf.display_order,
+                    'is_active', pf.is_active
+                  ) ORDER BY pf.display_order ASC, pf.id ASC
+                )
+                FROM package_features pf
+                WHERE pf.package_id = p.id
+              ),
+              '[]'::json
+            ) AS package_features,
             COALESCE(
               (
                 SELECT json_agg(
@@ -112,6 +113,23 @@ export async function GET(request: any) {
                 (
                   SELECT json_agg(
                     json_build_object(
+                      'id', pf.id,
+                      'package_id', pf.package_id,
+                      'title', pf.title,
+                      'slug', pf.slug,
+                      'display_order', pf.display_order,
+                      'is_active', pf.is_active
+                    ) ORDER BY pf.display_order ASC, pf.id ASC
+                  )
+                  FROM package_features pf
+                  WHERE pf.package_id = p.id
+                ),
+                '[]'::json
+              ) AS package_features,
+              COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object(
                       'id', hm.id,
                       'name', hm.name,
                       'slug', hm.slug,
@@ -165,7 +183,7 @@ export async function GET(request: any) {
                 '[]'::json
               ) AS control_module_ids
        FROM packages p
-       ORDER BY p.sort_order ASC, COALESCE(p.monthly_price_usd, p.monthly_price, 0) ASC, p.id ASC`).catch(() => ({ rows: [] }));
+       ORDER BY p.sort_order ASC, COALESCE(p.bdt_per_month, p.usd_per_month, 0) ASC, p.id ASC`).catch(() => ({ rows: [] }));
         return NextResponse.json({
             success: true,
             table: 'packages',
@@ -188,7 +206,7 @@ export async function POST(request: any) {
         const body = await request.json();
         const data = body.data || body;
         const name = (data.name || '').trim() || 'Untitled Package';
-        const slug = await generateUniqueSlug(name);
+        const slug = await generateUniquePackageSlug(name);
         const shortDescription = (data.short_description || '').trim();
         const tagline = (data.tagline || '').trim();
         const description = (data.description || '').trim();
@@ -211,9 +229,8 @@ export async function POST(request: any) {
         const isActive = data.is_active !== undefined ? Boolean(data.is_active) : true;
         const gracePeriod = data.grace_period !== undefined ? Math.max(0, Number(data.grace_period)) : 3;
         const sortOrder = Number(data.sort_order) || 0;
-        const features = Array.isArray(data.features)
-            ? JSON.stringify(data.features)
-            : (typeof data.features === 'object' && data.features !== null ? JSON.stringify(data.features) : '[]');
+        const rawFeaturesInput = data.package_features !== undefined ? data.package_features : data.features;
+        const features = '[]';
         let homeModuleIds: any[] = [];
         if (Array.isArray(data.home_module_ids)) {
             homeModuleIds = data.home_module_ids.map(Number).filter((n: any) => !isNaN(n) && n > 0);
@@ -272,6 +289,9 @@ export async function POST(request: any) {
          SELECT $1, unnest($2::bigint[])
          ON CONFLICT (package_id, control_module_id) DO NOTHING`, [newPackage.id, controlModuleIds]).catch((e: any) => console.warn('Error linking package_control_module batch:', e.message));
         }
+        if (rawFeaturesInput !== undefined) {
+            await syncPackageFeatures(newPackage.id, rawFeaturesInput);
+        }
         const fullPackage = await fetchPackageById(newPackage.id);
         await invalidatePackagesCache();
         return NextResponse.json({
@@ -310,7 +330,7 @@ export async function PUT(request: any) {
         }
         let slug = current.slug;
         if (name && name !== current.name) {
-            slug = await generateUniqueSlug(name, Number(id));
+            slug = await generateUniquePackageSlug(name, Number(id));
         }
         const shortDescription = data.short_description !== undefined ? data.short_description : current.short_description;
         const tagline = data.tagline !== undefined ? (data.tagline || '').trim() : (current.tagline || '');
@@ -439,6 +459,10 @@ export async function PUT(request: any) {
             await queryDb(`INSERT INTO package_control_modules (package_id, control_module_id)
          SELECT $1, unnest($2::bigint[])
          ON CONFLICT (package_id, control_module_id) DO NOTHING`, [Number(id), controlIds]).catch((e: any) => console.warn('Error linking package_control_module batch:', e.message));
+        }
+        if (data.package_features !== undefined || data.features !== undefined) {
+            const rawFeatList = data.package_features !== undefined ? data.package_features : data.features;
+            await syncPackageFeatures(Number(id), rawFeatList);
         }
         const fullPackage = await fetchPackageById(Number(id));
         await invalidatePackagesCache();

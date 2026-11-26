@@ -299,6 +299,28 @@ CREATE TRIGGER update_packages_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
+-- 8B. PACKAGE FEATURES TABLE (Showcase Informational Features per Package)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS package_features (
+    id BIGSERIAL PRIMARY KEY,
+    package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(160) NOT NULL,
+    display_order INT DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_package_features_pkg ON package_features(package_id, display_order);
+
+DROP TRIGGER IF EXISTS update_package_features_updated_at ON package_features;
+CREATE TRIGGER update_package_features_updated_at
+    BEFORE UPDATE ON package_features
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
 -- Deprecated website_modules table removed (superseded by website_home_modules and website_control_modules)
 -- ----------------------------------------------------------------------------
 DROP TABLE IF EXISTS website_modules CASCADE;

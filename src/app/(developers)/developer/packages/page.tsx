@@ -306,6 +306,7 @@ export default function AdminPackagesPage() {
             const isRowActive = pkg.is_active !== false;
             const homeCount = Array.isArray(pkg.home_modules) ? pkg.home_modules.length : 0;
             const controlCount = Array.isArray(pkg.control_modules) ? pkg.control_modules.length : 0;
+            const featuresCount = Array.isArray(pkg.package_features) ? pkg.package_features.length : 0;
             const monthlyUsd = Number(pkg.usd_per_month ?? 0);
             const yearlyUsd = monthlyUsd * 12;
             const monthlyBdt = Number(pkg.bdt_per_month ?? 0);
@@ -358,10 +359,15 @@ export default function AdminPackagesPage() {
 
                       <td className="py-2.5">
                         <div className="font-medium text-slate-800 dark:text-slate-200">
-                          {pkg.max_students || 500} Students &bull; {pkg.max_storage || '5 GB'}
+                          {Number(pkg.max_students ?? 0).toLocaleString()} Students &bull;{' '}
+                          {Number(pkg.max_storage_mb ?? 0) >= 1024
+                            ? (Number(pkg.max_storage_mb) % 1024 === 0
+                                ? `${Number(pkg.max_storage_mb) / 1024} GB`
+                                : `${(Number(pkg.max_storage_mb) / 1024).toFixed(1)} GB`)
+                            : `${Number(pkg.max_storage_mb ?? 0)} MB`}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          {pkg.max_teachers || 30} Teachers &bull; {pkg.max_staff || 20} Staff &bull; {pkg.grace_period ?? 3}d Grace
+                          {Number(pkg.max_teachers ?? 0).toLocaleString()} Teachers &bull; {Number(pkg.max_staff ?? 0).toLocaleString()} Staff &bull; {pkg.grace_period ?? 0}d Grace
                         </div>
                       </td>
 
@@ -392,6 +398,9 @@ export default function AdminPackagesPage() {
                           </span>
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                             {homeCount} Home
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+                            {featuresCount} Features
                           </span>
                         </div>
                       </td>

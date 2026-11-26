@@ -53,7 +53,9 @@ export async function GET(request: any) {
                 p.name AS package_name, 
                 p.slug AS package_slug, 
                 p.tagline AS package_tagline,
+                p.short_description AS package_short_description,
                 p.description AS package_description, 
+                COALESCE(p.bdt_per_month, 0) AS bdt_per_month,
                 COALESCE(p.usd_per_month, 0) AS price,
                 (COALESCE(p.usd_per_month, 0) * 100)::int AS price_in_cents, 
                 'USD' AS currency, 
@@ -63,6 +65,9 @@ export async function GET(request: any) {
                 COALESCE(p.max_students, 0) AS max_students,
                 COALESCE(p.max_staff, 0) AS max_staff,
                 COALESCE(p.max_storage_mb, 5120) AS max_storage_mb,
+                p.is_available_student_panel,
+                p.is_available_teacher_panel,
+                p.is_available_custom_domain,
                 pu.purchase_code,
                 pu.total_amount,
                 pu.status AS purchase_status,
@@ -122,16 +127,33 @@ export async function GET(request: any) {
          LEFT JOIN packages p ON pu.package_id = p.id
          WHERE pay.creator_id = $1
          ORDER BY pay.id DESC LIMIT 50`, [creatorId]).catch(() => ({ rows: [] })),
-            queryDb(`SELECT id, name, slug, tagline, description,
-                bdt_per_month, usd_per_month, eur_per_month, gbp_per_month, aud_per_month, cad_per_month,
-                COALESCE(usd_per_month, 0) AS monthly_price,
-                (COALESCE(usd_per_month, 0) * 100)::bigint AS price_in_cents,
-                discount_percentage, max_students, max_teachers, max_staff, max_storage_mb,
+            queryDb(`SELECT p.id, p.name, p.slug, p.short_description, p.tagline, p.description,
+                p.bdt_per_month, p.usd_per_month, p.eur_per_month, p.gbp_per_month, p.aud_per_month, p.cad_per_month,
+                COALESCE(p.usd_per_month, 0) AS monthly_price,
+                (COALESCE(p.usd_per_month, 0) * 100)::bigint AS price_in_cents,
+                p.discount_percentage, p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb,
+                p.is_available_student_panel, p.is_available_teacher_panel, p.is_available_custom_domain,
                 1 AS max_websites,
-                features, is_popular, is_active, grace_period, sort_order
-         FROM packages
-         WHERE is_active = TRUE AND is_public = TRUE
-         ORDER BY sort_order ASC, bdt_per_month ASC, id ASC`).catch(() => ({ rows: [] })),
+                p.features,
+                COALESCE(
+                  (
+                    SELECT json_agg(
+                      json_build_object(
+                        'id', pf.id,
+                        'title', pf.title,
+                        'slug', pf.slug,
+                        'display_order', pf.display_order
+                      ) ORDER BY pf.display_order ASC, pf.id ASC
+                    )
+                    FROM package_features pf
+                    WHERE pf.package_id = p.id AND pf.is_active = TRUE
+                  ),
+                  '[]'::json
+                ) AS package_features,
+                p.is_popular, p.is_active, p.grace_period, p.sort_order
+         FROM packages p
+         WHERE p.is_active = TRUE AND p.is_public = TRUE
+         ORDER BY p.sort_order ASC, p.bdt_per_month ASC, p.id ASC`).catch(() => ({ rows: [] })),
             queryDb(`SELECT s.id, s.creator_id, s.ticket_number, s.subject, s.status, s.priority,
                 'General' AS category, s.created_at, s.updated_at,
                 (SELECT COUNT(*)::int FROM support_messages WHERE support_id = s.id) AS message_count,

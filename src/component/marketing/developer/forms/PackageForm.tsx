@@ -1,24 +1,45 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-function parseInitialFeatures(data: any) {
-    if (!data?.features)
-        return [];
-    if (Array.isArray(data.features))
-        return data.features.filter(Boolean);
-    if (typeof data.features === 'string') {
+interface ShowcaseFeatureItem {
+    id?: number;
+    title: string;
+    slug?: string;
+    display_order: number;
+    is_active: boolean;
+}
+
+function parseInitialPackageFeatures(data: any): ShowcaseFeatureItem[] {
+    if (Array.isArray(data?.package_features) && data.package_features.length > 0) {
+        return data.package_features
+            .map((f: any, idx: number) => ({
+                id: f.id,
+                title: String(f.title || f.name || '').trim(),
+                slug: f.slug,
+                display_order: Number(f.display_order ?? idx + 1),
+                is_active: f.is_active !== false,
+            }))
+            .filter((f: ShowcaseFeatureItem) => Boolean(f.title));
+    }
+    let raw: any[] = [];
+    if (Array.isArray(data?.features)) raw = data.features;
+    else if (typeof data?.features === 'string') {
         try {
             const parsed = JSON.parse(data.features);
-            if (Array.isArray(parsed))
-                return parsed.filter(Boolean);
-        }
-        catch (_: any) { }
+            if (Array.isArray(parsed)) raw = parsed;
+        } catch {}
     }
-    return [];
+    return raw
+        .map((f: any, idx: number) => ({
+            title: String(typeof f === 'string' ? f : f?.title || f?.name || '').trim(),
+            display_order: idx + 1,
+            is_active: true,
+        }))
+        .filter((f: ShowcaseFeatureItem) => Boolean(f.title));
 }
+
 function buildInitialFormData(initialData: any) {
     return {
         name: initialData?.name || '',
-        slug: initialData?.slug || '',
         short_description: initialData?.short_description || '',
         tagline: initialData?.tagline || '',
         description: initialData?.description || '',
@@ -55,7 +76,7 @@ function buildInitialFormData(initialData: any) {
         is_public: initialData?.is_public !== undefined ? Boolean(initialData.is_public) : true,
         is_active: initialData?.is_active !== undefined ? Boolean(initialData.is_active) : true,
         sort_order: initialData?.sort_order ?? 0,
-        features: parseInitialFeatures(initialData),
+        package_features: parseInitialPackageFeatures(initialData),
     };
 }
 function getInitialHomeIds(initialData: any) {
@@ -87,7 +108,7 @@ function getInitialControlIds(initialData: any) {
 export default function PackageForm({ initialData = null, onSuccess, onCancel, apiEndpoint = '/api/marketing/developer/packages', }: any) {
     const isEditing = Boolean(initialData?.id);
     const [formData, setFormData] = useState<any>(() => buildInitialFormData(initialData));
-    const [newFeatureText, setNewFeatureText] = useState<any>('');
+    const [newFeatureTitle, setNewFeatureTitle] = useState<string>('');
     const [homeModules, setHomeModules] = useState<any>([]);
     const [controlModules, setControlModules] = useState<any>([]);
     const [selectedHomeIds, setSelectedHomeIds] = useState<any>(() => getInitialHomeIds(initialData));
@@ -161,21 +182,39 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
     }, [controlModules, controlSearch, controlCategoryFilter]);
     const handleAddFeature = (e: any) => {
         e.preventDefault();
-        const text = newFeatureText.trim();
-        if (!text)
-            return;
-        if (!formData.features.includes(text)) {
-            setFormData((prev: any) => ({
+        const title = newFeatureTitle.trim();
+        if (!title) return;
+        setFormData((prev: any) => {
+            const list: ShowcaseFeatureItem[] = Array.isArray(prev.package_features) ? prev.package_features : [];
+            if (list.some((f) => f.title.toLowerCase() === title.toLowerCase())) {
+                return prev;
+            }
+            return {
                 ...prev,
-                features: [...prev.features, text],
-            }));
-        }
-        setNewFeatureText('');
+                package_features: [
+                    ...list,
+                    {
+                        title,
+                        display_order: list.length + 1,
+                        is_active: true,
+                    },
+                ],
+            };
+        });
+        setNewFeatureTitle('');
     };
-    const handleRemoveFeature = (featureToRemove: any) => {
+    const handleRemoveFeature = (indexToRemove: number) => {
         setFormData((prev: any) => ({
             ...prev,
-            features: prev.features.filter((f: any) => f !== featureToRemove),
+            package_features: (prev.package_features || []).filter((_: any, idx: number) => idx !== indexToRemove),
+        }));
+    };
+    const handleFeatureChange = (index: number, field: 'title' | 'is_active', value: any) => {
+        setFormData((prev: any) => ({
+            ...prev,
+            package_features: (prev.package_features || []).map((f: any, idx: number) =>
+                idx === index ? { ...f, [field]: value } : f
+            ),
         }));
     };
     const handleStoragePreset = (mb: any) => {
@@ -210,7 +249,6 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
         const maxStorageMb = Math.max(100, parseInt(formData.max_storage_mb, 10) || 5120);
         const payload = {
             name: formData.name.trim(),
-            slug: formData.slug.trim(),
             short_description: formData.short_description.trim(),
             tagline: formData.tagline.trim(),
             description: formData.description.trim(),
@@ -225,7 +263,13 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
             max_teachers: Math.max(1, parseInt(formData.max_teachers, 10) || 30),
             max_staff: Math.max(1, parseInt(formData.max_staff, 10) || 20),
             max_storage_mb: maxStorageMb,
-            features: formData.features,
+            package_features: (formData.package_features || [])
+                .map((f: any, idx: number) => ({
+                    title: String(f.title || '').trim(),
+                    display_order: idx + 1,
+                    is_active: f.is_active !== false,
+                }))
+                .filter((f: any) => Boolean(f.title)),
             is_available_student_panel: Boolean(formData.is_available_student_panel),
             is_available_teacher_panel: Boolean(formData.is_available_teacher_panel),
             is_available_custom_domain: Boolean(formData.is_available_custom_domain),
@@ -294,19 +338,12 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
         </div>)}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Package Name <span className="text-rose-500">*</span>
             </label>
             <input type="text" required value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Slug Identifier
-            </label>
-            <input type="text" value={formData.slug} onChange={(e: any) => setFormData({ ...formData, slug: e.target.value })} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
           </div>
 
           <div>
@@ -536,36 +573,48 @@ export default function PackageForm({ initialData = null, onSuccess, onCancel, a
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="border-b border-slate-200 dark:border-slate-700 pb-2">
             <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
-              Marketing Feature Tags
+              Showcase Package Features
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Highlight bullet points displayed on customer pricing comparison tables.
+              Informational highlights shown to customers for this package. Slugs are generated automatically by the server.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <label className="sr-only">Add Feature Tag</label>
-              <input type="text" value={newFeatureText} onChange={(e: any) => setNewFeatureText(e.target.value)} onKeyDown={(e: any) => {
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
+            <div className="sm:col-span-10">
+              <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Feature Title
+              </label>
+              <input type="text" value={newFeatureTitle} onChange={(e: any) => setNewFeatureTitle(e.target.value)} onKeyDown={(e: any) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 handleAddFeature(e);
             }
         }} className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
             </div>
-            <button type="button" onClick={handleAddFeature} className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium cursor-pointer">
-              Add Tag
-            </button>
+            <div className="sm:col-span-2">
+              <button type="button" onClick={handleAddFeature} className="w-full px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium cursor-pointer">
+                Add Feature
+              </button>
+            </div>
           </div>
 
-          {formData.features.length > 0 ? (<div className="flex flex-wrap gap-1.5 pt-1">
-              {formData.features.map((feature: any, idx: any) => (<span key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200">
-                  <span>{feature}</span>
-                  <button type="button" onClick={() => handleRemoveFeature(feature)} className="text-slate-400 hover:text-rose-500 font-bold leading-none cursor-pointer">
-                    &times;
-                  </button>
-                </span>))}
-            </div>) : (<p className="text-xs text-slate-400 italic">No marketing feature tags added yet.</p>)}
+          {(formData.package_features || []).length > 0 ? (<div className="space-y-2 pt-1">
+              {formData.package_features.map((feature: ShowcaseFeatureItem, idx: number) => (<div key={feature.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <div className="sm:col-span-10">
+                    <input type="text" value={feature.title} onChange={(e: any) => handleFeatureChange(idx, 'title', e.target.value)} className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded px-2.5 py-1 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:border-slate-800"/>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center justify-end gap-2">
+                    <label className="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer">
+                      <input type="checkbox" checked={feature.is_active !== false} onChange={(e: any) => handleFeatureChange(idx, 'is_active', e.target.checked)} className="rounded border-slate-300 cursor-pointer"/>
+                      <span>Active</span>
+                    </label>
+                    <button type="button" onClick={() => handleRemoveFeature(idx)} className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-[11px] font-medium cursor-pointer">
+                      Remove
+                    </button>
+                  </div>
+                </div>))}
+            </div>) : (<p className="text-xs text-slate-400 italic">No showcase features added yet.</p>)}
         </div>
 
         <div className="p-4 rounded bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">

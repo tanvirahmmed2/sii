@@ -21,11 +21,13 @@ function formatPackageRecord(p: any) {
     const audPerMonth = Number(p.aud_per_month ?? 0);
     const cadPerMonth = Number(p.cad_per_month ?? 0);
     const maxStorageMb = Number(p.max_storage_mb ?? 5120);
-    const maxStorage = p.max_storage || `${Math.round(maxStorageMb / 1024)} GB`;
+    const maxStorage = p.max_storage || (maxStorageMb >= 1024
+        ? (maxStorageMb % 1024 === 0 ? `${maxStorageMb / 1024} GB` : `${(maxStorageMb / 1024).toFixed(1)} GB`)
+        : `${maxStorageMb} MB`);
     return {
         ...p,
         id: Number(p.id),
-        name: p.name || 'Standard Package',
+        name: p.name || '',
         slug: p.slug || `package-${p.id}`,
         short_description: p.short_description || '',
         tagline: p.tagline || '',
@@ -36,27 +38,22 @@ function formatPackageRecord(p: any) {
         gbp_per_month: gbpPerMonth,
         aud_per_month: audPerMonth,
         cad_per_month: cadPerMonth,
-        monthly_price_usd: usdPerMonth,
-        yearly_price_usd: Math.round(usdPerMonth * 12),
-        monthly_price_bdt: bdtPerMonth,
-        yearly_price_bdt: Math.round(bdtPerMonth * 12),
-        monthly_price: usdPerMonth,
-        yearly_price: Math.round(usdPerMonth * 12),
         discount_percentage: Number(p.discount_percentage || 0),
-        max_students: Number(p.max_students ?? 500),
-        max_teachers: Number(p.max_teachers ?? 30),
-        max_staff: Number(p.max_staff ?? 20),
+        max_students: Number(p.max_students ?? 0),
+        max_teachers: Number(p.max_teachers ?? 0),
+        max_staff: Number(p.max_staff ?? 0),
         max_storage: maxStorage,
         max_storage_mb: maxStorageMb,
-        is_available_student_panel: p.is_available_student_panel !== false,
-        is_available_teacher_panel: p.is_available_teacher_panel !== false,
+        is_available_student_panel: Boolean(p.is_available_student_panel),
+        is_available_teacher_panel: Boolean(p.is_available_teacher_panel),
         is_available_custom_domain: Boolean(p.is_available_custom_domain),
         is_popular: Boolean(p.is_popular),
         is_public: p.is_public !== false,
         is_active: Boolean(p.is_active),
-        grace_period: Number(p.grace_period ?? 3),
+        grace_period: Number(p.grace_period ?? 0),
         sort_order: Number(p.sort_order ?? 0),
         features,
+        package_features: Array.isArray(p.package_features) ? p.package_features : [],
         home_modules: Array.isArray(p.home_modules) ? p.home_modules : [],
         home_module_ids: Array.isArray(p.home_module_ids) ? p.home_module_ids : [],
         control_modules: Array.isArray(p.control_modules) ? p.control_modules : [],
@@ -70,6 +67,23 @@ export async function GET(request: any) {
         const slug = searchParams.get('slug');
         const baseQuery = `
       SELECT p.*,
+             COALESCE(
+               (
+                 SELECT json_agg(
+                   json_build_object(
+                     'id', pf.id,
+                     'package_id', pf.package_id,
+                     'title', pf.title,
+                     'slug', pf.slug,
+                     'display_order', pf.display_order,
+                     'is_active', pf.is_active
+                   ) ORDER BY pf.display_order ASC, pf.id ASC
+                 )
+                 FROM package_features pf
+                 WHERE pf.package_id = p.id AND pf.is_active = TRUE
+               ),
+               '[]'::json
+             ) AS package_features,
              COALESCE(
                (
                  SELECT json_agg(

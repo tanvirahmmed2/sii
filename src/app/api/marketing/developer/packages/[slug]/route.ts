@@ -1,25 +1,27 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
-import slugify from 'slugify';
-async function generateUniqueSlug(name: any, excludeId: any = null) {
-    const baseSlug = slugify(name || 'package', { lower: true, strict: true, trim: true }) || 'package';
-    let slug = baseSlug;
-    let counter = 1;
-    while (true) {
-        const params = excludeId ? [slug, Number(excludeId)] : [slug];
-        const query = excludeId
-            ? 'SELECT id FROM packages WHERE slug = $1 AND id != $2 LIMIT 1'
-            : 'SELECT id FROM packages WHERE slug = $1 LIMIT 1';
-        const check = await queryDb(query, params);
-        if (check.rows.length === 0)
-            return slug;
-        counter++;
-        slug = `${baseSlug}-${counter}`;
-    }
-}
+import { invalidatePackagesCache } from 'src/lib/redis/redisClient';
+import { generateUniquePackageSlug, syncPackageFeatures } from 'src/lib/packages/packageFeatures';
 async function fetchFullPackageBySlugOrId(slugOrId: any) {
     const res = await queryDb(`SELECT p.*,
+            COALESCE(
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'id', pf.id,
+                    'package_id', pf.package_id,
+                    'title', pf.title,
+                    'slug', pf.slug,
+                    'display_order', pf.display_order,
+                    'is_active', pf.is_active
+                  ) ORDER BY pf.display_order ASC, pf.id ASC
+                )
+                FROM package_features pf
+                WHERE pf.package_id = p.id
+              ),
+              '[]'::json
+            ) AS package_features,
             COALESCE(
               (
                 SELECT json_agg(
@@ -138,27 +140,30 @@ export async function PUT(request: any, { params }: any) {
             return NextResponse.json({ success: false, error: 'Package name cannot be empty' }, { status: 400 });
         }
         let newSlug = current.slug;
-        if (data.slug && String(data.slug).trim() && String(data.slug).trim().toLowerCase() !== current.slug.toLowerCase()) {
-            newSlug = await generateUniqueSlug(String(data.slug).trim(), current.id);
-        }
-        else if (name && name !== current.name) {
-            newSlug = await generateUniqueSlug(name, current.id);
+        if (name && name !== current.name) {
+            newSlug = await generateUniquePackageSlug(name, current.id);
         }
         const shortDescription = data.short_description !== undefined ? data.short_description : current.short_description;
         const tagline = data.tagline !== undefined ? (data.tagline || '').trim() : (current.tagline || '');
         const description = data.description !== undefined ? data.description : current.description;
-        const monthlyPriceUsd = data.monthly_price_usd !== undefined
-            ? Math.max(0, Number(data.monthly_price_usd) || 0)
-            : Number(current.monthly_price_usd ?? current.monthly_price ?? 0);
-        const yearlyPriceUsd = data.yearly_price_usd !== undefined
-            ? Math.max(0, Number(data.yearly_price_usd) || 0)
-            : Number(current.yearly_price_usd ?? current.yearly_price ?? 0);
-        const monthlyPriceBdt = data.monthly_price_bdt !== undefined
-            ? Math.max(0, Number(data.monthly_price_bdt) || 0)
-            : Number(current.monthly_price_bdt ?? 0);
-        const yearlyPriceBdt = data.yearly_price_bdt !== undefined
-            ? Math.max(0, Number(data.yearly_price_bdt) || 0)
-            : Number(current.yearly_price_bdt ?? 0);
+        const bdtPerMonth = data.bdt_per_month !== undefined
+            ? Math.max(0, Number(data.bdt_per_month) || 0)
+            : Number(current.bdt_per_month ?? 0);
+        const usdPerMonth = data.usd_per_month !== undefined
+            ? Math.max(0, Number(data.usd_per_month) || 0)
+            : Number(current.usd_per_month ?? 0);
+        const eurPerMonth = data.eur_per_month !== undefined
+            ? Math.max(0, Number(data.eur_per_month) || 0)
+            : Number(current.eur_per_month ?? (usdPerMonth * 0.92));
+        const gbpPerMonth = data.gbp_per_month !== undefined
+            ? Math.max(0, Number(data.gbp_per_month) || 0)
+            : Number(current.gbp_per_month ?? (usdPerMonth * 0.79));
+        const audPerMonth = data.aud_per_month !== undefined
+            ? Math.max(0, Number(data.aud_per_month) || 0)
+            : Number(current.aud_per_month ?? (usdPerMonth * 1.52));
+        const cadPerMonth = data.cad_per_month !== undefined
+            ? Math.max(0, Number(data.cad_per_month) || 0)
+            : Number(current.cad_per_month ?? (usdPerMonth * 1.38));
         const discountPercentage = data.discount_percentage !== undefined
             ? Math.min(100, Math.max(0, Number(data.discount_percentage) || 0))
             : Number(current.discount_percentage || 0);
@@ -200,12 +205,12 @@ export async function PUT(request: any, { params }: any) {
            short_description = $3,
            tagline = $4,
            description = $5,
-           monthly_price_usd = $6,
-           yearly_price_usd = $7,
-           monthly_price_bdt = $8,
-           yearly_price_bdt = $9,
-           monthly_price = $10,
-           yearly_price = $11,
+           bdt_per_month = $6,
+           usd_per_month = $7,
+           eur_per_month = $8,
+           gbp_per_month = $9,
+           aud_per_month = $10,
+           cad_per_month = $11,
            discount_percentage = $12,
            max_students = $13,
            max_teachers = $14,
@@ -223,8 +228,8 @@ export async function PUT(request: any, { params }: any) {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $26`, [
             name, newSlug, shortDescription, tagline, description,
-            monthlyPriceUsd, yearlyPriceUsd, monthlyPriceBdt, yearlyPriceBdt,
-            monthlyPriceUsd, yearlyPriceUsd, discountPercentage,
+            bdtPerMonth, usdPerMonth, eurPerMonth, gbpPerMonth, audPerMonth, cadPerMonth,
+            discountPercentage,
             maxStudents, maxTeachers, maxStaff, maxStorageMb,
             isAvailableStudentPanel, isAvailableTeacherPanel, isAvailableCustomDomain,
             featuresJson, isPopular, isPublic, isActive, gracePeriod, sortOrder,
@@ -264,7 +269,12 @@ export async function PUT(request: any, { params }: any) {
            ON CONFLICT (package_id, control_module_id) DO NOTHING`, [current.id, controlIds]).catch((e: any) => console.warn('Error syncing package_control_module batch:', e.message));
             }
         }
+        if (data.package_features !== undefined || data.features !== undefined) {
+            const rawFeatList = data.package_features !== undefined ? data.package_features : data.features;
+            await syncPackageFeatures(current.id, rawFeatList);
+        }
         const updatedPackage = await fetchFullPackageBySlugOrId(newSlug);
+        await invalidatePackagesCache();
         return NextResponse.json({
             success: true,
             record: updatedPackage,
@@ -290,6 +300,7 @@ export async function DELETE(request: any, { params }: any) {
         if (deleteRes.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Package not found' }, { status: 404 });
         }
+        await invalidatePackagesCache();
         return NextResponse.json({
             success: true,
             message: `Package "${deleteRes.rows[0].name}" deleted successfully`,

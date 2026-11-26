@@ -263,10 +263,10 @@ function SubscriptionContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 py-3 border-b border-slate-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 py-3 border-b border-slate-100">
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Websites Quota</span>
-                      <div className="text-xs font-bold text-slate-900 font-mono">
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
                         {websitesUsed} / {websitesAllowed}
                       </div>
                       <span className="text-[10px] text-slate-500">
@@ -276,31 +276,43 @@ function SubscriptionContent() {
 
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Teachers Limit</span>
-                      <div className="text-xs font-bold text-slate-900 font-mono">
-                        {sub.max_teachers ? `${sub.max_teachers} Max` : 'Unlimited'}
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
+                        {Number(sub.max_teachers ?? 0).toLocaleString()} Max
                       </div>
                       <span className="text-[10px] text-slate-500">Faculty accounts</span>
                     </div>
 
                     <div className="space-y-0.5">
+                      <span className="text-[10px] uppercase font-semibold text-slate-400 block">Staff Limit</span>
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
+                        {Number(sub.max_staff ?? 0).toLocaleString()} Max
+                      </div>
+                      <span className="text-[10px] text-slate-500">Administrative staff</span>
+                    </div>
+
+                    <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Students Limit</span>
-                      <div className="text-xs font-bold text-slate-900 font-mono">
-                        {sub.max_students ? `${sub.max_students} Max` : 'Unlimited'}
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
+                        {Number(sub.max_students ?? 0).toLocaleString()} Max
                       </div>
                       <span className="text-[10px] text-slate-500">Enrolled capacity</span>
                     </div>
 
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Cloud Storage</span>
-                      <div className="text-xs font-bold text-slate-900 font-mono">
-                        {sub.max_storage_mb || 5120} MB
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
+                        {Number(sub.max_storage_mb ?? 0) >= 1024
+                            ? (Number(sub.max_storage_mb) % 1024 === 0
+                                ? `${Number(sub.max_storage_mb) / 1024} GB`
+                                : `${(Number(sub.max_storage_mb) / 1024).toFixed(1)} GB`)
+                            : `${Number(sub.max_storage_mb ?? 0)} MB`}
                       </div>
                       <span className="text-[10px] text-slate-500">Document storage</span>
                     </div>
 
                     <div className="space-y-0.5 col-span-2 sm:col-span-1">
                       <span className="text-[10px] uppercase font-semibold text-slate-400 block">Subscription Period</span>
-                      <div className="text-xs font-bold text-slate-900 font-mono">
+                      <div className="text-xs font-semibold text-slate-900 font-mono">
                         {sub.daysRemaining !== undefined ? `${sub.daysRemaining} Days Left` : 'Active'}
                       </div>
                       <span className="text-[10px] text-slate-500">

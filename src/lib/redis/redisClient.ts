@@ -1008,13 +1008,13 @@ export async function invalidateModulesCache(): Promise<void> {
 }
 
 export async function fetchPackagesList(fetcher: () => Promise<any>): Promise<any> {
-  const cacheKey = 'marketing:packages:public';
+  const cacheKey = 'marketing:packages:v3:public';
   return fetchWithCache(cacheKey, fetcher, 300);
 }
 
 export async function fetchPackageByIdOrSlug(idOrSlug: string | number, fetcher: () => Promise<any>): Promise<any> {
   const clean = String(idOrSlug).trim().toLowerCase();
-  const cacheKey = `marketing:packages:single:${clean}`;
+  const cacheKey = `marketing:packages:v3:single:${clean}`;
   return fetchWithCache(cacheKey, fetcher, 300);
 }
 
