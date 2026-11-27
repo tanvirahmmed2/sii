@@ -588,27 +588,6 @@ CREATE TRIGGER update_custom_emails_updated_at
     BEFORE UPDATE ON custom_emails
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TABLE IF NOT EXISTS custom_emails (
-    id BIGSERIAL PRIMARY KEY,
-    to_email VARCHAR(255) NOT NULL,
-    subject VARCHAR(500) NOT NULL,
-    description TEXT NOT NULL,
-    attachments JSONB DEFAULT '[]'::jsonb,
-    status VARCHAR(50) NOT NULL DEFAULT 'Sent',
-    provider VARCHAR(50) DEFAULT 'brevo',
-    message_id VARCHAR(255),
-    failure_reason TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_custom_emails_to ON custom_emails(to_email);
-CREATE INDEX IF NOT EXISTS idx_custom_emails_created ON custom_emails(created_at DESC);
-
-DROP TRIGGER IF EXISTS update_custom_emails_updated_at ON custom_emails;
-CREATE TRIGGER update_custom_emails_updated_at
-    BEFORE UPDATE ON custom_emails
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TABLE IF NOT EXISTS otp_dispatch_logs (
     id BIGSERIAL PRIMARY KEY,
     identifier VARCHAR(255) NOT NULL,
@@ -694,7 +673,7 @@ CREATE TABLE IF NOT EXISTS website_domains (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     domain_type VARCHAR(50) DEFAULT 'subdomain' CHECK (domain_type IN ('subdomain', 'custom_domain', 'custom')),
-    domain VARCHAR(255) NOT NULL,
+    domain VARCHAR(255) NOT NULL UNIQUE,
     domain_name VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
@@ -721,14 +700,35 @@ CREATE TABLE IF NOT EXISTS website_information (
     website_id BIGINT UNIQUE NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
     creator_nid VARCHAR(100),
     creator_nid_url TEXT,
+    creator_nid_front_image TEXT,
+    creator_nid_front_image_id VARCHAR(255),
+    creator_nid_back_image TEXT,
+    creator_nid_back_image_id VARCHAR(255),
     eiin_certificate VARCHAR(100),
     eiin_certificate_url TEXT,
+    eiin_certificate_image TEXT,
+    eiin_certificate_image_id VARCHAR(255),
+    ugc_certificate TEXT,
+    ugc_certificate_id VARCHAR(255),
+    additional_certificate TEXT,
+    additional_certificate_id VARCHAR(255),
     address TEXT,
     other_details JSONB DEFAULT '{}'::jsonb,
     verification_status VARCHAR(50) DEFAULT 'pending' CHECK (verification_status IN ('pending', 'approved', 'rejected')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS creator_nid_front_image TEXT;
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS creator_nid_front_image_id VARCHAR(255);
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS creator_nid_back_image TEXT;
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS creator_nid_back_image_id VARCHAR(255);
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS eiin_certificate_image TEXT;
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS eiin_certificate_image_id VARCHAR(255);
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS ugc_certificate TEXT;
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS ugc_certificate_id VARCHAR(255);
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS additional_certificate TEXT;
+ALTER TABLE website_information ADD COLUMN IF NOT EXISTS additional_certificate_id VARCHAR(255);
 
 CREATE INDEX IF NOT EXISTS idx_website_information_website ON website_information(website_id);
 

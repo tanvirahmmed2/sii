@@ -1,5 +1,6 @@
 import pool from './db';
 import { PoolClient, Pool } from 'pg';
+import { deleteImage } from './cloudinary';
 
 export interface PurgeWebsiteOptions {
   websiteId: string | number;
@@ -42,6 +43,29 @@ export async function purgeWebsite(
       throw new Error('Website not found or unauthorized.');
     }
     const websiteInfo = checkRes.rows[0];
+
+    const assetPublicIds: string[] = [];
+    try {
+      const siteAssetsRes = await client.query(
+        `SELECT w.logo_id, w.favicon_id,
+                wi.creator_nid_front_image_id,
+                wi.creator_nid_back_image_id,
+                wi.eiin_certificate_image_id,
+                wi.ugc_certificate_id,
+                wi.additional_certificate_id
+         FROM websites w
+         LEFT JOIN website_information wi ON wi.website_id = w.id
+         WHERE w.id = $1`,
+        [targetId]
+      );
+      if (siteAssetsRes.rows[0]) {
+        for (const val of Object.values(siteAssetsRes.rows[0])) {
+          if (val && typeof val === 'string' && val.trim()) {
+            assetPublicIds.push(val.trim());
+          }
+        }
+      }
+    } catch (_) {}
 
     const purgeSql = `
       DO $$
@@ -168,6 +192,10 @@ export async function purgeWebsite(
 
     if (!isClient) {
       await client.query('COMMIT');
+    }
+
+    for (const publicId of assetPublicIds) {
+      await deleteImage(publicId).catch(() => {});
     }
 
     return {

@@ -239,22 +239,49 @@ export async function PUT(request: any, { params }: any) {
                 ? String(wi.verification_status).toLowerCase()
                 : 'pending';
             await queryDb(`INSERT INTO website_information (
-          website_id, creator_nid, creator_nid_url, eiin_certificate, eiin_certificate_url, address, other_details, verification_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          website_id, creator_nid, creator_nid_url,
+          creator_nid_front_image, creator_nid_front_image_id,
+          creator_nid_back_image, creator_nid_back_image_id,
+          eiin_certificate, eiin_certificate_url,
+          eiin_certificate_image, eiin_certificate_image_id,
+          ugc_certificate, ugc_certificate_id,
+          additional_certificate, additional_certificate_id,
+          address, other_details, verification_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::jsonb, $18)
         ON CONFLICT (website_id) DO UPDATE SET
           creator_nid = COALESCE(EXCLUDED.creator_nid, website_information.creator_nid),
           creator_nid_url = COALESCE(EXCLUDED.creator_nid_url, website_information.creator_nid_url),
+          creator_nid_front_image = COALESCE(EXCLUDED.creator_nid_front_image, website_information.creator_nid_front_image),
+          creator_nid_front_image_id = COALESCE(EXCLUDED.creator_nid_front_image_id, website_information.creator_nid_front_image_id),
+          creator_nid_back_image = COALESCE(EXCLUDED.creator_nid_back_image, website_information.creator_nid_back_image),
+          creator_nid_back_image_id = COALESCE(EXCLUDED.creator_nid_back_image_id, website_information.creator_nid_back_image_id),
           eiin_certificate = COALESCE(EXCLUDED.eiin_certificate, website_information.eiin_certificate),
           eiin_certificate_url = COALESCE(EXCLUDED.eiin_certificate_url, website_information.eiin_certificate_url),
+          eiin_certificate_image = COALESCE(EXCLUDED.eiin_certificate_image, website_information.eiin_certificate_image),
+          eiin_certificate_image_id = COALESCE(EXCLUDED.eiin_certificate_image_id, website_information.eiin_certificate_image_id),
+          ugc_certificate = COALESCE(EXCLUDED.ugc_certificate, website_information.ugc_certificate),
+          ugc_certificate_id = COALESCE(EXCLUDED.ugc_certificate_id, website_information.ugc_certificate_id),
+          additional_certificate = COALESCE(EXCLUDED.additional_certificate, website_information.additional_certificate),
+          additional_certificate_id = COALESCE(EXCLUDED.additional_certificate_id, website_information.additional_certificate_id),
           address = COALESCE(EXCLUDED.address, website_information.address),
           other_details = COALESCE(EXCLUDED.other_details, website_information.other_details),
           verification_status = EXCLUDED.verification_status,
           updated_at = CURRENT_TIMESTAMP`, [
                 websiteId,
                 wi.creator_nid || null,
-                wi.creator_nid_url || null,
+                wi.creator_nid_url || wi.creator_nid_front_image || null,
+                wi.creator_nid_front_image || null,
+                wi.creator_nid_front_image_id || null,
+                wi.creator_nid_back_image || null,
+                wi.creator_nid_back_image_id || null,
                 wi.eiin_certificate || null,
-                wi.eiin_certificate_url || null,
+                wi.eiin_certificate_url || wi.eiin_certificate_image || null,
+                wi.eiin_certificate_image || null,
+                wi.eiin_certificate_image_id || null,
+                wi.ugc_certificate || null,
+                wi.ugc_certificate_id || null,
+                wi.additional_certificate || null,
+                wi.additional_certificate_id || null,
                 wi.address || null,
                 typeof wi.other_details === 'object' && wi.other_details !== null ? JSON.stringify(wi.other_details) : '{}',
                 vStatus

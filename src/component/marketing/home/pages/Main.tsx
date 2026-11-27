@@ -6,7 +6,7 @@ const Main = () => {
         </video>
         <div className='relative z-10 text-center px-4 max-w-5xl mx-auto'>
             <h1 className='text-4xl uppercase sm:text-6xl md:text-7xl font-bold text-white tracking-tight drop-shadow-md'>
-                World&apos;s #no 1 solution for LMS management system
+                World&apos;s #no 1 solution for Academy management system
             </h1>
         </div>
     </div>);

@@ -87,6 +87,8 @@ export default function WebsiteManagePage() {
     const [customDomainStatus, setCustomDomainStatus] = useState<any>({ state: 'idle', message: '' });
     const [verifyingDns, setVerifyingDns] = useState<any>(false);
     const [confirmingDomain, setConfirmingDomain] = useState<any>(false);
+    const [pendingCustomDomain, setPendingCustomDomain] = useState<any>('');
+    const [pendingVerificationToken, setPendingVerificationToken] = useState<any>('');
     const [domainDnsRecords, setDomainDnsRecords] = useState<any>([]);
     const [dnsVerificationResult, setDnsVerificationResult] = useState<any>(null);
     const [copiedRecordKey, setCopiedRecordKey] = useState<any>('');
@@ -141,7 +143,25 @@ export default function WebsiteManagePage() {
         bio: '',
     });
     const [savingProfile, setSavingProfile] = useState<any>(false);
-    const [academicsSubTab, setAcademicsSubTab] = useState<any>('departments');
+    const [academicsSubTab, setAcademicsSubTab] = useState<any>('hierarchy');
+    const [academicConfig, setAcademicConfig] = useState<any>({
+        hierarchy_preset: 'CLASS_SEC',
+        has_departments: false,
+        has_sessions: true,
+        has_classes: true,
+        has_sections: true,
+        dept_label: 'Department',
+        session_label: 'Academic Year',
+        class_label: 'Class',
+        section_label: 'Section',
+    });
+    const [savingAcademicConfig, setSavingAcademicConfig] = useState<any>(false);
+    const [academicSessions, setAcademicSessions] = useState<any>([]);
+    const [academicDays, setAcademicDays] = useState<any>([]);
+    const [academicPeriods, setAcademicPeriods] = useState<any>([]);
+    const [sessionForm, setSessionForm] = useState<any>({ name: '', is_active: true });
+    const [dayForm, setDayForm] = useState<any>({ name: '', short_name: '', order_no: 1 });
+    const [periodForm, setPeriodForm] = useState<any>({ name: '', start_time: '09:00', end_time: '09:45', is_break: false, order_no: 1 });
     const [academicDepts, setAcademicDepts] = useState<any>([]);
     const [academicClasses, setAcademicClasses] = useState<any>([]);
     const [academicSections, setAcademicSections] = useState<any>([]);
@@ -151,7 +171,7 @@ export default function WebsiteManagePage() {
     const [deptModal, setDeptModal] = useState<any>({ open: false, editing: null });
     const [deptForm, setDeptForm] = useState<any>({ name: '', code: '', order_no: 0, description: '', is_active: true });
     const [classModal, setClassModal] = useState<any>({ open: false, editing: null });
-    const [classForm, setClassForm] = useState<any>({ name: '', code: '', department_id: '', capacity: 40, display_order: 0 });
+    const [classForm, setClassForm] = useState<any>({ name: '', code: '', department_id: '', max_seats: 40 });
     const [sectionModal, setSectionModal] = useState<any>({ open: false, editing: null });
     const [sectionForm, setSectionForm] = useState<any>({ class_id: '', name: '', capacity: 40, room_number: '' });
     const [subjectModal, setSubjectModal] = useState<any>({ open: false, editing: null });
@@ -554,7 +574,6 @@ export default function WebsiteManagePage() {
             };
             if (cleanSub)
                 payload.subdomain = cleanSub;
-            payload.custom_domain = cleanCustom || '';
             const res = await fetch('/api/marketing/creator/websites', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -650,7 +669,7 @@ export default function WebsiteManagePage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'connect_custom_domain',
+                    action: 'prepare_custom_domain_dns',
                     id: website.id,
                     creatorId: Number(creatorId),
                     custom_domain: clean,
@@ -658,35 +677,29 @@ export default function WebsiteManagePage() {
             });
             const data = await res.json();
             if (data.success) {
+                setPendingCustomDomain(clean);
+                setPendingVerificationToken(data.verification_token || '');
+                setDomainDnsRecords(Array.isArray(data.dns_records) ? data.dns_records : []);
+                setShowDnsDetails(true);
                 setDomainFeedback({
                     type: 'success',
-                    text: data.message || `Custom domain "${clean}" saved! Configure the required DNS records below.`,
+                    text: data.message || `DNS verification records generated for "${clean}". Configure these DNS records at your registrar, verify DNS, and then confirm to add the custom domain.`,
                 });
-                setWebsite((prev: any) => ({
-                    ...prev,
-                    custom_domain: clean,
-                    custom_domain_verified: false,
-                    custom_domain_record: data.domain,
-                }));
-                if (data.dns_records && Array.isArray(data.dns_records)) {
-                    setDomainDnsRecords(data.dns_records);
-                }
-                if (refetchCreator)
-                    refetchCreator();
             }
             else {
-                setDomainFeedback({ type: 'error', text: data.error || 'Failed to connect custom domain.' });
+                setDomainFeedback({ type: 'error', text: data.error || 'Failed to prepare DNS records for custom domain.' });
             }
         }
         catch {
-            setDomainFeedback({ type: 'error', text: 'Network error connecting custom domain.' });
+            setDomainFeedback({ type: 'error', text: 'Network error preparing custom domain DNS.' });
         }
         finally {
             setSaving(false);
         }
     };
     const handleVerifyDns = async (bypassInDev: any = false) => {
-        if (!website?.custom_domain)
+        const targetDomain = pendingCustomDomain || website?.custom_domain;
+        if (!targetDomain)
             return;
         setVerifyingDns(true);
         setDomainFeedback({ type: '', text: '' });
@@ -698,6 +711,7 @@ export default function WebsiteManagePage() {
                     action: 'verify_dns',
                     id: website.id,
                     creatorId: Number(creatorId),
+                    custom_domain: targetDomain,
                     bypassInDev: Boolean(bypassInDev),
                 }),
             });
@@ -710,15 +724,8 @@ export default function WebsiteManagePage() {
             if (data.verified) {
                 setDomainFeedback({
                     type: 'success',
-                    text: data.message || 'DNS Verified! Click Confirm & Activate Domain below to make it live.',
+                    text: data.message || 'DNS Verified! Click Add & Activate Custom Domain below to save and enable it.',
                 });
-                setWebsite((prev: any) => ({
-                    ...prev,
-                    custom_domain_verified: true,
-                    custom_domain_record: data.domain || prev.custom_domain_record,
-                }));
-                if (refetchCreator)
-                    refetchCreator();
             }
             else {
                 setDomainFeedback({
@@ -735,7 +742,8 @@ export default function WebsiteManagePage() {
         }
     };
     const handleConfirmCustomDomain = async () => {
-        if (!website?.custom_domain)
+        const targetDomain = pendingCustomDomain || website?.custom_domain;
+        if (!targetDomain)
             return;
         setConfirmingDomain(true);
         setDomainFeedback({ type: '', text: '' });
@@ -747,24 +755,29 @@ export default function WebsiteManagePage() {
                     action: 'confirm_custom_domain',
                     id: website.id,
                     creatorId: Number(creatorId),
+                    custom_domain: targetDomain,
+                    bypassInDev: Boolean(dnsVerificationResult?.canBypassInDev && dnsVerificationResult?.verified),
                 }),
             });
             const data = await res.json();
             if (data.success) {
                 setDomainFeedback({
                     type: 'success',
-                    text: data.message || 'Domain successfully confirmed and activated as live primary domain!',
+                    text: data.message || 'Custom domain verified and activated as live primary domain!',
                 });
                 setWebsite((prev: any) => ({
                     ...prev,
+                    custom_domain: targetDomain,
                     custom_domain_verified: true,
                     custom_domain_record: data.domain,
                 }));
+                setPendingCustomDomain('');
+                setPendingVerificationToken('');
                 if (refetchCreator)
                     refetchCreator();
             }
             else {
-                setDomainFeedback({ type: 'error', text: data.error || 'Failed to confirm custom domain.' });
+                setDomainFeedback({ type: 'error', text: data.error || 'DNS verification failed. Custom domain was not added.' });
             }
         }
         catch {
@@ -1064,18 +1077,41 @@ export default function WebsiteManagePage() {
             return;
         try {
             setLoadingAcademics(true);
-            const [deptRes, classRes, secRes, subRes] = await Promise.all([
+            const [cfgRes, sessRes, deptRes, classRes, secRes, subRes, dayRes, perRes] = await Promise.all([
+                fetch(`/api/${domainParam}/staff/panel/academic-config`),
+                fetch(`/api/${domainParam}/staff/panel/sessions`),
                 fetch(`/api/${domainParam}/staff/panel/departments`),
                 fetch(`/api/${domainParam}/staff/panel/classes`),
                 fetch(`/api/${domainParam}/staff/panel/sections`),
                 fetch(`/api/${domainParam}/staff/panel/subjects`),
+                fetch(`/api/${domainParam}/staff/panel/days`),
+                fetch(`/api/${domainParam}/staff/panel/periods`),
             ]);
-            const [deptData, classData, secData, subData] = await Promise.all([
-                deptRes.json(),
-                classRes.json(),
-                secRes.json(),
-                subRes.json(),
+            const [cfgData, sessData, deptData, classData, secData, subData, dayData, perData] = await Promise.all([
+                cfgRes.json().catch(() => null),
+                sessRes.json().catch(() => null),
+                deptRes.json().catch(() => null),
+                classRes.json().catch(() => null),
+                secRes.json().catch(() => null),
+                subRes.json().catch(() => null),
+                dayRes.json().catch(() => null),
+                perRes.json().catch(() => null),
             ]);
+            if (cfgData?.success && cfgData.config) {
+                setAcademicConfig({
+                    hierarchy_preset: cfgData.config.hierarchy_preset || 'CLASS_SEC',
+                    has_departments: Boolean(cfgData.config.has_departments),
+                    has_sessions: cfgData.config.has_sessions !== false,
+                    has_classes: cfgData.config.has_classes !== false,
+                    has_sections: cfgData.config.has_sections !== false,
+                    dept_label: cfgData.config.dept_label || 'Department',
+                    session_label: cfgData.config.session_label || 'Academic Year',
+                    class_label: cfgData.config.class_label || 'Class',
+                    section_label: cfgData.config.section_label || 'Section',
+                });
+            }
+            if (sessData?.success)
+                setAcademicSessions(sessData.sessions || []);
             if (deptData?.success)
                 setAcademicDepts(deptData.departments || []);
             if (classData?.success)
@@ -1084,6 +1120,10 @@ export default function WebsiteManagePage() {
                 setAcademicSections(secData.sections || []);
             if (subData?.success)
                 setAcademicSubjects(subData.subjects || []);
+            if (dayData?.success)
+                setAcademicDays(dayData.days || []);
+            if (perData?.success)
+                setAcademicPeriods(perData.periods || []);
         }
         catch {
             setAcademicActionMsg({ type: 'error', text: 'Failed to load institutional academic records.' });
@@ -1092,6 +1132,114 @@ export default function WebsiteManagePage() {
             setLoadingAcademics(false);
         }
     }, [domainParam]);
+    const handleSaveAcademicConfig = async (e: any) => {
+        e.preventDefault();
+        try {
+            setSavingAcademicConfig(true);
+            setAcademicActionMsg({ type: '', text: '' });
+            const res = await fetch(`/api/${domainParam}/staff/panel/academic-config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(academicConfig),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success)
+                throw new Error(data.error || 'Failed to save hierarchy configuration.');
+            setAcademicActionMsg({ type: 'success', text: 'Primary academic hierarchy configuration saved.' });
+            fetchAcademics();
+        }
+        catch (err: any) {
+            setAcademicActionMsg({ type: 'error', text: err.message });
+        }
+        finally {
+            setSavingAcademicConfig(false);
+        }
+    };
+    const handleCreateSession = async (e: any) => {
+        e.preventDefault();
+        if (!sessionForm.name.trim())
+            return;
+        try {
+            setSubmittingAcademic(true);
+            const res = await fetch(`/api/${domainParam}/staff/panel/sessions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: sessionForm.name.trim(), is_active: sessionForm.is_active }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success)
+                throw new Error(data.error || 'Failed to add session.');
+            setSessionForm({ name: '', is_active: true });
+            setAcademicActionMsg({ type: 'success', text: 'Academic session added.' });
+            fetchAcademics();
+        }
+        catch (err: any) {
+            setAcademicActionMsg({ type: 'error', text: err.message });
+        }
+        finally {
+            setSubmittingAcademic(false);
+        }
+    };
+    const handleCreateDay = async (e: any) => {
+        e.preventDefault();
+        if (!dayForm.name.trim())
+            return;
+        try {
+            setSubmittingAcademic(true);
+            const res = await fetch(`/api/${domainParam}/staff/panel/days`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: dayForm.name.trim(),
+                    short_name: dayForm.short_name.trim() || dayForm.name.trim().slice(0, 3).toUpperCase(),
+                    order_no: Number(dayForm.order_no) || academicDays.length + 1,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success)
+                throw new Error(data.error || 'Failed to add day.');
+            setDayForm({ name: '', short_name: '', order_no: academicDays.length + 2 });
+            setAcademicActionMsg({ type: 'success', text: 'Working day added.' });
+            fetchAcademics();
+        }
+        catch (err: any) {
+            setAcademicActionMsg({ type: 'error', text: err.message });
+        }
+        finally {
+            setSubmittingAcademic(false);
+        }
+    };
+    const handleCreatePeriod = async (e: any) => {
+        e.preventDefault();
+        if (!periodForm.name.trim())
+            return;
+        try {
+            setSubmittingAcademic(true);
+            const res = await fetch(`/api/${domainParam}/staff/panel/periods`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: periodForm.name.trim(),
+                    start_time: periodForm.start_time,
+                    end_time: periodForm.end_time,
+                    is_break: Boolean(periodForm.is_break),
+                    order_no: Number(periodForm.order_no) || academicPeriods.length + 1,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success)
+                throw new Error(data.error || 'Failed to add period.');
+            setPeriodForm({ name: '', start_time: '09:00', end_time: '09:45', is_break: false, order_no: academicPeriods.length + 2 });
+            setAcademicActionMsg({ type: 'success', text: 'Routine period added.' });
+            fetchAcademics();
+        }
+        catch (err: any) {
+            setAcademicActionMsg({ type: 'error', text: err.message });
+        }
+        finally {
+            setSubmittingAcademic(false);
+        }
+    };
     const handleSaveDept = async (e: any) => {
         e.preventDefault();
         if (!deptForm.name.trim()) {
@@ -1136,8 +1284,7 @@ export default function WebsiteManagePage() {
                 name: classForm.name.trim(),
                 code: classForm.code.trim(),
                 department_id: classForm.department_id ? classForm.department_id : null,
-                capacity: Number(classForm.capacity) || 40,
-                display_order: Number(classForm.display_order) || 0,
+                max_seats: Number(classForm.max_seats) || 40,
             };
             if (classModal.editing)
                 body.id = classModal.editing.id;
@@ -1257,6 +1404,12 @@ export default function WebsiteManagePage() {
                 endpoint = `/api/${domainParam}/staff/panel/sections?id=${academicDeleteTarget.id}`;
             if (academicDeleteTarget.type === 'subject')
                 endpoint = `/api/${domainParam}/staff/panel/subjects?id=${academicDeleteTarget.id}`;
+            if (academicDeleteTarget.type === 'session')
+                endpoint = `/api/${domainParam}/staff/panel/sessions?id=${academicDeleteTarget.id}`;
+            if (academicDeleteTarget.type === 'day')
+                endpoint = `/api/${domainParam}/staff/panel/days?id=${academicDeleteTarget.id}`;
+            if (academicDeleteTarget.type === 'period')
+                endpoint = `/api/${domainParam}/staff/panel/periods?id=${academicDeleteTarget.id}`;
             const res = await fetch(endpoint, { method: 'DELETE' });
             const data = await res.json();
             if (!res.ok || !data.success)
@@ -1538,7 +1691,7 @@ export default function WebsiteManagePage() {
                     🔒
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-900">
                       Custom Domain Locked in Current Plan
                     </h3>
                     <p className="text-xs text-amber-800 leading-relaxed">
@@ -1557,16 +1710,16 @@ export default function WebsiteManagePage() {
                 </div>
               </div>) : ((!website.custom_domain || !website.custom_domain_verified) && (<form onSubmit={handleConnectCustomDomain} className="space-y-3 max-w-lg">
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-slate-700">Custom Domain Host</label>
+                    <label className="block text-xs font-medium text-slate-700">Custom Domain Host (Must Verify DNS Before Adding)</label>
                     <p className="text-[11px] text-slate-500">
-                      Enter your root domain or subdomain without http:// or https://. Example: <code>school.edu</code> or <code>portal.campus.org</code>.
+                      Enter your domain without http:// or https:// (for example, school.edu or portal.campus.org), generate DNS records, verify DNS propagation, and then activate.
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <input type="text" aria-label="Custom Domain Host" value={customDomainInput} onChange={(e: any) => setCustomDomainInput(e.target.value)} className="flex-1 bg-white border border-slate-300 rounded px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-slate-800"/>
                     <button type="submit" disabled={saving} className="px-3.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50 whitespace-nowrap">
-                      {saving ? 'Saving...' : website.custom_domain ? 'Update Domain' : 'Save & Generate DNS'}
+                      {saving ? 'Generating...' : 'Generate & Check DNS'}
                     </button>
                   </div>
 
@@ -1578,12 +1731,34 @@ export default function WebsiteManagePage() {
                     </div>)}
                 </form>))}
 
-            {website.custom_domain && (showDnsDetails || !website.custom_domain_verified) && (<div className="space-y-4 pt-3 border-t border-slate-100">
+            {(pendingCustomDomain || website.custom_domain) && (showDnsDetails || !website.custom_domain_verified) && (() => {
+                const targetDomain = pendingCustomDomain || website.custom_domain;
+                const targetToken = pendingVerificationToken || website.custom_domain_record?.verification_token || 'hiesci-verification';
+                const targetParts = targetDomain.split('.');
+                const fallbackDnsRecords = [
+                    {
+                        type: targetParts.length === 2 ? 'A' : 'CNAME',
+                        name: targetParts.length === 2 ? '@' : targetParts[0],
+                        value: targetParts.length === 2 ? aTarget : cnameTarget,
+                        ttl: '3600',
+                        description: 'Primary hostname routing record',
+                    },
+                    {
+                        type: 'TXT',
+                        name: `_hiesci-challenge${targetParts.length === 2 ? '' : '.' + targetParts[0]}`,
+                        value: targetToken,
+                        ttl: '3600',
+                        description: 'Domain ownership verification challenge',
+                    },
+                ];
+                const resolvedRecords = domainDnsRecords.length > 0 ? domainDnsRecords : fallbackDnsRecords;
+                const isTargetAlreadyVerifiedOnServer = Boolean(!pendingCustomDomain && website.custom_domain_verified);
+                return (<div className="space-y-4 pt-3 border-t border-slate-100">
                 <div className="bg-slate-50 border border-slate-200 rounded p-3.5 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <div className="text-xs font-semibold text-slate-900">
-                        Required DNS Records for: <span className="font-mono text-slate-800">{website.custom_domain}</span>
+                        Required DNS Records for: <span className="font-mono text-slate-800">{targetDomain}</span>
                       </div>
                       <p className="text-[11px] text-slate-500">
                         Add the following DNS records in your domain registrar or DNS management console (Cloudflare, Namecheap, GoDaddy, etc.):
@@ -1591,22 +1766,7 @@ export default function WebsiteManagePage() {
                     </div>
 
                     <button type="button" onClick={() => {
-                    const allTxt = (domainDnsRecords.length > 0
-                        ? domainDnsRecords
-                        : [
-                            {
-                                type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
-                                name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
-                                value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
-                                ttl: '3600',
-                            },
-                            {
-                                type: 'TXT',
-                                name: `_hiesci-challenge${website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]}`,
-                                value: website.custom_domain_record?.verification_token || 'hiesci-verification',
-                                ttl: '3600',
-                            },
-                        ])
+                    const allTxt = resolvedRecords
                         .map((r: any) => `${r.type}\t${r.name}\t${r.value}\t${r.ttl}`)
                         .join('\n');
                     handleCopyText(allTxt, 'all');
@@ -1628,26 +1788,9 @@ export default function WebsiteManagePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-slate-800">
-                        {(domainDnsRecords.length > 0
-                    ? domainDnsRecords
-                    : [
-                        {
-                            type: website.custom_domain.split('.').length === 2 ? 'A' : 'CNAME',
-                            name: website.custom_domain.split('.').length === 2 ? '@' : website.custom_domain.split('.')[0],
-                            value: website.custom_domain.split('.').length === 2 ? aTarget : cnameTarget,
-                            ttl: '3600',
-                            description: 'Primary hostname routing record',
-                        },
-                        {
-                            type: 'TXT',
-                            name: `_hiesci-challenge${website.custom_domain.split('.').length === 2 ? '' : '.' + website.custom_domain.split('.')[0]}`,
-                            value: website.custom_domain_record?.verification_token || 'hiesci-verification',
-                            ttl: '3600',
-                            description: 'Domain ownership verification challenge',
-                        },
-                    ]).map((record: any, idx: any) => (<tr key={idx} className="hover:bg-slate-50/60">
+                        {resolvedRecords.map((record: any, idx: any) => (<tr key={idx} className="hover:bg-slate-50/60">
                             <td className="py-2 px-3">
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${record.type === 'CNAME'
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${record.type === 'CNAME'
                         ? 'bg-purple-100 text-purple-800'
                         : record.type === 'A'
                             ? 'bg-blue-100 text-blue-800'
@@ -1682,14 +1825,14 @@ export default function WebsiteManagePage() {
                   </p>
                 </div>
 
-                {!website.custom_domain_verified && (<div className="p-3.5 bg-slate-50 border border-slate-200 rounded space-y-3">
+                {!isTargetAlreadyVerifiedOnServer && (<div className="p-3.5 bg-slate-50 border border-slate-200 rounded space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <div className="text-xs font-semibold text-slate-900">
-                          Step 3 & 4: Verify and Confirm Domain
+                          Step 3 & 4: Verify DNS & Add Custom Domain
                         </div>
                         <p className="text-[11px] text-slate-600">
-                          Click Verify DNS to check that your DNS records are active. Once verified, confirm to activate your live custom domain.
+                          Verify live DNS propagation first. Custom domains can only be saved and activated after DNS verification passes.
                         </p>
                       </div>
 
@@ -1708,21 +1851,22 @@ export default function WebsiteManagePage() {
                         {dnsVerificationResult.message}
                       </div>)}
 
-                    {(website.custom_domain_verified || dnsVerificationResult?.verified) && (<div className="p-3 rounded bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3">
+                    {dnsVerificationResult?.verified && (<div className="p-3 rounded bg-emerald-50 border border-emerald-200 flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <div className="text-xs font-semibold text-emerald-900">
-                            DNS Records Detected & Verified!
+                            DNS Records Verified for {targetDomain}
                           </div>
                           <p className="text-[11px] text-emerald-800">
-                            Your domain ownership and DNS routing are verified. Click below to activate this domain for all live traffic.
+                            Your domain ownership and DNS routing passed verification. Click below to add and activate this custom domain.
                           </p>
                         </div>
                         <button type="button" onClick={handleConfirmCustomDomain} disabled={confirmingDomain} className="px-4 py-2 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs cursor-pointer disabled:opacity-50 shadow-xs">
-                          {confirmingDomain ? 'Activating...' : 'Confirm & Activate Domain'}
+                          {confirmingDomain ? 'Activating...' : 'Add & Activate Custom Domain'}
                         </button>
                       </div>)}
                   </div>)}
-              </div>)}
+              </div>);
+            })()}
 
             {showDisconnectConfirm && (<div className="p-3.5 rounded bg-rose-50 border border-rose-200 space-y-2 text-xs">
                 <div className="font-semibold text-rose-900">Disconnect Custom Domain?</div>
@@ -2607,8 +2751,7 @@ export default function WebsiteManagePage() {
                         name: '',
                         code: '',
                         department_id: '',
-                        capacity: 40,
-                        display_order: academicClasses.length + 1,
+                        max_seats: 40,
                     });
                 }} className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer">
                   + Add Class
@@ -2641,9 +2784,12 @@ export default function WebsiteManagePage() {
             </div>
           </div>
 
-
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Sessions</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicSessions.length}</span>
+              <span className="text-[10px] text-slate-500">Academic years</span>
+            </div>
             <div className="bg-white border border-slate-200 rounded p-3">
               <span className="text-[10px] uppercase font-semibold text-slate-400 block">Departments</span>
               <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicDepts.length}</span>
@@ -2664,14 +2810,22 @@ export default function WebsiteManagePage() {
               <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicSubjects.length}</span>
               <span className="text-[10px] text-slate-500">Under classes</span>
             </div>
+            <div className="bg-white border border-slate-200 rounded p-3">
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Schedule</span>
+              <span className="text-base font-semibold text-slate-900 block mt-0.5">{academicDays.length}d / {academicPeriods.length}p</span>
+              <span className="text-[10px] text-slate-500">Days &amp; Periods</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-2 pt-2 rounded-t">
+          <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white px-2 pt-2 rounded-t">
             {[
+                { id: 'hierarchy', label: 'Primary Hierarchy Config' },
+                { id: 'sessions', label: `Sessions (${academicSessions.length})` },
                 { id: 'departments', label: `Departments (${academicDepts.length})` },
                 { id: 'classes', label: `Classes (${academicClasses.length})` },
                 { id: 'sections', label: `Sections (${academicSections.length})` },
                 { id: 'subjects', label: `Subjects (${academicSubjects.length})` },
+                { id: 'schedule', label: `Days & Periods (${academicDays.length}/${academicPeriods.length})` },
             ].map((sub: any) => (<button key={sub.id} type="button" onClick={() => setAcademicsSubTab(sub.id)} className={`px-3 py-1.5 font-medium text-xs border-b-2 transition-colors cursor-pointer ${academicsSubTab === sub.id
                     ? 'border-slate-900 text-slate-900 font-semibold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
@@ -2682,6 +2836,127 @@ export default function WebsiteManagePage() {
           <div className="bg-white border border-slate-200 rounded-b p-4 shadow-2xs">
             {loadingAcademics ? (<div className="py-12 flex justify-center items-center text-xs text-slate-500">
                 Loading academic structure...
+              </div>) : academicsSubTab === 'hierarchy' ? (<form onSubmit={handleSaveAcademicConfig} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  {[
+                        { id: 'CLASS_SEC', title: 'Class -> Section', dept: false, sess: true, cls: true, sec: true },
+                        { id: 'DEPT_SESSION_SEC', title: 'Dept -> Session -> Section', dept: true, sess: true, cls: false, sec: true },
+                        { id: 'DEPT_CLASS_SEC', title: 'Dept -> Class -> Section', dept: true, sess: true, cls: true, sec: true },
+                        { id: 'CUSTOM', title: 'Custom Hierarchy', dept: academicConfig.has_departments, sess: academicConfig.has_sessions, cls: academicConfig.has_classes, sec: academicConfig.has_sections },
+                    ].map((preset: any) => (<button key={preset.id} type="button" onClick={() => setAcademicConfig((prev: any) => ({
+                        ...prev,
+                        hierarchy_preset: preset.id,
+                        has_departments: preset.dept,
+                        has_sessions: preset.sess,
+                        has_classes: preset.cls,
+                        has_sections: preset.sec,
+                    }))} className={`p-3 rounded border text-left cursor-pointer ${academicConfig.hierarchy_preset === preset.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                        <div className="text-xs font-semibold text-slate-900">{preset.title}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{preset.id}</div>
+                      </button>))}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
+                    <input type="checkbox" checked={academicConfig.has_departments} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_departments: e.target.checked })}/>
+                    <span>Use Departments</span>
+                  </label>
+                  <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
+                    <input type="checkbox" checked={academicConfig.has_sessions} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_sessions: e.target.checked })}/>
+                    <span>Use Sessions</span>
+                  </label>
+                  <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
+                    <input type="checkbox" checked={academicConfig.has_classes} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_classes: e.target.checked })}/>
+                    <span>Use Classes</span>
+                  </label>
+                  <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
+                    <input type="checkbox" checked={academicConfig.has_sections} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_sections: e.target.checked })}/>
+                    <span>Use Sections</span>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Department Label</label>
+                    <input type="text" value={academicConfig.dept_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, dept_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Session Label</label>
+                    <input type="text" value={academicConfig.session_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, session_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Class Label</label>
+                    <input type="text" value={academicConfig.class_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, class_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Section Label</label>
+                    <input type="text" value={academicConfig.section_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, section_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" disabled={savingAcademicConfig} className="px-4 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
+                    {savingAcademicConfig ? 'Saving...' : 'Save Primary Hierarchy'}
+                  </button>
+                </div>
+              </form>) : academicsSubTab === 'sessions' ? (<div className="space-y-4">
+                <form onSubmit={handleCreateSession} className="flex flex-wrap items-end gap-2 bg-slate-50 border border-slate-200 rounded p-3">
+                  <div className="flex-1 min-w-44">
+                    <label className="block text-[11px] font-medium text-slate-700 mb-1">Session / Academic Year Name</label>
+                    <input type="text" value={sessionForm.name} onChange={(e: any) => setSessionForm({ ...sessionForm, name: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"/>
+                  </div>
+                  <label className="flex items-center gap-1.5 text-xs px-2 py-1.5 cursor-pointer">
+                    <input type="checkbox" checked={sessionForm.is_active} onChange={(e: any) => setSessionForm({ ...sessionForm, is_active: e.target.checked })}/>
+                    <span>Active</span>
+                  </label>
+                  <button type="submit" disabled={submittingAcademic} className="px-3.5 py-1.5 rounded bg-slate-900 text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
+                    Add Session
+                  </button>
+                </form>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded">
+                  {academicSessions.length === 0 ? (<p className="p-4 text-xs text-slate-500 text-center">No sessions configured yet.</p>) : academicSessions.map((s: any) => (<div key={s.id} className="p-2.5 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-900">{s.name}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${s.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
+                          {s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'session', id: s.id, name: s.name })} className="text-rose-600 hover:underline cursor-pointer">
+                        Delete
+                      </button>
+                    </div>))}
+                </div>
+              </div>) : academicsSubTab === 'schedule' ? (<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3 border border-slate-200 rounded p-3">
+                  <div className="text-xs font-semibold text-slate-900">Working Days</div>
+                  <form onSubmit={handleCreateDay} className="grid grid-cols-4 gap-2">
+                    <input type="text" aria-label="Day Name" value={dayForm.name} onChange={(e: any) => setDayForm({ ...dayForm, name: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="text" aria-label="Short Name" value={dayForm.short_name} onChange={(e: any) => setDayForm({ ...dayForm, short_name: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <button type="submit" disabled={submittingAcademic} className="px-2 py-1 rounded bg-slate-900 text-white text-xs cursor-pointer">Add Day</button>
+                  </form>
+                  <div className="divide-y divide-slate-100">
+                    {academicDays.map((d: any) => (<div key={d.id} className="py-1.5 flex items-center justify-between text-xs">
+                        <span>{d.name} ({d.short_name || d.name.slice(0, 3)})</span>
+                        <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'day', id: d.id, name: d.name })} className="text-rose-600 hover:underline cursor-pointer">Delete</button>
+                      </div>))}
+                  </div>
+                </div>
+                <div className="space-y-3 border border-slate-200 rounded p-3">
+                  <div className="text-xs font-semibold text-slate-900">Daily Periods &amp; Breaks</div>
+                  <form onSubmit={handleCreatePeriod} className="grid grid-cols-4 gap-2">
+                    <input type="text" aria-label="Period Name" value={periodForm.name} onChange={(e: any) => setPeriodForm({ ...periodForm, name: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="time" aria-label="Start Time" value={periodForm.start_time} onChange={(e: any) => setPeriodForm({ ...periodForm, start_time: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="time" aria-label="End Time" value={periodForm.end_time} onChange={(e: any) => setPeriodForm({ ...periodForm, end_time: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <label className="col-span-2 flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input type="checkbox" checked={periodForm.is_break} onChange={(e: any) => setPeriodForm({ ...periodForm, is_break: e.target.checked })}/>
+                      <span>Break / Recess</span>
+                    </label>
+                    <button type="submit" disabled={submittingAcademic} className="col-span-2 px-2 py-1 rounded bg-slate-900 text-white text-xs cursor-pointer">Add Period</button>
+                  </form>
+                  <div className="divide-y divide-slate-100">
+                    {academicPeriods.map((p: any) => (<div key={p.id} className="py-1.5 flex items-center justify-between text-xs">
+                        <span>{p.name} ({p.start_time} - {p.end_time}){p.is_break ? ' [Break]' : ''}</span>
+                        <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'period', id: p.id, name: p.name })} className="text-rose-600 hover:underline cursor-pointer">Delete</button>
+                      </div>))}
+                  </div>
+                </div>
               </div>) : academicsSubTab === 'departments' ? (academicDepts.length === 0 ? (<div className="py-8 text-center space-y-2">
                   <p className="text-xs text-slate-500">No departments configured yet.</p>
                   <button type="button" onClick={() => {
@@ -2751,8 +3026,7 @@ export default function WebsiteManagePage() {
                         name: '',
                         code: '',
                         department_id: '',
-                        capacity: 40,
-                        display_order: 1,
+                        max_seats: 40,
                     });
                 }} className="text-xs text-blue-600 hover:underline cursor-pointer">
                     Add first academic class
@@ -2764,9 +3038,8 @@ export default function WebsiteManagePage() {
                         <th className="py-2.5 px-3">Class Name</th>
                         <th className="py-2.5 px-3">Code</th>
                         <th className="py-2.5 px-3">Department (Optional)</th>
-                        <th className="py-2.5 px-3">Capacity</th>
+                        <th className="py-2.5 px-3">Max Seats</th>
                         <th className="py-2.5 px-3">Sections</th>
-                        <th className="py-2.5 px-3">Order</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -2779,9 +3052,8 @@ export default function WebsiteManagePage() {
                                 {c.department_name}
                               </span>) : (<span className="text-slate-400 italic">Independent / General</span>)}
                           </td>
-                          <td className="py-2.5 px-3 font-mono text-slate-700">{c.capacity} seats</td>
+                          <td className="py-2.5 px-3 font-mono text-slate-700">{c.max_seats ?? 40} seats</td>
                           <td className="py-2.5 px-3 font-medium text-slate-700">{c.section_count || 0}</td>
-                          <td className="py-2.5 px-3 font-mono text-slate-500">#{c.display_order}</td>
                           <td className="py-2.5 px-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button type="button" onClick={() => {
@@ -2790,8 +3062,7 @@ export default function WebsiteManagePage() {
                             name: c.name,
                             code: c.code || '',
                             department_id: c.department_id ? String(c.department_id) : '',
-                            capacity: c.capacity ?? 40,
-                            display_order: c.display_order ?? 0,
+                            max_seats: c.max_seats ?? 40,
                         });
                     }} className="px-2 py-0.5 rounded text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer">
                                 Edit
@@ -2979,7 +3250,7 @@ export default function WebsiteManagePage() {
           {classModal.open && (<div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
               <div className="bg-white border border-slate-200 rounded-lg max-w-md w-full p-5 shadow-xl space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-semibold text-slate-900">
                     {classModal.editing ? 'Edit Class' : 'Create Class'}
                   </h3>
                   <button type="button" onClick={() => setClassModal({ open: false, editing: null })} className="text-slate-400 hover:text-slate-700 text-sm cursor-pointer">
@@ -3013,16 +3284,10 @@ export default function WebsiteManagePage() {
                     </div>
                     <div>
                       <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                        Display Order
+                        Max Seats
                       </label>
-                      <input type="number" aria-label="Display Order" value={classForm.display_order} onChange={(e: any) => setClassForm({ ...classForm, display_order: e.target.value })} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"/>
+                      <input type="number" aria-label="Max Seats" value={classForm.max_seats} onChange={(e: any) => setClassForm({ ...classForm, max_seats: e.target.value })} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"/>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                      Max Student Capacity
-                    </label>
-                    <input type="number" aria-label="Max Student Capacity" value={classForm.capacity} onChange={(e: any) => setClassForm({ ...classForm, capacity: e.target.value })} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden font-mono"/>
                   </div>
                   <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onClick={() => setClassModal({ open: false, editing: null })} className="px-3 py-1.5 rounded text-xs border border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer">

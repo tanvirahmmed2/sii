@@ -5116,13 +5116,17 @@ $$;
 CREATE TABLE IF NOT EXISTS website_domains (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    domain_type VARCHAR(50) DEFAULT 'subdomain' CHECK (domain_type IN ('subdomain', 'custom_domain', 'custom')),
     domain VARCHAR(255) NOT NULL UNIQUE,
+    domain_name VARCHAR(255),
     is_primary BOOLEAN DEFAULT FALSE,
-    ssl_status VARCHAR(50) DEFAULT 'pending' CHECK (ssl_status IN ('pending', 'active', 'failed', 'expired')),
-    verification_token VARCHAR(255),
     is_verified BOOLEAN DEFAULT FALSE,
-    verified_at TIMESTAMPTZ,
+    verification_token VARCHAR(255),
+    dns_record_type VARCHAR(10) DEFAULT 'CNAME',
+    dns_record_value VARCHAR(255) DEFAULT 'domains.hiesci.com',
     dns_records JSONB DEFAULT '[]'::jsonb,
+    ssl_status VARCHAR(50) DEFAULT 'pending' CHECK (ssl_status IN ('pending', 'active', 'failed', 'expired')),
+    verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

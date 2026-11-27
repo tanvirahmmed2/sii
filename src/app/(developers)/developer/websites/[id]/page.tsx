@@ -58,8 +58,18 @@ export default function WebsiteDetailsPage({ params }: any) {
         verification_status: 'pending',
         creator_nid: '',
         creator_nid_url: '',
+        creator_nid_front_image: '',
+        creator_nid_front_image_id: '',
+        creator_nid_back_image: '',
+        creator_nid_back_image_id: '',
         eiin_certificate: '',
         eiin_certificate_url: '',
+        eiin_certificate_image: '',
+        eiin_certificate_image_id: '',
+        ugc_certificate: '',
+        ugc_certificate_id: '',
+        additional_certificate: '',
+        additional_certificate_id: '',
         address: '',
         other_details_text: '{}',
     });
@@ -125,8 +135,18 @@ export default function WebsiteDetailsPage({ params }: any) {
                 verification_status: vi.verification_status || 'pending',
                 creator_nid: vi.creator_nid || '',
                 creator_nid_url: vi.creator_nid_url || '',
+                creator_nid_front_image: vi.creator_nid_front_image || vi.creator_nid_url || '',
+                creator_nid_front_image_id: vi.creator_nid_front_image_id || '',
+                creator_nid_back_image: vi.creator_nid_back_image || '',
+                creator_nid_back_image_id: vi.creator_nid_back_image_id || '',
                 eiin_certificate: vi.eiin_certificate || '',
                 eiin_certificate_url: vi.eiin_certificate_url || '',
+                eiin_certificate_image: vi.eiin_certificate_image || vi.eiin_certificate_url || '',
+                eiin_certificate_image_id: vi.eiin_certificate_image_id || '',
+                ugc_certificate: vi.ugc_certificate || '',
+                ugc_certificate_id: vi.ugc_certificate_id || '',
+                additional_certificate: vi.additional_certificate || '',
+                additional_certificate_id: vi.additional_certificate_id || '',
                 address: vi.address || '',
                 other_details_text: typeof vi.other_details === 'object' && vi.other_details !== null
                     ? JSON.stringify(vi.other_details, null, 2)
@@ -338,9 +358,19 @@ export default function WebsiteDetailsPage({ params }: any) {
                     website_information: {
                         verification_status: verificationForm.verification_status,
                         creator_nid: verificationForm.creator_nid,
-                        creator_nid_url: verificationForm.creator_nid_url,
+                        creator_nid_url: verificationForm.creator_nid_url || verificationForm.creator_nid_front_image,
+                        creator_nid_front_image: verificationForm.creator_nid_front_image,
+                        creator_nid_front_image_id: verificationForm.creator_nid_front_image_id,
+                        creator_nid_back_image: verificationForm.creator_nid_back_image,
+                        creator_nid_back_image_id: verificationForm.creator_nid_back_image_id,
                         eiin_certificate: verificationForm.eiin_certificate,
-                        eiin_certificate_url: verificationForm.eiin_certificate_url,
+                        eiin_certificate_url: verificationForm.eiin_certificate_url || verificationForm.eiin_certificate_image,
+                        eiin_certificate_image: verificationForm.eiin_certificate_image,
+                        eiin_certificate_image_id: verificationForm.eiin_certificate_image_id,
+                        ugc_certificate: verificationForm.ugc_certificate,
+                        ugc_certificate_id: verificationForm.ugc_certificate_id,
+                        additional_certificate: verificationForm.additional_certificate,
+                        additional_certificate_id: verificationForm.additional_certificate_id,
                         address: verificationForm.address,
                         other_details: parsedDetails,
                     },
@@ -1207,33 +1237,78 @@ export default function WebsiteDetailsPage({ params }: any) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Creator NID Document URL
+                  Creator NID Front Image URL
                 </label>
                 <div className="flex items-center gap-2">
-                  <input type="text" value={verificationForm.creator_nid_url} onChange={(e: any) => setVerificationForm({ ...verificationForm, creator_nid_url: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
-                  {verificationForm.creator_nid_url && (<a href={verificationForm.creator_nid_url} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
+                  <input type="text" value={verificationForm.creator_nid_front_image} onChange={(e: any) => setVerificationForm({ ...verificationForm, creator_nid_front_image: e.target.value, creator_nid_url: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
+                  {(verificationForm.creator_nid_front_image || verificationForm.creator_nid_url) && (<a href={verificationForm.creator_nid_front_image || verificationForm.creator_nid_url} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
                       <FiExternalLink /> View
                     </a>)}
                 </div>
+                <input type="text" aria-label="Creator NID Front Public ID" value={verificationForm.creator_nid_front_image_id} onChange={(e: any) => setVerificationForm({ ...verificationForm, creator_nid_front_image_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-300 focus:outline-none"/>
               </div>
 
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Creator NID Back Image URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="text" value={verificationForm.creator_nid_back_image} onChange={(e: any) => setVerificationForm({ ...verificationForm, creator_nid_back_image: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
+                  {verificationForm.creator_nid_back_image && (<a href={verificationForm.creator_nid_back_image} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
+                      <FiExternalLink /> View
+                    </a>)}
+                </div>
+                <input type="text" aria-label="Creator NID Back Public ID" value={verificationForm.creator_nid_back_image_id} onChange={(e: any) => setVerificationForm({ ...verificationForm, creator_nid_back_image_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-300 focus:outline-none"/>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                   EIIN Certificate Number
                 </label>
                 <input type="text" value={verificationForm.eiin_certificate} onChange={(e: any) => setVerificationForm({ ...verificationForm, eiin_certificate: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"/>
               </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  EIIN Certificate Image / PDF URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="text" value={verificationForm.eiin_certificate_image} onChange={(e: any) => setVerificationForm({ ...verificationForm, eiin_certificate_image: e.target.value, eiin_certificate_url: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
+                  {(verificationForm.eiin_certificate_image || verificationForm.eiin_certificate_url) && (<a href={verificationForm.eiin_certificate_image || verificationForm.eiin_certificate_url} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
+                      <FiExternalLink /> View
+                    </a>)}
+                </div>
+                <input type="text" aria-label="EIIN Certificate Public ID" value={verificationForm.eiin_certificate_image_id} onChange={(e: any) => setVerificationForm({ ...verificationForm, eiin_certificate_image_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-300 focus:outline-none"/>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                EIIN Certificate Document URL
-              </label>
-              <div className="flex items-center gap-2">
-                <input type="text" value={verificationForm.eiin_certificate_url} onChange={(e: any) => setVerificationForm({ ...verificationForm, eiin_certificate_url: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
-                {verificationForm.eiin_certificate_url && (<a href={verificationForm.eiin_certificate_url} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
-                    <FiExternalLink /> View
-                  </a>)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  UGC Certificate Document URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="text" value={verificationForm.ugc_certificate} onChange={(e: any) => setVerificationForm({ ...verificationForm, ugc_certificate: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
+                  {verificationForm.ugc_certificate && (<a href={verificationForm.ugc_certificate} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
+                      <FiExternalLink /> View
+                    </a>)}
+                </div>
+                <input type="text" aria-label="UGC Certificate Public ID" value={verificationForm.ugc_certificate_id} onChange={(e: any) => setVerificationForm({ ...verificationForm, ugc_certificate_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-300 focus:outline-none"/>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Additional Certificate Document URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input type="text" value={verificationForm.additional_certificate} onChange={(e: any) => setVerificationForm({ ...verificationForm, additional_certificate: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none"/>
+                  {verificationForm.additional_certificate && (<a href={verificationForm.additional_certificate} target="_blank" rel="noopener noreferrer" className="px-2.5 py-2 rounded border border-slate-200 text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:border-slate-700 shrink-0 inline-flex items-center gap-1">
+                      <FiExternalLink /> View
+                    </a>)}
+                </div>
+                <input type="text" aria-label="Additional Certificate Public ID" value={verificationForm.additional_certificate_id} onChange={(e: any) => setVerificationForm({ ...verificationForm, additional_certificate_id: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-[11px] font-mono text-slate-600 dark:text-slate-300 focus:outline-none"/>
               </div>
             </div>
 
