@@ -145,23 +145,29 @@ export default function WebsiteManagePage() {
     const [savingProfile, setSavingProfile] = useState<any>(false);
     const [academicsSubTab, setAcademicsSubTab] = useState<any>('hierarchy');
     const [academicConfig, setAcademicConfig] = useState<any>({
-        hierarchy_preset: 'CLASS_SEC',
-        has_departments: false,
-        has_sessions: true,
-        has_classes: true,
-        has_sections: true,
-        dept_label: 'Department',
-        session_label: 'Academic Year',
-        class_label: 'Class',
-        section_label: 'Section',
+        hierarchy_type: 'CLASS_SEC',
+        use_department: false,
+        use_session: true,
+        use_class: true,
+        use_section: true,
+        require_department: false,
+        require_session: true,
+        require_class: true,
+        require_section: false,
+        labels: {
+            department: 'Department',
+            session: 'Academic Year',
+            class: 'Class',
+            section: 'Section',
+        },
     });
     const [savingAcademicConfig, setSavingAcademicConfig] = useState<any>(false);
     const [academicSessions, setAcademicSessions] = useState<any>([]);
     const [academicDays, setAcademicDays] = useState<any>([]);
     const [academicPeriods, setAcademicPeriods] = useState<any>([]);
-    const [sessionForm, setSessionForm] = useState<any>({ name: '', is_active: true });
-    const [dayForm, setDayForm] = useState<any>({ name: '', short_name: '', order_no: 1 });
-    const [periodForm, setPeriodForm] = useState<any>({ name: '', start_time: '09:00', end_time: '09:45', is_break: false, order_no: 1 });
+    const [sessionForm, setSessionForm] = useState<any>({ name: '', status: 'active' });
+    const [dayForm, setDayForm] = useState<any>({ name: '', day_order: 1, status: 'on' });
+    const [periodForm, setPeriodForm] = useState<any>({ day_id: '', name: '', start_time: '09:00', end_time: '09:45', is_break: false, apply_to_all_active_days: false });
     const [academicDepts, setAcademicDepts] = useState<any>([]);
     const [academicClasses, setAcademicClasses] = useState<any>([]);
     const [academicSections, setAcademicSections] = useState<any>([]);
@@ -1098,16 +1104,23 @@ export default function WebsiteManagePage() {
                 perRes.json().catch(() => null),
             ]);
             if (cfgData?.success && cfgData.config) {
+                const cfgLabels = typeof cfgData.config.labels === 'object' && cfgData.config.labels !== null ? cfgData.config.labels : {};
                 setAcademicConfig({
-                    hierarchy_preset: cfgData.config.hierarchy_preset || 'CLASS_SEC',
-                    has_departments: Boolean(cfgData.config.has_departments),
-                    has_sessions: cfgData.config.has_sessions !== false,
-                    has_classes: cfgData.config.has_classes !== false,
-                    has_sections: cfgData.config.has_sections !== false,
-                    dept_label: cfgData.config.dept_label || 'Department',
-                    session_label: cfgData.config.session_label || 'Academic Year',
-                    class_label: cfgData.config.class_label || 'Class',
-                    section_label: cfgData.config.section_label || 'Section',
+                    hierarchy_type: cfgData.config.hierarchy_type || 'CLASS_SEC',
+                    use_department: Boolean(cfgData.config.use_department),
+                    use_session: cfgData.config.use_session !== false,
+                    use_class: cfgData.config.use_class !== false,
+                    use_section: cfgData.config.use_section !== false,
+                    require_department: Boolean(cfgData.config.require_department),
+                    require_session: cfgData.config.require_session !== false,
+                    require_class: cfgData.config.require_class !== false,
+                    require_section: Boolean(cfgData.config.require_section),
+                    labels: {
+                        department: cfgLabels.department || 'Department',
+                        session: cfgLabels.session || 'Academic Year',
+                        class: cfgLabels.class || 'Class',
+                        section: cfgLabels.section || 'Section',
+                    },
                 });
             }
             if (sessData?.success)
@@ -1120,8 +1133,13 @@ export default function WebsiteManagePage() {
                 setAcademicSections(secData.sections || []);
             if (subData?.success)
                 setAcademicSubjects(subData.subjects || []);
-            if (dayData?.success)
-                setAcademicDays(dayData.days || []);
+            if (dayData?.success) {
+                const loadedDays = dayData.days || [];
+                setAcademicDays(loadedDays);
+                if (loadedDays.length > 0) {
+                    setPeriodForm((prev: any) => prev.day_id ? prev : { ...prev, day_id: String(loadedDays[0].id) });
+                }
+            }
             if (perData?.success)
                 setAcademicPeriods(perData.periods || []);
         }
@@ -1138,7 +1156,7 @@ export default function WebsiteManagePage() {
             setSavingAcademicConfig(true);
             setAcademicActionMsg({ type: '', text: '' });
             const res = await fetch(`/api/${domainParam}/staff/panel/academic-config`, {
-                method: 'PUT',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(academicConfig),
             });
@@ -1164,12 +1182,12 @@ export default function WebsiteManagePage() {
             const res = await fetch(`/api/${domainParam}/staff/panel/sessions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: sessionForm.name.trim(), is_active: sessionForm.is_active }),
+                body: JSON.stringify({ name: sessionForm.name.trim(), status: sessionForm.status || 'active' }),
             });
             const data = await res.json();
             if (!res.ok || !data.success)
                 throw new Error(data.error || 'Failed to add session.');
-            setSessionForm({ name: '', is_active: true });
+            setSessionForm({ name: '', status: 'active' });
             setAcademicActionMsg({ type: 'success', text: 'Academic session added.' });
             fetchAcademics();
         }
@@ -1191,14 +1209,14 @@ export default function WebsiteManagePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: dayForm.name.trim(),
-                    short_name: dayForm.short_name.trim() || dayForm.name.trim().slice(0, 3).toUpperCase(),
-                    order_no: Number(dayForm.order_no) || academicDays.length + 1,
+                    day_order: Number(dayForm.day_order) || academicDays.length + 1,
+                    status: dayForm.status === 'off' ? 'off' : 'on',
                 }),
             });
             const data = await res.json();
             if (!res.ok || !data.success)
                 throw new Error(data.error || 'Failed to add day.');
-            setDayForm({ name: '', short_name: '', order_no: academicDays.length + 2 });
+            setDayForm({ name: '', day_order: academicDays.length + 2, status: 'on' });
             setAcademicActionMsg({ type: 'success', text: 'Working day added.' });
             fetchAcademics();
         }
@@ -1211,7 +1229,8 @@ export default function WebsiteManagePage() {
     };
     const handleCreatePeriod = async (e: any) => {
         e.preventDefault();
-        if (!periodForm.name.trim())
+        const targetDayId = periodForm.day_id || (academicDays[0]?.id ? String(academicDays[0].id) : '');
+        if (!periodForm.name.trim() || !targetDayId)
             return;
         try {
             setSubmittingAcademic(true);
@@ -1219,17 +1238,18 @@ export default function WebsiteManagePage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    day_id: Number(targetDayId),
                     name: periodForm.name.trim(),
                     start_time: periodForm.start_time,
                     end_time: periodForm.end_time,
                     is_break: Boolean(periodForm.is_break),
-                    order_no: Number(periodForm.order_no) || academicPeriods.length + 1,
+                    apply_to_all_active_days: Boolean(periodForm.apply_to_all_active_days),
                 }),
             });
             const data = await res.json();
             if (!res.ok || !data.success)
                 throw new Error(data.error || 'Failed to add period.');
-            setPeriodForm({ name: '', start_time: '09:00', end_time: '09:45', is_break: false, order_no: academicPeriods.length + 2 });
+            setPeriodForm((prev: any) => ({ ...prev, name: '', start_time: '09:00', end_time: '09:45', is_break: false }));
             setAcademicActionMsg({ type: 'success', text: 'Routine period added.' });
             fetchAcademics();
         }
@@ -2839,56 +2859,60 @@ export default function WebsiteManagePage() {
               </div>) : academicsSubTab === 'hierarchy' ? (<form onSubmit={handleSaveAcademicConfig} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {[
-                        { id: 'CLASS_SEC', title: 'Class -> Section', dept: false, sess: true, cls: true, sec: true },
-                        { id: 'DEPT_SESSION_SEC', title: 'Dept -> Session -> Section', dept: true, sess: true, cls: false, sec: true },
-                        { id: 'DEPT_CLASS_SEC', title: 'Dept -> Class -> Section', dept: true, sess: true, cls: true, sec: true },
-                        { id: 'CUSTOM', title: 'Custom Hierarchy', dept: academicConfig.has_departments, sess: academicConfig.has_sessions, cls: academicConfig.has_classes, sec: academicConfig.has_sections },
+                        { id: 'CLASS_SEC', title: 'Class -> Section', dept: false, sess: true, cls: true, sec: true, reqDept: false, reqSess: true, reqCls: true, reqSec: false },
+                        { id: 'DEPT_SESSION_SEC', title: 'Dept -> Session -> Section', dept: true, sess: true, cls: false, sec: true, reqDept: true, reqSess: true, reqCls: false, reqSec: false },
+                        { id: 'DEPT_CLASS_SEC', title: 'Dept -> Class -> Section', dept: true, sess: true, cls: true, sec: true, reqDept: true, reqSess: true, reqCls: true, reqSec: false },
+                        { id: 'CUSTOM', title: 'Custom Hierarchy', dept: academicConfig.use_department, sess: academicConfig.use_session, cls: academicConfig.use_class, sec: academicConfig.use_section, reqDept: academicConfig.require_department, reqSess: academicConfig.require_session, reqCls: academicConfig.require_class, reqSec: academicConfig.require_section },
                     ].map((preset: any) => (<button key={preset.id} type="button" onClick={() => setAcademicConfig((prev: any) => ({
                         ...prev,
-                        hierarchy_preset: preset.id,
-                        has_departments: preset.dept,
-                        has_sessions: preset.sess,
-                        has_classes: preset.cls,
-                        has_sections: preset.sec,
-                    }))} className={`p-3 rounded border text-left cursor-pointer ${academicConfig.hierarchy_preset === preset.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                        hierarchy_type: preset.id,
+                        use_department: preset.dept,
+                        use_session: preset.sess,
+                        use_class: preset.cls,
+                        use_section: preset.sec,
+                        require_department: preset.reqDept,
+                        require_session: preset.reqSess,
+                        require_class: preset.reqCls,
+                        require_section: preset.reqSec,
+                    }))} className={`p-3 rounded border text-left cursor-pointer ${academicConfig.hierarchy_type === preset.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:bg-slate-50'}`}>
                         <div className="text-xs font-semibold text-slate-900">{preset.title}</div>
                         <div className="text-[10px] text-slate-500 font-mono mt-0.5">{preset.id}</div>
                       </button>))}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
-                    <input type="checkbox" checked={academicConfig.has_departments} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_departments: e.target.checked })}/>
+                    <input type="checkbox" checked={academicConfig.use_department} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_type: 'CUSTOM', use_department: e.target.checked, require_department: e.target.checked ? academicConfig.require_department : false })}/>
                     <span>Use Departments</span>
                   </label>
                   <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
-                    <input type="checkbox" checked={academicConfig.has_sessions} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_sessions: e.target.checked })}/>
+                    <input type="checkbox" checked={academicConfig.use_session} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_type: 'CUSTOM', use_session: e.target.checked, require_session: e.target.checked ? academicConfig.require_session : false })}/>
                     <span>Use Sessions</span>
                   </label>
                   <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
-                    <input type="checkbox" checked={academicConfig.has_classes} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_classes: e.target.checked })}/>
+                    <input type="checkbox" checked={academicConfig.use_class} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_type: 'CUSTOM', use_class: e.target.checked, require_class: e.target.checked ? academicConfig.require_class : false })}/>
                     <span>Use Classes</span>
                   </label>
                   <label className="flex items-center gap-2 border border-slate-200 rounded px-3 py-2 cursor-pointer">
-                    <input type="checkbox" checked={academicConfig.has_sections} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_preset: 'CUSTOM', has_sections: e.target.checked })}/>
+                    <input type="checkbox" checked={academicConfig.use_section} onChange={(e: any) => setAcademicConfig({ ...academicConfig, hierarchy_type: 'CUSTOM', use_section: e.target.checked, require_section: e.target.checked ? academicConfig.require_section : false })}/>
                     <span>Use Sections</span>
                   </label>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 mb-1">Department Label</label>
-                    <input type="text" value={academicConfig.dept_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, dept_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                    <input type="text" value={academicConfig.labels.department} onChange={(e: any) => setAcademicConfig({ ...academicConfig, labels: { ...academicConfig.labels, department: e.target.value } })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 mb-1">Session Label</label>
-                    <input type="text" value={academicConfig.session_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, session_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                    <input type="text" value={academicConfig.labels.session} onChange={(e: any) => setAcademicConfig({ ...academicConfig, labels: { ...academicConfig.labels, session: e.target.value } })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 mb-1">Class Label</label>
-                    <input type="text" value={academicConfig.class_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, class_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                    <input type="text" value={academicConfig.labels.class} onChange={(e: any) => setAcademicConfig({ ...academicConfig, labels: { ...academicConfig.labels, class: e.target.value } })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-slate-600 mb-1">Section Label</label>
-                    <input type="text" value={academicConfig.section_label} onChange={(e: any) => setAcademicConfig({ ...academicConfig, section_label: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
+                    <input type="text" value={academicConfig.labels.section} onChange={(e: any) => setAcademicConfig({ ...academicConfig, labels: { ...academicConfig.labels, section: e.target.value } })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs"/>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -2902,10 +2926,10 @@ export default function WebsiteManagePage() {
                     <label className="block text-[11px] font-medium text-slate-700 mb-1">Session / Academic Year Name</label>
                     <input type="text" value={sessionForm.name} onChange={(e: any) => setSessionForm({ ...sessionForm, name: e.target.value })} className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white"/>
                   </div>
-                  <label className="flex items-center gap-1.5 text-xs px-2 py-1.5 cursor-pointer">
-                    <input type="checkbox" checked={sessionForm.is_active} onChange={(e: any) => setSessionForm({ ...sessionForm, is_active: e.target.checked })}/>
-                    <span>Active</span>
-                  </label>
+                  <select aria-label="Session Status" value={sessionForm.status} onChange={(e: any) => setSessionForm({ ...sessionForm, status: e.target.value })} className="px-2.5 py-1.5 border border-slate-300 rounded text-xs bg-white cursor-pointer">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                   <button type="submit" disabled={submittingAcademic} className="px-3.5 py-1.5 rounded bg-slate-900 text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
                     Add Session
                   </button>
@@ -2914,8 +2938,8 @@ export default function WebsiteManagePage() {
                   {academicSessions.length === 0 ? (<p className="p-4 text-xs text-slate-500 text-center">No sessions configured yet.</p>) : academicSessions.map((s: any) => (<div key={s.id} className="p-2.5 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-900">{s.name}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${s.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
-                          {s.is_active ? 'Active' : 'Inactive'}
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${(s.status || 'active') === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
+                          {(s.status || 'active') === 'active' ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                       <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'session', id: s.id, name: s.name })} className="text-rose-600 hover:underline cursor-pointer">
@@ -2928,12 +2952,12 @@ export default function WebsiteManagePage() {
                   <div className="text-xs font-semibold text-slate-900">Working Days</div>
                   <form onSubmit={handleCreateDay} className="grid grid-cols-4 gap-2">
                     <input type="text" aria-label="Day Name" value={dayForm.name} onChange={(e: any) => setDayForm({ ...dayForm, name: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
-                    <input type="text" aria-label="Short Name" value={dayForm.short_name} onChange={(e: any) => setDayForm({ ...dayForm, short_name: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="number" aria-label="Day Order" value={dayForm.day_order} onChange={(e: any) => setDayForm({ ...dayForm, day_order: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
                     <button type="submit" disabled={submittingAcademic} className="px-2 py-1 rounded bg-slate-900 text-white text-xs cursor-pointer">Add Day</button>
                   </form>
                   <div className="divide-y divide-slate-100">
                     {academicDays.map((d: any) => (<div key={d.id} className="py-1.5 flex items-center justify-between text-xs">
-                        <span>{d.name} ({d.short_name || d.name.slice(0, 3)})</span>
+                        <span>{d.name} (#{d.day_order} • {d.status === 'off' ? 'Off' : 'On'})</span>
                         <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'day', id: d.id, name: d.name })} className="text-rose-600 hover:underline cursor-pointer">Delete</button>
                       </div>))}
                   </div>
@@ -2941,18 +2965,26 @@ export default function WebsiteManagePage() {
                 <div className="space-y-3 border border-slate-200 rounded p-3">
                   <div className="text-xs font-semibold text-slate-900">Daily Periods &amp; Breaks</div>
                   <form onSubmit={handleCreatePeriod} className="grid grid-cols-4 gap-2">
+                    <select aria-label="Period Day" value={periodForm.day_id} onChange={(e: any) => setPeriodForm({ ...periodForm, day_id: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs cursor-pointer">
+                      <option value="">Select Day</option>
+                      {academicDays.map((d: any) => (<option key={d.id} value={d.id}>{d.name}</option>))}
+                    </select>
                     <input type="text" aria-label="Period Name" value={periodForm.name} onChange={(e: any) => setPeriodForm({ ...periodForm, name: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
-                    <input type="time" aria-label="Start Time" value={periodForm.start_time} onChange={(e: any) => setPeriodForm({ ...periodForm, start_time: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
-                    <input type="time" aria-label="End Time" value={periodForm.end_time} onChange={(e: any) => setPeriodForm({ ...periodForm, end_time: e.target.value })} className="px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="time" aria-label="Start Time" value={periodForm.start_time} onChange={(e: any) => setPeriodForm({ ...periodForm, start_time: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
+                    <input type="time" aria-label="End Time" value={periodForm.end_time} onChange={(e: any) => setPeriodForm({ ...periodForm, end_time: e.target.value })} className="col-span-2 px-2 py-1 border border-slate-300 rounded text-xs"/>
                     <label className="col-span-2 flex items-center gap-1.5 text-xs cursor-pointer">
                       <input type="checkbox" checked={periodForm.is_break} onChange={(e: any) => setPeriodForm({ ...periodForm, is_break: e.target.checked })}/>
                       <span>Break / Recess</span>
                     </label>
-                    <button type="submit" disabled={submittingAcademic} className="col-span-2 px-2 py-1 rounded bg-slate-900 text-white text-xs cursor-pointer">Add Period</button>
+                    <label className="col-span-2 flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input type="checkbox" checked={periodForm.apply_to_all_active_days} onChange={(e: any) => setPeriodForm({ ...periodForm, apply_to_all_active_days: e.target.checked })}/>
+                      <span>All Active Days</span>
+                    </label>
+                    <button type="submit" disabled={submittingAcademic} className="col-span-4 px-2 py-1 rounded bg-slate-900 text-white text-xs cursor-pointer">Add Period</button>
                   </form>
                   <div className="divide-y divide-slate-100">
                     {academicPeriods.map((p: any) => (<div key={p.id} className="py-1.5 flex items-center justify-between text-xs">
-                        <span>{p.name} ({p.start_time} - {p.end_time}){p.is_break ? ' [Break]' : ''}</span>
+                        <span>{p.day_name ? `${p.day_name}: ` : ''}{p.name} ({p.start_time} - {p.end_time}){p.is_break ? ' [Break]' : ''}</span>
                         <button type="button" onClick={() => setAcademicDeleteTarget({ type: 'period', id: p.id, name: p.name })} className="text-rose-600 hover:underline cursor-pointer">Delete</button>
                       </div>))}
                   </div>
