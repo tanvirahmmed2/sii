@@ -3,6 +3,7 @@ import { queryDb } from 'src/lib/database/db';
 import { hasStaffModulePermission, verifyStaffModuleAccess } from 'src/lib/middleware/staff';
 import { getWebsiteUrl } from 'src/lib/database/secret';
 import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
+import { normalizeAcademicConfig } from 'src/lib/modules/academicConfig';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
     return verifyStaffModuleAccess(request, context, ['system', 'settings', 'routine'], action);
 }
@@ -61,7 +62,7 @@ export async function GET(request: any, context: any) {
             success: true,
             website,
             domains: domainsRes.rows,
-            academicConfig: configRes.rows[0] || auth.website?.academic_config || null,
+            academicConfig: normalizeAcademicConfig(configRes.rows[0] || auth.website?.academic_config || null),
             modules: modulesRes.rows || [],
             portals,
             permissions: {

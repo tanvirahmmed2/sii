@@ -15,7 +15,6 @@ import {
     FiChevronRight,
     FiClipboard,
     FiClock,
-    FiCpu,
     FiCreditCard,
     FiDollarSign,
     FiEdit3,
@@ -29,7 +28,6 @@ import {
     FiKey,
     FiLayers,
     FiList,
-    FiLock,
     FiMail,
     FiMessageSquare,
     FiPlusCircle,
@@ -88,7 +86,6 @@ const TOP_SECTION_ICONS: Record<string, any> = {
     Fees: FiDollarSign,
     Payments: FiCheckCircle,
     Purchase: FiShoppingBag,
-    Enterprise: FiCpu,
     Config: FiSliders,
     Directory: FiGrid,
     Settings: FiSettings,
@@ -192,16 +189,9 @@ const hasActiveChild = (item: any, pathname: any) => {
     }
     return false;
 };
-function AccessBadge({ accessLevel, isLocked }: { accessLevel: string; isLocked?: boolean }) {
-    if (isLocked) {
-        return (<span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shrink-0">
-        <FiLock className="w-2.5 h-2.5"/>
-        <span>Locked</span>
-      </span>);
-    }
+function AccessBadge({ accessLevel }: { accessLevel: string }) {
     const styles: Record<string, string> = {
         Owner: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-        Full: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
         Edit: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
         View: 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
     };
@@ -244,14 +234,12 @@ const SubCollapsibleGroup = ({ group, pathname, onCloseMobile, forceOpenState = 
                 const label = child.displayTitle || child.title;
                 return (<Link key={child.path || idx} href={target} onClick={onCloseMobile} className={`flex items-center justify-between gap-1.5 px-2 py-1 rounded text-[11px] transition-colors ${isActive
                         ? 'bg-primary/10 text-primary dark:text-primary-light font-semibold border-l-2 border-primary'
-                        : child.isLocked
-                            ? 'text-slate-400 dark:text-slate-500 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 font-normal'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-normal'}`} title={label}>
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-normal'}`} title={label}>
                 <span className="flex items-center gap-1.5 min-w-0">
                   <ChildIcon className="w-3 h-3 shrink-0 opacity-75"/>
                   <span className="truncate">{label}</span>
                 </span>
-                <AccessBadge accessLevel={child.accessLevel} isLocked={child.isLocked}/>
+                <AccessBadge accessLevel={child.accessLevel}/>
               </Link>);
             })}
         </div>)}
@@ -273,14 +261,12 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
         const label = module.displayTitle || module.title;
         return (<Link href={target} onClick={onCloseMobile} className={`flex items-center justify-between gap-2 w-full px-2.5 py-1.5 rounded text-xs transition-colors cursor-pointer ${isActive
                 ? 'bg-primary/10 text-primary dark:text-primary-light font-semibold border-l-2 border-primary'
-                : module.isLocked
-                    ? 'text-slate-400 dark:text-slate-500 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 font-medium'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 font-medium'}`} title={label}>
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/60 font-medium'}`} title={label}>
         <span className="flex items-center gap-2 min-w-0">
           <ModuleIcon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}/>
           <span className="truncate">{label}</span>
         </span>
-        <AccessBadge accessLevel={module.accessLevel} isLocked={module.isLocked}/>
+        <AccessBadge accessLevel={module.accessLevel}/>
       </Link>);
     }
     return (<div className="flex flex-col space-y-0.5">
@@ -305,14 +291,12 @@ const NavModuleAccordion = ({ module, pathname, onCloseMobile, forceOpenState = 
                 const label = item.displayTitle || item.title;
                 return (<Link key={item.path || idx} href={target} onClick={onCloseMobile} className={`flex items-center justify-between gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${isActive
                         ? 'bg-primary/10 text-primary dark:text-primary-light font-semibold border-l-2 border-primary'
-                        : item.isLocked
-                            ? 'text-slate-400 dark:text-slate-500 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 font-normal'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-normal'}`} title={label}>
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-normal'}`} title={label}>
                 <span className="flex items-center gap-1.5 min-w-0">
                   <ItemIcon className={`w-3 h-3 shrink-0 ${isActive ? 'text-primary' : 'opacity-75'}`}/>
                   <span className="truncate">{label}</span>
                 </span>
-                <AccessBadge accessLevel={item.accessLevel} isLocked={item.isLocked}/>
+                <AccessBadge accessLevel={item.accessLevel}/>
               </Link>);
             })}
         </div>)}
@@ -437,11 +421,13 @@ const Sidebar = ({ allowedModules = null, allowedPaths = null, isDevAdmin = fals
             }
             const meta = resolveModuleMeta(item);
             const lockInfo = getAcademicDimensionLockInfo(item.path, academicConfig);
+            if (lockInfo.locked) {
+                return null;
+            }
             const accessLevel = getStaffModuleAccessLevel(item.path, staffPermissions, hasAllBypass, item.module);
             return {
                 ...item,
                 displayTitle: meta?.name || item.title,
-                isLocked: lockInfo.locked,
                 accessLevel,
             };
         };
@@ -483,7 +469,6 @@ const Sidebar = ({ allowedModules = null, allowedPaths = null, isDevAdmin = fals
                         title: label,
                         fullTitle,
                         path: item.path,
-                        isLocked: item.isLocked,
                         accessLevel: item.accessLevel,
                         icon: getSidebarItemIcon(item, FiFolder),
                     });
@@ -575,10 +560,10 @@ const Sidebar = ({ allowedModules = null, allowedPaths = null, isDevAdmin = fals
                       <ResultIcon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isActive ? 'text-primary' : 'text-slate-400'}`}/>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1.5">
-                          <span className={`font-medium truncate ${isActive ? 'text-primary' : res.isLocked ? 'text-slate-400' : 'text-slate-900 dark:text-white'}`}>
+                          <span className={`font-medium truncate ${isActive ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>
                             {res.title}
                           </span>
-                          <AccessBadge accessLevel={res.accessLevel} isLocked={res.isLocked}/>
+                          <AccessBadge accessLevel={res.accessLevel}/>
                         </div>
                         <div className="text-[10px] text-slate-400 truncate">{res.fullTitle}</div>
                       </div>

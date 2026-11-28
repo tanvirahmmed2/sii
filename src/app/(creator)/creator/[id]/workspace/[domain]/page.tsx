@@ -170,6 +170,7 @@ export default function WebsiteManagePage() {
     const [academicsSubTab, setAcademicsSubTab] = useState<any>('hierarchy');
     const [academicConfig, setAcademicConfig] = useState<any>({
         hierarchy_type: 'CLASS_SEC',
+        primary_col: 'class',
         use_department: false,
         use_session: true,
         use_class: true,
@@ -1273,9 +1274,12 @@ export default function WebsiteManagePage() {
             ]);
             if (cfgData?.success && cfgData.config) {
                 const cfgLabels = typeof cfgData.config.labels === 'object' && cfgData.config.labels !== null ? cfgData.config.labels : {};
+                const c = cfgData.config;
+                const resolvedPrimary = c.primary_col || (c.use_department && !c.use_class ? 'department' : c.use_class ? 'class' : c.use_department ? 'department' : c.use_session ? 'session' : 'section');
                 setAcademicConfig({
-                    hierarchy_type: cfgData.config.hierarchy_type || 'CLASS_SEC',
-                    use_department: Boolean(cfgData.config.use_department),
+                    hierarchy_type: c.hierarchy_type || 'CLASS_SEC',
+                    primary_col: resolvedPrimary,
+                    use_department: Boolean(c.use_department),
                     use_session: cfgData.config.use_session !== false,
                     use_class: cfgData.config.use_class !== false,
                     use_section: cfgData.config.use_section !== false,
@@ -3368,13 +3372,14 @@ export default function WebsiteManagePage() {
               </div>) : academicsSubTab === 'hierarchy' ? (<form onSubmit={handleSaveAcademicConfig} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {[
-                        { id: 'CLASS_SEC', title: 'Class -> Section', dept: false, sess: true, cls: true, sec: true, reqDept: false, reqSess: true, reqCls: true, reqSec: false },
-                        { id: 'DEPT_SESSION_SEC', title: 'Dept -> Session -> Section', dept: true, sess: true, cls: false, sec: true, reqDept: true, reqSess: true, reqCls: false, reqSec: false },
-                        { id: 'DEPT_CLASS_SEC', title: 'Dept -> Class -> Section', dept: true, sess: true, cls: true, sec: true, reqDept: true, reqSess: true, reqCls: true, reqSec: false },
-                        { id: 'CUSTOM', title: 'Custom Hierarchy', dept: academicConfig.use_department, sess: academicConfig.use_session, cls: academicConfig.use_class, sec: academicConfig.use_section, reqDept: academicConfig.require_department, reqSess: academicConfig.require_session, reqCls: academicConfig.require_class, reqSec: academicConfig.require_section },
+                        { id: 'CLASS_SEC', title: 'Class -> Section', primary: 'class', dept: false, sess: true, cls: true, sec: true, reqDept: false, reqSess: true, reqCls: true, reqSec: false },
+                        { id: 'DEPT_SESSION_SEC', title: 'Dept -> Session -> Section', primary: 'department', dept: true, sess: true, cls: false, sec: true, reqDept: true, reqSess: true, reqCls: false, reqSec: false },
+                        { id: 'DEPT_CLASS_SEC', title: 'Dept -> Class -> Section', primary: 'department', dept: true, sess: true, cls: true, sec: true, reqDept: true, reqSess: true, reqCls: true, reqSec: false },
+                        { id: 'CUSTOM', title: 'Custom Hierarchy', primary: academicConfig.primary_col || 'class', dept: academicConfig.use_department, sess: academicConfig.use_session, cls: academicConfig.use_class, sec: academicConfig.use_section, reqDept: academicConfig.require_department, reqSess: academicConfig.require_session, reqCls: academicConfig.require_class, reqSec: academicConfig.require_section },
                     ].map((preset: any) => (<button key={preset.id} type="button" onClick={() => setAcademicConfig((prev: any) => ({
                         ...prev,
                         hierarchy_type: preset.id,
+                        primary_col: preset.primary,
                         use_department: preset.dept,
                         use_session: preset.sess,
                         use_class: preset.cls,
@@ -3390,29 +3395,55 @@ export default function WebsiteManagePage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   {[
-                        { useKey: 'use_department', reqKey: 'require_department', title: 'Departments' },
-                        { useKey: 'use_session', reqKey: 'require_session', title: 'Sessions' },
-                        { useKey: 'use_class', reqKey: 'require_class', title: 'Classes' },
-                        { useKey: 'use_section', reqKey: 'require_section', title: 'Sections' },
-                    ].map((dim: any) => (<div key={dim.useKey} className="border border-slate-200 rounded p-2.5 space-y-1.5">
-                        <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-800">
-                          <input type="checkbox" checked={Boolean(academicConfig[dim.useKey])} onChange={(e: any) => setAcademicConfig({
+                        { key: 'department', useKey: 'use_department', reqKey: 'require_department', title: 'Departments' },
+                        { key: 'session', useKey: 'use_session', reqKey: 'require_session', title: 'Sessions' },
+                        { key: 'class', useKey: 'use_class', reqKey: 'require_class', title: 'Classes' },
+                        { key: 'section', useKey: 'use_section', reqKey: 'require_section', title: 'Sections' },
+                    ].map((dim: any) => {
+                      const isPrimary = academicConfig.primary_col === dim.key;
+                      const isUsed = Boolean(academicConfig[dim.useKey]);
+                      return (<div key={dim.useKey} className={`border rounded p-2.5 space-y-1.5 ${isPrimary ? 'border-slate-900 bg-slate-50' : 'border-slate-200'}`}>
+                        <label className="flex items-center justify-between gap-2 cursor-pointer font-medium text-slate-800">
+                          <span className="flex items-center gap-2">
+                            <input type="checkbox" checked={isUsed} onChange={(e: any) => {
+                                const checked = e.target.checked;
+                                if (!checked) {
+                                    const nextState: any = { ...academicConfig, [dim.useKey]: false, [dim.reqKey]: false, hierarchy_type: 'CUSTOM' };
+                                    const remaining = ['department', 'class', 'session', 'section'].filter((d) => Boolean(nextState[`use_${d}`]));
+                                    if (remaining.length === 0) return;
+                                    if (nextState.primary_col === dim.key) {
+                                        nextState.primary_col = remaining[0];
+                                        nextState[`require_${remaining[0]}`] = true;
+                                    }
+                                    setAcademicConfig(nextState);
+                                    return;
+                                }
+                                setAcademicConfig({ ...academicConfig, hierarchy_type: 'CUSTOM', [dim.useKey]: true });
+                            }}/>
+                            <span>Use {dim.title}</span>
+                          </span>
+                          {isPrimary && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[9px] uppercase">Primary</span>}
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-700 pl-4">
+                          <input type="radio" name="creator_primary_col" checked={isPrimary} onChange={() => setAcademicConfig({
                             ...academicConfig,
                             hierarchy_type: 'CUSTOM',
-                            [dim.useKey]: e.target.checked,
-                            [dim.reqKey]: e.target.checked ? academicConfig[dim.reqKey] : false,
+                            primary_col: dim.key,
+                            [dim.useKey]: true,
+                            [dim.reqKey]: true,
                         })}/>
-                          <span>Use {dim.title}</span>
+                          <span>Primary Point</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer text-[11px] text-slate-600 pl-4">
-                          <input type="checkbox" disabled={!academicConfig[dim.useKey]} checked={Boolean(academicConfig[dim.reqKey])} onChange={(e: any) => setAcademicConfig({
+                          <input type="checkbox" disabled={!isUsed || isPrimary} checked={Boolean(academicConfig[dim.reqKey]) || isPrimary} onChange={(e: any) => setAcademicConfig({
                             ...academicConfig,
                             hierarchy_type: 'CUSTOM',
                             [dim.reqKey]: e.target.checked,
                         })}/>
-                          <span>Mandatory</span>
+                          <span>{isPrimary ? 'Mandatory (Primary)' : 'Mandatory'}</span>
                         </label>
-                      </div>))}
+                      </div>);
+                    })}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>

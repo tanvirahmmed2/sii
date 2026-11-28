@@ -597,6 +597,8 @@ CREATE TABLE IF NOT EXISTS website_academic_configs (
     website_id BIGINT NOT NULL UNIQUE REFERENCES websites(id) ON DELETE CASCADE,
     hierarchy_type VARCHAR(50) NOT NULL DEFAULT 'CLASS_SEC'
         CHECK (hierarchy_type IN ('DEPT_SESSION_SEC', 'CLASS_SEC', 'DEPT_CLASS_SEC', 'CUSTOM')),
+    primary_col VARCHAR(20) NOT NULL DEFAULT 'class'
+        CHECK (primary_col IN ('department', 'session', 'class', 'section')),
     use_department BOOLEAN NOT NULL DEFAULT FALSE,
     use_session BOOLEAN NOT NULL DEFAULT TRUE,
     use_class BOOLEAN NOT NULL DEFAULT TRUE,
@@ -614,6 +616,26 @@ CREATE TABLE IF NOT EXISTS website_academic_configs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'website_academic_configs' AND column_name = 'primary_col'
+    ) THEN
+        ALTER TABLE website_academic_configs
+            ADD COLUMN primary_col VARCHAR(20) NOT NULL DEFAULT 'class'
+            CHECK (primary_col IN ('department', 'session', 'class', 'section'));
+        UPDATE website_academic_configs
+        SET primary_col = CASE
+            WHEN use_department AND (hierarchy_type IN ('DEPT_SESSION_SEC', 'DEPT_CLASS_SEC') OR NOT use_class) THEN 'department'
+            WHEN use_class THEN 'class'
+            WHEN use_department THEN 'department'
+            WHEN use_session THEN 'session'
+            ELSE 'section'
+        END;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_website_academic_configs_web 
 ON website_academic_configs(website_id);

@@ -485,7 +485,7 @@ export function getStaffModuleAccessLevel(
     return ALWAYS_ALLOWED_STAFF_PATHS.has(normPath) ? 'View' : '';
   }
   if (matchedPerm.can_view && matchedPerm.can_create && matchedPerm.can_edit && matchedPerm.can_delete) {
-    return 'Full';
+    return '';
   }
   if (matchedPerm.can_edit || matchedPerm.can_create || matchedPerm.can_delete) {
     return 'Edit';

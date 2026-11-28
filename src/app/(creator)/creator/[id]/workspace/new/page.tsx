@@ -33,6 +33,7 @@ const HIERARCHY_PRESETS = [
     description: 'Students enroll into Classes and optional Sections under an Academic Year / Session.',
     path: ['Session / Year', 'Class', 'Section'],
     config: {
+      primary_col: 'class',
       use_department: false,
       require_department: false,
       use_session: true,
@@ -50,6 +51,7 @@ const HIERARCHY_PRESETS = [
     description: 'Classes belong to Departments such as Science, Arts, Commerce, or Morning/Day Shifts.',
     path: ['Department', 'Class', 'Section'],
     config: {
+      primary_col: 'department',
       use_department: true,
       require_department: true,
       use_session: true,
@@ -67,6 +69,7 @@ const HIERARCHY_PRESETS = [
     description: 'Enrollment runs directly by Department and Session/Semester without rigid Class levels.',
     path: ['Department', 'Session', 'Section'],
     config: {
+      primary_col: 'department',
       use_department: true,
       require_department: true,
       use_session: true,
@@ -279,6 +282,7 @@ export default function CreateWebsitePage() {
 
   const [hierarchyConfig, setHierarchyConfig] = useState<any>({
     hierarchy_type: 'CLASS_SEC',
+    primary_col: 'class',
     use_department: false,
     use_session: true,
     use_class: true,
@@ -547,10 +551,31 @@ export default function CreateWebsitePage() {
       const nextVal = !prev[key];
       const next: any = { ...prev, [key]: nextVal, hierarchy_type: 'CUSTOM' };
       if (key.startsWith('use_') && !nextVal) {
-        next[key.replace('use_', 'require_')] = false;
+        const remaining = ['department', 'class', 'session', 'section'].filter((d) => Boolean(next[`use_${d}`]));
+        if (remaining.length === 0) return prev;
+        const dimName = key.replace('use_', '');
+        next[`require_${dimName}`] = false;
+        if (next.primary_col === dimName) {
+          next.primary_col = remaining[0];
+          next[`require_${remaining[0]}`] = true;
+        }
       }
       return next;
     });
+  };
+
+  const handleSetPrimaryCol = (dim: string) => {
+    setHierarchyConfig((prev: any) => ({
+      ...prev,
+      primary_col: dim,
+      [`use_${dim}`]: true,
+      [`require_${dim}`]: true,
+      hierarchy_type: prev.hierarchy_type === 'CUSTOM'
+        ? 'CUSTOM'
+        : (HIERARCHY_PRESETS.find((p) => p.type === prev.hierarchy_type)?.config?.primary_col === dim
+            ? prev.hierarchy_type
+            : 'CUSTOM'),
+    }));
   };
 
   const validateStep3 = (): string | null => {
@@ -1217,30 +1242,48 @@ export default function CreateWebsitePage() {
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                     {[
-                      { useKey: 'use_department', reqKey: 'require_department', labelKey: 'department', title: 'Department' },
-                      { useKey: 'use_session', reqKey: 'require_session', labelKey: 'session', title: 'Session / Year' },
-                      { useKey: 'use_class', reqKey: 'require_class', labelKey: 'class', title: 'Class / Grade' },
-                      { useKey: 'use_section', reqKey: 'require_section', labelKey: 'section', title: 'Section / Batch' },
-                    ].map((dim) => (
-                      <div key={dim.useKey} className="p-3 rounded border border-slate-200 bg-slate-50/50 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-slate-800">{dim.title}</span>
+                      { key: 'department', useKey: 'use_department', reqKey: 'require_department', labelKey: 'department', title: 'Department' },
+                      { key: 'session', useKey: 'use_session', reqKey: 'require_session', labelKey: 'session', title: 'Session / Year' },
+                      { key: 'class', useKey: 'use_class', reqKey: 'require_class', labelKey: 'class', title: 'Class / Grade' },
+                      { key: 'section', useKey: 'use_section', reqKey: 'require_section', labelKey: 'section', title: 'Section / Batch' },
+                    ].map((dim) => {
+                      const isPrimary = hierarchyConfig.primary_col === dim.key;
+                      const isUsed = Boolean(hierarchyConfig[dim.useKey]);
+                      return (
+                      <div key={dim.useKey} className={`p-3 rounded border space-y-2 ${isPrimary ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-slate-50/50'}`}>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-xs font-medium text-slate-800 flex items-center gap-1.5">
+                            <span>{dim.title}</span>
+                            {isPrimary && (
+                              <span className="px-1 py-0.2 rounded bg-slate-900 text-white text-[9px] uppercase">Primary</span>
+                            )}
+                          </span>
                           <input
                             type="checkbox"
-                            checked={Boolean(hierarchyConfig[dim.useKey])}
+                            checked={isUsed}
                             onChange={() => handleToggleDimension(dim.useKey)}
                             className="cursor-pointer"
                           />
                         </div>
+                        <label className="flex items-center gap-1.5 text-[11px] text-slate-700 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="new_site_primary_col"
+                            checked={isPrimary}
+                            onChange={() => handleSetPrimaryCol(dim.key)}
+                            className="cursor-pointer"
+                          />
+                          <span>Primary Point</span>
+                        </label>
                         <label className="flex items-center gap-1.5 text-[11px] text-slate-600 cursor-pointer">
                           <input
                             type="checkbox"
-                            disabled={!hierarchyConfig[dim.useKey]}
-                            checked={Boolean(hierarchyConfig[dim.reqKey])}
+                            disabled={!isUsed || isPrimary}
+                            checked={Boolean(hierarchyConfig[dim.reqKey]) || isPrimary}
                             onChange={() => handleToggleDimension(dim.reqKey)}
                             className="cursor-pointer disabled:opacity-40"
                           />
-                          <span>Mandatory</span>
+                          <span>{isPrimary ? 'Mandatory (Primary)' : 'Mandatory'}</span>
                         </label>
                         <input
                           type="text"
@@ -1255,7 +1298,8 @@ export default function CreateWebsitePage() {
                           className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-800"
                         />
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 

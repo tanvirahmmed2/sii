@@ -41,7 +41,9 @@ const HIERARCHY_PRESETS = [
         subtitle: 'Standard School / High School',
         description: 'Students enroll directly into Classes and optional Sections under an Academic Year / Session.',
         path: ['Session / Year', 'Class', 'Section (optional)'],
+        primary_col: 'class',
         config: {
+            primary_col: 'class',
             use_department: false,
             require_department: false,
             use_session: true,
@@ -58,7 +60,9 @@ const HIERARCHY_PRESETS = [
         subtitle: 'Group / Shift / Version School or College',
         description: 'Classes belong to specific Departments (e.g., Science/Arts/Commerce, Morning/Day Shift, Bangla/English Version).',
         path: ['Department (Shift/Version)', 'Class', 'Section (optional)'],
+        primary_col: 'department',
         config: {
+            primary_col: 'department',
             use_department: true,
             require_department: true,
             use_session: true,
@@ -75,7 +79,9 @@ const HIERARCHY_PRESETS = [
         subtitle: 'Higher Ed / University / Academy',
         description: 'Direct enrollment into academic Departments and Sessions / Semesters without rigid grade levels.',
         path: ['Department', 'Session (Batch/Year)', 'Section (optional)'],
+        primary_col: 'department',
         config: {
+            primary_col: 'department',
             use_department: true,
             require_department: true,
             use_session: true,
@@ -90,10 +96,16 @@ const HIERARCHY_PRESETS = [
         type: 'CUSTOM',
         title: 'Custom Modular Configuration',
         subtitle: 'Tailored Structure',
-        description: 'Hand-pick exactly which entities are visible and required during admissions and student registrations.',
+        description: 'Hand-pick active entities, designate the single Primary point, and mark mandatory fields.',
         path: ['Custom Selected Fields'],
         config: null
     }
+];
+const ACADEMIC_DIMENSIONS_META = [
+    { key: 'department', useKey: 'use_department', reqKey: 'require_department', title: 'Department', desc: 'Faculty, Shift, or Academic Version group.' },
+    { key: 'session', useKey: 'use_session', reqKey: 'require_session', title: 'Session / Year', desc: 'Academic batch (e.g., 2026-2027).' },
+    { key: 'class', useKey: 'use_class', reqKey: 'require_class', title: 'Class / Grade', desc: 'Standard class level or semester.' },
+    { key: 'section', useKey: 'use_section', reqKey: 'require_section', title: 'Section / Group', desc: 'Subdivision batch or stream.' },
 ];
 export default function SystemManagementPage() {
     const routeParams: any = useParams();
@@ -111,6 +123,7 @@ export default function SystemManagementPage() {
     const [systemData, setSystemData] = useState<any>(null);
     const [hierarchyConfig, setHierarchyConfig] = useState<any>({
         hierarchy_type: 'CLASS_SEC',
+        primary_col: 'class',
         use_department: false,
         use_session: true,
         use_class: true,
@@ -187,8 +200,10 @@ export default function SystemManagementPage() {
                 });
                 if (data.academicConfig) {
                     const c = data.academicConfig;
+                    const resolvedPrimary = c.primary_col || (c.use_department && !c.use_class ? 'department' : c.use_class ? 'class' : c.use_department ? 'department' : c.use_session ? 'session' : 'section');
                     setHierarchyConfig({
                         hierarchy_type: c.hierarchy_type || 'CLASS_SEC',
+                        primary_col: resolvedPrimary,
                         use_department: Boolean(c.use_department),
                         use_session: Boolean(c.use_session),
                         use_class: Boolean(c.use_class),
@@ -250,8 +265,10 @@ export default function SystemManagementPage() {
                 });
                 if (data.academicConfig) {
                     const c = data.academicConfig;
+                    const resolvedPrimary = c.primary_col || (c.use_department && !c.use_class ? 'department' : c.use_class ? 'class' : c.use_department ? 'department' : c.use_session ? 'session' : 'section');
                     setHierarchyConfig({
                         hierarchy_type: c.hierarchy_type || 'CLASS_SEC',
+                        primary_col: resolvedPrimary,
                         use_department: Boolean(c.use_department),
                         use_session: Boolean(c.use_session),
                         use_class: Boolean(c.use_class),
@@ -281,6 +298,7 @@ export default function SystemManagementPage() {
         };
     }, [apiBase]);
     const handleSelectPreset = (preset: any) => {
+        if (!canEditAcademic) return;
         if (preset.type === 'CUSTOM') {
             setHierarchyConfig((prev: any) => ({
                 ...prev,
@@ -295,16 +313,41 @@ export default function SystemManagementPage() {
         }));
     };
     const handleToggleHierarchyField = (key: any) => {
+        if (!canEditAcademic) return;
         setHierarchyConfig((prev: any) => {
             const nextVal = !prev[key];
             const updated: any = { ...prev, [key]: nextVal };
             if (key.startsWith('use_') && !nextVal) {
-                const reqKey = key.replace('use_', 'require_');
-                updated[reqKey] = false;
+                const anyLeft = ['department', 'class', 'session', 'section'].some((d) => Boolean(updated[`use_${d}`]));
+                if (!anyLeft) {
+                    showToast('At least one academic dimension must remain enabled.', true);
+                    return prev;
+                }
+                const dimName = key.replace('use_', '');
+                updated[`require_${dimName}`] = false;
+                if (updated.primary_col === dimName) {
+                    const fallbackPrimary = ['department', 'class', 'session', 'section'].find((d) => Boolean(updated[`use_${d}`])) || 'class';
+                    updated.primary_col = fallbackPrimary;
+                    updated[`require_${fallbackPrimary}`] = true;
+                }
             }
             updated.hierarchy_type = 'CUSTOM';
             return updated;
         });
+    };
+    const handleSetPrimaryDimension = (dimension: string) => {
+        if (!canEditAcademic) return;
+        setHierarchyConfig((prev: any) => ({
+            ...prev,
+            primary_col: dimension,
+            [`use_${dimension}`]: true,
+            [`require_${dimension}`]: true,
+            hierarchy_type: prev.hierarchy_type === 'CUSTOM'
+                ? 'CUSTOM'
+                : (HIERARCHY_PRESETS.find((p: any) => p.type === prev.hierarchy_type)?.primary_col === dimension
+                    ? prev.hierarchy_type
+                    : 'CUSTOM'),
+        }));
     };
     const handleLabelChange = (field: any, val: any) => {
         setHierarchyConfig((prev: any) => ({
@@ -534,66 +577,87 @@ export default function SystemManagementPage() {
             </div>
 
             <div className="pt-4 border-t border-slate-100 space-y-4">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Hierarchy Dimensions & Mandatory Rules
-              </h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-slate-900 uppercase tracking-wider">
+                    Hierarchy Dimensions, Primary Point & Mandatory Rules
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Select active academic dimensions and designate one enabled dimension as the institution&apos;s Primary Point.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium shrink-0">
+                  <span>Primary Point:</span>
+                  <span className="font-semibold">
+                    {hierarchyConfig.labels?.[hierarchyConfig.primary_col] || hierarchyConfig.primary_col || 'Class'}
+                  </span>
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="p-3 rounded border border-slate-200 bg-white space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Department</span>
-                    <input type="checkbox" aria-label="Use Department" checked={hierarchyConfig.use_department} onChange={() => handleToggleHierarchyField('use_department')} className="rounded text-blue-600 w-4 h-4 cursor-pointer"/>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Faculty, Shift, or Academic Version group.
-                  </p>
-                  <label className="flex items-center gap-2 pt-1 text-[11px] text-slate-600 cursor-pointer">
-                    <input type="checkbox" aria-label="Require Department" disabled={!hierarchyConfig.use_department} checked={hierarchyConfig.require_department} onChange={() => handleToggleHierarchyField('require_department')} className="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"/>
-                    <span>Required Field</span>
-                  </label>
-                </div>
-
-                <div className="p-3 rounded border border-slate-200 bg-white space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Session / Year</span>
-                    <input type="checkbox" aria-label="Use Session" checked={hierarchyConfig.use_session} onChange={() => handleToggleHierarchyField('use_session')} className="rounded text-blue-600 w-4 h-4 cursor-pointer"/>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Academic batch (e.g., 2025-2026).
-                  </p>
-                  <label className="flex items-center gap-2 pt-1 text-[11px] text-slate-600 cursor-pointer">
-                    <input type="checkbox" aria-label="Require Session" disabled={!hierarchyConfig.use_session} checked={hierarchyConfig.require_session} onChange={() => handleToggleHierarchyField('require_session')} className="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"/>
-                    <span>Required Field</span>
-                  </label>
-                </div>
-
-                <div className="p-3 rounded border border-slate-200 bg-white space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Class / Grade</span>
-                    <input type="checkbox" aria-label="Use Class" checked={hierarchyConfig.use_class} onChange={() => handleToggleHierarchyField('use_class')} className="rounded text-blue-600 w-4 h-4 cursor-pointer"/>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Standard class level or semester.
-                  </p>
-                  <label className="flex items-center gap-2 pt-1 text-[11px] text-slate-600 cursor-pointer">
-                    <input type="checkbox" aria-label="Require Class" disabled={!hierarchyConfig.use_class} checked={hierarchyConfig.require_class} onChange={() => handleToggleHierarchyField('require_class')} className="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"/>
-                    <span>Required Field</span>
-                  </label>
-                </div>
-
-                <div className="p-3 rounded border border-slate-200 bg-white space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Section / Group</span>
-                    <input type="checkbox" aria-label="Use Section" checked={hierarchyConfig.use_section} onChange={() => handleToggleHierarchyField('use_section')} className="rounded text-blue-600 w-4 h-4 cursor-pointer"/>
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Subdivision batch or stream.
-                  </p>
-                  <label className="flex items-center gap-2 pt-1 text-[11px] text-slate-600 cursor-pointer">
-                    <input type="checkbox" aria-label="Require Section" disabled={!hierarchyConfig.use_section} checked={hierarchyConfig.require_section} onChange={() => handleToggleHierarchyField('require_section')} className="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"/>
-                    <span>Required Field</span>
-                  </label>
-                </div>
+                {ACADEMIC_DIMENSIONS_META.map((dim) => {
+                  const isUsed = Boolean(hierarchyConfig[dim.useKey]);
+                  const isRequired = Boolean(hierarchyConfig[dim.reqKey]);
+                  const isPrimary = hierarchyConfig.primary_col === dim.key;
+                  const customLabel = hierarchyConfig.labels?.[dim.key] || dim.title;
+                  return (
+                    <div
+                      key={dim.key}
+                      className={`p-3 rounded border transition-colors space-y-2.5 ${
+                        isPrimary
+                          ? 'border-blue-500 bg-blue-50/30 ring-1 ring-blue-500/20'
+                          : isUsed
+                            ? 'border-slate-200 bg-white'
+                            : 'border-slate-200 bg-slate-50/70 opacity-75'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-xs font-semibold text-slate-800 truncate">{customLabel}</span>
+                          {isPrimary && (
+                            <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-medium uppercase shrink-0">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="checkbox"
+                          aria-label={`Use ${dim.title}`}
+                          disabled={!canEditAcademic}
+                          checked={isUsed}
+                          onChange={() => handleToggleHierarchyField(dim.useKey)}
+                          className="rounded text-blue-600 w-4 h-4 cursor-pointer disabled:opacity-40"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">{dim.desc}</p>
+                      <div className="pt-1 border-t border-slate-100 space-y-1.5">
+                        <label className="flex items-center gap-2 text-[11px] text-slate-700 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="primary_col"
+                            aria-label={`Set ${dim.title} as Primary`}
+                            disabled={!canEditAcademic}
+                            checked={isPrimary}
+                            onChange={() => handleSetPrimaryDimension(dim.key)}
+                            className="text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"
+                          />
+                          <span className={isPrimary ? 'text-blue-700 font-medium' : ''}>Primary Point</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-[11px] text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            aria-label={`Require ${dim.title}`}
+                            disabled={!canEditAcademic || !isUsed || isPrimary}
+                            checked={isRequired || isPrimary}
+                            onChange={() => handleToggleHierarchyField(dim.reqKey)}
+                            className="rounded text-blue-600 w-3.5 h-3.5 cursor-pointer disabled:opacity-40"
+                          />
+                          <span>{isPrimary ? 'Required (Primary)' : 'Required Field'}</span>
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

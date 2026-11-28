@@ -1184,52 +1184,6 @@ export const staffNavData = [
         ]
     },
     {
-        "title": "Enterprise",
-        "module": "tenant-quotas,page-builder,cbt-exams,fee-accounting,academic-progression,lms-courses,parent-transport-inventory,security-audit",
-        "children": [
-            {
-                "title": "Quotas",
-                "module": "tenant-quotas",
-                "path": "/tenant-quotas"
-            },
-            {
-                "title": "CMS",
-                "module": "page-builder",
-                "path": "/page-builder"
-            },
-            {
-                "title": "CBT",
-                "module": "cbt-exams",
-                "path": "/cbt-exams"
-            },
-            {
-                "title": "Ledger",
-                "module": "fee-accounting",
-                "path": "/fee-accounting"
-            },
-            {
-                "title": "Progression",
-                "module": "academic-progression",
-                "path": "/academic-progression"
-            },
-            {
-                "title": "LMS",
-                "module": "lms-courses",
-                "path": "/lms-courses"
-            },
-            {
-                "title": "Operations",
-                "module": "parent-transport-inventory",
-                "path": "/parent-transport-inventory"
-            },
-            {
-                "title": "Security",
-                "module": "security-audit",
-                "path": "/security-audit"
-            }
-        ]
-    },
-    {
         "title": "Config",
         "module": "settings",
         "children": [

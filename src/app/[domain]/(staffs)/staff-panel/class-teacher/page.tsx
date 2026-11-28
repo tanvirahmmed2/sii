@@ -224,7 +224,9 @@ export default function ClassTeacherPage() {
             <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 font-mono">
               {academicConfig?.hierarchy_type || 'CLASS_SEC'}
             </span>
-            <span className="text-[10px] font-medium text-slate-400">{classes.length} {classLabel}es</span>
+            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+              Primary: {academicConfig?.labels?.[academicConfig?.primary_col || 'class'] || 'Class'}
+            </span>
           </div>
         </div>
       </div>

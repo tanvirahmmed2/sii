@@ -15,6 +15,7 @@ import {
   invalidateWebsiteModulesCache,
 } from '../redis/redisClient';
 import { expandModuleKeys } from '../modules/moduleMappings';
+import { normalizeAcademicConfig } from '../modules/academicConfig';
 
 interface CacheEntry {
   website: any;
@@ -538,30 +539,7 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
     try {
       const cfgRes = await query(`SELECT * FROM website_academic_configs WHERE website_id = $1 LIMIT 1`, [website.id]).catch(() => ({ rows: [] }));
       const rawCfg = cfgRes?.rows?.[0];
-      website.academic_config = rawCfg
-        ? {
-            ...rawCfg,
-            use_department: Boolean(rawCfg.use_department),
-            use_session: rawCfg.use_session === undefined ? true : Boolean(rawCfg.use_session),
-            use_class: rawCfg.use_class === undefined ? true : Boolean(rawCfg.use_class),
-            use_section: rawCfg.use_section === undefined ? true : Boolean(rawCfg.use_section),
-            require_department: Boolean(rawCfg.require_department),
-            require_session: rawCfg.require_session === undefined ? true : Boolean(rawCfg.require_session),
-            require_class: rawCfg.require_class === undefined ? true : Boolean(rawCfg.require_class),
-            require_section: Boolean(rawCfg.require_section),
-          }
-        : {
-            hierarchy_type: 'CLASS_SEC',
-            use_department: false,
-            use_session: true,
-            use_class: true,
-            use_section: true,
-            require_department: false,
-            require_session: true,
-            require_class: true,
-            require_section: false,
-            labels: { department: 'Department', session: 'Academic Year', class: 'Class', section: 'Section' },
-          };
+      website.academic_config = normalizeAcademicConfig(rawCfg);
       website.academicConfig = website.academic_config;
     } catch { }
 

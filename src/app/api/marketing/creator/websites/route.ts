@@ -19,50 +19,9 @@ import {
   cancelWebsiteDeletion,
 } from "../../../../../lib/database/websiteLifecycle";
 import { checkDomainAvailability, checkCustomDomainAvailability } from "./check-domain/route";
+import { buildAcademicConfigPayload } from "../../../../../lib/modules/academicConfig";
 
 export const dynamic = "force-dynamic";
-
-const VALID_HIERARCHIES = ["DEPT_SESSION_SEC", "CLASS_SEC", "DEPT_CLASS_SEC", "CUSTOM"];
-
-const DEFAULT_HIERARCHY_LABELS = {
-  department: "Department",
-  session: "Academic Year",
-  class: "Class",
-  section: "Section",
-};
-
-const ACADEMIC_PRESETS: Record<string, any> = {
-  DEPT_SESSION_SEC: {
-    use_department: true,
-    require_department: true,
-    use_session: true,
-    require_session: true,
-    use_class: false,
-    require_class: false,
-    use_section: true,
-    require_section: false,
-  },
-  CLASS_SEC: {
-    use_department: false,
-    require_department: false,
-    use_session: true,
-    require_session: true,
-    use_class: true,
-    require_class: true,
-    use_section: true,
-    require_section: false,
-  },
-  DEPT_CLASS_SEC: {
-    use_department: true,
-    require_department: true,
-    use_session: true,
-    require_session: true,
-    use_class: true,
-    require_class: true,
-    use_section: true,
-    require_section: false,
-  },
-};
 
 const DEFAULT_DAYS = [
   { name: "Sunday", day_order: 1, status: "on" },
@@ -254,48 +213,7 @@ async function resolveAssetUrlAndId(
 }
 
 function buildResolvedAcademicConfig(rawConfig: any) {
-  const rawType = String(rawConfig?.hierarchy_type || "CLASS_SEC").trim().toUpperCase();
-  const resolvedHierarchy = VALID_HIERARCHIES.includes(rawType) ? rawType : "CLASS_SEC";
-  let useDepartment = Boolean(rawConfig?.use_department);
-  let requireDepartment = Boolean(rawConfig?.require_department);
-  let useSession = rawConfig?.use_session !== undefined ? Boolean(rawConfig.use_session) : true;
-  let requireSession = rawConfig?.require_session !== undefined ? Boolean(rawConfig.require_session) : true;
-  let useClass = rawConfig?.use_class !== undefined ? Boolean(rawConfig.use_class) : true;
-  let requireClass = rawConfig?.require_class !== undefined ? Boolean(rawConfig.require_class) : true;
-  let useSection = rawConfig?.use_section !== undefined ? Boolean(rawConfig.use_section) : true;
-  let requireSection = Boolean(rawConfig?.require_section);
-
-  if (resolvedHierarchy !== "CUSTOM" && ACADEMIC_PRESETS[resolvedHierarchy]) {
-    const preset = ACADEMIC_PRESETS[resolvedHierarchy];
-    useDepartment = preset.use_department;
-    requireDepartment = preset.require_department;
-    useSession = preset.use_session;
-    requireSession = preset.require_session;
-    useClass = preset.use_class;
-    requireClass = preset.require_class;
-    useSection = preset.use_section;
-    requireSection = preset.require_section;
-  }
-
-  const labels = {
-    department: String(rawConfig?.labels?.department || DEFAULT_HIERARCHY_LABELS.department).trim() || DEFAULT_HIERARCHY_LABELS.department,
-    session: String(rawConfig?.labels?.session || DEFAULT_HIERARCHY_LABELS.session).trim() || DEFAULT_HIERARCHY_LABELS.session,
-    class: String(rawConfig?.labels?.class || DEFAULT_HIERARCHY_LABELS.class).trim() || DEFAULT_HIERARCHY_LABELS.class,
-    section: String(rawConfig?.labels?.section || DEFAULT_HIERARCHY_LABELS.section).trim() || DEFAULT_HIERARCHY_LABELS.section,
-  };
-
-  return {
-    hierarchy_type: resolvedHierarchy,
-    use_department: useDepartment,
-    require_department: useDepartment ? requireDepartment : false,
-    use_session: useSession,
-    require_session: useSession ? requireSession : false,
-    use_class: useClass,
-    require_class: useClass ? requireClass : false,
-    use_section: useSection,
-    require_section: useSection ? requireSection : false,
-    labels,
-  };
+  return buildAcademicConfigPayload(rawConfig);
 }
 
 export async function GET(request: any) {
@@ -1158,13 +1076,14 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
 
       await client.query(
         `INSERT INTO website_academic_configs (
-           website_id, hierarchy_type,
+           website_id, hierarchy_type, primary_col,
            use_department, use_session, use_class, use_section,
            require_department, require_session, require_class, require_section,
            labels, updated_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, NOW())
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, NOW())
          ON CONFLICT (website_id) DO UPDATE SET
            hierarchy_type = EXCLUDED.hierarchy_type,
+           primary_col = EXCLUDED.primary_col,
            use_department = EXCLUDED.use_department,
            use_session = EXCLUDED.use_session,
            use_class = EXCLUDED.use_class,
@@ -1178,6 +1097,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
         [
           newWebsite.id,
           academicConfig.hierarchy_type,
+          academicConfig.primary_col,
           academicConfig.use_department,
           academicConfig.use_session,
           academicConfig.use_class,
