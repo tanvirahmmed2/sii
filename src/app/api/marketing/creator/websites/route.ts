@@ -209,12 +209,28 @@ async function verifyCustomDomainDnsLive(
 }
 
 async function resolveAssetUrlAndId(
-  urlVal: any,
+  fileOrUrlVal: any,
   idVal: any,
   folder: string,
-  isPdfFallback: boolean = false
+  isPdfFallback: boolean = false,
+  rollbackTracker?: string[]
 ): Promise<{ url: string | null; publicId: string | null }> {
-  const rawUrl = String(urlVal || "").trim();
+  const isBlobLike =
+    fileOrUrlVal &&
+    typeof fileOrUrlVal === "object" &&
+    typeof fileOrUrlVal.arrayBuffer === "function";
+  if (isBlobLike) {
+    const fileName = String(fileOrUrlVal.name || "").toLowerCase();
+    const isPdf = isPdfFallback && (fileOrUrlVal.type === "application/pdf" || fileName.endsWith(".pdf"));
+    const up = isPdf ? await uploadPdf(fileOrUrlVal, folder) : await uploadImage(fileOrUrlVal, folder);
+    const pubId = up.publicId || up.id || null;
+    if (pubId && rollbackTracker) rollbackTracker.push(pubId);
+    return {
+      url: up.secure_url || up.url || null,
+      publicId: pubId || String(idVal || "").trim() || null,
+    };
+  }
+  const rawUrl = String(fileOrUrlVal || "").trim();
   const rawId = String(idVal || "").trim();
   if (!rawUrl) {
     return { url: null, publicId: rawId || null };
@@ -222,9 +238,11 @@ async function resolveAssetUrlAndId(
   if (rawUrl.startsWith("data:")) {
     const isPdf = isPdfFallback || rawUrl.startsWith("data:application/pdf");
     const up = isPdf ? await uploadPdf(rawUrl, folder) : await uploadImage(rawUrl, folder);
+    const pubId = up.publicId || up.id || rawId || null;
+    if (pubId && rollbackTracker) rollbackTracker.push(pubId);
     return {
       url: up.secure_url || up.url || null,
-      publicId: up.publicId || up.id || rawId || null,
+      publicId: pubId,
     };
   }
   return { url: rawUrl, publicId: rawId || null };
@@ -640,12 +658,19 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       );
     }
 
-    const rawNidFront = body.creatorNidFrontImage || body.creator_nid_front_image || "";
+    const rawNidFront = body.nid_front_file || body.creatorNidFrontImage || body.creator_nid_front_image || "";
     const rawNidFrontId = body.creatorNidFrontImageId || body.creator_nid_front_image_id || "";
-    const rawNidBack = body.creatorNidBackImage || body.creator_nid_back_image || "";
+    const rawNidBack = body.nid_back_file || body.creatorNidBackImage || body.creator_nid_back_image || "";
     const rawNidBackId = body.creatorNidBackImageId || body.creator_nid_back_image_id || "";
 
-    if (!String(rawNidFront).trim() || !String(rawNidBack).trim()) {
+    const hasNidFront =
+      (typeof rawNidFront === "object" && rawNidFront !== null && typeof rawNidFront.arrayBuffer === "function") ||
+      Boolean(String(rawNidFront).trim());
+    const hasNidBack =
+      (typeof rawNidBack === "object" && rawNidBack !== null && typeof rawNidBack.arrayBuffer === "function") ||
+      Boolean(String(rawNidBack).trim());
+
+    if (!hasNidFront || !hasNidBack) {
       return NextResponse.json(
         { success: false, error: "Both Creator NID Front image and NID Back image are required for verification." },
         { status: 400 }
@@ -705,7 +730,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
           .filter((d: any) => Boolean(d.name))
       : [];
 
-    const cleanClasses: Array<any> = Array.isArray(rawAcademics.classes)
+    const rawClassesList: Array<any> = Array.isArray(rawAcademics.classes)
       ? rawAcademics.classes
           .map((c: any, idx: number) => ({
             key: String(c?.key || c?.name || idx).trim(),
@@ -717,6 +742,13 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
           }))
           .filter((c: any) => Boolean(c.name))
       : [];
+    const seenClassNames = new Set<string>();
+    const cleanClasses: Array<any> = rawClassesList.filter((c: any) => {
+      const k = c.name.toLowerCase();
+      if (seenClassNames.has(k)) return false;
+      seenClassNames.add(k);
+      return true;
+    });
 
     const cleanSections: Array<any> = Array.isArray(rawAcademics.sections)
       ? rawAcademics.sections
@@ -900,36 +932,77 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
     const youtubeUrl = String(body.youtube_url || body.youtubeUrl || "").trim() || null;
     const linkedinUrl = String(body.linkedin_url || body.linkedinUrl || "").trim() || null;
 
-    const logoAsset = await resolveAssetUrlAndId(body.logo, body.logo_id, "website_logos", false).catch(() => ({
-      url: null,
-      publicId: null,
-    }));
-    const faviconAsset = await resolveAssetUrlAndId(body.favicon, body.favicon_id, "website_favicons", false).catch(() => ({
-      url: null,
-      publicId: null,
-    }));
+    const uploadedPublicIdsToRollback: string[] = [];
+    let logoAsset = { url: null as string | null, publicId: null as string | null };
+    let faviconAsset = { url: null as string | null, publicId: null as string | null };
+    let nidFrontAsset = { url: null as string | null, publicId: null as string | null };
+    let nidBackAsset = { url: null as string | null, publicId: null as string | null };
+    let eiinImageAsset = { url: null as string | null, publicId: null as string | null };
+    let ugcAsset = { url: null as string | null, publicId: null as string | null };
+    let additionalCertAsset = { url: null as string | null, publicId: null as string | null };
 
     const verificationFolder = `school/verification/${creatorId}`;
-    const nidFrontAsset = await resolveAssetUrlAndId(rawNidFront, rawNidFrontId, `${verificationFolder}/nid_front`, false);
-    const nidBackAsset = await resolveAssetUrlAndId(rawNidBack, rawNidBackId, `${verificationFolder}/nid_back`, false);
-    const eiinImageAsset = await resolveAssetUrlAndId(
-      body.eiinCertificateImage || body.eiin_certificate_image || body.eiinCertificateUrl || body.eiin_certificate_url,
-      body.eiinCertificateImageId || body.eiin_certificate_image_id,
-      `${verificationFolder}/eiin_certificate`,
-      true
-    );
-    const ugcAsset = await resolveAssetUrlAndId(
-      body.ugcCertificate || body.ugc_certificate,
-      body.ugcCertificateId || body.ugc_certificate_id,
-      `${verificationFolder}/ugc_certificate`,
-      true
-    );
-    const additionalCertAsset = await resolveAssetUrlAndId(
-      body.additionalCertificate || body.additional_certificate,
-      body.additionalCertificateId || body.additional_certificate_id,
-      `${verificationFolder}/additional_certificate`,
-      true
-    );
+    try {
+      logoAsset = await resolveAssetUrlAndId(
+        body.logo_file || body.logo,
+        body.logo_id,
+        "website_logos",
+        false,
+        uploadedPublicIdsToRollback
+      );
+      faviconAsset = await resolveAssetUrlAndId(
+        body.favicon_file || body.favicon,
+        body.favicon_id,
+        "website_favicons",
+        false,
+        uploadedPublicIdsToRollback
+      );
+      nidFrontAsset = await resolveAssetUrlAndId(
+        rawNidFront,
+        rawNidFrontId,
+        `${verificationFolder}/nid_front`,
+        false,
+        uploadedPublicIdsToRollback
+      );
+      nidBackAsset = await resolveAssetUrlAndId(
+        rawNidBack,
+        rawNidBackId,
+        `${verificationFolder}/nid_back`,
+        false,
+        uploadedPublicIdsToRollback
+      );
+      eiinImageAsset = await resolveAssetUrlAndId(
+        body.eiin_certificate_file ||
+          body.eiinCertificateImage ||
+          body.eiin_certificate_image ||
+          body.eiinCertificateUrl ||
+          body.eiin_certificate_url,
+        body.eiinCertificateImageId || body.eiin_certificate_image_id,
+        `${verificationFolder}/eiin_certificate`,
+        true,
+        uploadedPublicIdsToRollback
+      );
+      ugcAsset = await resolveAssetUrlAndId(
+        body.ugc_certificate_file || body.ugcCertificate || body.ugc_certificate,
+        body.ugcCertificateId || body.ugc_certificate_id,
+        `${verificationFolder}/ugc_certificate`,
+        true,
+        uploadedPublicIdsToRollback
+      );
+      additionalCertAsset = await resolveAssetUrlAndId(
+        body.additional_certificate_file || body.additionalCertificate || body.additional_certificate,
+        body.additionalCertificateId || body.additional_certificate_id,
+        `${verificationFolder}/additional_certificate`,
+        true,
+        uploadedPublicIdsToRollback
+      );
+    } catch (uploadErr: any) {
+      await Promise.allSettled(uploadedPublicIdsToRollback.map((pid) => deleteImage(pid)));
+      return NextResponse.json(
+        { success: false, error: `Failed to upload verification files: ${uploadErr?.message || "Upload error"}` },
+        { status: 500 }
+      );
+    }
 
     const eiinCertificate = String(body.eiinCertificate || body.eiin_certificate || "").trim() || null;
     const verificationAddress = String(body.verificationAddress || body.verification_address || address || "").trim() || null;
@@ -1195,6 +1268,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
         const secRes = await client.query(
           `INSERT INTO website_sections (website_id, class_id, department_id, session_id, name, capacity, room_number)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (website_id, class_id, name) DO UPDATE SET capacity = EXCLUDED.capacity
            RETURNING id`,
           [newWebsite.id, classId, deptId, sessId, sec.name, sec.capacity, sec.room_number]
         );
@@ -1308,6 +1382,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       await client.query("COMMIT");
     } catch (txError: any) {
       await client.query("ROLLBACK").catch(() => {});
+      await Promise.allSettled(uploadedPublicIdsToRollback.map((pid) => deleteImage(pid)));
       throw txError;
     } finally {
       client.release();
@@ -2091,10 +2166,19 @@ export async function POST(request: any) {
     let body: any;
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
-      body = Object.fromEntries(formData.entries());
-      const file = formData.get("file");
-      if (file) {
-        body.file = file;
+      const payloadRaw = formData.get("payload");
+      const parsedPayload =
+        typeof payloadRaw === "string" && payloadRaw.trim() ? JSON.parse(payloadRaw) : {};
+      body = { ...parsedPayload };
+      for (const [k, v] of formData.entries()) {
+        if (k === "payload") continue;
+        if (typeof v === "object" && v !== null && typeof (v as any).arrayBuffer === "function") {
+          if ((v as any).size > 0) {
+            body[k] = v;
+          }
+        } else if (body[k] === undefined) {
+          body[k] = v;
+        }
       }
     } else {
       body = await request.json();
@@ -2114,17 +2198,32 @@ export async function seedWebsiteDefaults(
   dbClient: any = null
 ) {
   try {
-    const execQuery = dbClient ? (q: string, p: any[]) => dbClient.query(q, p) : queryDb;
-    await execQuery(
-      `INSERT INTO website_notices (website_id, title, content, is_published, published_at)
-       VALUES ($1, $2, $3, TRUE, CURRENT_TIMESTAMP)
-       ON CONFLICT DO NOTHING`,
-      [
-        websiteId,
-        `Welcome to ${websiteName}`,
-        `We take immense pride in announcing the launch of our digital campus portal for ${websiteName}. Students and parents can access admission notices, timetables, and academic records seamlessly.`,
-      ]
-    ).catch(() => null);
+    const noticeSlug = `welcome-to-${websiteId}`;
+    const noticeTitle = `Welcome to ${websiteName}`;
+    const noticeDesc = `We take immense pride in announcing the launch of our digital campus portal for ${websiteName}. Students and parents can access admission notices, timetables, and academic records seamlessly.`;
+
+    if (dbClient) {
+      await dbClient.query("SAVEPOINT seed_defaults_sp");
+      try {
+        await dbClient.query(
+          `INSERT INTO website_notices (website_id, title, slug, description, published_date, is_active)
+           VALUES ($1, $2, $3, $4, CURRENT_DATE, TRUE)
+           ON CONFLICT (website_id, slug) DO NOTHING`,
+          [websiteId, noticeTitle, noticeSlug, noticeDesc]
+        );
+        await dbClient.query("RELEASE SAVEPOINT seed_defaults_sp");
+      } catch (innerErr) {
+        await dbClient.query("ROLLBACK TO SAVEPOINT seed_defaults_sp");
+        console.error("Warning seeding default welcome notice:", innerErr);
+      }
+    } else {
+      await queryDb(
+        `INSERT INTO website_notices (website_id, title, slug, description, published_date, is_active)
+         VALUES ($1, $2, $3, $4, CURRENT_DATE, TRUE)
+         ON CONFLICT (website_id, slug) DO NOTHING`,
+        [websiteId, noticeTitle, noticeSlug, noticeDesc]
+      ).catch((innerErr) => console.error("Warning seeding default welcome notice:", innerErr));
+    }
   } catch (err: any) {
     console.error("Error seeding website defaults:", err);
   }

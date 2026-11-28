@@ -98,20 +98,20 @@ const INITIAL_DAYS = [
 ];
 
 interface AssetState {
-  url: string;
-  publicId: string;
+  file: File | null;
+  previewUrl: string;
+  isPdf: boolean;
   name: string;
   size: string;
-  uploading: boolean;
   error: string;
 }
 
 const EMPTY_ASSET: AssetState = {
-  url: '',
-  publicId: '',
+  file: null,
+  previewUrl: '',
+  isPdf: false,
   name: '',
   size: '',
-  uploading: false,
   error: '',
 };
 
@@ -132,7 +132,6 @@ function VerificationUploadCard({
   onSelectFile: (file: File) => void;
   onRemove: () => void;
 }) {
-  const isImage = asset.url && !asset.url.toLowerCase().includes('.pdf') && !asset.name.toLowerCase().endsWith('.pdf');
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-medium text-slate-700">
@@ -140,16 +139,15 @@ function VerificationUploadCard({
       </label>
       {helperText && <span className="block text-[10px] text-slate-500">{helperText}</span>}
 
-      {!asset.url ? (
+      {!asset.file ? (
         <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-300 rounded bg-slate-50 hover:bg-slate-100 cursor-pointer transition min-h-[96px]">
           <span className="text-xs font-medium text-slate-700">
-            {asset.uploading ? 'Uploading to Cloudinary...' : `Upload ${label}`}
+            Select {label}
           </span>
-          <span className="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WEBP or PDF up to 10MB</span>
+          <span className="text-[10px] text-slate-500 mt-0.5">JPG, PNG, WEBP or PDF up to 10MB (uploaded on create)</span>
           <input
             type="file"
             accept={accept}
-            disabled={asset.uploading}
             onChange={(e: any) => {
               const file = e.target.files?.[0];
               if (file) onSelectFile(file);
@@ -162,9 +160,9 @@ function VerificationUploadCard({
         <div className="p-2.5 border border-emerald-200 bg-emerald-50/50 rounded space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              {isImage ? (
+              {!asset.isPdf && asset.previewUrl ? (
                 <img
-                  src={asset.url}
+                  src={asset.previewUrl}
                   alt={label}
                   className="w-10 h-10 rounded object-cover border border-slate-200 bg-white shrink-0"
                 />
@@ -174,9 +172,9 @@ function VerificationUploadCard({
                 </div>
               )}
               <div className="min-w-0">
-                <div className="text-xs font-medium text-slate-900 truncate">{asset.name || 'Uploaded File'}</div>
+                <div className="text-xs font-medium text-slate-900 truncate">{asset.name || 'Selected File'}</div>
                 <div className="text-[10px] text-emerald-700 font-mono truncate">
-                  ID: {asset.publicId || 'Stored'} {asset.size ? `• ${asset.size}` : ''}
+                  Ready to upload {asset.size ? `• ${asset.size}` : ''}
                 </div>
               </div>
             </div>
@@ -189,15 +187,18 @@ function VerificationUploadCard({
             </button>
           </div>
           <div className="flex items-center justify-between border-t border-emerald-100 pt-1.5 text-[11px]">
-            <a href={asset.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">
-              Preview File
-            </a>
+            {asset.previewUrl ? (
+              <a href={asset.previewUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-medium">
+                Preview File
+              </a>
+            ) : (
+              <span className="text-slate-500">Selected</span>
+            )}
             <label className="text-slate-600 hover:text-slate-900 font-medium cursor-pointer">
               <span>Replace</span>
               <input
                 type="file"
                 accept={accept}
-                disabled={asset.uploading}
                 onChange={(e: any) => {
                   const file = e.target.files?.[0];
                   if (file) onSelectFile(file);
@@ -250,7 +251,9 @@ export default function CreateWebsitePage() {
   const [secondaryColor, setSecondaryColor] = useState<string>('#0ea5e9');
   const [theme, setTheme] = useState<string>('default');
   const [currency, setCurrency] = useState<string>('BDT');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoData, setLogoData] = useState<string>('');
+  const [faviconFile, setFaviconFile] = useState<File | null>(null);
   const [faviconData, setFaviconData] = useState<string>('');
   const [facebookUrl, setFacebookUrl] = useState<string>('');
   const [twitterUrl, setTwitterUrl] = useState<string>('');
@@ -438,23 +441,30 @@ export default function CreateWebsitePage() {
   const isSelectedSubQuotaReached = selectedSub ? selectedSubUsed >= selectedSubAllowed : true;
   const noActiveSubs = activeSubs.length === 0;
 
-  const handleImageSelect = (file: File, setter: (val: string) => void) => {
+  const handleImageSelect = (
+    file: File,
+    prevUrl: string,
+    setFile: (f: File | null) => void,
+    setPreviewUrl: (val: string) => void
+  ) => {
     if (file.size > 5 * 1024 * 1024) {
       setCreateError('Logo/Favicon file cannot exceed 5MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setter(String(reader.result || ''));
-    reader.readAsDataURL(file);
+    if (prevUrl && prevUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(prevUrl);
+    }
+    setFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const uploadVerificationAsset = async (
+  const selectVerificationFile = (
     file: File,
-    docType: string,
     currentAsset: AssetState,
     setAsset: React.Dispatch<React.SetStateAction<AssetState>>
   ) => {
-    const isImageOrPdf = file.type.startsWith('image/') || file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImageOrPdf = file.type.startsWith('image/') || isPdf;
     if (!isImageOrPdf) {
       setAsset((prev) => ({ ...prev, error: 'Only image files (JPG/PNG/WEBP) or PDF documents are supported.' }));
       return;
@@ -463,59 +473,25 @@ export default function CreateWebsitePage() {
       setAsset((prev) => ({ ...prev, error: 'File size exceeds the 10MB limit.' }));
       return;
     }
-    setAsset((prev) => ({ ...prev, uploading: true, error: '' }));
-    const reader = new FileReader();
-    reader.onload = async (ev: any) => {
-      try {
-        const res = await fetch('/api/marketing/creator/websites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'upload_document',
-            creatorId: Number(creatorId),
-            file: ev.target.result,
-            fileName: file.name,
-            documentType: docType,
-            oldPublicId: currentAsset.publicId || undefined,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.url) {
-          setAsset({
-            url: data.url,
-            publicId: data.publicId || '',
-            name: file.name,
-            size: `${(file.size / 1024).toFixed(1)} KB`,
-            uploading: false,
-            error: '',
-          });
-        } else {
-          setAsset((prev) => ({ ...prev, uploading: false, error: data.error || 'Upload failed.' }));
-        }
-      } catch {
-        setAsset((prev) => ({ ...prev, uploading: false, error: 'Network error uploading verification asset.' }));
-      }
-    };
-    reader.onerror = () => {
-      setAsset((prev) => ({ ...prev, uploading: false, error: 'Failed to read selected file.' }));
-    };
-    reader.readAsDataURL(file);
+    if (currentAsset.previewUrl && currentAsset.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(currentAsset.previewUrl);
+    }
+    setAsset({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      isPdf,
+      name: file.name,
+      size: `${(file.size / 1024).toFixed(1)} KB`,
+      error: '',
+    });
   };
 
-  const removeVerificationAsset = async (
+  const removeVerificationAsset = (
     asset: AssetState,
     setAsset: React.Dispatch<React.SetStateAction<AssetState>>
   ) => {
-    if (asset.publicId) {
-      fetch('/api/marketing/creator/websites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'delete_uploaded_asset',
-          creatorId: Number(creatorId),
-          publicId: asset.publicId,
-        }),
-      }).catch(() => {});
+    if (asset.previewUrl && asset.previewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(asset.previewUrl);
     }
     setAsset({ ...EMPTY_ASSET });
   };
@@ -546,12 +522,8 @@ export default function CreateWebsitePage() {
       setCreateError('Creator National ID (NID) number is required.');
       return;
     }
-    if (!nidFront.url || !nidBack.url) {
-      setCreateError('Both Creator NID Front image and NID Back image must be uploaded.');
-      return;
-    }
-    if (nidFront.uploading || nidBack.uploading || eiinCertAsset.uploading || ugcCertAsset.uploading || additionalCertAsset.uploading) {
-      setCreateError('Please wait until verification uploads finish.');
+    if (!nidFront.file || !nidBack.file) {
+      setCreateError('Both Creator NID Front image and NID Back image must be selected.');
       return;
     }
     setCurrentStep(3);
@@ -639,6 +611,11 @@ export default function CreateWebsitePage() {
       return;
     }
 
+    if (!nidFront.file || !nidBack.file) {
+      setCreateError('Creator NID Front and Back images are required.');
+      return;
+    }
+
     setCreating(true);
     const cleanSubdomain = subdomain.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
     const otherDetailsPayload = {
@@ -648,66 +625,66 @@ export default function CreateWebsitePage() {
     };
 
     try {
+      const payloadData = {
+        action: 'create_website',
+        creatorId: Number(creatorId),
+        subscriptionId: Number(selectedSubscriptionId),
+        name: name.trim(),
+        institutionType,
+        eeinNumber: eeinNumber.trim(),
+        tagline: tagline.trim(),
+        contactEmail: contactEmail.trim(),
+        contactPhone: contactPhone.trim(),
+        address: address.trim(),
+        primaryColor,
+        secondaryColor,
+        theme,
+        currency,
+        facebook_url: facebookUrl.trim(),
+        twitter_url: twitterUrl.trim(),
+        instagram_url: instagramUrl.trim(),
+        youtube_url: youtubeUrl.trim(),
+        linkedin_url: linkedinUrl.trim(),
+        is_maintenance_mode: isMaintenanceMode,
+        maintenance_message: maintenanceMessage.trim(),
+        subdomain: cleanSubdomain,
+        creatorNid: creatorNid.trim(),
+        eiinCertificate: eiinCertificate.trim(),
+        verificationAddress: (verificationAddress || address).trim(),
+        otherDetails: otherDetailsPayload,
+        academicConfig: hierarchyConfig,
+        academics: {
+          sessions: hierarchyConfig.use_session ? sessions.filter((s) => s.name.trim()) : [],
+          departments: hierarchyConfig.use_department ? departments.filter((d) => d.name.trim()) : [],
+          classes: hierarchyConfig.use_class ? classesList.filter((c) => c.name.trim()) : [],
+          sections: hierarchyConfig.use_section ? sectionsList.filter((s) => s.name.trim()) : [],
+          subjects: subjectsList.filter((s) => s.name.trim()),
+          days: daysList,
+          periods: periodsList.filter((p) => p.name.trim()),
+        },
+      };
+
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify(payloadData));
+      if (logoFile) formData.append('logo_file', logoFile);
+      if (faviconFile) formData.append('favicon_file', faviconFile);
+      formData.append('nid_front_file', nidFront.file);
+      formData.append('nid_back_file', nidBack.file);
+      if (eiinCertAsset.file) formData.append('eiin_certificate_file', eiinCertAsset.file);
+      if (ugcCertAsset.file) formData.append('ugc_certificate_file', ugcCertAsset.file);
+      if (additionalCertAsset.file) formData.append('additional_certificate_file', additionalCertAsset.file);
+
       const res = await fetch('/api/marketing/creator/websites', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_website',
-          creatorId: Number(creatorId),
-          subscriptionId: Number(selectedSubscriptionId),
-          name: name.trim(),
-          institutionType,
-          eeinNumber: eeinNumber.trim(),
-          tagline: tagline.trim(),
-          contactEmail: contactEmail.trim(),
-          contactPhone: contactPhone.trim(),
-          address: address.trim(),
-          primaryColor,
-          secondaryColor,
-          theme,
-          currency,
-          logo: logoData || undefined,
-          favicon: faviconData || undefined,
-          facebook_url: facebookUrl.trim(),
-          twitter_url: twitterUrl.trim(),
-          instagram_url: instagramUrl.trim(),
-          youtube_url: youtubeUrl.trim(),
-          linkedin_url: linkedinUrl.trim(),
-          is_maintenance_mode: isMaintenanceMode,
-          maintenance_message: maintenanceMessage.trim(),
-          subdomain: cleanSubdomain,
-          creatorNid: creatorNid.trim(),
-          creator_nid_front_image: nidFront.url,
-          creator_nid_front_image_id: nidFront.publicId,
-          creator_nid_back_image: nidBack.url,
-          creator_nid_back_image_id: nidBack.publicId,
-          eiinCertificate: eiinCertificate.trim(),
-          eiin_certificate_image: eiinCertAsset.url,
-          eiin_certificate_image_id: eiinCertAsset.publicId,
-          ugc_certificate: ugcCertAsset.url,
-          ugc_certificate_id: ugcCertAsset.publicId,
-          additional_certificate: additionalCertAsset.url,
-          additional_certificate_id: additionalCertAsset.publicId,
-          verificationAddress: (verificationAddress || address).trim(),
-          otherDetails: otherDetailsPayload,
-          academicConfig: hierarchyConfig,
-          academics: {
-            sessions: hierarchyConfig.use_session ? sessions.filter((s) => s.name.trim()) : [],
-            departments: hierarchyConfig.use_department ? departments.filter((d) => d.name.trim()) : [],
-            classes: hierarchyConfig.use_class ? classesList.filter((c) => c.name.trim()) : [],
-            sections: hierarchyConfig.use_section ? sectionsList.filter((s) => s.name.trim()) : [],
-            subjects: subjectsList.filter((s) => s.name.trim()),
-            days: daysList,
-            periods: periodsList.filter((p) => p.name.trim()),
-          },
-        }),
+        body: formData,
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.website?.id) {
         setCreateSuccess(`Website "${name}" created successfully! Redirecting to workspace...`);
         if (refetch) await refetch();
+        const targetSub = data.subdomain || cleanSubdomain;
         setTimeout(() => {
-          router.push(`/creator/${creatorId}/workspace/${cleanSubdomain}`);
+          router.push(`/creator/${creatorId}/workspace/${targetSub}`);
         }, 1200);
       } else {
         setCreateError(data.error || 'Failed to create website.');
@@ -770,8 +747,8 @@ export default function CreateWebsitePage() {
               {[
                 { num: 1, title: '1. Website Info', enabled: true },
                 { num: 2, title: '2. Verification Docs', enabled: Boolean(name && contactEmail && contactPhone && address) },
-                { num: 3, title: '3. Academic Hierarchy', enabled: Boolean(name && creatorNid && nidFront.url && nidBack.url) },
-                { num: 4, title: '4. Claim Subdomain', enabled: Boolean(name && creatorNid && nidFront.url && nidBack.url) },
+                { num: 3, title: '3. Academic Hierarchy', enabled: Boolean(name && creatorNid && nidFront.file && nidBack.file) },
+                { num: 4, title: '4. Claim Subdomain', enabled: Boolean(name && creatorNid && nidFront.file && nidBack.file) },
               ].map((st) => (
                 <button
                   key={st.num}
@@ -940,10 +917,14 @@ export default function CreateWebsitePage() {
                         )}
                         <label className="px-3 py-1.5 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-medium cursor-pointer">
                           <span>{logoData ? 'Change Logo' : 'Select Logo Image'}</span>
-                          <input type="file" accept="image/*" onChange={(e: any) => e.target.files?.[0] && handleImageSelect(e.target.files[0], setLogoData)} className="hidden" />
+                          <input type="file" accept="image/*" onChange={(e: any) => e.target.files?.[0] && handleImageSelect(e.target.files[0], logoData, setLogoFile, setLogoData)} className="hidden" />
                         </label>
                         {logoData && (
-                          <button type="button" onClick={() => setLogoData('')} className="text-[11px] text-rose-600 cursor-pointer">
+                          <button type="button" onClick={() => {
+                            if (logoData.startsWith('blob:')) URL.revokeObjectURL(logoData);
+                            setLogoFile(null);
+                            setLogoData('');
+                          }} className="text-[11px] text-rose-600 cursor-pointer">
                             Clear
                           </button>
                         )}
@@ -958,10 +939,14 @@ export default function CreateWebsitePage() {
                         )}
                         <label className="px-3 py-1.5 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs font-medium cursor-pointer">
                           <span>{faviconData ? 'Change Favicon' : 'Select Favicon Image'}</span>
-                          <input type="file" accept="image/*" onChange={(e: any) => e.target.files?.[0] && handleImageSelect(e.target.files[0], setFaviconData)} className="hidden" />
+                          <input type="file" accept="image/*" onChange={(e: any) => e.target.files?.[0] && handleImageSelect(e.target.files[0], faviconData, setFaviconFile, setFaviconData)} className="hidden" />
                         </label>
                         {faviconData && (
-                          <button type="button" onClick={() => setFaviconData('')} className="text-[11px] text-rose-600 cursor-pointer">
+                          <button type="button" onClick={() => {
+                            if (faviconData.startsWith('blob:')) URL.revokeObjectURL(faviconData);
+                            setFaviconFile(null);
+                            setFaviconData('');
+                          }} className="text-[11px] text-rose-600 cursor-pointer">
                             Clear
                           </button>
                         )}
@@ -1120,7 +1105,7 @@ export default function CreateWebsitePage() {
                     label="Creator NID Front Image"
                     required={true}
                     asset={nidFront}
-                    onSelectFile={(file) => uploadVerificationAsset(file, 'creator_nid_front', nidFront, setNidFront)}
+                    onSelectFile={(file) => selectVerificationFile(file, nidFront, setNidFront)}
                     onRemove={() => removeVerificationAsset(nidFront, setNidFront)}
                   />
 
@@ -1128,21 +1113,21 @@ export default function CreateWebsitePage() {
                     label="Creator NID Back Image"
                     required={true}
                     asset={nidBack}
-                    onSelectFile={(file) => uploadVerificationAsset(file, 'creator_nid_back', nidBack, setNidBack)}
+                    onSelectFile={(file) => selectVerificationFile(file, nidBack, setNidBack)}
                     onRemove={() => removeVerificationAsset(nidBack, setNidBack)}
                   />
 
                   <VerificationUploadCard
                     label="EIIN Certificate Image / PDF"
                     asset={eiinCertAsset}
-                    onSelectFile={(file) => uploadVerificationAsset(file, 'eiin_certificate', eiinCertAsset, setEiinCertAsset)}
+                    onSelectFile={(file) => selectVerificationFile(file, eiinCertAsset, setEiinCertAsset)}
                     onRemove={() => removeVerificationAsset(eiinCertAsset, setEiinCertAsset)}
                   />
 
                   <VerificationUploadCard
                     label="UGC / Accreditation Certificate"
                     asset={ugcCertAsset}
-                    onSelectFile={(file) => uploadVerificationAsset(file, 'ugc_certificate', ugcCertAsset, setUgcCertAsset)}
+                    onSelectFile={(file) => selectVerificationFile(file, ugcCertAsset, setUgcCertAsset)}
                     onRemove={() => removeVerificationAsset(ugcCertAsset, setUgcCertAsset)}
                   />
 
@@ -1150,7 +1135,7 @@ export default function CreateWebsitePage() {
                     <VerificationUploadCard
                       label="Additional Supporting Certificate"
                       asset={additionalCertAsset}
-                      onSelectFile={(file) => uploadVerificationAsset(file, 'additional_certificate', additionalCertAsset, setAdditionalCertAsset)}
+                      onSelectFile={(file) => selectVerificationFile(file, additionalCertAsset, setAdditionalCertAsset)}
                       onRemove={() => removeVerificationAsset(additionalCertAsset, setAdditionalCertAsset)}
                     />
                   </div>
