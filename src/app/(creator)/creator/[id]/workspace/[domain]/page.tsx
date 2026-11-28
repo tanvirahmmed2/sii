@@ -3720,9 +3720,7 @@ export default function WebsiteManagePage() {
                       <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
                         <th className="py-2.5 px-3">{academicConfig.labels.class} Name</th>
                         <th className="py-2.5 px-3">Code</th>
-                        <th className="py-2.5 px-3">{academicConfig.labels.department}</th>
                         <th className="py-2.5 px-3">Max Seats</th>
-                        <th className="py-2.5 px-3">Sections</th>
                         <th className="py-2.5 px-3">Description</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
@@ -3731,13 +3729,7 @@ export default function WebsiteManagePage() {
                       {academicClasses.map((c: any) => (<tr key={c.id} className="hover:bg-slate-50">
                           <td className="py-2.5 px-3 font-semibold text-slate-900">{c.name}</td>
                           <td className="py-2.5 px-3 font-mono text-[10px]">{c.code || '—'}</td>
-                          <td className="py-2.5 px-3">
-                            {c.department_name ? (<span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-[10px]">
-                                {c.department_name}
-                              </span>) : (<span className="text-slate-400 italic">Independent / General</span>)}
-                          </td>
                           <td className="py-2.5 px-3 font-mono text-slate-700">{c.max_seats ?? 40} seats</td>
-                          <td className="py-2.5 px-3 font-medium text-slate-700">{c.section_count || 0}</td>
                           <td className="py-2.5 px-3 text-slate-500 truncate max-w-xs">{c.description || '—'}</td>
                           <td className="py-2.5 px-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
@@ -3746,7 +3738,6 @@ export default function WebsiteManagePage() {
                         setClassForm({
                             name: c.name,
                             code: c.code || '',
-                            department_id: c.department_id ? String(c.department_id) : '',
                             max_seats: c.max_seats ?? 40,
                             description: c.description || '',
                         });
@@ -3766,9 +3757,6 @@ export default function WebsiteManagePage() {
                   <button type="button" onClick={() => {
                     setSectionModal({ open: true, editing: null });
                     setSectionForm({
-                        class_id: academicClasses[0]?.id ? String(academicClasses[0].id) : '',
-                        department_id: academicDepts[0]?.id ? String(academicDepts[0].id) : '',
-                        session_id: academicSessions[0]?.id ? String(academicSessions[0].id) : '',
                         name: '',
                         capacity: 40,
                         room_number: '',
@@ -3781,9 +3769,6 @@ export default function WebsiteManagePage() {
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider">
                         <th className="py-2.5 px-3">{academicConfig.labels.section} Name</th>
-                        <th className="py-2.5 px-3">{academicConfig.labels.class}</th>
-                        <th className="py-2.5 px-3">{academicConfig.labels.department}</th>
-                        <th className="py-2.5 px-3">{academicConfig.labels.session}</th>
                         <th className="py-2.5 px-3">Capacity</th>
                         <th className="py-2.5 px-3">Room / Venue</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
@@ -3792,9 +3777,6 @@ export default function WebsiteManagePage() {
                     <tbody className="divide-y divide-slate-100">
                       {academicSections.map((s: any) => (<tr key={s.id} className="hover:bg-slate-50">
                           <td className="py-2.5 px-3 font-semibold text-slate-900">{s.name}</td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800">{s.class_name || '—'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{s.department_name || 'General'}</td>
-                          <td className="py-2.5 px-3 text-slate-600">{s.session_name || '—'}</td>
                           <td className="py-2.5 px-3 font-mono text-slate-700">{s.capacity} seats</td>
                           <td className="py-2.5 px-3 text-slate-600">{s.room_number || '—'}</td>
                           <td className="py-2.5 px-3 text-right">
@@ -3802,9 +3784,6 @@ export default function WebsiteManagePage() {
                               <button type="button" onClick={() => {
                         setSectionModal({ open: true, editing: s });
                         setSectionForm({
-                            class_id: s.class_id ? String(s.class_id) : '',
-                            department_id: s.department_id ? String(s.department_id) : '',
-                            session_id: s.session_id ? String(s.session_id) : '',
                             name: s.name,
                             capacity: s.capacity ?? 40,
                             room_number: s.room_number || '',
@@ -4035,17 +4014,6 @@ export default function WebsiteManagePage() {
                     </label>
                     <input type="text" aria-label="Class Name" value={classForm.name} onChange={(e: any) => setClassForm({ ...classForm, name: e.target.value })} required className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden"/>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                      Department Track (Optional)
-                    </label>
-                    <select aria-label="Department Track" value={classForm.department_id} onChange={(e: any) => setClassForm({ ...classForm, department_id: e.target.value })} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer">
-                      <option value="">None / General (Independent Class)</option>
-                      {academicDepts.map((d: any) => (<option key={d.id} value={d.id}>
-                          {d.name} {d.code ? `(${d.code})` : ''}
-                        </option>))}
-                    </select>
-                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-medium text-slate-700 mb-1">
@@ -4173,37 +4141,6 @@ export default function WebsiteManagePage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveSection} className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      {academicConfig.labels.class} {academicConfig.use_class && academicConfig.require_class ? '*' : '(Optional)'}
-                    </label>
-                    <select aria-label="Parent Class" value={sectionForm.class_id} onChange={(e: any) => setSectionForm({ ...sectionForm, class_id: e.target.value })} required={Boolean(academicConfig.use_class && academicConfig.require_class)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-900 focus:outline-hidden cursor-pointer">
-                      <option value="">None / Direct {academicConfig.labels.section}</option>
-                      {academicClasses.map((c: any) => (<option key={c.id} value={c.id}>
-                          {c.name} {c.department_name ? `(${c.department_name})` : ''}
-                        </option>))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                        {academicConfig.labels.department} (Optional)
-                      </label>
-                      <select aria-label="Section Department" value={sectionForm.department_id} onChange={(e: any) => setSectionForm({ ...sectionForm, department_id: e.target.value })} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 text-slate-900">
-                        <option value="">None</option>
-                        {academicDepts.map((d: any) => (<option key={d.id} value={d.id}>{d.name}</option>))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                        {academicConfig.labels.session} (Optional)
-                      </label>
-                      <select aria-label="Section Session" value={sectionForm.session_id} onChange={(e: any) => setSectionForm({ ...sectionForm, session_id: e.target.value })} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 text-slate-900">
-                        <option value="">None</option>
-                        {academicSessions.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-                      </select>
-                    </div>
-                  </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       {academicConfig.labels.section} Name *

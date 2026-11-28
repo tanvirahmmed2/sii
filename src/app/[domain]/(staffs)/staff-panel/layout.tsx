@@ -18,14 +18,16 @@ export const dynamic = 'force-dynamic';
 const StaffPanelLayout = async ({ children, params }: any) => {
   const resolvedParams = await params;
   const domain = resolvedParams?.domain;
-  const staffSession = await getStaffSession(domain);
+  const [staffSession, website] = await Promise.all([
+    getStaffSession(domain),
+    resolveWebsiteFromRequest(null, { params: resolvedParams }),
+  ]);
   let isCreatorAdmin = false;
   let creatorSession = null;
 
   if (!staffSession) {
     creatorSession = await getCreatorSession();
     if (creatorSession) {
-      const website = await resolveWebsiteFromRequest(null, { params: resolvedParams });
       if (website && (String(creatorSession.id) === String(website.creator_id) || creatorSession.isDeveloper)) {
         isCreatorAdmin = true;
       }
@@ -37,7 +39,15 @@ const StaffPanelLayout = async ({ children, params }: any) => {
     redirect(loginTarget);
   }
 
-  const allowedModules = isCreatorAdmin ? ['all'] : (staffSession?.allowedModules || []);
+  const websiteAllowedSlugs = Array.isArray(website?.allowed_control_module_slugs)
+    ? website.allowed_control_module_slugs
+    : [];
+  const allowedModules = isCreatorAdmin
+    ? (websiteAllowedSlugs.length > 0 ? websiteAllowedSlugs : ['all'])
+    : (staffSession?.allowedModules || []);
+  const allowedPaths = isCreatorAdmin
+    ? (Array.isArray(website?.allowed_control_module_paths) ? website.allowed_control_module_paths : [])
+    : (staffSession?.allowedModulePaths || []);
   const staffUser = staffSession?.staff || staffSession?.user || staffSession || (isCreatorAdmin ? {
     id: creatorSession?.id,
     name: creatorSession?.name || 'Administrator',
@@ -50,9 +60,9 @@ const StaffPanelLayout = async ({ children, params }: any) => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       <Navbar staffUser={staffUser} />
       <div className="flex flex-1 pt-14 min-h-[calc(100vh-3.5rem)]">
-        <Sidebar allowedModules={allowedModules} isDevAdmin={isCreatorAdmin} />
+        <Sidebar allowedModules={allowedModules} allowedPaths={allowedPaths} isDevAdmin={isCreatorAdmin} staffPermissions={staffSession?.permissions || null} />
         <main className="flex-1 w-full min-w-0 p-4 sm:p-6 lg:p-8 transition-all duration-200">
-          <StaffModuleRouteGuard allowedModules={allowedModules}>
+          <StaffModuleRouteGuard allowedModules={allowedModules} allowedPaths={allowedPaths} isDevAdmin={isCreatorAdmin}>
             {children}
           </StaffModuleRouteGuard>
         </main>

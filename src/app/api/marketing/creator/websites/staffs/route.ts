@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession, hashPassword } from 'src/lib/middleware/creator';
 import { revokeAllStaffSessions } from 'src/lib/middleware/staff';
-import { invalidatePanelSessionsByTag } from 'src/lib/redis/redisClient';
+import { invalidatePanelSessionsByTag, invalidateStaffModulesCache } from 'src/lib/redis/redisClient';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
-import { getBaseUrl, getWebsiteUrl, BASE_DOMAIN, BASE_HOST } from 'src/lib/database/secret';
+import { getWebsiteUrl } from 'src/lib/database/secret';
 import { generateToken } from 'src/lib/utils/random';
 import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
 import { getClientIp, getUserAgent, inspectMalwareAndAttacks, checkRateLimit, } from 'src/lib/security/shield';
@@ -25,6 +24,59 @@ async function verifyWebsiteOwnership(websiteId: any, sessionCreator: any, creat
 function buildStaffVerificationUrl(website: any, token: any, request: any) {
     const origin = getWebsiteUrl(website, request);
     return `${origin}/auth/access/staff/verify?token=${encodeURIComponent(token)}`;
+}
+function buildStaffLoginUrl(website: any, request: any) {
+    const origin = getWebsiteUrl(website, request);
+    return `${origin}/auth/access/staff/login`;
+}
+async function sendStaffVerificationEmail({
+    website,
+    staff,
+    verificationToken,
+    request,
+    isResend = false,
+    isRegistered = false,
+    ip = null,
+}: any) {
+    const setupUrl = buildStaffVerificationUrl(website, verificationToken, request);
+    const loginUrl = buildStaffLoginUrl(website, request);
+    const primaryUrl = isRegistered ? loginUrl : setupUrl;
+    const primaryLabel = isRegistered ? 'Open Staff Portal Login' : 'Verify Your Account';
+    const messageLine = isResend
+        ? `A new verification link has been issued for your staff account at ${website.name}.`
+        : `You have been registered as a staff member at ${website.name}.`;
+    const instructionLine = isRegistered
+        ? 'Click the button below to access your staff portal login.'
+        : 'Click the verification button below to confirm your staff identity and configure your portal password.';
+    const html = buildStyledEmail({
+        title: isResend ? 'Staff Account Verification' : `${website.name} Staff Verification`,
+        institutionName: website.name,
+        bodyHtml: `
+          <p style="margin: 0 0 14px 0;">Dear ${staff.name},</p>
+          <p style="margin: 0 0 14px 0;">${messageLine}</p>
+          <p style="margin: 0;">${instructionLine}</p>
+        `,
+        actionUrl: primaryUrl,
+        actionText: primaryLabel,
+        footerNote: isRegistered ? '' : 'This verification link is valid for 7 days.',
+    });
+    const text = isRegistered
+        ? `Dear ${staff.name},\n\n${messageLine}\n\n${instructionLine}\n${loginUrl}`
+        : `Dear ${staff.name},\n\n${messageLine}\n\n${instructionLine}\n${setupUrl}\n\nThis verification link is valid for 7 days.`;
+    await sendEmail({
+        to: staff.email,
+        toName: staff.name,
+        fromName: website.name || undefined,
+        subject: isResend ? `Verify Your Staff Account - ${website.name}` : `Staff Account Verification - ${website.name}`,
+        html,
+        text,
+        websiteId: website.id,
+        recipientType: 'staff',
+        recipientId: staff.id,
+        purpose: 'staff_verification',
+        ip,
+    });
+    return { setupUrl, loginUrl };
 }
 export async function GET(request: any) {
     try {
@@ -238,23 +290,14 @@ export async function POST(request: any) {
         let emailSent = false;
         let emailError = null;
         try {
-            await sendEmail({
-                to: newStaff.email,
-                toName: newStaff.name,
-                subject: `Staff Verification & Portal Setup - ${website.name}`,
-                html: buildStyledEmail({
-                    title: `${website.name} Staff Portal`,
-                    subtitle: 'Institutional Account Verification',
-                    recipientName: newStaff.name,
-                    bodyParagraphs: [
-                        `You have been registered as an official staff member for ${website.name}.`,
-                        'Please verify your staff account and complete your portal setup using the verification token below:',
-                    ],
-                    code: verificationToken,
-                    codeLabel: 'Verification Token',
-                    footerNote: `This verification token is valid for 7 days. If you were not expecting this, please contact administration at ${website.contact_email || 'the institution'}.`,
-                }),
-                text: `Welcome to ${website.name}. You have been registered as a staff member. Your verification token is: ${verificationToken}. Valid for 7 days.`,
+            await sendStaffVerificationEmail({
+                website,
+                staff: newStaff,
+                verificationToken,
+                request,
+                isResend: false,
+                isRegistered,
+                ip: getClientIp(request),
             });
             emailSent = true;
         }
@@ -262,28 +305,13 @@ export async function POST(request: any) {
             console.warn('Notice sending staff verification email:', err.message);
             emailError = err.message;
         }
-        let smsSent = false;
-        if (sendInvite && cleanNumber) {
-            try {
-                await sendSms({
-                    to: cleanNumber,
-                    message: `Welcome to ${website.name}. You have been registered as a staff member. Your verification token is: ${verificationToken}`,
-                    purpose: 'staff_invite',
-                    userId: newStaff.id,
-                    userType: 'staff',
-                    websiteId,
-                });
-                smsSent = true;
-            }
-            catch (_: any) { }
-        }
         return NextResponse.json({
             success: true,
-            message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}${smsSent ? ' Notification SMS sent.' : ''}`,
+            message: `Staff member "${newStaff.name}" created successfully.${emailSent ? ' Verification email sent.' : (emailError ? ` (Email delivery notice: ${emailError})` : '')}`,
             staff: newStaff,
-            inviteSent: emailSent || smsSent,
+            inviteSent: emailSent,
             emailSent,
-            smsSent,
+            smsSent: false,
             setupUrl,
             verificationToken,
         });
@@ -326,23 +354,14 @@ export async function PUT(request: any) {
             let emailSent = false;
             let emailError = null;
             try {
-                await sendEmail({
-                    to: staff.email,
-                    toName: staff.name,
-                    subject: `Staff Verification Code - ${website.name}`,
-                    html: buildStyledEmail({
-                        title: `${website.name} Staff Portal`,
-                        subtitle: 'Official Staff Account Verification',
-                        recipientName: staff.name,
-                        bodyParagraphs: [
-                            `Here is your requested staff verification token for ${website.name}.`,
-                            'Enter the token below on the staff verification page to complete your staff profile and security setup:',
-                        ],
-                        code: newToken,
-                        codeLabel: 'Verification Token',
-                        footerNote: 'This verification token is valid for 7 days.',
-                    }),
-                    text: `Your staff verification token for ${website.name} is: ${newToken}. Valid for 7 days.`,
+                await sendStaffVerificationEmail({
+                    website,
+                    staff,
+                    verificationToken: newToken,
+                    request,
+                    isResend: true,
+                    isRegistered: Boolean(staff.is_registered),
+                    ip: getClientIp(request),
                 });
                 emailSent = true;
             }
@@ -428,7 +447,10 @@ export async function PUT(request: any) {
             can_delete = EXCLUDED.can_delete,
             updated_at = CURRENT_TIMESTAMP`, [websiteId, staffId, ctrlIds, views, creates, edits, deletes]);
             }
-            await invalidatePanelSessionsByTag('staff', `staff:${staffId}`);
+            await Promise.all([
+                invalidatePanelSessionsByTag('staff', `staff:${staffId}`),
+                invalidateStaffModulesCache(websiteId, staffId),
+            ]);
             return NextResponse.json({
                 success: true,
                 message: 'Module permissions updated successfully.',
@@ -533,6 +555,10 @@ export async function DELETE(request: any) {
             return NextResponse.json({ success: false, error: 'Unauthorized or website not found.' }, { status: 403 });
         }
         await queryDb(`DELETE FROM website_staffs WHERE id = $1 AND website_id = $2`, [staffId, websiteId]);
+        await Promise.all([
+            invalidatePanelSessionsByTag('staff', `staff:${staffId}`),
+            invalidateStaffModulesCache(websiteId, staffId),
+        ]);
         return NextResponse.json({
             success: true,
             message: 'Staff member removed successfully.',

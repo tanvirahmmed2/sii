@@ -442,25 +442,28 @@ export async function POST(request: any, context: any) {
         let emailError = null;
         try {
             const emailHtml = buildStyledEmail({
-                title: 'Officer Account Invitation',
-                subtitle: `${website.name} — Administrative Portal`,
-                recipientName: name.trim(),
-                bodyParagraphs: [
-                    `You have been registered as an administrative officer (${designation} - ${validDept}) at ${website.name}.`,
-                    'Please verify your officer identity and establish your login credentials on the verification screen using the token below.',
-                    'This verification token is valid for 7 days. Once verified, you will be able to access the Officer Panel to manage your designated campus operations.',
-                ],
-                code: verificationToken,
-                codeLabel: 'Verification Token',
-                footerNote: 'If you did not expect this invitation, please contact your campus administration.',
+                title: 'Officer Account Verification',
+                institutionName: website.name,
+                bodyHtml: `
+                  <p style="margin: 0 0 14px 0;">Dear ${name.trim()},</p>
+                  <p style="margin: 0 0 14px 0;">You have been registered as an officer (${designation?.trim() || 'Officer'} - ${validDept}) at ${website.name}.</p>
+                  <p style="margin: 0;">Click the verification button below to confirm your account and configure your portal password.</p>
+                `,
+                actionUrl: verificationUrl,
+                actionText: 'Verify Your Account',
+                footerNote: 'This verification link is valid for 7 days.',
             });
             await sendEmail({
                 to: trimmedEmail,
                 toName: name.trim(),
-                subject: `${website.name} - Complete Your Officer Account Setup`,
+                fromName: website.name || undefined,
+                subject: `${website.name} - Verify Your Officer Account`,
                 html: emailHtml,
-                text: `Welcome to ${website.name}. You have been registered as an administrative officer. Your verification token is: ${verificationToken}. Valid for 7 days.`,
+                text: `Dear ${name.trim()},\n\nYou have been registered as an officer at ${website.name}.\n\nClick the link below to verify your account and configure your portal password:\n${verificationUrl}\n\nThis verification link is valid for 7 days.`,
                 websiteId: website.id,
+                recipientType: 'officer',
+                recipientId: createdOfficer.id,
+                purpose: 'officer_verification',
             });
             emailSent = true;
         }

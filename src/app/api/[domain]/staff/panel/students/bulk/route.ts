@@ -40,8 +40,8 @@ export async function POST(request: any, context: any) {
         }
         const [deptsRes, classesRes, sectionsRes, sessionsRes] = await Promise.all([
             queryDb(`SELECT id, name, code FROM website_departments WHERE website_id = $1`, [website.id]),
-            queryDb(`SELECT id, name, code, department_id FROM website_classes WHERE website_id = $1`, [website.id]),
-            queryDb(`SELECT id, name, class_id FROM website_sections WHERE website_id = $1`, [website.id]),
+            queryDb(`SELECT id, name, code FROM website_classes WHERE website_id = $1`, [website.id]),
+            queryDb(`SELECT id, name FROM website_sections WHERE website_id = $1`, [website.id]),
             queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1`, [website.id]),
         ]);
         const deptsList = deptsRes.rows;
@@ -62,12 +62,11 @@ export async function POST(request: any, context: any) {
             const found = classesList.find((c: any) => (c.code && c.code.toLowerCase() === str) || c.name.toLowerCase() === str || String(c.id) === str);
             return found ? found.id : null;
         };
-        const findSectionId = (val: any, classId: any) => {
+        const findSectionId = (val: any, _classId?: any) => {
             if (!val)
                 return null;
             const str = String(val).trim().toLowerCase();
-            const found = sectionsList.find((s: any) => (!classId || String(s.class_id) === String(classId)) &&
-                (s.name.toLowerCase() === str || String(s.id) === str));
+            const found = sectionsList.find((s: any) => s.name.toLowerCase() === str || String(s.id) === str);
             return found ? found.id : null;
         };
         const findSessionId = (val: any) => {
@@ -153,6 +152,7 @@ export async function POST(request: any, context: any) {
                         const emailHtml = buildStyledEmail({
                             title: `Welcome to ${instName}`,
                             subtitle: 'Official Student Identity & Portal Account Setup',
+                            institutionName: instName,
                             recipientName: 'Student',
                             bodyParagraphs: [
                                 `Congratulations! You have been registered into the official academic database at <strong>${instName}</strong>.`,
@@ -163,17 +163,23 @@ export async function POST(request: any, context: any) {
                   ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
                   <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${email}</code></div>
                 </div>`,
-                                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, please visit the student setup page with your registration details.`,
+                                `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your student account setup.`,
                             ],
+                            actionUrl: setupUrl,
+                            actionText: 'Complete Student Account Setup',
                             footerNote: `If you did not request this registration or have questions, please contact the ${instName} administrative office.`
                         });
                         await sendEmail({
                             to: email,
                             toName: 'Student',
+                            fromName: instName,
                             subject: `Student Account Setup & Registration - ${instName}`,
                             html: emailHtml,
-                            text: `Welcome to ${instName}. Your Registration No is ${newStudent.registration_no}, Student ID: ${newStudent.student_unique_id}. Please visit the portal setup page to configure your personal account password.`,
+                            text: `Welcome to ${instName}. Your Registration No is ${newStudent.registration_no}, Student ID: ${newStudent.student_unique_id}. Complete your portal account setup here: ${setupUrl}`,
                             websiteId: website.id,
+                            recipientType: 'student',
+                            recipientId: newStudent.id,
+                            purpose: 'student_setup',
                         });
                     }
                     catch (mailErr: any) {

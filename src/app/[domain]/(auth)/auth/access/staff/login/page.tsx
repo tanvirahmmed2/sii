@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiEye, FiEyeOff, FiMail, FiPhone, FiAlertCircle } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 export default function StaffLoginPage() {
     const router = useRouter();
@@ -62,11 +62,10 @@ export default function StaffLoginPage() {
             }
             if (data.twoFactorRequired || data.requires2FA) {
                 setStep('2fa');
-                if (data.channel)
-                    setChannel(data.channel);
+                setChannel('email');
                 setHasPhone(Boolean(data.hasPhone));
                 setHasEmail(Boolean(data.hasEmail));
-                setMaskedTarget(data.channel === 'sms' ? (data.phone || 'your phone') : (data.email || 'your email'));
+                setMaskedTarget(data.email || 'your email');
                 setCooldown(60);
                 toast.success(data.message || 'Verification code dispatched.');
             }
@@ -135,9 +134,9 @@ export default function StaffLoginPage() {
             if (!response.ok) {
                 throw new Error(data.error || data.message || 'Failed to resend code.');
             }
-            setChannel(activeChannel);
+            setChannel('email');
             setCooldown(60);
-            toast.success(data.message || `New code sent via ${activeChannel === 'sms' ? 'SMS' : 'email'}.`);
+            toast.success(data.message || 'New verification code sent via email.');
         }
         catch (err: any) {
             toast.error(err.message);
@@ -170,16 +169,9 @@ export default function StaffLoginPage() {
                 Two-Factor Security Verification
               </span>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                A 6-digit passcode was dispatched to <strong className="text-slate-900 dark:text-white">{maskedTarget || identifier}</strong> via {channel.toUpperCase()}.
+                A 6-digit passcode was dispatched to <strong className="text-slate-900 dark:text-white">{maskedTarget || identifier}</strong> via EMAIL.
               </p>
             </div>
-
-            {hasPhone && hasEmail && (<div className="flex items-center justify-center gap-2 pt-1">
-                <button type="button" onClick={() => handleResendCode(channel === 'email' ? 'sms' : 'email')} disabled={resending || cooldown > 0} className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium cursor-pointer disabled:opacity-50">
-                  {channel === 'email' ? <FiPhone size={13}/> : <FiMail size={13}/>}
-                  <span>{channel === 'email' ? 'Switch to SMS delivery' : 'Switch to Email delivery'}</span>
-                </button>
-              </div>)}
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">

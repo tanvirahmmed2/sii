@@ -3,7 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { FiEye, FiEyeOff, FiMail, FiPhone, FiLock, FiKey, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiCheckCircle } from 'react-icons/fi';
 import { useTenantWebsite } from 'src/component/helper/WebsiteContext';
 function StaffRecoveryInner() {
     const router = useRouter();
@@ -56,10 +56,10 @@ function StaffRecoveryInner() {
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to dispatch recovery code.');
             }
-            setChannel(activeChannel);
+            setChannel('email');
             setCooldown(60);
             setStep('reset');
-            toast.success(data.message || `Recovery code sent via ${activeChannel === 'sms' ? 'SMS' : 'email'}.`);
+            toast.success(data.message || 'Recovery code and link sent via email.');
         }
         catch (err: any) {
             toast.error(err.message);
@@ -143,24 +143,8 @@ function StaffRecoveryInner() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Recovery Code Delivery Method *
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setChannel('email')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded text-xs font-medium border cursor-pointer transition-colors ${channel === 'email'
-                ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10'
-                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900'}`}>
-                <FiMail />
-                <span>Via Email</span>
-              </button>
-              <button type="button" onClick={() => setChannel('sms')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded text-xs font-medium border cursor-pointer transition-colors ${channel === 'sms'
-                ? 'border-primary bg-primary/5 text-primary dark:bg-primary/10'
-                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900'}`}>
-                <FiPhone />
-                <span>Via SMS</span>
-              </button>
-            </div>
+          <div className="p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-600 dark:text-slate-400">
+            Recovery code &amp; reset link will be dispatched to your registered email address.
           </div>
 
           <button type="submit" disabled={loading} className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center">

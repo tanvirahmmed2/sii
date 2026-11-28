@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { TenantWebsiteContext } from 'src/component/helper/WebsiteContext';
 const INSTITUTION_TYPES = [
     { value: 'school', label: 'School' },
     { value: 'university', label: 'University' },
@@ -96,6 +97,8 @@ const HIERARCHY_PRESETS = [
 ];
 export default function SystemManagementPage() {
     const routeParams: any = useParams();
+    const router = useRouter();
+    const tenantCtx: any = React.useContext(TenantWebsiteContext);
     const domain = routeParams?.domain || '';
     const apiBase = useMemo(() => (domain ? `/api/${domain}` : '/api'), [domain]);
     const [activeTab, setActiveTab] = useState<any>('hierarchy');
@@ -335,6 +338,10 @@ export default function SystemManagementPage() {
                         }
                     }));
                 }
+                if (typeof tenantCtx?.fetchWebsiteData === 'function') {
+                    await tenantCtx.fetchWebsiteData().catch(() => {});
+                }
+                router.refresh();
             }
             else {
                 showToast(data.error || 'Failed to save academic hierarchy.', true);
@@ -365,7 +372,11 @@ export default function SystemManagementPage() {
             const data = await res.json();
             if (data.success) {
                 showToast('System configuration updated successfully.');
-                loadSystemData();
+                await loadSystemData();
+                if (typeof tenantCtx?.fetchWebsiteData === 'function') {
+                    await tenantCtx.fetchWebsiteData().catch(() => {});
+                }
+                router.refresh();
             }
             else {
                 showToast(data.error || 'Failed to update system configuration.', true);
@@ -394,6 +405,8 @@ export default function SystemManagementPage() {
     const domains = systemData?.domains || [];
     const modules = systemData?.modules || [];
     const portals = systemData?.portals || {};
+    const canEditSystem = systemData?.permissions?.canEdit !== false;
+    const canEditAcademic = systemData?.permissions?.canEditAcademic !== false;
     return (<div className="w-full space-y-4">
       {toastMessage && (<div className="p-3.5 rounded text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between shadow-xs">
           <span className="font-medium">{toastMessage}</span>
@@ -459,8 +472,8 @@ export default function SystemManagementPage() {
                   Choose the academic hierarchy model that matches your institution&apos;s workflow. Forms, admissions, and student rosters automatically adapt to your chosen model.
                 </p>
               </div>
-              <button type="button" onClick={handleSaveHierarchy} disabled={savingHierarchy} className="px-4 py-2 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 cursor-pointer self-start sm:self-center shrink-0">
-                {savingHierarchy ? 'Saving Architecture...' : 'Save Architecture Preset'}
+              <button type="button" onClick={handleSaveHierarchy} disabled={savingHierarchy || !canEditAcademic} className="px-4 py-2 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 cursor-pointer self-start sm:self-center shrink-0">
+                {savingHierarchy ? 'Saving Architecture...' : !canEditAcademic ? 'View Only Access' : 'Save Architecture Preset'}
               </button>
             </div>
 
@@ -625,8 +638,8 @@ export default function SystemManagementPage() {
               </div>
 
               <div className="flex justify-end pt-2">
-                <button type="button" onClick={handleSaveHierarchy} disabled={savingHierarchy} className="px-5 py-2 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition disabled:opacity-50 cursor-pointer">
-                  {savingHierarchy ? 'Saving Changes...' : 'Save Hierarchy & Labels'}
+                <button type="button" onClick={handleSaveHierarchy} disabled={savingHierarchy || !canEditAcademic} className="px-5 py-2 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition disabled:opacity-50 cursor-pointer">
+                  {savingHierarchy ? 'Saving Changes...' : !canEditAcademic ? 'View Only Access' : 'Save Hierarchy & Labels'}
                 </button>
               </div>
             </div>
@@ -641,8 +654,8 @@ export default function SystemManagementPage() {
                 Official accreditation, address, and profile data displayed on the institutional site and receipts.
               </p>
             </div>
-            <button type="button" onClick={handleSaveProfile} disabled={savingGeneral} className="px-4 py-2 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 cursor-pointer">
-              {savingGeneral ? 'Saving Profile...' : 'Save Profile Changes'}
+            <button type="button" onClick={handleSaveProfile} disabled={savingGeneral || !canEditSystem} className="px-4 py-2 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition disabled:opacity-50 cursor-pointer">
+              {savingGeneral ? 'Saving Profile...' : !canEditSystem ? 'View Only Access' : 'Save Profile Changes'}
             </button>
           </div>
 

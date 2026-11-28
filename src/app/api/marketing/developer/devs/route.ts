@@ -52,13 +52,15 @@ async function handleCreateAdmin(d: any, request: any) {
      FROM developers d
      LEFT JOIN developer_roles r ON d.role_id = r.id
      WHERE d.id = $1 LIMIT 1`, [insertRes.rows[0].id]);
-    const newAdmin = {
+    const newAdmin: any = {
         ...(devWithRole.rows[0] || insertRes.rows[0]),
         is_verified: false,
     };
+    const verifyUrl = `${getBaseUrl(request)}/developer-auth/verify?token=${encodeURIComponent(verificationToken)}&email=${encodeURIComponent(email)}`;
     try {
         await sendEmail({
             to: email,
+            toName: name,
             subject: `Verify Your Developer Account - ${SITE_NAME}`,
             html: buildStyledEmail({
                 title: `${SITE_NAME} Developer Portal`,
@@ -66,13 +68,18 @@ async function handleCreateAdmin(d: any, request: any) {
                 recipientName: name,
                 bodyParagraphs: [
                     `An administrator account has been created for you on ${SITE_NAME}.`,
-                    'To activate your account and set up access, please enter the 6-digit verification code below on the verification page.',
+                    'Click the verification button below or enter the 6-digit verification code on the verification page to activate your account.',
                 ],
+                actionUrl: verifyUrl,
+                actionText: 'Verify Developer Account',
                 code: String(verificationCode),
                 codeLabel: 'Verification Code',
-                footerNote: 'This activation code is valid for 24 hours. If you did not expect this invitation, please ignore this email.',
+                footerNote: 'This activation link and code are valid for 24 hours. If you did not expect this invitation, please ignore this email.',
             }),
-            text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\n\nYour 6-digit verification code is: ${verificationCode}\n\nEnter this code on the verification page to activate your account.\n\nThis code expires in 24 hours.`,
+            text: `Hello ${name},\n\nAn administrator account was created for you on ${SITE_NAME}.\nVerify using this link: ${verifyUrl}\nOr enter your 6-digit verification code: ${verificationCode}\n\nExpires in 24 hours.`,
+            recipientType: 'developer',
+            recipientId: newAdmin.id,
+            purpose: 'developer_verification',
         });
     }
     catch (mailErr: any) {

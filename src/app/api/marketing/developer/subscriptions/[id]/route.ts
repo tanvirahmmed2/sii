@@ -650,12 +650,14 @@ export async function PUT(request: any, { params }: any) {
                 await queryDb(`UPDATE websites SET subscription_id = NULL WHERE subscription_id = $1 AND id != $2`, [actualSubId, targetWebsiteId]).catch(() => { });
                 await queryDb(`UPDATE websites SET subscription_id = $1, subscription_expires_at = COALESCE($2, subscription_expires_at), updated_at = CURRENT_TIMESTAMP WHERE id = $3`, [actualSubId, data.current_period_end || currentSub.current_period_end, targetWebsiteId]).catch(() => { });
                 await enforceSubscriptionMaintenanceForWebsite(targetWebsiteId);
+                await invalidateWebsiteCache(targetWebsiteId).catch(() => { });
             }
             else {
                 await queryDb(`UPDATE websites SET subscription_id = NULL, is_maintenance_mode = TRUE, updated_at = CURRENT_TIMESTAMP WHERE subscription_id = $1`, [actualSubId]).catch(() => { });
+                await invalidateWebsiteCache().catch(() => { });
             }
         }
-        else if (data.current_period_end || data.status) {
+        else if (data.current_period_end || data.status || data.package_id) {
             const linkedRows = await queryDb(
                 `SELECT id FROM websites WHERE subscription_id = $1 OR ($2::bigint IS NOT NULL AND id = $2::bigint)`,
                 [actualSubId, currentSub.website_id || null]

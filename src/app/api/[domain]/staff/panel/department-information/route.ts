@@ -1,21 +1,28 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { verifyAcademicDimensionEnabled } from 'src/lib/modules/academicConfig';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
-    return verifyStaffModuleAccess(request, context, ['departments', 'class-setup'], action);
+    const auth = await verifyStaffModuleAccess(request, context, ['department-information', 'departments', 'class-setup'], action);
+    if (auth.error)
+        return auth;
+    const dim = await verifyAcademicDimensionEnabled(auth.website, 'department');
+    if (dim.locked && action !== 'view') {
+        return { error: dim.message, status: 403, locked: true, code: 'ACADEMIC_DIMENSION_LOCKED' };
+    }
+    return { ...auth, academicDim: dim };
 }
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'view');
         if (auth.error) {
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         }
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search')?.trim();
         const departmentId = searchParams.get('department_id')?.trim();
         const id = searchParams.get('id')?.trim();
-        const departmentsResult = await queryDb(`SELECT d.id, d.name, d.code, d.is_active,
-              COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.department_id = d.id), 0)::int AS class_count
+        const departmentsResult = await queryDb(`SELECT d.id, d.name, d.code, d.is_active
        FROM website_departments d
        WHERE d.website_id = $1
        ORDER BY d.order_no ASC, d.name ASC`, [auth.website.id]);

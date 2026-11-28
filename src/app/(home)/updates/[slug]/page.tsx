@@ -76,7 +76,7 @@ export default function SingleUpdatePage({ params }: any) {
         </div>
       </div>
 
-      <article className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 shadow-xs space-y-8">
+      <article className=" space-y-8">
         <div className="space-y-4 border-b border-slate-100 dark:border-slate-800 pb-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-mono font-bold border border-secondary/20">
@@ -103,7 +103,7 @@ export default function SingleUpdatePage({ params }: any) {
             <BiListCheck className="text-secondary text-xl" />
             <span>Changelog &amp; Detailed Notes</span>
           </h3>
-          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-5 sm:p-6 text-xs sm:text-sm font-mono text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+          <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs sm:text-sm font-mono text-slate-700 dark:text-slate-200 whitespace-pre-line leading-relaxed">
             {update.changelog}
           </div>
         </div>)}

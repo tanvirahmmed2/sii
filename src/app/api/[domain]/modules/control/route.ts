@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { getStaffSession } from 'src/lib/middleware/staff';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
+import { invalidateModulesCache, invalidateWebsiteModulesCache } from 'src/lib/redis/redisClient';
+
 export async function GET(request: any, context: any) {
     try {
         const website = await resolveWebsiteFromRequest(request, context);
@@ -11,29 +15,38 @@ export async function GET(request: any, context: any) {
         const category = searchParams.get('category');
         const search = searchParams.get('search');
         const active = searchParams.get('active');
-        let sql = 'SELECT * FROM website_control_modules';
-        const conds: any[] = [];
-        const params: any[] = [];
-        if (active === 'true') {
-            conds.push('is_active = TRUE');
+        const scope = (searchParams.get('scope') || 'all').toLowerCase();
+
+        const staffSession = await getStaffSession(request).catch(() => null);
+        const staffAllowedSet = staffSession && String(staffSession.websiteId || staffSession.website_id) === String(website.id) && Array.isArray(staffSession.allowedModules)
+            ? new Set(staffSession.allowedModules.map((s: any) => String(s).toLowerCase()))
+            : null;
+
+        let modules = Array.isArray(website.allowed_control_modules) ? website.allowed_control_modules : [];
+        if (scope === 'staff') {
+            modules = modules.filter((m: any) => String(m.path || '').startsWith('/staff-panel/'));
         }
-        else if (active === 'false') {
-            conds.push('is_active = FALSE');
+        if (staffAllowedSet) {
+            modules = modules.filter((m: any) => staffAllowedSet.has(String(m.slug || '').toLowerCase()));
         }
-        if (category && category.trim()) {
-            params.push(category.trim());
-            conds.push(`LOWER(category) = LOWER($${params.length})`);
-        }
-        if (search && search.trim()) {
-            params.push(`%${search.trim().toLowerCase()}%`);
-            conds.push(`(LOWER(name) LIKE $${params.length} OR LOWER(slug) LIKE $${params.length} OR LOWER(description) LIKE $${params.length} OR LOWER(path) LIKE $${params.length})`);
-        }
-        if (conds.length > 0) {
-            sql += ' WHERE ' + conds.join(' AND ');
-        }
-        sql += ' ORDER BY category ASC, display_order ASC, id ASC';
-        const res = await queryDb(sql, params).catch(() => ({ rows: [] }));
-        const modules = res.rows || [];
+        modules = modules.filter((m: any) => {
+            if (active === 'true' && !m.is_active)
+                return false;
+            if (active === 'false' && m.is_active)
+                return false;
+            if (category && category.trim() && String(m.category || '').toLowerCase() !== category.trim().toLowerCase())
+                return false;
+            if (search && search.trim()) {
+                const q = search.trim().toLowerCase();
+                const match = String(m.name || '').toLowerCase().includes(q) ||
+                    String(m.slug || '').toLowerCase().includes(q) ||
+                    String(m.description || '').toLowerCase().includes(q) ||
+                    String(m.path || '').toLowerCase().includes(q);
+                if (!match)
+                    return false;
+            }
+            return true;
+        });
         const categories = Array.from(new Set(modules.map((m: any) => m.category).filter(Boolean)));
         return NextResponse.json({
             success: true,
@@ -100,6 +113,11 @@ export async function PATCH(request: any, context: any) {
         if (res.rowCount === 0) {
             return NextResponse.json({ success: false, error: 'Control module not found.' }, { status: 404 });
         }
+        await Promise.all([
+            invalidateModulesCache(),
+            invalidateWebsiteModulesCache(),
+            invalidateWebsiteCache(website.id),
+        ]).catch(() => { });
         return NextResponse.json({
             success: true,
             message: 'Control module updated successfully.',

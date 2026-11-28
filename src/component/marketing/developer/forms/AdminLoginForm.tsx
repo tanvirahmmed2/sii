@@ -191,12 +191,10 @@ export default function AdminLoginForm() {
       {twoFactorRequired ? (<form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
           <div className="p-3 rounded border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/60 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 text-xs space-y-1">
             <p className="font-medium">
-              {twoFactorChannel === 'sms' ? 'SMS Code Dispatched' : 'Email Code Dispatched'}
+              Email Code Dispatched
             </p>
             <p>
-              {twoFactorChannel === 'sms'
-                ? 'Please enter the 6-digit verification code sent via SMS to your registered mobile phone.'
-                : 'Please enter the 6-digit verification code sent to your registered email address.'}
+              Please enter the 6-digit verification code sent to your registered email address.
             </p>
           </div>
 
@@ -212,15 +210,9 @@ export default function AdminLoginForm() {
               {loading ? 'Verifying...' : 'Verify & Continue'}
             </button>
 
-            <div className="flex items-center justify-between text-xs pt-1">
-              {twoFactorChannel === 'email' ? (<button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('sms')} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                  Send to phone
-                </button>) : (<button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('email')} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                  Send to email
-                </button>)}
-
-              <button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel(twoFactorChannel)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer">
-                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+            <div className="flex items-center justify-end text-xs pt-1">
+              <button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('email')} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer">
+                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code to email'}
               </button>
             </div>
 

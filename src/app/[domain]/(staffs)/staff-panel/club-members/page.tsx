@@ -282,9 +282,7 @@ export default function ClubMembersPage() {
     const activeMembers = members.filter((m: any) => m.status === 'active').length;
     const chatMembers = members.filter((m: any) => m.can_access_chat).length;
     const execMembers = members.filter((m: any) => m.role !== 'member').length;
-    const filteredCandidateClasses = candidateDept === 'all'
-        ? classes
-        : classes.filter((c: any) => String(c.department_id) === String(candidateDept));
+    const filteredCandidateClasses = classes;
     return (<div className="w-full space-y-4">
       {toastMessage && (<div className="p-3 rounded text-xs bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between shadow-2xs">
           <span>{toastMessage}</span>

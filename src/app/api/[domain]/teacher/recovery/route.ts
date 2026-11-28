@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword, revokeAllTeacherSessions } from 'src/lib/middleware/teacher';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { getWebsiteUrl } from 'src/lib/database/secret';
 import { inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, extractClientIp, } from 'src/lib/security/shield';
 function buildTeacherRecoveryUrl(website: any, token: any, request: any) {
@@ -30,7 +29,6 @@ export async function POST(request: any, context: any) {
         }
         const body = await request.json().catch(() => ({}));
         const identifier = body.identifier || body.email || body.phone || body.number;
-        const requestedChannel = String(body.channel || 'email').toLowerCase();
         if (!identifier) {
             return NextResponse.json({ success: false, error: 'Teacher email address or phone number is required.' }, { status: 400 });
         }
@@ -57,8 +55,11 @@ export async function POST(request: any, context: any) {
         if (!teacher.is_active) {
             return NextResponse.json({ success: false, error: 'This teacher account is deactivated. Please contact campus administration.' }, { status: 403 });
         }
+        if (!teacher.email) {
+            return NextResponse.json({ success: false, error: 'No email address registered on your teacher profile.' }, { status: 400 });
+        }
         const targetPhone = teacher.phone || teacher.number;
-        const selectedChannel = requestedChannel === 'sms' && targetPhone ? 'sms' : 'email';
+        const selectedChannel = 'email';
         const dispatchLimitCheck = await checkOtpDispatchRateLimit({
             identifier: teacher.email,
             phone: targetPhone,
@@ -83,53 +84,44 @@ export async function POST(request: any, context: any) {
             ip: clientIp,
         });
         const institutionName = website.name || 'Institution Teacher Portal';
-        if (selectedChannel === 'sms') {
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${institutionName} password recovery code is: ${recoveryCode}. Valid for 1 hour.`,
-                    purpose: 'recovery',
-                    userId: teacher.id,
-                    userType: 'teacher',
-                    ip: clientIp,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch recovery SMS.' }, { status: 500 });
-            }
+        const recoveryUrl = buildTeacherRecoveryUrl(website, recoveryCode, request);
+        try {
+            const html = buildStyledEmail({
+                title: 'Teacher Password Recovery',
+                subtitle: `${institutionName} — Faculty Operations Portal`,
+                institutionName,
+                recipientName: teacher.name,
+                bodyParagraphs: [
+                    'We received a request to reset the password for your faculty account.',
+                    'Click the link below or enter the 6-digit recovery code on the recovery page to set your new password.',
+                    'This security code is valid for 1 hour. If you did not make this request, you can safely ignore this email.',
+                ],
+                actionUrl: recoveryUrl,
+                actionText: 'Reset Teacher Password',
+                code: recoveryCode,
+                codeLabel: 'Recovery Passcode',
+                footerNote: 'This security code is valid for 1 hour. Do not share it with anyone.',
+            });
+            await sendEmail({
+                to: teacher.email,
+                toName: teacher.name,
+                fromName: institutionName,
+                subject: `${institutionName} - Teacher Password Recovery Code`,
+                html,
+                text: `Your teacher password recovery code is: ${recoveryCode}.\nOr reset directly using this link: ${recoveryUrl}\nValid for 1 hour.`,
+                websiteId: website.id,
+                recipientType: 'teacher',
+                recipientId: teacher.id,
+                purpose: 'teacher_recovery',
+                ip: clientIp,
+            });
         }
-        else {
-            try {
-                const html = buildStyledEmail({
-                    title: 'Teacher Password Recovery',
-                    subtitle: `${institutionName} — Faculty Operations Portal`,
-                    recipientName: teacher.name,
-                    bodyParagraphs: [
-                        'We received a request to reset the password for your faculty account.',
-                        'Enter the 6-digit recovery code below on the recovery page to set your new password.',
-                        'This security code is valid for 1 hour. If you did not make this request, you can safely ignore this email.',
-                    ],
-                    code: recoveryCode,
-                    codeLabel: 'Recovery Passcode',
-                    footerNote: 'This security code is valid for 1 hour. Do not share it with anyone.',
-                });
-                await sendEmail({
-                    to: teacher.email,
-                    toName: teacher.name,
-                    subject: `${institutionName} - Teacher Password Recovery Code`,
-                    html,
-                    text: `Your teacher password recovery code is: ${recoveryCode}. Valid for 1 hour.`,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `Password recovery code dispatched to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+            message: 'Password recovery code and link dispatched to your registered email address.',
             channel: selectedChannel,
         });
     }

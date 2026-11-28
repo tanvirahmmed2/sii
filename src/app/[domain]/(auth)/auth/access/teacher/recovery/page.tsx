@@ -114,23 +114,9 @@ function TeacherRecoveryInner() {
             <input type="text" required value={identifier} onChange={(e: any) => setIdentifier(e.target.value)} disabled={loading} className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded text-sm text-slate-900 dark:text-white outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-colors"/>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Recovery Channel *
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setSelectedChannel('email')} className={`py-2 px-3 rounded border text-xs font-medium cursor-pointer transition-colors ${selectedChannel === 'email'
-                ? 'border-primary bg-primary/10 text-primary font-semibold'
-                : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400'}`}>
-                Email Address
-              </button>
-              <button type="button" onClick={() => setSelectedChannel('sms')} className={`py-2 px-3 rounded border text-xs font-medium cursor-pointer transition-colors ${selectedChannel === 'sms'
-                ? 'border-primary bg-primary/10 text-primary font-semibold'
-                : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400'}`}>
-                SMS Notification
-              </button>
+            <div className="p-2.5 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-600 dark:text-slate-400">
+              Recovery code &amp; reset link will be sent to your registered email address.
             </div>
-          </div>
 
           <button type="submit" disabled={loading} className="w-full py-2.5 rounded bg-primary hover:bg-primary-dark text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60 text-center">
             {loading ? 'Dispatching Recovery Code...' : 'Request Recovery Code →'}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import { invalidatePackagesCache } from 'src/lib/redis/redisClient';
+import { clearWebsiteCache } from 'src/lib/middleware/websiteResolver';
 import { generateUniquePackageSlug, syncPackageFeatures } from 'src/lib/packages/packageFeatures';
 async function fetchFullPackageBySlugOrId(slugOrId: any) {
     const res = await queryDb(`SELECT p.*,
@@ -274,7 +275,7 @@ export async function PUT(request: any, { params }: any) {
             await syncPackageFeatures(current.id, rawFeatList);
         }
         const updatedPackage = await fetchFullPackageBySlugOrId(newSlug);
-        await invalidatePackagesCache();
+        await Promise.all([invalidatePackagesCache(), clearWebsiteCache()]);
         return NextResponse.json({
             success: true,
             record: updatedPackage,

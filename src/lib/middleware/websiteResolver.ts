@@ -8,7 +8,13 @@ import {
   DEFAULT_REDIS_NEGATIVE_TTL_SEC,
   QUERY_TIMEOUT_MS,
 } from '../database/secret';
-import { getRedisClient, isRedisConnected } from '../redis/redisClient';
+import {
+  getRedisClient,
+  isRedisConnected,
+  fetchWebsiteModulesCache,
+  invalidateWebsiteModulesCache,
+} from '../redis/redisClient';
+import { expandModuleKeys } from '../modules/moduleMappings';
 
 interface CacheEntry {
   website: any;
@@ -303,162 +309,203 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
     let packageInfo: any = null;
 
     try {
-      const pkgRes = await query(
-        `SELECT p.id AS package_id, p.name AS package_name, p.slug AS package_slug,
-                p.short_description, p.description, p.tagline,
-                p.bdt_per_month, p.usd_per_month, p.eur_per_month, p.gbp_per_month, p.aud_per_month, p.cad_per_month, p.discount_percentage,
-                p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb,
-                p.is_available_student_panel, p.is_available_teacher_panel, p.is_available_custom_domain,
-                p.features, p.grace_period,
-                s.id AS subscription_id, s.status AS subscription_status,
-                s.billing_cycle AS subscription_billing_cycle, s.current_period_end AS subscription_period_end,
-                COALESCE(
-                  (
-                    SELECT json_agg(
-                      json_build_object(
-                        'id', cm.id,
-                        'name', cm.name,
-                        'path', cm.path,
-                        'category', cm.category,
-                        'description', cm.description,
-                        'icon', cm.icon
-                      ) ORDER BY cm.display_order ASC, cm.id ASC
-                    )
-                    FROM package_control_modules pcm
-                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
-                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
-                  ),
-                  '[]'::json
-                ) AS allowed_control_modules,
-                COALESCE(
-                  (
-                    SELECT array_agg(DISTINCT cm.path ORDER BY cm.path ASC)
-                    FROM package_control_modules pcm
-                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
-                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
-                  ),
-                  ARRAY[]::varchar[]
-                ) AS allowed_control_module_paths,
-                COALESCE(
-                  (
-                    SELECT array_agg(DISTINCT cm.slug ORDER BY cm.slug ASC)
-                    FROM package_control_modules pcm
-                    JOIN website_control_modules cm ON cm.id = pcm.control_module_id
-                    WHERE pcm.package_id = p.id AND cm.is_active = TRUE
-                  ),
-                  ARRAY[]::varchar[]
-                ) AS allowed_control_module_slugs,
-                COALESCE(
-                  (
-                    SELECT json_agg(
-                      json_build_object(
-                        'id', hm.id,
-                        'name', hm.name,
-                        'path', hm.path,
-                        'category', hm.category,
-                        'description', hm.description,
-                        'icon', hm.icon
-                      ) ORDER BY hm.display_order ASC, hm.id ASC
-                    )
-                    FROM package_home_modules phm
-                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
-                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
-                  ),
-                  '[]'::json
-                ) AS allowed_home_modules,
-                COALESCE(
-                  (
-                    SELECT array_agg(DISTINCT hm.path ORDER BY hm.path ASC)
-                    FROM package_home_modules phm
-                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
-                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
-                  ),
-                  ARRAY[]::varchar[]
-                ) AS allowed_home_module_paths,
-                COALESCE(
-                  (
-                    SELECT array_agg(DISTINCT hm.slug ORDER BY hm.slug ASC)
-                    FROM package_home_modules phm
-                    JOIN website_home_modules hm ON hm.id = phm.home_module_id
-                    WHERE phm.package_id = p.id AND hm.is_active = TRUE
-                  ),
-                  ARRAY[]::varchar[]
-                ) AS allowed_home_module_slugs
-         FROM subscriptions s
-         JOIN packages p ON p.id = s.package_id
-         WHERE (s.id = $1 OR s.website_id = $2)
-         ORDER BY (s.id = $1) DESC, (s.status = 'active') DESC, s.id DESC
-         LIMIT 1`,
-        [website.subscription_id || 0, website.id]
-      );
+      const moduleBundle = await fetchWebsiteModulesCache(website.id, async () => {
+        const pkgRes = await query(
+          `SELECT p.id AS package_id, p.name AS package_name, p.slug AS package_slug,
+                  p.short_description, p.description, p.tagline,
+                  p.bdt_per_month, p.usd_per_month, p.eur_per_month, p.gbp_per_month, p.aud_per_month, p.cad_per_month, p.discount_percentage,
+                  p.max_students, p.max_teachers, p.max_staff, p.max_storage_mb,
+                  p.is_available_student_panel, p.is_available_teacher_panel, p.is_available_custom_domain,
+                  p.features, p.grace_period,
+                  s.id AS subscription_id, s.status AS subscription_status,
+                  s.billing_cycle AS subscription_billing_cycle, s.current_period_end AS subscription_period_end,
+                  COALESCE(
+                    (
+                      SELECT json_agg(
+                        json_build_object(
+                          'id', cm.id,
+                          'slug', cm.slug,
+                          'name', cm.name,
+                          'path', cm.path,
+                          'category', cm.category,
+                          'description', cm.description,
+                          'icon', cm.icon,
+                          'is_active', cm.is_active
+                        ) ORDER BY cm.display_order ASC, cm.id ASC
+                      )
+                      FROM package_control_modules pcm
+                      JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                      WHERE pcm.package_id = p.id AND cm.is_active = TRUE
+                    ),
+                    '[]'::json
+                  ) AS allowed_control_modules,
+                  COALESCE(
+                    (
+                      SELECT array_agg(DISTINCT cm.path ORDER BY cm.path ASC)
+                      FROM package_control_modules pcm
+                      JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                      WHERE pcm.package_id = p.id AND cm.is_active = TRUE
+                    ),
+                    ARRAY[]::varchar[]
+                  ) AS allowed_control_module_paths,
+                  COALESCE(
+                    (
+                      SELECT array_agg(DISTINCT cm.slug ORDER BY cm.slug ASC)
+                      FROM package_control_modules pcm
+                      JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+                      WHERE pcm.package_id = p.id AND cm.is_active = TRUE
+                    ),
+                    ARRAY[]::varchar[]
+                  ) AS allowed_control_module_slugs,
+                  COALESCE(
+                    (
+                      SELECT json_agg(
+                        json_build_object(
+                          'id', hm.id,
+                          'slug', hm.slug,
+                          'name', hm.name,
+                          'path', hm.path,
+                          'category', hm.category,
+                          'description', hm.description,
+                          'icon', hm.icon,
+                          'is_active', hm.is_active
+                        ) ORDER BY hm.display_order ASC, hm.id ASC
+                      )
+                      FROM package_home_modules phm
+                      JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                      WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                    ),
+                    '[]'::json
+                  ) AS allowed_home_modules,
+                  COALESCE(
+                    (
+                      SELECT array_agg(DISTINCT hm.path ORDER BY hm.path ASC)
+                      FROM package_home_modules phm
+                      JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                      WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                    ),
+                    ARRAY[]::varchar[]
+                  ) AS allowed_home_module_paths,
+                  COALESCE(
+                    (
+                      SELECT array_agg(DISTINCT hm.slug ORDER BY hm.slug ASC)
+                      FROM package_home_modules phm
+                      JOIN website_home_modules hm ON hm.id = phm.home_module_id
+                      WHERE phm.package_id = p.id AND hm.is_active = TRUE
+                    ),
+                    ARRAY[]::varchar[]
+                  ) AS allowed_home_module_slugs
+           FROM subscriptions s
+           JOIN packages p ON p.id = s.package_id
+           WHERE (s.id = $1 OR s.website_id = $2)
+           ORDER BY (s.id = $1) DESC, (s.status = 'active') DESC, s.id DESC
+           LIMIT 1`,
+          [website.subscription_id || 0, website.id]
+        );
 
-      if (pkgRes && pkgRes.rows && pkgRes.rows.length > 0) {
-        const pRow = pkgRes.rows[0];
-        const subIsActive = isSubscriptionActiveRecord({
-          status: pRow.subscription_status,
-          current_period_end: pRow.subscription_period_end,
-        });
-        if (!subIsActive) {
+        if (pkgRes && pkgRes.rows && pkgRes.rows.length > 0) {
+          const pRow = pkgRes.rows[0];
+          const subIsActive = isSubscriptionActiveRecord({
+            status: pRow.subscription_status,
+            current_period_end: pRow.subscription_period_end,
+          });
+          return {
+            hasSubscription: true,
+            subIsActive,
+            subscription_id: pRow.subscription_id,
+            subscription_status: pRow.subscription_status,
+            subscription_billing_cycle: pRow.subscription_billing_cycle,
+            subscription_period_end: pRow.subscription_period_end,
+            packageInfo: {
+              id: pRow.package_id,
+              name: pRow.package_name,
+              slug: pRow.package_slug,
+              short_description: pRow.short_description,
+              description: pRow.description,
+              tagline: pRow.tagline,
+              bdt_per_month: pRow.bdt_per_month,
+              usd_per_month: pRow.usd_per_month,
+              eur_per_month: pRow.eur_per_month,
+              gbp_per_month: pRow.gbp_per_month,
+              aud_per_month: pRow.aud_per_month,
+              cad_per_month: pRow.cad_per_month,
+              monthly_price_usd: pRow.usd_per_month,
+              yearly_price_usd: Number(pRow.usd_per_month || 0) * 12,
+              monthly_price_bdt: pRow.bdt_per_month,
+              yearly_price_bdt: Number(pRow.bdt_per_month || 0) * 12,
+              monthly_price: pRow.usd_per_month,
+              yearly_price: Number(pRow.usd_per_month || 0) * 12,
+              discount_percentage: pRow.discount_percentage,
+              max_students: pRow.max_students,
+              max_teachers: pRow.max_teachers,
+              max_staff: pRow.max_staff,
+              max_storage_mb: pRow.max_storage_mb,
+              is_available_student_panel: pRow.is_available_student_panel ?? true,
+              is_available_teacher_panel: pRow.is_available_teacher_panel ?? true,
+              is_available_custom_domain: pRow.is_available_custom_domain ?? false,
+              features: pRow.features || [],
+              grace_period: pRow.grace_period,
+              subscription_id: pRow.subscription_id,
+              subscription_status: pRow.subscription_status,
+              subscription_billing_cycle: pRow.subscription_billing_cycle,
+              subscription_period_end: pRow.subscription_period_end,
+            },
+            allowedControlModules: pRow.allowed_control_modules || [],
+            allowedControlModulePaths: pRow.allowed_control_module_paths || [],
+            allowedControlModuleSlugs: pRow.allowed_control_module_slugs || [],
+            allowedHomeModules: pRow.allowed_home_modules || [],
+            allowedHomeModulePaths: pRow.allowed_home_module_paths || [],
+            allowedHomeModuleSlugs: pRow.allowed_home_module_slugs || [],
+          };
+        }
+
+        const [fallbackControl, fallbackHome]: [any, any] = await Promise.all([
+          query(`SELECT id, slug, name, path, category, description, icon, is_active FROM website_control_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] })),
+          query(`SELECT id, slug, name, path, category, description, icon, is_active FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] }))
+        ]);
+        const fbControlRows = fallbackControl.rows || [];
+        const fbHomeRows = fallbackHome.rows || [];
+        return {
+          hasSubscription: false,
+          subIsActive: false,
+          subscription_id: null,
+          subscription_status: 'inactive',
+          subscription_billing_cycle: null,
+          subscription_period_end: null,
+          packageInfo: null,
+          allowedControlModules: fbControlRows,
+          allowedControlModulePaths: fbControlRows.map((m: any) => m.path).filter(Boolean),
+          allowedControlModuleSlugs: fbControlRows.map((m: any) => m.slug).filter(Boolean),
+          allowedHomeModules: fbHomeRows,
+          allowedHomeModulePaths: fbHomeRows.map((m: any) => m.path).filter(Boolean),
+          allowedHomeModuleSlugs: fbHomeRows.map((m: any) => m.slug).filter(Boolean),
+        };
+      });
+
+      if (moduleBundle) {
+        if (moduleBundle.hasSubscription) {
+          if (!moduleBundle.subIsActive) {
+            website.is_maintenance_mode = true;
+            website.is_published = false;
+          }
+          website.subscription_id = moduleBundle.subscription_id;
+          website.subscription_status = moduleBundle.subscription_status;
+          website.subscription_billing_cycle = moduleBundle.subscription_billing_cycle;
+          website.subscription_period_end = moduleBundle.subscription_period_end;
+          website.subscription_is_active = Boolean(moduleBundle.subIsActive);
+        } else {
           website.is_maintenance_mode = true;
           website.is_published = false;
+          website.subscription_status = 'inactive';
+          website.subscription_is_active = false;
         }
-        website.subscription_status = pRow.subscription_status;
-        website.subscription_is_active = subIsActive;
-        packageInfo = {
-          id: pRow.package_id,
-          name: pRow.package_name,
-          slug: pRow.package_slug,
-          short_description: pRow.short_description,
-          description: pRow.description,
-          tagline: pRow.tagline,
-          bdt_per_month: pRow.bdt_per_month,
-          usd_per_month: pRow.usd_per_month,
-          eur_per_month: pRow.eur_per_month,
-          gbp_per_month: pRow.gbp_per_month,
-          aud_per_month: pRow.aud_per_month,
-          cad_per_month: pRow.cad_per_month,
-          monthly_price_usd: pRow.usd_per_month,
-          yearly_price_usd: Number(pRow.usd_per_month || 0) * 12,
-          monthly_price_bdt: pRow.bdt_per_month,
-          yearly_price_bdt: Number(pRow.bdt_per_month || 0) * 12,
-          monthly_price: pRow.usd_per_month,
-          yearly_price: Number(pRow.usd_per_month || 0) * 12,
-          discount_percentage: pRow.discount_percentage,
-          max_students: pRow.max_students,
-          max_teachers: pRow.max_teachers,
-          max_staff: pRow.max_staff,
-          max_storage_mb: pRow.max_storage_mb,
-          is_available_student_panel: pRow.is_available_student_panel ?? true,
-          is_available_teacher_panel: pRow.is_available_teacher_panel ?? true,
-          is_available_custom_domain: pRow.is_available_custom_domain ?? false,
-          features: pRow.features || [],
-          grace_period: pRow.grace_period,
-          subscription_id: pRow.subscription_id,
-          subscription_status: pRow.subscription_status,
-          subscription_billing_cycle: pRow.subscription_billing_cycle,
-          subscription_period_end: pRow.subscription_period_end,
-        };
-        allowedControlModules = pRow.allowed_control_modules || [];
-        allowedControlModulePaths = pRow.allowed_control_module_paths || [];
-        allowedControlModuleSlugs = pRow.allowed_control_module_slugs || [];
-        allowedHomeModules = pRow.allowed_home_modules || [];
-        allowedHomeModulePaths = pRow.allowed_home_module_paths || [];
-        allowedHomeModuleSlugs = pRow.allowed_home_module_slugs || [];
-      } else {
-        website.is_maintenance_mode = true;
-        website.is_published = false;
-        website.subscription_status = 'inactive';
-        website.subscription_is_active = false;
-        const [fallbackControl, fallbackHome]: [any, any] = await Promise.all([
-          query(`SELECT id, name, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] })),
-          query(`SELECT id, name, path, category, description, icon FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] }))
-        ]);
-        allowedControlModules = fallbackControl.rows || [];
-        allowedControlModulePaths = allowedControlModules.map((m: any) => m.path).filter(Boolean);
-        allowedControlModuleSlugs = [];
-        allowedHomeModules = fallbackHome.rows || [];
-        allowedHomeModulePaths = allowedHomeModules.map((m: any) => m.path).filter(Boolean);
-        allowedHomeModuleSlugs = [];
+        packageInfo = moduleBundle.packageInfo || null;
+        allowedControlModules = moduleBundle.allowedControlModules || [];
+        allowedControlModulePaths = moduleBundle.allowedControlModulePaths || [];
+        allowedControlModuleSlugs = moduleBundle.allowedControlModuleSlugs || [];
+        allowedHomeModules = moduleBundle.allowedHomeModules || [];
+        allowedHomeModulePaths = moduleBundle.allowedHomeModulePaths || [];
+        allowedHomeModuleSlugs = moduleBundle.allowedHomeModuleSlugs || [];
       }
     } catch (e: any) {
       console.warn('[websiteResolver] Error loading package modules:', e.message);
@@ -487,6 +534,36 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
     website.allowed_modules = allowedControlModules;
     website.allowed_module_slugs = allowedControlModuleSlugs;
     website.allowedModules = allowedControlModuleSlugs;
+
+    try {
+      const cfgRes = await query(`SELECT * FROM website_academic_configs WHERE website_id = $1 LIMIT 1`, [website.id]).catch(() => ({ rows: [] }));
+      const rawCfg = cfgRes?.rows?.[0];
+      website.academic_config = rawCfg
+        ? {
+            ...rawCfg,
+            use_department: Boolean(rawCfg.use_department),
+            use_session: rawCfg.use_session === undefined ? true : Boolean(rawCfg.use_session),
+            use_class: rawCfg.use_class === undefined ? true : Boolean(rawCfg.use_class),
+            use_section: rawCfg.use_section === undefined ? true : Boolean(rawCfg.use_section),
+            require_department: Boolean(rawCfg.require_department),
+            require_session: rawCfg.require_session === undefined ? true : Boolean(rawCfg.require_session),
+            require_class: rawCfg.require_class === undefined ? true : Boolean(rawCfg.require_class),
+            require_section: Boolean(rawCfg.require_section),
+          }
+        : {
+            hierarchy_type: 'CLASS_SEC',
+            use_department: false,
+            use_session: true,
+            use_class: true,
+            use_section: true,
+            require_department: false,
+            require_session: true,
+            require_class: true,
+            require_section: false,
+            labels: { department: 'Department', session: 'Academic Year', class: 'Class', section: 'Section' },
+          };
+      website.academicConfig = website.academic_config;
+    } catch { }
 
     const settingsCopy = { ...website };
     website.settings = settingsCopy;
@@ -629,6 +706,7 @@ export async function invalidateWebsiteCache(identifier?: string | number | null
   if (!identifier) {
     websiteCache.clear();
     await removeWebsiteFromRedis();
+    await invalidateWebsiteModulesCache();
     return;
   }
   const cleanId = String(identifier).trim().toLowerCase();
@@ -684,31 +762,46 @@ export async function invalidateWebsiteCache(identifier?: string | number | null
 
   await removeWebsiteFromRedis(matchedWebsiteId || cleanId);
   await removeWebsiteAliasesFromRedis(Array.from(aliases), matchedWebsiteId);
+  await invalidateWebsiteModulesCache(matchedWebsiteId || cleanId);
 }
 
 export async function clearWebsiteCache(): Promise<void> {
   websiteCache.clear();
   inFlightResolutions.clear();
   await removeWebsiteFromRedis();
+  await invalidateWebsiteModulesCache();
 }
 
 export async function hasTenantModuleAllowance(websiteOrId: any, moduleSlug: string): Promise<boolean> {
   if (!websiteOrId || !moduleSlug) return false;
 
   const targetSlug = String(moduleSlug).trim().toLowerCase();
+  const candidates = expandModuleKeys(targetSlug);
 
-  if (typeof websiteOrId === 'object' && Array.isArray(websiteOrId.allowed_module_slugs)) {
-    return websiteOrId.allowed_module_slugs.includes(targetSlug);
+  const checkWebsite = (w: any): boolean => {
+    const controlSlugs = Array.isArray(w?.allowed_control_module_slugs)
+      ? w.allowed_control_module_slugs
+      : (Array.isArray(w?.allowed_module_slugs) ? w.allowed_module_slugs : []);
+    const homeSlugs = Array.isArray(w?.allowed_home_module_slugs) ? w.allowed_home_module_slugs : [];
+    const slugSet = new Set(
+      [...controlSlugs, ...homeSlugs].map((s: any) => String(s || '').trim().toLowerCase()).filter(Boolean)
+    );
+    if (slugSet.size === 0 && Array.isArray(w?.allowed_control_modules)) {
+      for (const m of w.allowed_control_modules) {
+        if (m?.slug) slugSet.add(String(m.slug).trim().toLowerCase());
+      }
+    }
+    return candidates.some((c) => slugSet.has(c));
+  };
+
+  if (typeof websiteOrId === 'object' && (Array.isArray(websiteOrId.allowed_module_slugs) || Array.isArray(websiteOrId.allowed_control_modules))) {
+    return checkWebsite(websiteOrId);
   }
 
   const website = typeof websiteOrId === 'object' ? websiteOrId : await resolveWebsite(websiteOrId);
   if (!website) return false;
 
-  if (Array.isArray(website.allowed_module_slugs)) {
-    return website.allowed_module_slugs.includes(targetSlug);
-  }
-
-  return false;
+  return checkWebsite(website);
 }
 
 export async function getTenantAllowedModules(websiteOrId: any): Promise<any> {

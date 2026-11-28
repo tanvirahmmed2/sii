@@ -46,16 +46,20 @@ export async function POST(request: any, context: any) {
         await queryDb(`UPDATE website_officers
        SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour'
        WHERE id = $2`, [recoveryToken, officer.id]);
+        const recoveryUrl = buildOfficerRecoveryUrl(website, recoveryToken, request);
         try {
             const html = buildStyledEmail({
                 title: 'Officer Password Recovery',
                 subtitle: `${website.name} — Administrative Portal`,
+                institutionName: website.name,
                 recipientName: officer.name,
                 bodyParagraphs: [
                     'We received a request to recover or reset the password for your officer portal account.',
-                    'Enter the 6-digit recovery code below on the password reset screen. This code remains active for 1 hour.',
+                    'Click the link below or enter the 6-digit recovery code on the password reset screen. This code remains active for 1 hour.',
                     'If you did not request this, you can ignore this notice; your credentials will remain unchanged.',
                 ],
+                actionUrl: recoveryUrl,
+                actionText: 'Reset Officer Password',
                 code: recoveryToken,
                 codeLabel: 'Recovery Passcode',
                 footerNote: 'This recovery passcode is valid for 1 hour. Do not share it with anyone.',
@@ -63,10 +67,14 @@ export async function POST(request: any, context: any) {
             await sendEmail({
                 to: officer.email,
                 toName: officer.name,
+                fromName: website.name || undefined,
                 subject: `${website.name} - Officer Password Recovery Code`,
                 html,
-                text: `Your officer password recovery code is: ${recoveryToken}.\nEnter this 6-digit code on the password reset page to update your credentials.\nValid for 1 hour.`,
+                text: `Your officer password recovery code is: ${recoveryToken}.\nOr reset directly using this link: ${recoveryUrl}\nValid for 1 hour.`,
                 websiteId: website.id,
+                recipientType: 'officer',
+                recipientId: officer.id,
+                purpose: 'officer_recovery',
             });
         }
         catch (mailErr: any) {

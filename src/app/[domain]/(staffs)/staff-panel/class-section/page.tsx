@@ -1,232 +1,195 @@
 'use client';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
+
 export default function ClassSectionPage() {
-    const params: any = useParams();
-    const domain = params?.domain || '';
-    const [classes, setClasses] = useState<any>([]);
-    const [sections, setSections] = useState<any>([]);
-    const [loading, setLoading] = useState<any>(true);
-    const [searchTerm, setSearchTerm] = useState<any>('');
-    const [selectedClassId, setSelectedClassId] = useState<any>('all');
-    const [isFormOpen, setIsFormOpen] = useState<any>(false);
-    const [editingSection, setEditingSection] = useState<any>(null);
-    const [formData, setFormData] = useState<any>({
-        class_id: '',
-        name: '',
-        capacity: 40,
-        room_number: ''
+  const params: any = useParams();
+  const domain = params?.domain || '';
+  const [sections, setSections] = useState<any>([]);
+  const [loading, setLoading] = useState<any>(true);
+  const [searchTerm, setSearchTerm] = useState<any>('');
+  const [isFormOpen, setIsFormOpen] = useState<any>(false);
+  const [editingSection, setEditingSection] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({
+    name: '',
+    capacity: 40,
+    room_number: ''
+  });
+  const [submitting, setSubmitting] = useState<any>(false);
+  const [errorMsg, setErrorMsg] = useState<any>('');
+  const [successMsg, setSuccessMsg] = useState<any>('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<any>(null);
+  const [deletingId, setDeletingId] = useState<any>(null);
+  const formSectionRef = useRef<any>(null);
+
+  const fetchData = useCallback(async (silent: any = false) => {
+    try {
+      if (!silent)
+        setLoading(true);
+      const res = await fetch(`/api/${domain}/staff/panel/sections`);
+      const secData = await res.json();
+      if (secData.success) {
+        setSections(secData.sections || []);
+      }
+      else {
+        setErrorMsg(secData.error || 'Failed to fetch sections.');
+      }
+    }
+    catch {
+      setErrorMsg('Network error fetching sections data.');
+    }
+    finally {
+      setLoading(false);
+    }
+  }, [domain]);
+
+  useEffect(() => {
+    fetchData(false);
+  }, [fetchData]);
+
+  const filteredSections = useMemo(() => {
+    const q = searchTerm.toLowerCase();
+    return sections.filter((s: any) =>
+      s.name.toLowerCase().includes(q) ||
+      (s.room_number && s.room_number.toLowerCase().includes(q))
+    );
+  }, [sections, searchTerm]);
+
+  const openCreateForm = () => {
+    setEditingSection(null);
+    setFormData({
+      name: '',
+      capacity: 40,
+      room_number: ''
     });
-    const [submitting, setSubmitting] = useState<any>(false);
-    const [errorMsg, setErrorMsg] = useState<any>('');
-    const [successMsg, setSuccessMsg] = useState<any>('');
-    const [deleteConfirmId, setDeleteConfirmId] = useState<any>(null);
-    const [deletingId, setDeletingId] = useState<any>(null);
-    const formSectionRef = useRef<any>(null);
-    const fetchData = useCallback(async (silent: any = false) => {
-        try {
-            if (!silent)
-                setLoading(true);
-            const res = await fetch(`/api/${domain}/staff/panel/sections${selectedClassId !== 'all' ? `?class_id=${selectedClassId}` : ''}`);
-            const secData = await res.json();
-            if (secData.success) {
-                setSections(secData.sections || []);
-                if (secData.available_classes) {
-                    setClasses(secData.available_classes);
-                }
-            }
-            else {
-                setErrorMsg(secData.error || 'Failed to fetch sections.');
-            }
-        }
-        catch {
-            setErrorMsg('Network error fetching sections data.');
-        }
-        finally {
-            setLoading(false);
-        }
-    }, [domain, selectedClassId]);
-    useEffect(() => {
-        let ignore = false;
-        const load = async () => {
-            try {
-                const res = await fetch(`/api/${domain}/staff/panel/sections${selectedClassId !== 'all' ? `?class_id=${selectedClassId}` : ''}`);
-                const data = await res.json();
-                if (!ignore && data.success) {
-                    setSections(data.sections || []);
-                    if (data.available_classes)
-                        setClasses(data.available_classes);
-                }
-            }
-            catch {
-                if (!ignore)
-                    setErrorMsg('Network error fetching sections.');
-            }
-            finally {
-                if (!ignore)
-                    setLoading(false);
-            }
-        };
-        load();
-        return () => {
-            ignore = true;
-        };
-    }, [domain, selectedClassId]);
-    const filteredSections = useMemo(() => {
-        return sections.filter((s: any) => {
-            const q = searchTerm.toLowerCase();
-            const matchesSearch = s.name.toLowerCase().includes(q) || (s.class_name && s.class_name.toLowerCase().includes(q)) || (s.department_name && s.department_name.toLowerCase().includes(q)) || (s.room_number && s.room_number.toLowerCase().includes(q));
-            const matchesClass = selectedClassId === 'all' || String(s.class_id) === String(selectedClassId);
-            return matchesSearch && matchesClass;
-        });
-    }, [sections, searchTerm, selectedClassId]);
-    const openCreateForm = () => {
-        setEditingSection(null);
-        setFormData({
-            class_id: selectedClassId !== 'all' ? selectedClassId : classes[0]?.id ? String(classes[0].id) : '',
-            name: '',
-            capacity: 40,
-            room_number: ''
-        });
-        setErrorMsg('');
-        setIsFormOpen(true);
-        setDeleteConfirmId(null);
-        setTimeout(() => {
-            formSectionRef.current?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }, 100);
-    };
-    const openEditForm = (sec: any) => {
-        setEditingSection(sec);
-        setFormData({
-            class_id: String(sec.class_id),
-            name: sec.name,
-            capacity: sec.capacity || 40,
-            room_number: sec.room_number || ''
-        });
-        setErrorMsg('');
-        setIsFormOpen(true);
-        setDeleteConfirmId(null);
-        setTimeout(() => {
-            formSectionRef.current?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }, 100);
-    };
-    const closeForm = () => {
+    setErrorMsg('');
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const openEditForm = (sec: any) => {
+    setEditingSection(sec);
+    setFormData({
+      name: sec.name,
+      capacity: sec.capacity || 40,
+      room_number: sec.room_number || ''
+    });
+    setErrorMsg('');
+    setIsFormOpen(true);
+    setDeleteConfirmId(null);
+    setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingSection(null);
+    setErrorMsg('');
+  };
+
+  const handleFormSubmit = async (e: any) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      setErrorMsg('Section name is required.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      setErrorMsg('');
+      const url = `/api/${domain}/staff/panel/sections`;
+      const method = editingSection ? 'PUT' : 'POST';
+      const body = editingSection ? { ...formData, id: editingSection.id } : formData;
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(data.message || 'Section saved successfully.');
+        setTimeout(() => setSuccessMsg(''), 4000);
         setIsFormOpen(false);
         setEditingSection(null);
-        setErrorMsg('');
-    };
-    const handleFormSubmit = async (e: any) => {
-        e.preventDefault();
-        if (!formData.class_id) {
-            setErrorMsg('Please select a parent class.');
-            return;
-        }
-        if (!formData.name.trim()) {
-            setErrorMsg('Section name is required.');
-            return;
-        }
-        try {
-            setSubmitting(true);
-            setErrorMsg('');
-            const url = `/api/${domain}/staff/panel/sections`;
-            const method = editingSection ? 'PUT' : 'POST';
-            const body = editingSection ? {
-                ...formData,
-                id: editingSection.id
-            } : formData;
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-            if (data.success) {
-                setSuccessMsg(data.message || 'Section saved successfully.');
-                setTimeout(() => setSuccessMsg(''), 4000);
-                setIsFormOpen(false);
-                setEditingSection(null);
-                fetchData(true);
-            }
-            else {
-                setErrorMsg(data.error || 'Failed to save section.');
-            }
-        }
-        catch {
-            setErrorMsg('Network error saving section.');
-        }
-        finally {
-            setSubmitting(false);
-        }
-    };
-    const handleDelete = async (id: any) => {
-        try {
-            setDeletingId(id);
-            const res = await fetch(`/api/${domain}/staff/panel/sections?id=${id}`, {
-                method: 'DELETE'
-            });
-            const data = await res.json();
-            if (data.success) {
-                setSuccessMsg('Section deleted successfully.');
-                setTimeout(() => setSuccessMsg(''), 4000);
-                setDeleteConfirmId(null);
-                fetchData(true);
-            }
-            else {
-                setErrorMsg(data.error || 'Failed to delete section.');
-            }
-        }
-        catch {
-            setErrorMsg('Network error deleting section.');
-        }
-        finally {
-            setDeletingId(null);
-        }
-    };
-    return (<div className="w-full space-y-4">
+        fetchData(true);
+      }
+      else {
+        setErrorMsg(data.error || 'Failed to save section.');
+      }
+    }
+    catch {
+      setErrorMsg('Network error saving section.');
+    }
+    finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: any) => {
+    try {
+      setDeletingId(id);
+      const res = await fetch(`/api/${domain}/staff/panel/sections?id=${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg('Section deleted successfully.');
+        setTimeout(() => setSuccessMsg(''), 4000);
+        setDeleteConfirmId(null);
+        fetchData(true);
+      }
+      else {
+        setErrorMsg(data.error || 'Failed to delete section.');
+      }
+    }
+    catch {
+      setErrorMsg('Network error deleting section.');
+    }
+    finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (<div className="w-full space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Total Sections</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-bold text-slate-900 dark:text-white font-mono">{sections.length}</span>
-            <span className="text-[10px] font-medium text-slate-500">Active Batches</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Classes Mapped</p>
-          <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-              {new Set(sections.map((s: any) => s.class_id)).size}
-            </span>
-            <span className="text-[10px] font-medium text-blue-600">Covered Grades</span>
+            <span className="text-xl font-semibold text-slate-900 dark:text-white font-mono">{sections.length}</span>
+            <span className="text-[10px] font-medium text-slate-500">Independent Units</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
           <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Section Capacity</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+            <span className="text-xl font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
               {sections.reduce((sum: any, s: any) => sum + (parseInt(s.capacity, 10) || 0), 0)}
             </span>
-            <span className="text-[10px] font-medium text-emerald-600">Max Desks</span>
+            <span className="text-[10px] font-medium text-emerald-600">Total Seats</span>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
-          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Hierarchy Position</p>
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Assigned Students</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              Class &gt; Section
+            <span className="text-xl font-semibold text-blue-600 dark:text-blue-400 font-mono">
+              {sections.reduce((sum: any, s: any) => sum + (parseInt(s.student_count, 10) || 0), 0)}
             </span>
-            <span className="text-[10px] font-medium text-slate-400">Under Classes</span>
+            <span className="text-[10px] font-medium text-blue-600">Enrolled</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3.5 shadow-2xs">
+          <p className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 tracking-wider">Rooms Assigned</p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-xl font-semibold text-slate-800 dark:text-slate-200 font-mono">
+              {sections.filter((s: any) => Boolean(s.room_number)).length}
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">Venues Set</span>
           </div>
         </div>
       </div>
@@ -242,7 +205,7 @@ export default function ClassSectionPage() {
 
       {deleteConfirmId && (<div className="p-4 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 text-slate-900 dark:text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div>
-            <p className="text-xs font-bold text-rose-900 dark:text-rose-200">
+            <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">
               Confirm Deleting Section: {sections.find((s: any) => s.id === deleteConfirmId)?.name || `#${deleteConfirmId}`}?
             </p>
             <p className="text-[11px] text-rose-700 dark:text-rose-300/80 mt-0.5">
@@ -263,8 +226,8 @@ export default function ClassSectionPage() {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-600"/>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {editingSection ? `Edit Section: ${editingSection.name}` : 'Create New Class Section / Batch'}
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                {editingSection ? `Edit Section: ${editingSection.name}` : 'Create New Section / Batch'}
               </h3>
             </div>
             <button type="button" onClick={closeForm} className="text-slate-400 hover:text-slate-700 dark:hover:text-white px-2 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Close form">
@@ -273,52 +236,26 @@ export default function ClassSectionPage() {
           </div>
 
           <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Parent Class <span className="text-rose-500">*</span>
+                  Section Name / Title <span className="text-rose-500">*</span>
                 </label>
-                <select aria-label="Parent Class" value={formData.class_id} onChange={(e: any) => setFormData({
-                ...formData,
-                class_id: e.target.value
-            })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
-                  <option value="">Select Target Class...</option>
-                  {classes.map((c: any) => (<option key={c.id} value={c.id}>
-                      {c.name} {c.code ? `(${c.code})` : ''} {c.department_name ? `[Dept: ${c.department_name}]` : ''}
-                    </option>))}
-                </select>
+                <input type="text" aria-label="Section Name" value={formData.name} onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"/>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Section Name / Batch Title <span className="text-rose-500">*</span>
-                </label>
-                <input type="text" aria-label="Section Name or Batch Title" value={formData.name} onChange={(e: any) => setFormData({
-                ...formData,
-                name: e.target.value
-            })} required className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"/>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Max Student Capacity (Seats)
                 </label>
-                <input type="number" aria-label="Max Student Capacity" min="1" max="1000" value={formData.capacity} onChange={(e: any) => setFormData({
-                ...formData,
-                capacity: e.target.value
-            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"/>
+                <input type="number" aria-label="Max Student Capacity" min="1" max="1000" value={formData.capacity} onChange={(e: any) => setFormData({ ...formData, capacity: e.target.value })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden font-mono"/>
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Assigned Room / Venue Number
                 </label>
-                <input type="text" aria-label="Assigned Room or Venue Number" value={formData.room_number} onChange={(e: any) => setFormData({
-                ...formData,
-                room_number: e.target.value
-            })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"/>
+                <input type="text" aria-label="Assigned Room or Venue Number" value={formData.room_number} onChange={(e: any) => setFormData({ ...formData, room_number: e.target.value })} className="w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden"/>
               </div>
             </div>
 
@@ -335,26 +272,16 @@ export default function ClassSectionPage() {
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 flex-1 max-w-lg flex-wrap">
-            <div className="relative flex-1 min-w-[180px]">
-              <input type="text" aria-label="Search section, class, room" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"/>
-            </div>
-            {classes.length > 0 && (<div className="w-48">
-                <select aria-label="Filter sections by class" value={selectedClassId} onChange={(e: any) => setSelectedClassId(e.target.value)} className="w-full text-xs px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden cursor-pointer">
-                  <option value="all">All Classes</option>
-                  {classes.map((c: any) => (<option key={c.id} value={c.id}>
-                      {c.name} {c.code ? `(${c.code})` : ''}
-                    </option>))}
-                </select>
-              </div>)}
+          <div className="flex items-center gap-2 flex-1 max-w-md">
+            <input type="text" aria-label="Search section or room" value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} className="w-full text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-slate-900"/>
           </div>
 
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => fetchData(false)} className="px-2 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer text-xs" title="Refresh">
+            <button type="button" onClick={() => fetchData(false)} className="px-2.5 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer text-xs" title="Refresh">
               Refresh
             </button>
             <button type="button" onClick={openCreateForm} className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition cursor-pointer">
-              <span>Add Section</span>
+              <span>+ Add Section</span>
             </button>
           </div>
         </div>
@@ -365,16 +292,15 @@ export default function ClassSectionPage() {
             </div>) : filteredSections.length === 0 ? (<div className="py-12 text-center space-y-2">
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400">No sections found.</p>
               <button type="button" onClick={openCreateForm} className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
-                Create your first class section
+                Create your first section
               </button>
             </div>) : (<table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-3">Section Name</th>
-                  <th className="py-2.5 px-3">Parent Class</th>
-                  <th className="py-2.5 px-3">Department</th>
                   <th className="py-2.5 px-3">Max Capacity</th>
                   <th className="py-2.5 px-3">Assigned Room</th>
+                  <th className="py-2.5 px-3">Students</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -383,19 +309,6 @@ export default function ClassSectionPage() {
                     <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
                       <span>{sec.name}</span>
                     </td>
-                    <td className="py-3 px-3">
-                      <span className="font-semibold text-slate-900 dark:text-white">
-                        {sec.class_name}
-                      </span>
-                      {sec.class_code && (<span className="ml-1 text-[10px] font-mono text-slate-400">
-                          ({sec.class_code})
-                        </span>)}
-                    </td>
-                    <td className="py-3 px-3">
-                      {sec.department_name ? (<span className="font-semibold text-blue-600 dark:text-blue-400">
-                          {sec.department_name}
-                        </span>) : (<span className="text-slate-400 italic">General</span>)}
-                    </td>
                     <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
                       {sec.capacity} seats
                     </td>
@@ -403,6 +316,9 @@ export default function ClassSectionPage() {
                       {sec.room_number ? (<span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
                           {sec.room_number}
                         </span>) : (<span className="text-slate-400 italic">Not set</span>)}
+                    </td>
+                    <td className="py-3 px-3 font-mono text-blue-600 dark:text-blue-400">
+                      {sec.student_count || 0}
                     </td>
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">

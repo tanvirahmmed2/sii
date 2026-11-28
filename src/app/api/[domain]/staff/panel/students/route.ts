@@ -6,7 +6,6 @@ import { hashPassword } from 'src/lib/middleware/students';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
 import { buildStudentSetupUrl } from 'src/lib/student/urls';
 import { checkInstitutionEmailAvailability, checkInstitutionPhoneAvailability } from 'src/lib/database/emailUniqueness';
-import { sendSms } from 'src/lib/database/smsSender';
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyStudentStaffAccess(request, context, 'view');
@@ -323,6 +322,7 @@ export async function POST(request: any, context: any) {
                 const emailHtml = buildStyledEmail({
                     title: `Welcome to ${instName}`,
                     subtitle: 'Official Student Identity & Portal Account Setup',
+                    institutionName: instName,
                     recipientName,
                     bodyParagraphs: [
                         `Congratulations! You have been registered into the official academic database at <strong>${instName}</strong>.`,
@@ -333,35 +333,28 @@ export async function POST(request: any, context: any) {
               ${newStudent.roll_no ? `<div style="margin-bottom: 6px;"><strong>Roll No:</strong> ${newStudent.roll_no}</div>` : ''}
               <div><strong>Registered Email:</strong> <code style="font-family: monospace; font-size: 13px; color: #0f172a;">${cleanEmail}</code></div>
             </div>`,
-                        `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, please visit the student setup page with your registration details.`,
+                        `To activate your portal account, access online gradesheets, ID cards, exam results, and notice boards, click the button below to complete your student account setup.`,
                     ],
+                    actionUrl: setupUrl,
+                    actionText: 'Complete Student Account Setup',
                     footerNote: `If you did not expect this enrollment notification or have questions, please reach out to the ${instName} administrative office.`
                 });
                 await sendEmail({
                     to: cleanEmail,
                     toName: recipientName,
+                    fromName: instName,
                     subject: `Student Account Setup & Registration - ${instName}`,
                     html: emailHtml,
-                    text: `Welcome to ${instName}. Your Registration No is ${newStudent.registration_no}, Student ID: ${newStudent.student_unique_id}. Please visit the portal setup page to configure your personal account password.`,
+                    text: `Welcome to ${instName}. Your Registration No is ${newStudent.registration_no}, Student ID: ${newStudent.student_unique_id}. Complete your student account setup here: ${setupUrl}`,
                     websiteId: website.id,
+                    recipientType: 'student',
+                    recipientId: newStudent.id,
+                    purpose: 'student_setup',
                 });
             }
             catch (mailErr: any) {
                 console.warn('Mail dispatch warning on registration:', mailErr.message);
             }
-        }
-        if (cleanPhone) {
-            try {
-                await sendSms({
-                    to: cleanPhone,
-                    message: `Welcome to ${website.name || 'Campus'}. Your Registration No is ${newStudent.registration_no}. Please visit the portal setup page to configure your account.`,
-                    purpose: 'student_invite',
-                    userId: newStudent.id,
-                    userType: 'student',
-                    websiteId: website.id,
-                });
-            }
-            catch (_: any) { }
         }
         return NextResponse.json({
             success: true,

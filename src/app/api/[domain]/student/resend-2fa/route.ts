@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, extractClientIp, } from 'src/lib/security/shield';
 export async function POST(request: any, context: any) {
     try {
@@ -24,7 +23,6 @@ export async function POST(request: any, context: any) {
         }
         const body = await request.json().catch(() => ({}));
         const identifier = body.identifier || body.registration_number || body.registration_no || body.email || body.phone || body.number;
-        const requestedChannel = String(body.channel || 'email').toLowerCase();
         if (!identifier) {
             return NextResponse.json({ success: false, error: 'Student identifier is required.' }, { status: 400 });
         }
@@ -49,8 +47,11 @@ export async function POST(request: any, context: any) {
             return NextResponse.json({ success: false, error: 'Student account not found.' }, { status: 404 });
         }
         const student = studentRes.rows[0];
+        if (!student.email) {
+            return NextResponse.json({ success: false, error: 'No email registered on student profile.' }, { status: 400 });
+        }
         const targetPhone = student.phone || student.number;
-        const selectedChannel = requestedChannel === 'sms' && targetPhone ? 'sms' : 'email';
+        const selectedChannel = 'email';
         const dispatchLimitCheck = await checkOtpDispatchRateLimit({
             identifier: student.email || student.registration_no,
             phone: targetPhone,
@@ -75,53 +76,39 @@ export async function POST(request: any, context: any) {
             ip: clientIp,
         });
         const institutionName = website.name || 'Institution Student Portal';
-        if (selectedChannel === 'sms') {
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${institutionName} student 2FA security code is: ${secureOtp}. Valid for 10 minutes.`,
-                    purpose: '2fa',
-                    userId: student.id,
-                    userType: 'student',
-                    ip: clientIp,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch SMS code.' }, { status: 500 });
-            }
+        try {
+            const html = buildStyledEmail({
+                title: 'Student Security Verification',
+                subtitle: `${institutionName} — Student Services Portal`,
+                institutionName,
+                recipientName: student.name || 'Student',
+                bodyParagraphs: [
+                    'A new two-factor authentication code was requested for your student account.',
+                    'Please use the code below to complete login. This code is valid for 10 minutes.',
+                ],
+                code: secureOtp,
+                codeLabel: 'Two-Factor Security Code',
+            });
+            await sendEmail({
+                to: student.email,
+                toName: student.name || 'Student',
+                fromName: institutionName,
+                subject: `${institutionName} - New Student Verification Passcode`,
+                html,
+                text: `Your new ${institutionName} student verification passcode is: ${secureOtp}. Valid for 10 minutes.`,
+                websiteId: website.id,
+                recipientType: 'student',
+                recipientId: student.id,
+                purpose: 'student_2fa',
+                ip: clientIp,
+            });
         }
-        else {
-            if (!student.email) {
-                return NextResponse.json({ success: false, error: 'No email registered on student profile.' }, { status: 400 });
-            }
-            try {
-                const html = buildStyledEmail({
-                    title: 'Student Security Verification',
-                    subtitle: `${institutionName} — Student Services Portal`,
-                    recipientName: student.name || 'Student',
-                    bodyParagraphs: [
-                        'A new two-factor authentication code was requested for your student account.',
-                        'Please use the code below to complete login. This code is valid for 10 minutes.',
-                    ],
-                    code: secureOtp,
-                    codeLabel: 'Two-Factor Security Code',
-                });
-                await sendEmail({
-                    to: student.email,
-                    toName: student.name || 'Student',
-                    subject: `${institutionName} - New Student Verification Passcode`,
-                    html,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch email code.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch email code.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `New verification code dispatched to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+            message: 'New verification code dispatched to your registered email address.',
             channel: selectedChannel,
         });
     }

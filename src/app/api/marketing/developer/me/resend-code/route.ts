@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { generateRandomHex } from 'src/lib/utils/random';
 import { queryDb } from 'src/lib/database/db';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import { getClientIp, inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, } from 'src/lib/security/shield';
 export async function POST(request: any) {
@@ -14,7 +13,7 @@ export async function POST(request: any) {
         }
         const ip = getClientIp(request);
         const raw = String(body.email || body.identifier || body.phone || '').trim();
-        const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+        const channel = 'email';
         if (!raw) {
             return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
         }
@@ -76,62 +75,37 @@ export async function POST(request: any) {
        WHERE id = $3`, [newToken, newCode, admin.id]);
         const baseUrl = getBaseUrl(request);
         const verifyUrl = `${baseUrl}/developer-auth/verify?token=${newToken}&email=${encodeURIComponent(admin.email)}`;
-        if (channel === 'sms') {
-            if (!admin.phone) {
-                return NextResponse.json({ success: false, error: 'No mobile phone number found for this account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: admin.phone,
-                    message: `Your ${SITE_NAME} Developer verification code is: ${newCode}. Enter this code or visit ${verifyUrl}`,
-                    purpose: 'verification',
-                    userId: admin.id,
-                    userType: 'developer',
-                    ip,
-                });
-                await recordOtpDispatch({
-                    identifier: admin.phone,
-                    phone: admin.phone,
-                    email: admin.email,
-                    channel: 'sms',
-                    purpose: 'verification',
-                    ip,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: `Failed to dispatch SMS: ${smsErr.message}` }, { status: 500 });
-            }
-            return NextResponse.json({
-                success: true,
-                message: 'A new verification code has been dispatched via SMS to your registered mobile phone.',
-                channel: 'sms',
-                cooldownSeconds: 60,
-            });
-        }
         try {
             const emailHtml = buildStyledEmail({
                 title: `${SITE_NAME} Developer Portal`,
                 subtitle: 'Account Verification Code',
                 recipientName: admin.name || 'Developer',
                 bodyParagraphs: [
-                    'You requested a new verification code for your platform administrator account.',
-                    'Enter the 6-digit verification code below on the verification screen to activate your account.'
+                    'You requested a new verification link for your platform administrator account.',
+                    'Click the verification button below or enter the 6-digit verification code on the verification screen to activate your account.'
                 ],
+                actionUrl: verifyUrl,
+                actionText: 'Verify Developer Account',
                 code: newCode,
                 codeLabel: 'Verification Code',
-                footerNote: 'This verification code will expire in 24 hours. Do not share it with anyone.'
+                footerNote: 'This verification link and code will expire in 24 hours. Do not share it with anyone.'
             });
             await sendEmail({
                 to: admin.email,
-                subject: `Developer Verification Code - ${SITE_NAME}`,
+                toName: admin.name || 'Developer',
+                subject: `Developer Verification Link - ${SITE_NAME}`,
                 html: emailHtml,
-                text: `Hello ${admin.name},\n\nYour new developer verification code is: ${newCode}\nEnter this code on the verification screen to activate your account.\n\nExpires in 24 hours.`,
+                text: `Hello ${admin.name},\n\nVerify your developer account here: ${verifyUrl}\nOr enter your 6-digit verification code: ${newCode}\n\nExpires in 24 hours.`,
+                recipientType: 'developer',
+                recipientId: admin.id,
+                purpose: 'developer_verification',
+                ip,
             });
             await recordOtpDispatch({
                 identifier: admin.email,
                 phone: admin.phone,
                 email: admin.email,
-                channel: 'email',
+                channel,
                 purpose: 'verification',
                 ip,
             });

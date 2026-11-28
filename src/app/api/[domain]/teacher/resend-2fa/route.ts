@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, extractClientIp, } from 'src/lib/security/shield';
 export async function POST(request: any, context: any) {
     try {
@@ -24,7 +23,6 @@ export async function POST(request: any, context: any) {
         }
         const body = await request.json().catch(() => ({}));
         const identifier = body.identifier || body.email || body.phone || body.number;
-        const requestedChannel = String(body.channel || 'email').toLowerCase();
         if (!identifier) {
             return NextResponse.json({ success: false, error: 'Teacher email or phone number is required.' }, { status: 400 });
         }
@@ -49,8 +47,11 @@ export async function POST(request: any, context: any) {
         if (!teacher.is_active || !teacher.is_registered) {
             return NextResponse.json({ success: false, error: 'Account is inactive or pending registration verification.' }, { status: 403 });
         }
+        if (!teacher.email) {
+            return NextResponse.json({ success: false, error: 'No email address registered on teacher profile.' }, { status: 400 });
+        }
         const targetPhone = teacher.phone || teacher.number;
-        const selectedChannel = requestedChannel === 'sms' && targetPhone ? 'sms' : 'email';
+        const selectedChannel = 'email';
         const dispatchLimitCheck = await checkOtpDispatchRateLimit({
             identifier: teacher.email,
             phone: targetPhone,
@@ -75,50 +76,39 @@ export async function POST(request: any, context: any) {
             ip: clientIp,
         });
         const institutionName = website.name || 'Institution Teacher Portal';
-        if (selectedChannel === 'sms') {
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${institutionName} faculty 2FA security code is: ${secureOtp}. Valid for 10 minutes.`,
-                    purpose: '2fa',
-                    userId: teacher.id,
-                    userType: 'teacher',
-                    ip: clientIp,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch SMS code.' }, { status: 500 });
-            }
+        try {
+            const html = buildStyledEmail({
+                title: 'Teacher Security Verification',
+                subtitle: `${institutionName} — Faculty Operations Portal`,
+                institutionName,
+                recipientName: teacher.name,
+                bodyParagraphs: [
+                    'A new two-factor authentication code was requested for your teacher account.',
+                    'Please use the verification code below to complete your authentication. This security code will expire in 10 minutes.',
+                ],
+                code: secureOtp,
+                codeLabel: 'Two-Factor Authentication Code',
+            });
+            await sendEmail({
+                to: teacher.email,
+                toName: teacher.name,
+                fromName: institutionName,
+                subject: `${institutionName} - New Teacher Verification Passcode`,
+                html,
+                text: `Your new ${institutionName} teacher verification passcode is: ${secureOtp}. Valid for 10 minutes.`,
+                websiteId: website.id,
+                recipientType: 'teacher',
+                recipientId: teacher.id,
+                purpose: 'teacher_2fa',
+                ip: clientIp,
+            });
         }
-        else {
-            try {
-                const html = buildStyledEmail({
-                    title: 'Teacher Security Verification',
-                    subtitle: `${institutionName} — Faculty Operations Portal`,
-                    recipientName: teacher.name,
-                    bodyParagraphs: [
-                        'A new two-factor authentication code was requested for your teacher account.',
-                        'Please use the verification code below to complete your authentication. This security code will expire in 10 minutes.',
-                    ],
-                    code: secureOtp,
-                    codeLabel: 'Two-Factor Authentication Code',
-                });
-                await sendEmail({
-                    to: teacher.email,
-                    toName: teacher.name,
-                    subject: `${institutionName} - New Teacher Verification Passcode`,
-                    html,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch email code.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch email code.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `New verification code dispatched to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+            message: 'New verification code dispatched to your registered email address.',
             channel: selectedChannel,
         });
     }

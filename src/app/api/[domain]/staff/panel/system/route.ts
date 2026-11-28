@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { hasStaffModulePermission, verifyStaffModuleAccess } from 'src/lib/middleware/staff';
 import { getWebsiteUrl } from 'src/lib/database/secret';
 import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
-    return verifyStaffModuleAccess(request, context, ['settings', 'routine'], action);
+    return verifyStaffModuleAccess(request, context, ['system', 'settings', 'routine'], action);
 }
 export async function GET(request: any, context: any) {
     try {
@@ -34,13 +34,15 @@ export async function GET(request: any, context: any) {
          WHERE w.id = $1`, [websiteId]),
             queryDb(`SELECT * FROM website_domains WHERE website_id = $1 ORDER BY is_primary DESC, id ASC`, [websiteId]),
             queryDb(`SELECT * FROM website_academic_configs WHERE website_id = $1`, [websiteId]),
-            queryDb(`SELECT cm.id, cm.name, cm.path, cm.category, cm.description, cm.icon
-         FROM package_control_modules pcm
-         JOIN website_control_modules cm ON cm.id = pcm.control_module_id
-         JOIN websites w ON w.id = $1
-         LEFT JOIN subscriptions s ON s.id = w.subscription_id
-         WHERE pcm.package_id = COALESCE(s.package_id, 1) AND cm.is_active = TRUE
-         ORDER BY cm.display_order ASC, cm.id ASC`, [websiteId]).catch(() => ({ rows: [] }))
+            Array.isArray(auth.website?.allowed_control_modules) && auth.website.allowed_control_modules.length > 0
+                ? Promise.resolve({ rows: auth.website.allowed_control_modules })
+                : queryDb(`SELECT cm.id, cm.slug, cm.name, cm.path, cm.category, cm.description, cm.icon
+             FROM package_control_modules pcm
+             JOIN website_control_modules cm ON cm.id = pcm.control_module_id
+             JOIN websites w ON w.id = $1
+             LEFT JOIN subscriptions s ON s.id = w.subscription_id
+             WHERE pcm.package_id = COALESCE(s.package_id, 1) AND cm.is_active = TRUE
+             ORDER BY cm.display_order ASC, cm.id ASC`, [websiteId]).catch(() => ({ rows: [] }))
         ]);
         if (siteRes.rows.length === 0) {
             return NextResponse.json({ success: false, error: 'Institution portal not found.' }, { status: 404 });
@@ -53,13 +55,19 @@ export async function GET(request: any, context: any) {
             staff: `${baseUrl}/auth/access/staff/login`,
             officer: `${baseUrl}/auth/access/officer/login`
         };
+        const canEdit = Boolean(auth.isCreator || hasStaffModulePermission(auth.staffSession, ['system', 'settings', 'routine'], 'edit'));
+        const canEditAcademic = Boolean(auth.isCreator || hasStaffModulePermission(auth.staffSession, ['system', 'settings', 'routine', 'class-setup'], 'edit'));
         return NextResponse.json({
             success: true,
             website,
             domains: domainsRes.rows,
-            academicConfig: configRes.rows[0] || null,
+            academicConfig: configRes.rows[0] || auth.website?.academic_config || null,
             modules: modulesRes.rows || [],
-            portals
+            portals,
+            permissions: {
+                canEdit,
+                canEditAcademic,
+            },
         });
     }
     catch (error: any) {

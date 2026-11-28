@@ -123,7 +123,7 @@ export async function GET(request: any, context: any) {
         const result = await queryDb(queryStr, params);
         const clubsRes = await queryDb(`SELECT id, name, category, has_chat_box FROM website_clubs WHERE website_id = $1 AND is_active = true ORDER BY name ASC`, [website.id]);
         const deptsRes = await queryDb(`SELECT id, name FROM website_departments WHERE website_id = $1 AND is_active = true ORDER BY name ASC`, [website.id]);
-        const classesRes = await queryDb(`SELECT id, name, department_id FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [website.id]);
+        const classesRes = await queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [website.id]);
         const initialCandidatesRes = await queryDb(`SELECT s.id,
               s.registration_no,
               s.roll_no,

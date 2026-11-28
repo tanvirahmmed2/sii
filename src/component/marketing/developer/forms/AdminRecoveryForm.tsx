@@ -156,15 +156,9 @@ export default function AdminRecoveryForm() {
             {loading ? 'Updating Password...' : 'Save New Password'}
           </button>
 
-          <div className="flex items-center justify-between text-xs pt-1">
-            {channel === 'email' ? (<button type="button" onClick={() => handleRequestToken(null, 'sms')} disabled={loading || cooldown > 0} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                Send to phone
-              </button>) : (<button type="button" onClick={() => handleRequestToken(null, 'email')} disabled={loading || cooldown > 0} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                Send to email
-              </button>)}
-
-            <button type="button" onClick={() => handleRequestToken(null, channel)} disabled={loading || cooldown > 0} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer">
-              {cooldown > 0 ? `Resend token (${cooldown}s)` : 'Resend token'}
+          <div className="flex items-center justify-end text-xs pt-1">
+            <button type="button" onClick={() => handleRequestToken(null, 'email')} disabled={loading || cooldown > 0} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-50 cursor-pointer">
+              {cooldown > 0 ? `Resend token (${cooldown}s)` : 'Resend token to email'}
             </button>
           </div>
 

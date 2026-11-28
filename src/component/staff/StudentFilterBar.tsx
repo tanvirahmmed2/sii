@@ -52,12 +52,8 @@ export default function StudentFilterBar({ onFilter, onReset, loading = false, e
             isMounted = false;
         };
     }, [getApiEndpoint]);
-    const availableClasses = classes.filter((c: any) => {
-        if (selectedDepartment && c.department_id && String(c.department_id) !== String(selectedDepartment))
-            return false;
-        return true;
-    });
-    const availableSections = sections.filter((s: any) => !selectedClass || String(s.class_id) === String(selectedClass));
+    const availableClasses = classes;
+    const availableSections = sections;
     const handleSubmit = (e: any) => {
         e.preventDefault();
         const deptObj = departments.find((d: any) => String(d.id) === String(selectedDepartment));

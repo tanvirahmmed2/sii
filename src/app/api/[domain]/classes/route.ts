@@ -9,33 +9,21 @@ export async function GET(request: any, context: any) {
         }
         const result = await queryDb(`SELECT c.id,
               c.website_id,
-              c.department_id,
               c.name,
               c.code,
               c.max_seats,
               c.description,
               c.created_at,
               c.updated_at,
-              d.name AS department_name,
-              d.code AS department_code,
-              d.slug AS department_slug,
-              di.motto AS motto,
-              di.summary AS summary,
-              COALESCE(c.description, di.description) AS detailed_description,
-              COALESCE(di.expected_cost, 0.00) AS expected_cost,
-              COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
-              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count,
-              COALESCE(
-                (SELECT json_agg(json_build_object('id', sec.id, 'name', sec.name, 'capacity', sec.capacity, 'room_number', sec.room_number) ORDER BY sec.name ASC)
-                 FROM website_sections sec
-                 WHERE sec.class_id = c.id),
-                '[]'::json
-              ) AS sections
+              ci.motto AS motto,
+              ci.summary AS summary,
+              COALESCE(ci.description, c.description) AS detailed_description,
+              COALESCE(ci.expected_cost, 0.00) AS expected_cost,
+              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
        FROM website_classes c
-       JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
-       LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
+       LEFT JOIN website_class_information ci ON ci.class_id = c.id AND ci.website_id = c.website_id
        WHERE c.website_id = $1
-       ORDER BY d.name ASC, c.name ASC, c.id ASC`, [website.id]);
+       ORDER BY c.name ASC, c.id ASC`, [website.id]);
         return NextResponse.json({
             success: true,
             classes: result.rows,

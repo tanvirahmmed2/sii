@@ -1,52 +1,38 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { verifyAcademicDimensionEnabled } from 'src/lib/modules/academicConfig';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
-    return verifyStaffModuleAccess(request, context, ['class-setup', 'classes', 'routine'], action);
+    const auth = await verifyStaffModuleAccess(request, context, ['class-setup', 'classes', 'routine'], action);
+    if (auth.error)
+        return auth;
+    const dim = await verifyAcademicDimensionEnabled(auth.website, 'class');
+    if (dim.locked && action !== 'view') {
+        return { error: dim.message, status: 403, locked: true, code: 'ACADEMIC_DIMENSION_LOCKED' };
+    }
+    return { ...auth, academicDim: dim };
 }
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'view');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
-        const { searchParams } = new URL(request.url);
-        const departmentId = searchParams.get('department_id');
-        const departmentsResult = await queryDb(`SELECT id, name, code, slug 
-       FROM website_departments 
-       WHERE website_id = $1 
-       ORDER BY order_no ASC, name ASC`, [auth.website.id]);
-        let query = `
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
+        const result = await queryDb(`
       SELECT c.*,
-             d.name AS department_name,
-             d.code AS department_code,
-             d.slug AS department_slug,
-             COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
              COALESCE((SELECT COUNT(*) FROM website_subjects sub WHERE sub.class_id = c.id), 0)::int +
-             COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
+             COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count,
+             EXISTS(SELECT 1 FROM website_class_information ci WHERE ci.class_id = c.id AND ci.website_id = c.website_id) AS has_information
       FROM website_classes c
-      LEFT JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
       WHERE c.website_id = $1
-    `;
-        const params = [auth.website.id];
-        if (departmentId && departmentId !== 'all') {
-            if (departmentId === 'none' || departmentId === 'null') {
-                query += ` AND c.department_id IS NULL`;
-            }
-            else {
-                params.push(departmentId);
-                query += ` AND c.department_id = $${params.length}`;
-            }
-        }
-        query += ` ORDER BY COALESCE(d.name, 'ZZZ') ASC, c.name ASC, c.id ASC`;
-        const result = await queryDb(query, params);
+      ORDER BY c.name ASC, c.id ASC
+    `, [auth.website.id]);
         return NextResponse.json({
             success: true,
+            locked: Boolean(auth.academicDim?.locked),
+            academicConfig: auth.academicDim?.config || null,
             classes: result.rows,
-            available_departments: departmentsResult.rows,
-            departments: departmentsResult.rows,
             payload: {
                 classes: result.rows,
-                available_departments: departmentsResult.rows
             }
         });
     }
@@ -58,9 +44,9 @@ export async function POST(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'create');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         const body = await request.json().catch(() => ({}));
-        const { name, code, department_id, max_seats = 40, description = '' } = body;
+        const { name, code, max_seats = 40, description = '' } = body;
         if (!name || !String(name).trim()) {
             return NextResponse.json({ success: false, error: 'Class name is required.' }, { status: 400 });
         }
@@ -69,37 +55,20 @@ export async function POST(request: any, context: any) {
         const trimmedCode = code && String(code).trim()
             ? String(code).trim().toUpperCase()
             : `CLS-${cleanCodePart || '1'}`;
-        let validDeptId = null;
-        if (department_id && String(department_id) !== 'none' && String(department_id) !== 'null') {
-            const deptCheck = await queryDb(`SELECT id, name FROM website_departments WHERE id = $1 AND website_id = $2`, [department_id, auth.website.id]);
-            if ((deptCheck.rowCount ?? 0) > 0) {
-                validDeptId = parseInt(department_id, 10);
-            }
-        }
-        const insertRes = await queryDb(`INSERT INTO website_classes (website_id, department_id, name, code, max_seats, description)
-       VALUES ($1, $2, $3, $4, $5, $6)
+        const insertRes = await queryDb(`INSERT INTO website_classes (website_id, name, code, max_seats, description)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`, [
             auth.website.id,
-            validDeptId,
             trimmedName,
             trimmedCode,
             parseInt(max_seats, 10) || 40,
             description ? String(description).trim() : null
         ]);
         const savedClass = insertRes.rows[0];
-        const enrichedRes = await queryDb(`SELECT c.*,
-              d.name AS department_name,
-              d.code AS department_code,
-              d.slug AS department_slug,
-              0::int AS section_count,
-              0::int AS subject_count
-       FROM website_classes c
-       LEFT JOIN website_departments d ON d.id = c.department_id
-       WHERE c.id = $1`, [savedClass.id]);
         return NextResponse.json({
             success: true,
-            classItem: enrichedRes.rows[0] || savedClass,
-            class: enrichedRes.rows[0] || savedClass,
+            classItem: { ...savedClass, subject_count: 0, has_information: false },
+            class: { ...savedClass, subject_count: 0, has_information: false },
             message: 'Class created successfully.'
         });
     }
@@ -114,9 +83,9 @@ export async function PUT(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'edit');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         const body = await request.json().catch(() => ({}));
-        const { id, name, code, department_id, max_seats, description } = body;
+        const { id, name, code, max_seats, description } = body;
         if (!id) {
             return NextResponse.json({ success: false, error: 'Class ID is required.' }, { status: 400 });
         }
@@ -125,21 +94,6 @@ export async function PUT(request: any, context: any) {
             return NextResponse.json({ success: false, error: 'Class not found.' }, { status: 404 });
         }
         const existing = existingCheck.rows[0];
-        let targetDeptId = existing.department_id;
-        if (department_id !== undefined) {
-            if (!department_id || String(department_id) === 'none' || String(department_id) === 'null') {
-                targetDeptId = null;
-            }
-            else {
-                const deptCheck = await queryDb(`SELECT id FROM website_departments WHERE id = $1 AND website_id = $2`, [department_id, auth.website.id]);
-                if ((deptCheck.rowCount ?? 0) > 0) {
-                    targetDeptId = parseInt(department_id, 10);
-                }
-                else {
-                    targetDeptId = null;
-                }
-            }
-        }
         const updatedName = name !== undefined ? (name ? String(name).trim() : existing.name) : existing.name;
         const updatedCode = code !== undefined ? (code ? String(code).trim().toUpperCase() : existing.code) : existing.code;
         const updatedMaxSeats = max_seats !== undefined ? (parseInt(max_seats, 10) || existing.max_seats) : existing.max_seats;
@@ -147,29 +101,23 @@ export async function PUT(request: any, context: any) {
         const updateRes = await queryDb(`UPDATE website_classes
        SET name = $1,
            code = $2,
-           department_id = $3,
-           max_seats = $4,
-           description = $5,
+           max_seats = $3,
+           description = $4,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6 AND website_id = $7
+       WHERE id = $5 AND website_id = $6
        RETURNING *`, [
             updatedName,
             updatedCode,
-            targetDeptId,
             updatedMaxSeats,
             updatedDesc,
             id,
             auth.website.id
         ]);
         const enrichedRes = await queryDb(`SELECT c.*,
-              d.name AS department_name,
-              d.code AS department_code,
-              d.slug AS department_slug,
-              COALESCE((SELECT COUNT(*) FROM website_sections sec WHERE sec.class_id = c.id), 0)::int AS section_count,
               COALESCE((SELECT COUNT(*) FROM website_subjects sub WHERE sub.class_id = c.id), 0)::int +
-              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
+              COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count,
+              EXISTS(SELECT 1 FROM website_class_information ci WHERE ci.class_id = c.id AND ci.website_id = c.website_id) AS has_information
        FROM website_classes c
-       LEFT JOIN website_departments d ON d.id = c.department_id
        WHERE c.id = $1`, [id]);
         return NextResponse.json({
             success: true,
@@ -189,7 +137,7 @@ export async function DELETE(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'delete');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         const { searchParams } = new URL(request.url);
         let id = searchParams.get('id');
         if (!id) {

@@ -201,32 +201,10 @@ export default function TeacherLoginPage() {
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 A 6-digit passcode was sent to your registered{' '}
                 <strong className="text-slate-900 dark:text-white">
-                  {selectedChannel === 'sms'
-                ? (contactInfo.phone ? `phone number (${contactInfo.phone.replace(/.(?=.{4})/g, '*')})` : 'mobile phone via SMS')
-                : (contactInfo.email || identifier)}
+                  {contactInfo.email || identifier}
                 </strong>
               </p>
             </div>
-
-            {contactInfo.hasPhone && (<div className="flex items-center justify-center gap-2 text-xs">
-                <span className="text-slate-500">Deliver via:</span>
-                <button type="button" onClick={() => {
-                    setSelectedChannel('email');
-                    handleResend2Fa('email');
-                }} disabled={resending} className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer border ${selectedChannel === 'email'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
-                  Email
-                </button>
-                <button type="button" onClick={() => {
-                    setSelectedChannel('sms');
-                    handleResend2Fa('sms');
-                }} disabled={resending} className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer border ${selectedChannel === 'sms'
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
-                  SMS
-                </button>
-              </div>)}
 
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">

@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import {
+    fetchPlatformControlModules,
+    fetchPlatformHomeModules,
+    invalidateModulesCache,
+    invalidateWebsiteModulesCache,
+} from 'src/lib/redis/redisClient';
+import { clearWebsiteCache } from 'src/lib/middleware/websiteResolver';
 import slugify from 'slugify';
 export async function GET(request: any) {
     try {
@@ -9,38 +16,57 @@ export async function GET(request: any) {
         const includeInactive = searchParams.get('include_inactive') === 'true';
         const type = (searchParams.get('type') || 'control').toLowerCase();
         if (type === 'home') {
-            let sql = 'SELECT * FROM website_home_modules';
-            const conds: any[] = [];
-            const params: any[] = [];
-            if (!includeInactive)
-                conds.push('is_active = TRUE');
-            if (search && search.trim()) {
-                params.push(`%${search.trim().toLowerCase()}%`);
-                conds.push(`(LOWER(name) LIKE $${params.length} OR LOWER(description) LIKE $${params.length} OR LOWER(slug) LIKE $${params.length} OR LOWER(path) LIKE $${params.length})`);
+            if (includeInactive || (search && search.trim())) {
+                let sql = 'SELECT * FROM website_home_modules';
+                const conds: any[] = [];
+                const params: any[] = [];
+                if (!includeInactive)
+                    conds.push('is_active = TRUE');
+                if (search && search.trim()) {
+                    params.push(`%${search.trim().toLowerCase()}%`);
+                    conds.push(`(LOWER(name) LIKE $${params.length} OR LOWER(description) LIKE $${params.length} OR LOWER(slug) LIKE $${params.length} OR LOWER(path) LIKE $${params.length})`);
+                }
+                if (conds.length > 0)
+                    sql += ' WHERE ' + conds.join(' AND ');
+                sql += ' ORDER BY display_order ASC, id ASC';
+                const res = await queryDb(sql, params).catch(() => ({ rows: [] }));
+                return NextResponse.json({
+                    success: true,
+                    type: 'home',
+                    records: res.rows,
+                    modules: res.rows,
+                    total: res.rows.length,
+                });
             }
-            if (conds.length > 0)
-                sql += ' WHERE ' + conds.join(' AND ');
-            sql += ' ORDER BY display_order ASC, id ASC';
-            const res = await queryDb(sql, params).catch(() => ({ rows: [] }));
+            const rows = await fetchPlatformHomeModules(async () => {
+                const res = await queryDb('SELECT * FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] }));
+                return res.rows || [];
+            });
             return NextResponse.json({
                 success: true,
                 type: 'home',
-                records: res.rows,
-                modules: res.rows,
-                total: res.rows.length,
+                records: rows,
+                modules: rows,
+                total: rows.length,
             });
         }
         if (type === 'all') {
-            const [hRes, cRes] = await Promise.all([
-                queryDb('SELECT * FROM website_home_modules ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] })),
-                queryDb('SELECT * FROM website_control_modules ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] })),
+            const [homeRows, controlRows] = await Promise.all([
+                fetchPlatformHomeModules(async () => {
+                    const r = await queryDb('SELECT * FROM website_home_modules ORDER BY display_order ASC, id ASC').catch(() => ({ rows: [] }));
+                    return r.rows || [];
+                }),
+                fetchPlatformControlModules(async () => {
+                    const r = await queryDb('SELECT * FROM website_control_modules ORDER BY category ASC, display_order ASC, id ASC').catch(() => ({ rows: [] }));
+                    return r.rows || [];
+                }),
             ]);
             return NextResponse.json({
                 success: true,
                 type: 'all',
-                home_modules: hRes.rows || [],
-                control_modules: cRes.rows || [],
-                total: (hRes.rows?.length || 0) + (cRes.rows?.length || 0),
+                home_modules: homeRows,
+                control_modules: controlRows,
+                total: homeRows.length + controlRows.length,
             });
         }
         let sql = 'SELECT * FROM website_control_modules';
@@ -101,6 +127,7 @@ export async function POST(request: any) {
         const res = await queryDb(`INSERT INTO ${targetTable} (name, slug, path, category, description, icon, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`, [name, slug, path, category, description, icon, isActive]);
+        await Promise.all([invalidateModulesCache(), invalidateWebsiteModulesCache(), clearWebsiteCache()]);
         return NextResponse.json({
             success: true,
             message: `${type === 'home' ? 'Home' : 'Control'} module created successfully`,
@@ -141,6 +168,7 @@ export async function PUT(request: any) {
        SET name = $1, description = $2, icon = $3, category = $4, path = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP
        WHERE id = $7
        RETURNING *`, [name, description, icon, category, path, isActive, id]);
+        await Promise.all([invalidateModulesCache(), invalidateWebsiteModulesCache(), clearWebsiteCache()]);
         return NextResponse.json({
             success: true,
             message: `${type === 'home' ? 'Home' : 'Control'} module updated successfully`,
@@ -166,6 +194,7 @@ export async function DELETE(request: any) {
         }
         const targetTable = type === 'home' ? 'website_home_modules' : 'website_control_modules';
         await queryDb(`DELETE FROM ${targetTable} WHERE id = $1`, [id]);
+        await Promise.all([invalidateModulesCache(), invalidateWebsiteModulesCache(), clearWebsiteCache()]);
         return NextResponse.json({
             success: true,
             message: `${type === 'home' ? 'Home' : 'Control'} module deleted successfully`,

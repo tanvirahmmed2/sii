@@ -182,6 +182,7 @@ export async function PUT(request: any, context: any) {
                     const emailHtml = buildStyledEmail({
                         title: `Account Verified! Welcome to ${website.name || 'Student Portal'}`,
                         previewText: `Your profile verification has been approved. You can now access your student portal.`,
+                        institutionName: website.name || 'Institutional Management Portal',
                         websiteName: website.name || 'Institutional Management Portal',
                         bodyContent: `
               <p>Dear <strong>${student.name || 'Student'}</strong>,</p>
@@ -193,13 +194,20 @@ export async function PUT(request: any, context: any) {
               </div>
               <p style="font-size: 13px; color: #475569;">You can now log in to view your classes, attendance, marks, routine, and institutional notices.</p>
             `,
+                        actionUrl: portalUrl,
+                        actionText: 'Open Student Portal',
                     });
                     await sendEmail({
                         to: student.email,
                         toName: student.name || 'Student',
+                        fromName: website.name || undefined,
                         subject: `Profile Approved - Student Portal Access Enabled`,
                         html: emailHtml,
+                        text: `Your student profile at ${website.name || 'Campus'} (Registration No: ${student.registration_no}) has been verified and activated. Open your portal here: ${portalUrl}`,
                         websiteId: website.id,
+                        recipientType: 'student',
+                        recipientId: student.id,
+                        purpose: 'student_verification',
                     });
                 }
                 catch (err: any) {
@@ -234,6 +242,7 @@ export async function PUT(request: any, context: any) {
                     const emailHtml = buildStyledEmail({
                         title: `Profile Verification Update`,
                         previewText: `Changes required for your student account verification.`,
+                        institutionName: website.name || 'Institutional Management Portal',
                         websiteName: website.name || 'Institutional Management Portal',
                         bodyContent: `
               <p>Dear <strong>${student.name || 'Student'}</strong>,</p>
@@ -242,15 +251,22 @@ export async function PUT(request: any, context: any) {
                 <p style="margin: 0 0 4px 0;"><strong>Status:</strong> Action Required / Rejected</p>
                 <p style="margin: 0;"><strong>Review Feedback:</strong> ${notes || 'Please update your submitted details and resubmit.'}</p>
               </div>
-              <p style="font-size: 13px; color: #475569;">Please visit the student setup page to update your profile details and resubmit for verification.</p>
+              <p style="font-size: 13px; color: #475569;">Please click the button below to update your profile details and resubmit for verification.</p>
             `,
+                        actionUrl: setupUrl,
+                        actionText: 'Update Student Profile',
                     });
                     await sendEmail({
                         to: student.email,
                         toName: student.name || 'Student',
+                        fromName: website.name || undefined,
                         subject: `Student Profile Verification Notice - Action Required`,
                         html: emailHtml,
+                        text: `Your student profile at ${website.name || 'Campus'} requires updates: ${notes || 'Please update your submitted details and resubmit.'}\nUpdate profile here: ${setupUrl}`,
                         websiteId: website.id,
+                        recipientType: 'student',
+                        recipientId: student.id,
+                        purpose: 'student_verification',
                     });
                 }
                 catch (err: any) {

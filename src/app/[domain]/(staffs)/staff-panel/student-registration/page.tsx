@@ -66,12 +66,8 @@ export default function StudentRegistrationPage() {
         };
         fetchAcademicData();
     }, [getApiEndpoint]);
-    const availableClasses = classes.filter((c: any) => {
-        if (singleDepartmentId && c.department_id && String(c.department_id) !== String(singleDepartmentId))
-            return false;
-        return true;
-    });
-    const availableSections = sections.filter((sec: any) => !singleClassId || String(sec.class_id) === String(singleClassId));
+    const availableClasses = classes;
+    const availableSections = sections;
     const handleSingleRegister = async (e: any) => {
         e.preventDefault();
         if (!singleRegNo.trim()) {

@@ -1252,7 +1252,6 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       const usedClassCodes = new Set<string>();
       for (let i = 0; i < cleanClasses.length; i++) {
         const c = cleanClasses[i];
-        const deptId = c.department_key ? deptMap.get(c.department_key.toLowerCase()) || null : null;
         const cleanPart = c.name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8) || String(i + 1);
         let finalCode = c.code || `CLS-${cleanPart}`;
         let cSuffix = 2;
@@ -1262,11 +1261,11 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
         usedClassCodes.add(finalCode);
 
         const cRes = await client.query(
-          `INSERT INTO website_classes (website_id, department_id, name, code, max_seats, description)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO website_classes (website_id, name, code, max_seats, description)
+           VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (website_id, name) DO UPDATE SET max_seats = EXCLUDED.max_seats
            RETURNING id`,
-          [newWebsite.id, deptId, c.name, finalCode, c.max_seats, c.description]
+          [newWebsite.id, c.name, finalCode, c.max_seats, c.description]
         );
         const classId = Number(cRes.rows[0].id);
         classMap.set(c.key.toLowerCase(), classId);
@@ -1274,20 +1273,15 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       }
 
       const sectionMap = new Map<string, number>();
-      const defaultSessionId = cleanSessions.length > 0 ? sessionMap.get(cleanSessions[0].name.toLowerCase()) || null : null;
       for (const sec of cleanSections) {
-        const classId = sec.class_key ? classMap.get(sec.class_key.toLowerCase()) || null : null;
-        const deptId = sec.department_key ? deptMap.get(sec.department_key.toLowerCase()) || null : null;
-        const sessId = sec.session_name ? sessionMap.get(sec.session_name.toLowerCase()) || defaultSessionId : defaultSessionId;
         const secRes = await client.query(
-          `INSERT INTO website_sections (website_id, class_id, department_id, session_id, name, capacity, room_number)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (website_id, class_id, name) DO UPDATE SET capacity = EXCLUDED.capacity
+          `INSERT INTO website_sections (website_id, name, capacity, room_number)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (website_id, name) DO UPDATE SET capacity = EXCLUDED.capacity
            RETURNING id`,
-          [newWebsite.id, classId, deptId, sessId, sec.name, sec.capacity, sec.room_number]
+          [newWebsite.id, sec.name, sec.capacity, sec.room_number]
         );
         const secId = Number(secRes.rows[0].id);
-        sectionMap.set(`${classId || 0}:${sec.name.toLowerCase()}`, secId);
         sectionMap.set(sec.name.toLowerCase(), secId);
       }
 
@@ -1358,6 +1352,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
         }
       }
 
+      const defaultSessionId = cleanSessions.length > 0 ? sessionMap.get(cleanSessions[0].name.toLowerCase()) || null : null;
       for (const r of cleanRoutines) {
         const dayId = dayMap.get(r.day_name.toLowerCase());
         const classId = classMap.get(r.class_key.toLowerCase());

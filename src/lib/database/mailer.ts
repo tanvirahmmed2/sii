@@ -79,8 +79,8 @@ export function buildStyledEmail({
     }
     computedHtml = parts.join('');
   }
-  const finalActionUrl = code ? null : (actionUrl || ctaButton?.url || null);
-  const finalActionText = code ? null : (actionText || ctaButton?.label || null);
+  const finalActionUrl = actionUrl || ctaButton?.url || null;
+  const finalActionText = actionText || ctaButton?.label || null;
   const actionButton = finalActionUrl && finalActionText ? `
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
       <tr>

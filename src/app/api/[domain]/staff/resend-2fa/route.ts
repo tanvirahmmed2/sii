@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { getClientIp, inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, } from 'src/lib/security/shield';
 export async function POST(request: any, context: any) {
     try {
@@ -65,67 +64,55 @@ export async function POST(request: any, context: any) {
         if (!staff.is_active) {
             return NextResponse.json({ success: false, error: 'Staff account is deactivated.' }, { status: 403 });
         }
-        const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+        if (!staff.email) {
+            return NextResponse.json({ success: false, error: 'No email address is registered on this staff account.' }, { status: 400 });
+        }
+        const channel = 'email';
         const otpCode = generateSecureOtp(6);
         await queryDb(`UPDATE website_staffs
        SET two_factor_code = $1, two_factor_expires = CURRENT_TIMESTAMP + INTERVAL '10 minutes', updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`, [otpCode, staff.id]);
         await recordOtpDispatch({
-            identifier: raw,
+            identifier: staff.email,
             phone: staff.phone || staff.number,
             email: staff.email,
             channel,
             purpose: 'staff_resend_2fa',
             ip,
         });
-        if (channel === 'sms') {
-            const targetPhone = staff.phone || staff.number;
-            if (!targetPhone) {
-                return NextResponse.json({ success: false, error: 'No phone number is registered for SMS verification on this staff account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${website.name} staff 2FA security code is: ${otpCode}. Valid for 10 minutes.`,
-                    purpose: '2fa',
-                    userId: staff.id,
-                    userType: 'staff',
-                    ip,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch security SMS.' }, { status: 500 });
-            }
+        try {
+            const html = buildStyledEmail({
+                title: 'Staff Security Verification',
+                subtitle: `${website.name} — Staff Operations Portal`,
+                institutionName: website.name,
+                recipientName: staff.name,
+                bodyParagraphs: [
+                    'A new two-factor security code was requested for your staff portal login.',
+                    'Please enter the 6-digit code below to authenticate. This code is valid for 10 minutes.',
+                ],
+                code: otpCode,
+                codeLabel: 'New Security Code',
+            });
+            await sendEmail({
+                to: staff.email,
+                toName: staff.name,
+                fromName: website.name || undefined,
+                subject: `${website.name} - Resent Staff Security Code`,
+                html,
+                text: `Your new ${website.name} staff two-factor code is: ${otpCode}. Valid for 10 minutes.`,
+                websiteId: website.id,
+                recipientType: 'staff',
+                recipientId: staff.id,
+                purpose: 'staff_2fa',
+                ip,
+            });
         }
-        else {
-            try {
-                const html = buildStyledEmail({
-                    title: 'Staff Security Verification',
-                    subtitle: `${website.name} — Staff Operations Portal`,
-                    recipientName: staff.name,
-                    bodyParagraphs: [
-                        'A new two-factor security code was requested for your staff portal login.',
-                        'Please enter the 6-digit code below to authenticate. This code is valid for 10 minutes.',
-                    ],
-                    code: otpCode,
-                    codeLabel: 'New Security Code',
-                });
-                await sendEmail({
-                    to: staff.email,
-                    toName: staff.name,
-                    subject: `${website.name} - Resent Staff Security Code`,
-                    html,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch security email.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch security email.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `A new security code has been sent to your ${channel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+            message: 'A new security code has been sent to your email address.',
             channel,
             hasPhone: Boolean(staff.phone || staff.number),
             hasEmail: Boolean(staff.email),

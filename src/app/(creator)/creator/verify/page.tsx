@@ -131,8 +131,8 @@ function CreatorVerifyContent() {
             });
             const data = await res.json();
             if (data.success) {
-                setChannel(targetChannel);
-                setResendMsg(data.message || `A new 6-digit code has been sent via ${targetChannel === 'sms' ? 'SMS' : 'email'}.`);
+                setChannel('email');
+                setResendMsg(data.message || 'A new 6-digit verification code and link has been sent via email.');
                 setCooldown(60);
             } else {
                 setError(data.error || 'Failed to resend verification code.');
@@ -261,34 +261,14 @@ function CreatorVerifyContent() {
                             </button>
                         </form>
 
-                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-                            {channel === 'email' ? (
-                                <button
-                                    type="button"
-                                    onClick={() => handleResend('sms')}
-                                    disabled={resending || cooldown > 0}
-                                    className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
-                                >
-                                    Send to phone
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => handleResend('email')}
-                                    disabled={resending || cooldown > 0}
-                                    className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer"
-                                >
-                                    Send to email
-                                </button>
-                            )}
-
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2 text-xs">
                             <button
                                 type="button"
                                 disabled={resending || cooldown > 0}
-                                onClick={() => handleResend(channel)}
+                                onClick={() => handleResend('email')}
                                 className="text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white disabled:opacity-50 cursor-pointer"
                             >
-                                {cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend Code'}
+                                {cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend Code to Email'}
                             </button>
                         </div>
 

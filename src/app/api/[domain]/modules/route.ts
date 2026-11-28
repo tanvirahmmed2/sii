@@ -1,6 +1,31 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
+import { getStaffSession } from 'src/lib/middleware/staff';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
+import { invalidateModulesCache, invalidateWebsiteModulesCache } from 'src/lib/redis/redisClient';
+
+function filterModuleList(list: any[], { active, category, search }: any) {
+    return (list || []).filter((m: any) => {
+        if (active === 'true' && !m.is_active)
+            return false;
+        if (active === 'false' && m.is_active)
+            return false;
+        if (category && category.trim() && String(m.category || '').toLowerCase() !== category.trim().toLowerCase())
+            return false;
+        if (search && search.trim()) {
+            const q = search.trim().toLowerCase();
+            const match = String(m.name || '').toLowerCase().includes(q) ||
+                String(m.slug || '').toLowerCase().includes(q) ||
+                String(m.description || '').toLowerCase().includes(q) ||
+                String(m.path || '').toLowerCase().includes(q);
+            if (!match)
+                return false;
+        }
+        return true;
+    });
+}
+
 export async function GET(request: any, context: any) {
     try {
         const website = await resolveWebsiteFromRequest(request, context);
@@ -12,58 +37,35 @@ export async function GET(request: any, context: any) {
         const category = searchParams.get('category');
         const search = searchParams.get('search');
         const active = searchParams.get('active');
+        const scope = (searchParams.get('scope') || 'staff').toLowerCase();
+
+        const staffSession = await getStaffSession(request).catch(() => null);
+        const staffAllowedSet = staffSession && String(staffSession.websiteId || staffSession.website_id) === String(website.id) && Array.isArray(staffSession.allowedModules)
+            ? new Set(staffSession.allowedModules.map((s: any) => String(s).toLowerCase()))
+            : null;
+
         let homeModules: any[] = [];
         let controlModules: any[] = [];
-        let systemModules: any[] = [];
         if (type === 'all' || type === 'home') {
-            let homeSql = 'SELECT * FROM website_home_modules';
-            const homeConds: any[] = [];
-            const homeParams: any[] = [];
-            if (active === 'true') {
-                homeConds.push('is_active = TRUE');
-            }
-            else if (active === 'false') {
-                homeConds.push('is_active = FALSE');
-            }
-            if (category && category.trim()) {
-                homeParams.push(category.trim());
-                homeConds.push(`LOWER(category) = LOWER($${homeParams.length})`);
-            }
-            if (search && search.trim()) {
-                homeParams.push(`%${search.trim().toLowerCase()}%`);
-                homeConds.push(`(LOWER(name) LIKE $${homeParams.length} OR LOWER(slug) LIKE $${homeParams.length} OR LOWER(description) LIKE $${homeParams.length} OR LOWER(path) LIKE $${homeParams.length})`);
-            }
-            if (homeConds.length > 0) {
-                homeSql += ' WHERE ' + homeConds.join(' AND ');
-            }
-            homeSql += ' ORDER BY display_order ASC, id ASC';
-            const homeRes = await queryDb(homeSql, homeParams).catch(() => ({ rows: [] }));
-            homeModules = homeRes.rows || [];
+            const baseHome = Array.isArray(website.allowed_home_modules) ? website.allowed_home_modules : [];
+            homeModules = filterModuleList(baseHome, { active, category, search }).map((m: any) => ({
+                ...m,
+                in_package: true,
+            }));
         }
         if (type === 'all' || type === 'control') {
-            let ctrlSql = 'SELECT * FROM website_control_modules';
-            const ctrlConds: any[] = [];
-            const ctrlParams: any[] = [];
-            if (active === 'true') {
-                ctrlConds.push('is_active = TRUE');
+            let baseControl = Array.isArray(website.allowed_control_modules) ? website.allowed_control_modules : [];
+            if (scope === 'staff') {
+                baseControl = baseControl.filter((m: any) => String(m.path || '').startsWith('/staff-panel/'));
             }
-            else if (active === 'false') {
-                ctrlConds.push('is_active = FALSE');
+            if (staffAllowedSet) {
+                baseControl = baseControl.filter((m: any) => staffAllowedSet.has(String(m.slug || '').toLowerCase()));
             }
-            if (category && category.trim()) {
-                ctrlParams.push(category.trim());
-                ctrlConds.push(`LOWER(category) = LOWER($${ctrlParams.length})`);
-            }
-            if (search && search.trim()) {
-                ctrlParams.push(`%${search.trim().toLowerCase()}%`);
-                ctrlConds.push(`(LOWER(name) LIKE $${ctrlParams.length} OR LOWER(slug) LIKE $${ctrlParams.length} OR LOWER(description) LIKE $${ctrlParams.length} OR LOWER(path) LIKE $${ctrlParams.length})`);
-            }
-            if (ctrlConds.length > 0) {
-                ctrlSql += ' WHERE ' + ctrlConds.join(' AND ');
-            }
-            ctrlSql += ' ORDER BY category ASC, display_order ASC, id ASC';
-            const ctrlRes = await queryDb(ctrlSql, ctrlParams).catch(() => ({ rows: [] }));
-            controlModules = ctrlRes.rows || [];
+            controlModules = filterModuleList(baseControl, { active, category, search }).map((m: any) => ({
+                ...m,
+                in_package: true,
+                permitted: staffAllowedSet ? staffAllowedSet.has(String(m.slug || '').toLowerCase()) : true,
+            }));
         }
         const homeCategories = Array.from(new Set(homeModules.map((m: any) => m.category).filter(Boolean)));
         const controlCategories = Array.from(new Set(controlModules.map((m: any) => m.category).filter(Boolean)));
@@ -71,6 +73,7 @@ export async function GET(request: any, context: any) {
             success: true,
             website_id: website.id,
             institution_name: website.name,
+            package: website.package || null,
             type,
             home_modules: homeModules,
             control_modules: controlModules,
@@ -80,6 +83,8 @@ export async function GET(request: any, context: any) {
                 total_all: homeModules.length + controlModules.length,
                 home_categories: homeCategories,
                 control_categories: controlCategories,
+                package_name: website.package?.name || null,
+                cached: true,
             },
         });
     }
@@ -135,6 +140,11 @@ export async function PATCH(request: any, context: any) {
         if (res.rowCount === 0) {
             return NextResponse.json({ success: false, error: `Module not found in ${tableName}.` }, { status: 404 });
         }
+        await Promise.all([
+            invalidateModulesCache(),
+            invalidateWebsiteModulesCache(),
+            invalidateWebsiteCache(website.id),
+        ]).catch(() => { });
         return NextResponse.json({
             success: true,
             message: `${type === 'home' ? 'Home' : 'Control'} module updated successfully.`,

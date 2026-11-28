@@ -112,16 +112,14 @@ function CreatorLoginForm() {
                 }
                 if (data.requires2FA || data.twoFactorRequired) {
                     setIs2FARequired(true);
-                    if (data.channel) {
-                        setTwoFactorChannel(data.channel);
-                    }
+                    setTwoFactorChannel('email');
                     if (data.rateLimited) {
                         setError(data.error || 'Verification code limit reached.');
                     }
                     else {
                         setCooldown(60);
                         setError('');
-                        setResendMsg(data.error ? '' : `Two-factor verification code dispatched via ${data.channel === 'sms' ? 'SMS' : 'Email'}.`);
+                        setResendMsg(data.error ? '' : 'Two-factor verification code dispatched via email.');
                     }
                     return;
                 }
@@ -231,12 +229,10 @@ function CreatorLoginForm() {
         </div>) : is2FARequired ? (<form onSubmit={handleLogin} autoComplete="off" className="space-y-4">
           <div className="p-3 rounded-lg border border-indigo-200 bg-indigo-50/60 text-indigo-900 text-xs space-y-1">
             <p className="font-semibold">
-              {twoFactorChannel === 'sms' ? 'SMS Code Dispatched' : 'Email Code Dispatched'}
+              Email Code Dispatched
             </p>
             <p className="leading-relaxed">
-              {twoFactorChannel === 'sms'
-                ? 'Please enter the 6-digit verification code sent via SMS to your registered mobile phone.'
-                : 'Please enter the 6-digit verification code sent to your registered email address.'}
+              Please enter the 6-digit verification code sent to your registered email address.
             </p>
           </div>
 
@@ -252,15 +248,9 @@ function CreatorLoginForm() {
               {loading ? 'Verifying...' : 'Verify & Continue'}
             </button>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
-              {twoFactorChannel === 'email' ? (<button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('sms')} className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                  Send to phone
-                </button>) : (<button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('email')} className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-                  Send to email
-                </button>)}
-
-              <button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel(twoFactorChannel)} className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 cursor-pointer">
-                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+            <div className="flex items-center justify-end gap-2 text-xs pt-1">
+              <button type="button" disabled={cooldown > 0 || channelSwitching || loading} onClick={() => handleSelectChannel('email')} className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 cursor-pointer">
+                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code to email'}
               </button>
             </div>
 

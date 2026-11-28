@@ -18,17 +18,20 @@ export async function POST(request: any, context: any) {
             return NextResponse.json({ success: false, error: 'Teacher ID or email is required to resend verification link.' }, { status: 400 });
         }
         let queryStr = `
-      SELECT id, name, email, is_active, is_registered
-      FROM website_teachers
-      WHERE website_id = $1
+      SELECT wt.id, wt.name, wt.email, COALESCE(wt.phone, wt.number) AS phone, wt.is_active, wt.is_registered,
+             wd.title AS designation_title, dept.name AS department_name
+      FROM website_teachers wt
+      LEFT JOIN website_teacher_designation wd ON wd.id = wt.designation_id
+      LEFT JOIN website_departments dept ON dept.id = wt.department_id
+      WHERE wt.website_id = $1
     `;
         const queryParams = [website.id];
         if (teacherId) {
-            queryStr += ` AND id = $2`;
+            queryStr += ` AND wt.id = $2`;
             queryParams.push(teacherId);
         }
         else {
-            queryStr += ` AND LOWER(email) = LOWER($2)`;
+            queryStr += ` AND LOWER(wt.email) = LOWER($2)`;
             queryParams.push(email);
         }
         const teacherRes = await queryDb(queryStr, queryParams);
@@ -47,25 +50,28 @@ export async function POST(request: any, context: any) {
         let emailError = null;
         try {
             const emailHtml = buildStyledEmail({
-                title: 'Faculty Account Activation Code',
-                subtitle: `${website.name} — Teacher Operations Portal`,
-                recipientName: teacher.name,
-                bodyParagraphs: [
-                    `A new verification token has been requested for your faculty account at ${website.name}.`,
-                    'Your account status is currently inactive pending verification. Please use the verification token below on the setup screen to verify your profile and set up your personal login password.',
-                    'This token is valid for 7 days. Once verified, your status will become active and you will be able to log in, recover your credentials, and access the Teacher Portal.',
-                ],
-                code: verificationToken,
-                codeLabel: 'Verification Token',
-                footerNote: 'If you did not expect this email, please contact campus administration.',
+                title: 'Teacher Account Verification',
+                institutionName: website.name,
+                bodyHtml: `
+                  <p style="margin: 0 0 14px 0;">Dear ${teacher.name},</p>
+                  <p style="margin: 0 0 14px 0;">A new verification link has been issued for your teacher account at ${website.name}.</p>
+                  <p style="margin: 0;">Click the verification button below to confirm your account and configure your portal password.</p>
+                `,
+                actionUrl: verificationUrl,
+                actionText: 'Verify Your Account',
+                footerNote: 'This verification link is valid for 7 days.',
             });
             await sendEmail({
                 to: teacher.email,
                 toName: teacher.name,
-                subject: `${website.name} - Activate Your Faculty Account`,
+                fromName: website.name || undefined,
+                subject: `${website.name} - Verify Your Teacher Account`,
                 html: emailHtml,
-                text: `Faculty account activation token for ${website.name}. Your verification token is: ${verificationToken}. Valid for 7 days.`,
+                text: `Dear ${teacher.name},\n\nA new verification link has been issued for your teacher account at ${website.name}.\n\nClick the link below to verify your account and configure your portal password:\n${verificationUrl}\n\nThis verification link is valid for 7 days.`,
                 websiteId: website.id,
+                recipientType: 'teacher',
+                recipientId: teacher.id,
+                purpose: 'teacher_verification',
             });
             emailSent = true;
         }

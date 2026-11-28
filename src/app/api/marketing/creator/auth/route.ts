@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { SITE_NAME, CREATOR_TOKEN } from 'src/lib/database/secret';
+import { SITE_NAME, CREATOR_TOKEN, getBaseUrl } from 'src/lib/database/secret';
 import { authenticateCreator, getCreatorSession, clearCreatorSessionCookie, setCreatorSessionCookie, generateToken, hashPassword, } from 'src/lib/middleware/creator';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { getClientIp, getUserAgent, inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, enforceOtpCooldown, generateSecureOtp, sanitizeInput, } from 'src/lib/security/shield';
 export async function handleAuthAction(body: any, request: any) {
     const attackCheck = await inspectMalwareAndAttacks(request, body);
@@ -93,22 +92,30 @@ export async function handleAuthAction(body: any, request: any) {
             verificationCode,
         ]);
         const newCreator = res.rows[0];
+        const verifyUrl = `${getBaseUrl(request)}/creator/verify?token=${encodeURIComponent(verificationCode)}&email=${encodeURIComponent(cleanEmail)}`;
         try {
             await sendEmail({
                 to: cleanEmail,
+                toName: newCreator.name,
                 subject: `Your Verification Code: ${verificationCode} - ${SITE_NAME}`,
                 html: buildStyledEmail({
                     title: `Welcome to ${SITE_NAME}`,
                     subtitle: 'Creator Account Verification',
                     recipientName: newCreator.name,
                     bodyParagraphs: [
-                        'Thank you for joining our platform. Enter the 6-digit verification code below on the verification page to activate your creator account.',
+                        'Thank you for joining our platform. Click the verification link below or enter the 6-digit verification code on the verification page to activate your creator account.',
                     ],
+                    actionUrl: verifyUrl,
+                    actionText: 'Verify Creator Account',
                     code: verificationCode,
                     codeLabel: 'Verification Code',
                     footerNote: 'This verification code will expire in 24 hours. If you did not create an account, please ignore this email.',
                 }),
-                text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\n\nEnter this 6-digit code on the verification page to activate your account.\n\nExpires in 24 hours.`,
+                text: `Hello ${newCreator.name},\n\nYour ${SITE_NAME} creator verification code is: ${verificationCode}\nOr verify directly using this link: ${verifyUrl}\n\nExpires in 24 hours.`,
+                recipientType: 'creator',
+                recipientId: newCreator.id,
+                purpose: 'creator_verification',
+                ip,
             });
             await recordOtpDispatch({
                 identifier: cleanEmail,
@@ -221,7 +228,7 @@ export async function handleAuthAction(body: any, request: any) {
     }
     if (action === 'resend_verification') {
         const raw = String(body.email || body.identifier || body.phone || '').trim();
-        const channel = String(body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
+        const channel = 'email';
         if (!raw) {
             return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
         }
@@ -273,60 +280,36 @@ export async function handleAuthAction(body: any, request: any) {
        WHERE id = $2`, [newCode, creator.id]);
         const targetEmail = creator.email;
         const targetPhone = creator.phone;
-        if (channel === 'sms') {
-            if (!targetPhone) {
-                return NextResponse.json({ success: false, error: 'No phone number registered on this account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${SITE_NAME} Creator verification code is: ${newCode}. Valid for 24 hours.`,
-                    purpose: 'verification',
-                    userId: creator.id,
-                    userType: 'creator',
-                    ip,
-                });
-                await recordOtpDispatch({
-                    identifier: targetPhone,
-                    phone: targetPhone,
-                    email: targetEmail,
-                    channel: 'sms',
-                    purpose: 'verification',
-                    ip,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: `Failed to send SMS: ${smsErr.message}` }, { status: 500 });
-            }
-            return NextResponse.json({
-                success: true,
-                message: 'A new 6-digit verification code has been dispatched via SMS to your registered mobile phone.',
-                channel: 'sms',
-                cooldownSeconds: 60,
-            });
-        }
+        const verifyUrl = `${getBaseUrl(request)}/creator/verify?token=${encodeURIComponent(newCode)}&email=${encodeURIComponent(targetEmail)}`;
         try {
             await sendEmail({
                 to: targetEmail,
+                toName: creator.name,
                 subject: `Your Verification Code: ${newCode} - ${SITE_NAME}`,
                 html: buildStyledEmail({
                     title: 'Verify Your Creator Account',
                     subtitle: `${SITE_NAME} Security Verification`,
                     recipientName: creator.name,
                     bodyParagraphs: [
-                        'Here is your 6-digit verification code to activate your creator account.',
+                        'Here is your 6-digit verification code and direct verification link to activate your creator account.',
                     ],
+                    actionUrl: verifyUrl,
+                    actionText: 'Verify Creator Account',
                     code: newCode,
                     codeLabel: 'Verification Code',
                     footerNote: 'This verification code will expire in 24 hours. If you did not request this, please ignore this email.',
                 }),
-                text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\n\nEnter this 6-digit code on the verification page to activate your account.\n\nExpires in 24 hours.`,
+                text: `Hello ${creator.name},\n\nYour new verification code is: ${newCode}\nOr verify directly using this link: ${verifyUrl}\n\nExpires in 24 hours.`,
+                recipientType: 'creator',
+                recipientId: creator.id,
+                purpose: 'creator_verification',
+                ip,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,
                 phone: targetPhone,
                 email: targetEmail,
-                channel: 'email',
+                channel,
                 purpose: 'verification',
                 ip,
             });
@@ -336,8 +319,8 @@ export async function handleAuthAction(body: any, request: any) {
         }
         return NextResponse.json({
             success: true,
-            message: 'A new 6-digit verification code has been sent to your email.',
-            channel: 'email',
+            message: 'A new 6-digit verification code and link has been sent to your email.',
+            channel,
             cooldownSeconds: 60,
         });
     }
@@ -416,7 +399,7 @@ export async function handleAuthAction(body: any, request: any) {
     }
     if (action === 'recover') {
         const raw = String(body.identifier || body.email || body.phone || '').trim();
-        const channel = String(body.channel || 'email').trim().toLowerCase() === 'sms' ? 'sms' : 'email';
+        const channel = 'email';
         if (!raw) {
             return NextResponse.json({ success: false, error: 'Email address or phone number is required.' }, { status: 400 });
         }
@@ -464,60 +447,36 @@ export async function handleAuthAction(body: any, request: any) {
         const creator = res.rows[0];
         const targetEmail = creator.email;
         const targetPhone = creator.phone;
-        if (channel === 'sms') {
-            if (!targetPhone) {
-                return NextResponse.json({ success: false, error: 'No phone number registered for this creator account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${SITE_NAME} Creator password reset code is: ${recoveryCode}. Valid for 1 hour.`,
-                    purpose: 'recovery',
-                    userId: creator.id,
-                    userType: 'creator',
-                    ip,
-                });
-                await recordOtpDispatch({
-                    identifier: targetPhone,
-                    phone: targetPhone,
-                    email: targetEmail,
-                    channel: 'sms',
-                    purpose: 'recovery',
-                    ip,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: `Failed to dispatch SMS: ${smsErr.message}` }, { status: 500 });
-            }
-            return NextResponse.json({
-                success: true,
-                message: 'A 6-digit password reset code has been sent via SMS to your registered mobile phone.',
-                channel: 'sms',
-                cooldownSeconds: 60,
-            });
-        }
+        const recoveryUrl = `${getBaseUrl(request)}/creator/recovery?token=${encodeURIComponent(recoveryCode)}&email=${encodeURIComponent(targetEmail)}`;
         try {
             await sendEmail({
                 to: targetEmail,
+                toName: creator.name,
                 subject: `Your Password Reset Code: ${recoveryCode} - ${SITE_NAME}`,
                 html: buildStyledEmail({
                     title: 'Password Reset Request',
                     subtitle: `${SITE_NAME} Security Recovery`,
                     recipientName: creator.name,
                     bodyParagraphs: [
-                        `You requested to reset your password on ${SITE_NAME}. Enter the 6-digit security recovery code below on the password reset page to set your new password:`,
+                        `You requested to reset your password on ${SITE_NAME}. Click the link below or enter the 6-digit security recovery code on the password reset page to set your new password:`,
                     ],
+                    actionUrl: recoveryUrl,
+                    actionText: 'Reset Creator Password',
                     code: recoveryCode,
                     codeLabel: 'Recovery Code',
                     footerNote: 'This recovery code will expire in 1 hour. If you did not request a password reset, please ignore this email.',
                 }),
-                text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\n\nEnter this 6-digit code on the password reset page to update your password.\n\nExpires in 1 hour.`,
+                text: `Hello ${creator.name},\n\nYour ${SITE_NAME} password reset code is: ${recoveryCode}\nOr reset directly using this link: ${recoveryUrl}\n\nExpires in 1 hour.`,
+                recipientType: 'creator',
+                recipientId: creator.id,
+                purpose: 'creator_recovery',
+                ip,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,
                 phone: targetPhone,
                 email: targetEmail,
-                channel: 'email',
+                channel,
                 purpose: 'recovery',
                 ip,
             });

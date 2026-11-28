@@ -57,7 +57,7 @@ export async function GET(request: any, context: any) {
     `, [websiteId]);
         const [classesRes, sectionsRes, sessionsRes] = await Promise.all([
             queryDb(`SELECT id, name FROM website_classes WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
-            queryDb(`SELECT id, class_id, name FROM website_sections WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
+            queryDb(`SELECT id, name FROM website_sections WHERE website_id = $1 ORDER BY name ASC`, [websiteId]),
             queryDb(`SELECT id, name FROM website_sessions WHERE website_id = $1 ORDER BY id DESC`, [websiteId])
         ]);
         return NextResponse.json({

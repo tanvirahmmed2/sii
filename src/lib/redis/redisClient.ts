@@ -1003,8 +1003,69 @@ export async function fetchModulesList(fetcher: () => Promise<any>): Promise<any
   return fetchWithCache(cacheKey, fetcher, 300);
 }
 
+export async function fetchPlatformControlModules<T = any[]>(fetcher: () => Promise<T>): Promise<T> {
+  return fetchWithCache('marketing:modules:control:all', fetcher, 300);
+}
+
+export async function fetchPlatformHomeModules<T = any[]>(fetcher: () => Promise<T>): Promise<T> {
+  return fetchWithCache('marketing:modules:home:all', fetcher, 300);
+}
+
 export async function invalidateModulesCache(): Promise<void> {
-  await invalidateCache('marketing:modules:*');
+  await Promise.all([
+    invalidateCache('marketing:modules:*'),
+    invalidateCache('website:modules:*'),
+    invalidateCache('staff:modules:*'),
+  ]);
+}
+
+export async function fetchWebsiteModulesCache<T = any>(
+  websiteId: number | string,
+  fetcher: () => Promise<T>
+): Promise<T> {
+  const cleanId = String(websiteId || '').trim();
+  const cacheKey = `website:modules:${cleanId}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateWebsiteModulesCache(websiteId?: number | string): Promise<void> {
+  if (websiteId) {
+    const cleanId = String(websiteId).trim();
+    await Promise.all([
+      invalidateCache(`website:modules:${cleanId}`),
+      invalidateCache(`staff:modules:${cleanId}:*`),
+    ]);
+  } else {
+    await Promise.all([
+      invalidateCache('website:modules:*'),
+      invalidateCache('staff:modules:*'),
+    ]);
+  }
+}
+
+export async function fetchStaffModulesCache<T = any>(
+  websiteId: number | string,
+  staffId: number | string,
+  fetcher: () => Promise<T>
+): Promise<T> {
+  const wId = String(websiteId || '').trim();
+  const sId = String(staffId || '').trim();
+  const cacheKey = `staff:modules:${wId}:${sId}`;
+  return fetchWithCache(cacheKey, fetcher, 300);
+}
+
+export async function invalidateStaffModulesCache(
+  websiteId: number | string,
+  staffId?: number | string
+): Promise<void> {
+  const wId = String(websiteId || '').trim();
+  if (wId && staffId) {
+    await invalidateCache(`staff:modules:${wId}:${String(staffId).trim()}`);
+  } else if (wId) {
+    await invalidateCache(`staff:modules:${wId}:*`);
+  } else {
+    await invalidateCache('staff:modules:*');
+  }
 }
 
 export async function fetchPackagesList(fetcher: () => Promise<any>): Promise<any> {
@@ -1019,7 +1080,11 @@ export async function fetchPackageByIdOrSlug(idOrSlug: string | number, fetcher:
 }
 
 export async function invalidatePackagesCache(): Promise<void> {
-  await invalidateCache('marketing:packages:*');
+  await Promise.all([
+    invalidateCache('marketing:packages:*'),
+    invalidateCache('website:modules:*'),
+    invalidateCache('staff:modules:*'),
+  ]);
 }
 
 export async function fetchCreatorWishlist(creatorId: number | string, fetcher: () => Promise<any>): Promise<any> {

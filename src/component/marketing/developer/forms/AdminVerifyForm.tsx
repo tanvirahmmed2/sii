@@ -120,8 +120,8 @@ export default function AdminVerifyForm() {
             });
             const data = await res.json();
             if (res.ok && data.success) {
-                setChannel(targetChannel);
-                setSuccess(data.message || `A new verification code was sent via ${targetChannel === 'sms' ? 'SMS' : 'email'}.`);
+                setChannel('email');
+                setSuccess(data.message || 'A new verification code and link was sent via email.');
                 setResendCooldown(60);
             }
             else {
@@ -182,19 +182,13 @@ export default function AdminVerifyForm() {
         </button>
       </form>
 
-      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-        {channel === 'email' ? (<button type="button" onClick={() => handleResend('sms')} disabled={resending || resendCooldown > 0} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-            Send to phone
-          </button>) : (<button type="button" onClick={() => handleResend('email')} disabled={resending || resendCooldown > 0} className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline disabled:opacity-50 cursor-pointer">
-            Send to email
-          </button>)}
-
-        <button type="button" disabled={resending || resendCooldown > 0} onClick={() => handleResend(channel)} className="text-xs font-normal text-slate-700 dark:text-slate-300 hover:underline disabled:opacity-50 cursor-pointer">
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end text-xs">
+        <button type="button" disabled={resending || resendCooldown > 0} onClick={() => handleResend('email')} className="text-xs font-normal text-slate-700 dark:text-slate-300 hover:underline disabled:opacity-50 cursor-pointer">
           {resending
             ? 'Sending code...'
             : resendCooldown > 0
                 ? `Resend code (${resendCooldown}s)`
-                : 'Resend code'}
+                : 'Resend code to email'}
         </button>
       </div>
 

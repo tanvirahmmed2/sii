@@ -429,6 +429,33 @@ CROSS JOIN website_control_modules cm
 WHERE cm.slug = 'system'
 ON CONFLICT (package_id, control_module_id) DO NOTHING;
 
+INSERT INTO website_control_modules (name, slug, path, category, description, icon, is_active, display_order)
+VALUES
+    ('SMS Balance', 'sms-balance', '/staff-panel/sms-balance', 'Communications & Gateways', 'Monitor monthly SMS quota usage, delivery logs, and recipient analytics', 'BiMessageDetail', TRUE, 205),
+    ('Mail Balance', 'mail-balance', '/staff-panel/mail-balance', 'Communications & Gateways', 'Track transactional and institutional email dispatches and quota usage', 'BiEnvelope', TRUE, 206),
+    ('Transactions & Accounts', 'transactions', '/staff-panel/transactions', 'Fees & Accounting', 'Inspect payment gateway settlements, merchant accounts, and fee transactions', 'BiTransfer', TRUE, 207)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    path = EXCLUDED.path,
+    category = EXCLUDED.category,
+    description = EXCLUDED.description,
+    icon = EXCLUDED.icon,
+    is_active = TRUE;
+
+INSERT INTO package_control_modules (package_id, control_module_id)
+SELECT DISTINCT pcm.package_id, cm.id
+FROM package_control_modules pcm
+JOIN website_control_modules ref ON ref.id = pcm.control_module_id AND ref.slug = 'contacts'
+JOIN website_control_modules cm ON cm.slug IN ('sms-balance', 'mail-balance')
+ON CONFLICT (package_id, control_module_id) DO NOTHING;
+
+INSERT INTO package_control_modules (package_id, control_module_id)
+SELECT DISTINCT pcm.package_id, cm.id
+FROM package_control_modules pcm
+JOIN website_control_modules ref ON ref.id = pcm.control_module_id AND ref.slug = 'fees-education-configure'
+JOIN website_control_modules cm ON cm.slug = 'transactions'
+ON CONFLICT (package_id, control_module_id) DO NOTHING;
+
 -- ----------------------------------------------------------------------------
 -- 11. CREATORS TABLE (Clients / Educational Institution Owners / Customers)
 -- ----------------------------------------------------------------------------

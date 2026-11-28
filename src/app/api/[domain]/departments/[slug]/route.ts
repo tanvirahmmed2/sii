@@ -20,8 +20,7 @@ export async function GET(request: any, context: any) {
               d.order_no,
               di.motto,
               di.summary,
-              COALESCE(di.expected_cost, 0.00) AS expected_cost,
-              COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.department_id = d.id), 0)::int AS class_count
+              COALESCE(di.expected_cost, 0.00) AS expected_cost
        FROM website_departments d
        LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = d.website_id
        WHERE d.website_id = $1 AND (d.slug = $2 OR LOWER(d.slug) = LOWER($2) OR LOWER(d.code) = LOWER($2) OR d.id::text = $2)
@@ -39,10 +38,6 @@ export async function GET(request: any, context: any) {
        ORDER BY dh.order_no ASC, dh.id ASC
        LIMIT 1`, [website.id, dept.id]);
         const deptHead = headRes.rows[0] || null;
-        const classesRes = await queryDb(`SELECT id, name, code, max_seats, description
-       FROM website_classes
-       WHERE website_id = $1 AND department_id = $2
-       ORDER BY name ASC`, [website.id, dept.id]);
         const teachersRes = await queryDb(`SELECT t.id,
               t.name,
               t.email,
@@ -57,15 +52,14 @@ export async function GET(request: any, context: any) {
         const fullDept = {
             ...dept,
             dept_head: deptHead,
-            classes: classesRes.rows,
             teachers: teachersRes.rows,
         };
         return NextResponse.json({
             success: true,
             department: fullDept,
             dept_head: deptHead,
-            payload: { department: fullDept, dept_head: deptHead, classes: classesRes.rows, teachers: teachersRes.rows },
-            paylod: { department: fullDept, dept_head: deptHead, classes: classesRes.rows, teachers: teachersRes.rows },
+            payload: { department: fullDept, dept_head: deptHead, teachers: teachersRes.rows },
+            paylod: { department: fullDept, dept_head: deptHead, teachers: teachersRes.rows },
         });
     }
     catch (error: any) {

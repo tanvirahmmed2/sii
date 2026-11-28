@@ -28,7 +28,7 @@ export async function POST(request: any, context: any) {
         if (!officerId) {
             return NextResponse.json({ success: false, error: 'officerId is required.' }, { status: 400 });
         }
-        const officerRes = await queryDb(`SELECT id, name, email, department, designation, is_registered, is_active
+        const officerRes = await queryDb(`SELECT id, name, email, phone, department, designation, is_registered, is_active
        FROM website_officers
        WHERE website_id = $1 AND id = $2
        LIMIT 1`, [website.id, officerId]);
@@ -45,25 +45,28 @@ export async function POST(request: any, context: any) {
        WHERE website_id = $2 AND id = $3`, [verificationToken, website.id, officer.id]);
         const verificationUrl = buildOfficerVerificationUrl(website, verificationToken, request);
         const emailHtml = buildStyledEmail({
-            title: 'Officer Account Verification Reminder',
-            subtitle: `${website.name} — Administrative Portal`,
-            recipientName: officer.name,
-            bodyParagraphs: [
-                `This is a reminder to complete your officer account verification (${officer.designation || 'Officer'} - ${officer.department || 'General'}) for ${website.name}.`,
-                'Please verify your identity and establish your login password on the verification screen using the token below.',
-                'This invitation token is valid for 7 days.',
-            ],
-            code: verificationToken,
-            codeLabel: 'Verification Token',
-            footerNote: 'If you did not request this email, please contact campus administration.',
+            title: 'Officer Account Verification',
+            institutionName: website.name,
+            bodyHtml: `
+              <p style="margin: 0 0 14px 0;">Dear ${officer.name},</p>
+              <p style="margin: 0 0 14px 0;">A new verification link has been issued for your officer account at ${website.name}.</p>
+              <p style="margin: 0;">Click the verification button below to confirm your account and configure your portal password.</p>
+            `,
+            actionUrl: verificationUrl,
+            actionText: 'Verify Your Account',
+            footerNote: 'This verification link is valid for 7 days.',
         });
         await sendEmail({
             to: officer.email,
             toName: officer.name,
-            subject: `${website.name} - Complete Your Officer Account Setup`,
+            fromName: website.name || undefined,
+            subject: `${website.name} - Verify Your Officer Account`,
             html: emailHtml,
-            text: `Reminder for ${website.name} officer account verification. Your verification token is: ${verificationToken}. Valid for 7 days.`,
+            text: `Dear ${officer.name},\n\nA new verification link has been issued for your officer account at ${website.name}.\n\nClick the link below to verify your account and configure your portal password:\n${verificationUrl}\n\nThis verification link is valid for 7 days.`,
             websiteId: website.id,
+            recipientType: 'officer',
+            recipientId: officer.id,
+            purpose: 'officer_verification',
         });
         return NextResponse.json({
             success: true,

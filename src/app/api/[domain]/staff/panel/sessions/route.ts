@@ -1,20 +1,27 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { verifyAcademicDimensionEnabled } from 'src/lib/modules/academicConfig';
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
-    return verifyStaffModuleAccess(request, context, 'routine', action);
+    const auth = await verifyStaffModuleAccess(request, context, ['academic-year', 'routine'], action);
+    if (auth.error)
+        return auth;
+    const dim = await verifyAcademicDimensionEnabled(auth.website, 'session');
+    if (dim.locked && action !== 'view') {
+        return { error: dim.message, status: 403, locked: true, code: 'ACADEMIC_DIMENSION_LOCKED' };
+    }
+    return { ...auth, academicDim: dim };
 }
 export async function GET(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'view');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search')?.trim();
         let query = `
       SELECT s.*,
-             COALESCE((SELECT COUNT(*) FROM website_students st WHERE st.session_id = s.id), 0)::int AS student_count,
-             0::int AS class_count
+             COALESCE((SELECT COUNT(*) FROM website_students st WHERE st.session_id = s.id), 0)::int AS student_count
       FROM website_sessions s
       WHERE s.website_id = $1
     `;
@@ -27,6 +34,8 @@ export async function GET(request: any, context: any) {
         const result = await queryDb(query, params);
         return NextResponse.json({
             success: true,
+            locked: Boolean(auth.academicDim?.locked),
+            academicConfig: auth.academicDim?.config || null,
             sessions: result.rows,
             payload: { sessions: result.rows }
         });
@@ -40,7 +49,7 @@ export async function POST(request: any, context: any) {
     try {
         const auth = await verifyStaffAccess(request, context, 'create');
         if (auth.error)
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         const body = await request.json().catch(() => ({}));
         const { name, status = 'active' } = body;
         if (!name || !String(name).trim()) {

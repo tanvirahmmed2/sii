@@ -1,37 +1,28 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
-import { getStaffSession } from 'src/lib/middleware/staff';
-async function verifyStaffAccess(request: any, context: any) {
-    const website = await resolveWebsiteFromRequest(request, context);
-    if (!website) {
-        return { error: 'Educational institution portal not found.', status: 404 };
+import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { verifyAcademicDimensionEnabled } from 'src/lib/modules/academicConfig';
+async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
+    const auth = await verifyStaffModuleAccess(request, context, ['class-information', 'class-setup', 'routine'], action);
+    if (auth.error)
+        return auth;
+    const dim = await verifyAcademicDimensionEnabled(auth.website, 'class');
+    if (dim.locked && action !== 'view') {
+        return { error: dim.message, status: 403, locked: true, code: 'ACADEMIC_DIMENSION_LOCKED' };
     }
-    const staffSession = await getStaffSession(request);
-    if (!staffSession) {
-        return { error: 'Unauthorized: Staff access required.', status: 401 };
-    }
-    const staffWebsiteId = staffSession?.website_id ||
-        staffSession?.websiteId ||
-        staffSession?.staff?.websiteId ||
-        staffSession?.staff?.website_id;
-    if (staffWebsiteId && String(staffWebsiteId) !== String(website.id)) {
-        return { error: 'Forbidden: Cross-tenant access denied.', status: 403 };
-    }
-    return { website, staffSession };
+    return { ...auth, academicDim: dim };
 }
 export async function GET(request: any, context: any) {
     try {
-        const auth = await verifyStaffAccess(request, context);
+        const auth = await verifyStaffAccess(request, context, 'view');
         if (auth.error) {
-            return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+            return NextResponse.json({ success: false, error: auth.error, locked: Boolean(auth.locked) }, { status: auth.status });
         }
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search')?.trim();
         const classId = searchParams.get('class_id')?.trim();
         const id = searchParams.get('id')?.trim();
         const classesResult = await queryDb(`SELECT c.id, c.name, c.code, c.max_seats,
-              COALESCE((SELECT COUNT(*) FROM website_sections s WHERE s.class_id = c.id), 0)::int AS section_count,
               COALESCE((SELECT COUNT(*) FROM website_class_subjects cs WHERE cs.class_id = c.id), 0)::int AS subject_count
        FROM website_classes c
        WHERE c.website_id = $1
@@ -70,6 +61,8 @@ export async function GET(request: any, context: any) {
         const result = await queryDb(query, params);
         return NextResponse.json({
             success: true,
+            locked: Boolean(auth.academicDim?.locked),
+            academicConfig: auth.academicDim?.config || null,
             class_information: result.rows,
             available_classes: classesResult.rows,
             total: result.rowCount,
@@ -82,7 +75,7 @@ export async function GET(request: any, context: any) {
 }
 export async function POST(request: any, context: any) {
     try {
-        const auth = await verifyStaffAccess(request, context);
+        const auth = await verifyStaffAccess(request, context, 'create');
         if (auth.error) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
@@ -140,7 +133,7 @@ export async function POST(request: any, context: any) {
 }
 export async function PUT(request: any, context: any) {
     try {
-        const auth = await verifyStaffAccess(request, context);
+        const auth = await verifyStaffAccess(request, context, 'edit');
         if (auth.error) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }
@@ -195,7 +188,7 @@ export async function PUT(request: any, context: any) {
 }
 export async function DELETE(request: any, context: any) {
     try {
-        const auth = await verifyStaffAccess(request, context);
+        const auth = await verifyStaffAccess(request, context, 'delete');
         if (auth.error) {
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         }

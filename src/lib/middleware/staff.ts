@@ -12,13 +12,16 @@ import {
   generateSecureOtp,
 } from '../security/shield';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
-import { sendSms } from '../database/smsSender';
 import {
   fetchPanelSession,
+  fetchStaffModulesCache,
+  fetchWebsiteModulesCache,
   invalidatePanelSessionByToken,
   invalidatePanelSessionsByTag,
+  invalidateStaffModulesCache,
   shouldTouchSessionActivity,
 } from '../redis/redisClient';
+import { expandModuleKeys, normalizeStaffPath } from '../modules/moduleMappings';
 
 const DEFAULT_JWT_SECRET: string = JWT_SECRET || 'staff_jwt_secret_key_2026';
 
@@ -201,42 +204,96 @@ export async function getStaffSession(request?: any): Promise<any> {
         if (sessRes.rows.length === 0) return null;
         const row = sessRes.rows[0];
 
-        const permsRes = await queryDb(
-          `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
-                  wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
-                  cm.name AS module_name, cm.slug AS module_slug, cm.icon AS module_icon
-           FROM website_modules_permissions wmp
-           JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
-           JOIN websites w ON w.id = wmp.website_id
-           LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
-           WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND cm.is_active = TRUE
-             AND (
-               EXISTS (
-                 SELECT 1 FROM package_control_modules pcm 
-                 WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
-               )
-               OR s.package_id IS NULL
-             )`,
-          [row.id, row.website_id]
-        );
+        const staffModuleBundle = await fetchStaffModulesCache(row.website_id, row.id, async () => {
+          const websiteModulesBundle = await fetchWebsiteModulesCache(row.website_id, async () => {
+            const { resolveWebsite } = await import('./websiteResolver');
+            const resolved = await resolveWebsite(row.website_id);
+            return resolved
+              ? {
+                  allowedControlModules: resolved.allowed_control_modules || [],
+                  allowedControlModuleSlugs: resolved.allowed_control_module_slugs || [],
+                  allowedControlModulePaths: resolved.allowed_control_module_paths || [],
+                }
+              : null;
+          }).catch(() => null);
 
-        const permissions: Record<string, any> = {};
-        const allowedModules: string[] = [];
-
-        for (const p of permsRes.rows) {
-          permissions[p.module_slug] = {
-            can_view: Boolean(p.can_view),
-            can_create: Boolean(p.can_create),
-            can_edit: Boolean(p.can_edit),
-            can_delete: Boolean(p.can_delete),
-            module_name: p.module_name,
-            website_module_id: p.website_module_id,
-            module_icon: p.module_icon,
-          };
-          if (p.can_view) {
-            allowedModules.push(p.module_slug);
+          const allowedControlIdSet = new Set<number>();
+          if (Array.isArray(websiteModulesBundle?.allowedControlModules)) {
+            for (const cm of websiteModulesBundle.allowedControlModules) {
+              if (cm?.id) allowedControlIdSet.add(Number(cm.id));
+            }
           }
-        }
+
+          const permsRes = await queryDb(
+            `SELECT COALESCE(wmp.control_module_id, wmp.website_module_id) AS control_module_id,
+                    wmp.can_view, wmp.can_create, wmp.can_edit, wmp.can_delete,
+                    cm.name AS module_name, cm.slug AS module_slug, cm.path AS module_path,
+                    cm.category AS module_category, cm.icon AS module_icon
+             FROM website_modules_permissions wmp
+             JOIN website_control_modules cm ON cm.id = COALESCE(wmp.control_module_id, wmp.website_module_id)
+             JOIN websites w ON w.id = wmp.website_id
+             LEFT JOIN subscriptions s ON (s.id = w.subscription_id OR s.website_id = w.id)
+             WHERE wmp.staff_id = $1 AND wmp.website_id = $2 AND cm.is_active = TRUE
+               AND (
+                 EXISTS (
+                   SELECT 1 FROM package_control_modules pcm 
+                   WHERE pcm.package_id = s.package_id AND pcm.control_module_id = cm.id
+                 )
+                 OR s.package_id IS NULL
+               )`,
+            [row.id, row.website_id]
+          );
+
+          const perms: Record<string, any> = {};
+          const modSlugs: string[] = [];
+          const modPaths: string[] = [];
+          const modItems: any[] = [];
+
+          for (const p of permsRes.rows) {
+            const ctrlId = Number(p.control_module_id);
+            if (allowedControlIdSet.size > 0 && !allowedControlIdSet.has(ctrlId)) {
+              continue;
+            }
+            const slug = String(p.module_slug || '').trim();
+            const normPath = normalizeStaffPath(p.module_path);
+            perms[slug] = {
+              can_view: Boolean(p.can_view),
+              can_create: Boolean(p.can_create),
+              can_edit: Boolean(p.can_edit),
+              can_delete: Boolean(p.can_delete),
+              module_name: p.module_name,
+              control_module_id: ctrlId,
+              website_module_id: ctrlId,
+              module_path: normPath,
+              module_category: p.module_category,
+              module_icon: p.module_icon,
+            };
+            if (p.can_view) {
+              if (slug) modSlugs.push(slug);
+              if (normPath) modPaths.push(normPath);
+              modItems.push({
+                id: ctrlId,
+                slug,
+                name: p.module_name,
+                path: p.module_path || normPath,
+                category: p.module_category,
+                icon: p.module_icon,
+              });
+            }
+          }
+
+          return {
+            permissions: perms,
+            allowedModules: modSlugs,
+            allowedModulePaths: Array.from(new Set(modPaths)),
+            allowedControlModules: modItems,
+          };
+        });
+
+        const permissions = staffModuleBundle?.permissions || {};
+        const allowedModules = staffModuleBundle?.allowedModules || [];
+        const allowedModulePaths = staffModuleBundle?.allowedModulePaths || [];
+        const allowedControlModules = staffModuleBundle?.allowedControlModules || [];
 
         const staffUser = {
           id: row.id,
@@ -266,6 +323,8 @@ export async function getStaffSession(request?: any): Promise<any> {
           websiteCustomDomain: row.website_custom_domain,
           permissions,
           allowedModules,
+          allowedModulePaths,
+          allowedControlModules,
           token,
           sessionId: row.session_id,
         };
@@ -286,6 +345,8 @@ export async function getStaffSession(request?: any): Promise<any> {
           },
           permissions,
           allowedModules,
+          allowedModulePaths,
+          allowedControlModules,
         };
       },
       180
@@ -320,30 +381,39 @@ export async function isStaff(request?: any): Promise<boolean> {
 export function hasStaffModulePermission(staffOrSession: any, moduleSlugOrList: any, action = 'view'): boolean {
   if (!staffOrSession || !moduleSlugOrList) return false;
   const staff = staffOrSession.staff || staffOrSession;
-  const permissions = staff.permissions || {};
+  const permissions = staff.permissions || staffOrSession.permissions || {};
   const slugs = Array.isArray(moduleSlugOrList) ? moduleSlugOrList : [moduleSlugOrList];
 
-  for (const slug of slugs) {
-    const modPerm = permissions[slug];
-    if (modPerm) {
-      let allowed = false;
-      switch (action) {
-        case 'create':
-          allowed = Boolean(modPerm.can_create);
-          break;
-        case 'edit':
-        case 'update':
-          allowed = Boolean(modPerm.can_edit);
-          break;
-        case 'delete':
-          allowed = Boolean(modPerm.can_delete);
-          break;
-        case 'view':
-        default:
-          allowed = Boolean(modPerm.can_view);
-          break;
+  const checkActionAllowed = (modPerm: any) => {
+    switch (action) {
+      case 'create':
+        return Boolean(modPerm.can_create);
+      case 'edit':
+      case 'update':
+        return Boolean(modPerm.can_edit);
+      case 'delete':
+        return Boolean(modPerm.can_delete);
+      case 'view':
+      default:
+        return Boolean(modPerm.can_view);
+    }
+  };
+
+  for (const rawSlug of slugs) {
+    const cleanRaw = String(rawSlug || '').trim().toLowerCase();
+    if (!cleanRaw) continue;
+    if (cleanRaw === 'all') {
+      if (Object.values(permissions).some((p: any) => checkActionAllowed(p))) {
+        return true;
       }
-      if (allowed) return true;
+      continue;
+    }
+    const candidateSlugs = expandModuleKeys(cleanRaw);
+    for (const candidate of candidateSlugs) {
+      const modPerm = permissions[candidate];
+      if (modPerm && checkActionAllowed(modPerm)) {
+        return true;
+      }
     }
   }
 
@@ -404,7 +474,10 @@ export async function revokeAllStaffSessions(staffId: any, websiteId: any = null
     } else {
       await queryDb(`UPDATE staff_sessions SET is_active = FALSE WHERE staff_id = $1`, [staffId]);
     }
-    await invalidatePanelSessionsByTag('staff', `staff:${staffId}`);
+    await Promise.all([
+      invalidatePanelSessionsByTag('staff', `staff:${staffId}`),
+      websiteId ? invalidateStaffModulesCache(websiteId, staffId) : Promise.resolve(),
+    ]);
     return true;
   } catch (err) {
     console.error('Error revoking all staff sessions:', err);
@@ -414,12 +487,12 @@ export async function revokeAllStaffSessions(staffId: any, websiteId: any = null
 
 export async function isCashier(request?: any): Promise<boolean> {
   const staff = await getStaffUser(request);
-  return Boolean(staff?.permissions?.fees?.can_view || staff?.permissions?.accounting?.can_view);
+  return hasStaffModulePermission(staff, ['fees', 'accounting'], 'view');
 }
 
 export async function isRegister(request?: any): Promise<boolean> {
   const staff = await getStaffUser(request);
-  return Boolean(staff?.permissions?.sis?.can_view || staff?.permissions?.routine?.can_view);
+  return hasStaffModulePermission(staff, ['sis', 'routine'], 'view');
 }
 
 export async function isGeneralStaff(request?: any): Promise<boolean> {
@@ -622,7 +695,7 @@ export async function authenticateStaff({
 
   if (staff.is_two_factor_enabled) {
     if (!twoFactorCode) {
-      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+      const selectedChannel = 'email';
 
       const rateCheck = await checkOtpDispatchRateLimit({
         identifier: staff.email,
@@ -640,6 +713,12 @@ export async function authenticateStaff({
         err.twoFactorRequired = true;
         err.email = staff.email;
         err.phone = staff.phone || staff.number;
+        throw err;
+      }
+
+      if (!staff.email) {
+        const err: any = new Error('No email address is registered for two-factor verification on this staff account.');
+        err.status = 400;
         throw err;
       }
 
@@ -664,57 +743,40 @@ export async function authenticateStaff({
 
       const institutionName = website?.name || 'Institution Staff Portal';
 
-      if (selectedChannel === 'sms') {
-        const targetPhone = staff.phone || staff.number;
-        if (!targetPhone) {
-          const err: any = new Error('No phone number is registered for SMS verification on this staff account.');
-          err.status = 400;
-          throw err;
-        }
-        try {
-          await sendSms({
-            to: targetPhone,
-            message: `Your ${institutionName} staff 2FA security code is: ${secureOtp}. Valid for 10 minutes.`,
-            purpose: '2fa',
-            userId: staff.id,
-            userType: 'staff',
-            ip,
-            websiteId,
-          });
-        } catch (smsErr: any) {
-          const err: any = new Error(smsErr.message || 'Failed to dispatch 2FA SMS code.');
-          err.dispatchFailed = true;
-          throw err;
-        }
-      } else {
-        try {
-          const html = buildStyledEmail({
-            title: 'Staff Security Verification',
-            subtitle: `${institutionName} — Staff Operations Portal`,
-            recipientName: staff.name,
-            bodyParagraphs: [
-              'A login request to your staff portal was detected. Please use the verification code below to complete your authentication.',
-              'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
-            ],
-            code: secureOtp,
-            codeLabel: 'Two-Factor Authentication Code',
-          });
+      try {
+        const html = buildStyledEmail({
+          title: 'Staff Security Verification',
+          subtitle: `${institutionName} — Staff Operations Portal`,
+          institutionName,
+          recipientName: staff.name,
+          bodyParagraphs: [
+            'A login request to your staff portal was detected. Please use the verification code below to complete your authentication.',
+            'This security code will expire in 10 minutes. If you did not initiate this request, please contact your systems administrator immediately.',
+          ],
+          code: secureOtp,
+          codeLabel: 'Two-Factor Authentication Code',
+        });
 
-          await sendEmail({
-            to: staff.email,
-            toName: staff.name,
-            subject: `${institutionName} - Staff Portal Login Verification Code`,
-            html,
-            websiteId,
-          });
-        } catch (mailErr: any) {
-          const err: any = new Error(mailErr.message || 'Failed to dispatch 2FA email code.');
-          err.dispatchFailed = true;
-          throw err;
-        }
+        await sendEmail({
+          to: staff.email,
+          toName: staff.name,
+          fromName: institutionName,
+          subject: `${institutionName} - Staff Portal Login Verification Code`,
+          html,
+          text: `Your ${institutionName} staff two-factor verification code is: ${secureOtp}. Valid for 10 minutes.`,
+          websiteId,
+          recipientType: 'staff',
+          recipientId: staff.id,
+          purpose: 'staff_2fa',
+          ip,
+        });
+      } catch (mailErr: any) {
+        const err: any = new Error(mailErr.message || 'Failed to dispatch 2FA email code.');
+        err.dispatchFailed = true;
+        throw err;
       }
 
-      const err: any = new Error(`Two-factor verification code sent to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`);
+      const err: any = new Error('Two-factor verification code sent to your registered email address.');
       err.requires2FA = true;
       err.twoFactorRequired = true;
       err.channel = selectedChannel;

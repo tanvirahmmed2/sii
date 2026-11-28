@@ -9,7 +9,6 @@ import {
   invalidatePanelSessionsByTag,
 } from '../redis/redisClient';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
-import { sendSms } from '../database/smsSender';
 import {
   checkAccountLockout,
   recordFailedLogin,

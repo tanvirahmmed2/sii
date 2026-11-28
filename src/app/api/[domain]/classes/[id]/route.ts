@@ -13,23 +13,18 @@ export async function GET(request: any, context: any) {
         }
         const classRes = await queryDb(`SELECT c.id,
               c.website_id,
-              c.department_id,
               c.name,
               c.code,
               c.max_seats,
               c.description,
               c.created_at,
               c.updated_at,
-              d.name AS department_name,
-              d.code AS department_code,
-              d.slug AS department_slug,
-              di.motto AS motto,
-              di.summary AS summary,
-              COALESCE(c.description, di.description) AS detailed_description,
-              COALESCE(di.expected_cost, 0.00) AS expected_cost
+              ci.motto AS motto,
+              ci.summary AS summary,
+              COALESCE(ci.description, c.description) AS detailed_description,
+              COALESCE(ci.expected_cost, 0.00) AS expected_cost
        FROM website_classes c
-       JOIN website_departments d ON d.id = c.department_id AND d.website_id = c.website_id
-       LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = c.website_id
+       LEFT JOIN website_class_information ci ON ci.class_id = c.id AND ci.website_id = c.website_id
        WHERE c.website_id = $1 AND (c.id::text = $2 OR LOWER(c.code) = LOWER($2))
        LIMIT 1`, [website.id, id]);
         if (classRes.rows.length === 0) {
@@ -38,8 +33,8 @@ export async function GET(request: any, context: any) {
         const classData = classRes.rows[0];
         const sectionsRes = await queryDb(`SELECT id, name, capacity, room_number
        FROM website_sections
-       WHERE website_id = $1 AND class_id = $2
-       ORDER BY name ASC`, [website.id, classData.id]);
+       WHERE website_id = $1
+       ORDER BY name ASC`, [website.id]);
         const subjectsRes = await queryDb(`SELECT cs.id AS assignment_id,
               s.id AS subject_id,
               s.name AS subject_name,
@@ -59,8 +54,8 @@ export async function GET(request: any, context: any) {
               COALESCE(split_part(t.email, '@', 1), t.id::text) AS username
        FROM website_teachers t
        LEFT JOIN website_teacher_designation des ON des.id = t.designation_id
-       WHERE t.website_id = $1 AND (t.department_id = $2 OR t.department_id IS NULL) AND t.is_active = true
-       ORDER BY des.display_order ASC NULLS LAST, t.name ASC`, [website.id, classData.department_id]);
+       WHERE t.website_id = $1 AND t.is_active = true
+       ORDER BY des.display_order ASC NULLS LAST, t.name ASC`, [website.id]);
         const fullClass = {
             ...classData,
             sections: sectionsRes.rows,

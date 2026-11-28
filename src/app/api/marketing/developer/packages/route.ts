@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { requireDeveloperPermission } from 'src/lib/middleware/developer';
 import { invalidatePackagesCache } from 'src/lib/redis/redisClient';
+import { clearWebsiteCache } from 'src/lib/middleware/websiteResolver';
 import { generateUniquePackageSlug, syncPackageFeatures } from 'src/lib/packages/packageFeatures';
 async function fetchPackageById(id: any) {
     const res = await queryDb(`SELECT p.*,
@@ -465,7 +466,7 @@ export async function PUT(request: any) {
             await syncPackageFeatures(Number(id), rawFeatList);
         }
         const fullPackage = await fetchPackageById(Number(id));
-        await invalidatePackagesCache();
+        await Promise.all([invalidatePackagesCache(), clearWebsiteCache()]);
         return NextResponse.json({
             success: true,
             message: 'Package updated successfully',

@@ -119,14 +119,7 @@ export default function AdmissionCircularsPage() {
             isMounted = false;
         };
     }, [apiBase]);
-    const availableClassesForForm = useMemo(() => {
-        return classes.filter((cls: any) => {
-            if (form.department_id && String(cls.department_id) !== String(form.department_id)) {
-                return false;
-            }
-            return true;
-        });
-    }, [classes, form.department_id]);
+    const availableClassesForForm = classes;
     const selectedClass = useMemo(() => {
         return classes.find((c: any) => String(c.id) === String(form.class_id)) || null;
     }, [classes, form.class_id]);

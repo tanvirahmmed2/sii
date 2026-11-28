@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword, revokeAllStaffSessions } from 'src/lib/middleware/staff';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { getWebsiteUrl } from 'src/lib/database/secret';
 import { getClientIp, inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, } from 'src/lib/security/shield';
 function buildStaffRecoveryUrl(website: any, token: any, request: any) {
@@ -71,72 +70,62 @@ export async function POST(request: any, context: any) {
         if (!staff.is_active) {
             return NextResponse.json({ success: false, error: 'This staff account is deactivated. Please contact campus administration.' }, { status: 403 });
         }
+        if (!staff.email) {
+            return NextResponse.json({ success: false, error: 'No email address registered on this staff account.' }, { status: 400 });
+        }
         const generatedToken = generateSecureOtp(6);
         await queryDb(`UPDATE website_staffs
        SET recovery_token = $1, 
            recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour',
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`, [generatedToken, staff.id]);
-        const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+        const channel = 'email';
         await recordOtpDispatch({
-            identifier: raw,
+            identifier: staff.email,
             phone: staff.phone || staff.number,
             email: staff.email,
             channel,
             purpose: 'staff_recovery',
             ip,
         });
-        if (channel === 'sms') {
-            const targetPhone = staff.phone || staff.number;
-            if (!targetPhone) {
-                return NextResponse.json({ success: false, error: 'No phone number registered for SMS recovery on this staff account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${website.name} staff password recovery code is: ${generatedToken}. Valid for 60 minutes.`,
-                    purpose: 'recovery',
-                    userId: staff.id,
-                    userType: 'staff',
-                    ip,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch recovery SMS code.' }, { status: 500 });
-            }
+        const recoveryUrl = buildStaffRecoveryUrl(website, generatedToken, request);
+        try {
+            const html = buildStyledEmail({
+                title: 'Staff Password Recovery',
+                subtitle: `${website.name} — Staff Operations Portal`,
+                institutionName: website.name,
+                recipientName: staff.name,
+                bodyParagraphs: [
+                    'We received a request to reset the password for your staff account.',
+                    'Click the link below or enter the 6-digit recovery code on the reset screen to set your new password. This code is active for 1 hour.',
+                    'If you did not make this request, you can safely ignore this email; your existing credentials remain secure.',
+                ],
+                actionUrl: recoveryUrl,
+                actionText: 'Reset Staff Password',
+                code: generatedToken,
+                codeLabel: 'Password Recovery Code',
+                footerNote: 'This security code is active for 1 hour. Do not share it with anyone.',
+            });
+            await sendEmail({
+                to: staff.email,
+                toName: staff.name,
+                fromName: website.name || undefined,
+                subject: `${website.name} - Staff Password Recovery Code`,
+                html,
+                text: `Your staff password recovery code is: ${generatedToken}.\nOr reset directly using this link: ${recoveryUrl}\nValid for 60 minutes.`,
+                websiteId: website.id,
+                recipientType: 'staff',
+                recipientId: staff.id,
+                purpose: 'staff_recovery',
+                ip,
+            });
         }
-        else {
-            try {
-                const html = buildStyledEmail({
-                    title: 'Staff Password Recovery',
-                    subtitle: `${website.name} — Staff Operations Portal`,
-                    recipientName: staff.name,
-                    bodyParagraphs: [
-                        'We received a request to reset the password for your staff account.',
-                        'Enter the 6-digit recovery code below on the reset screen to set your new password. This code is active for 1 hour.',
-                        'If you did not make this request, you can safely ignore this email; your existing credentials remain secure.',
-                    ],
-                    code: generatedToken,
-                    codeLabel: 'Password Recovery Code',
-                    footerNote: 'This security code is active for 1 hour. Do not share it with anyone.',
-                });
-                await sendEmail({
-                    to: staff.email,
-                    toName: staff.name,
-                    subject: `${website.name} - Staff Password Recovery Code`,
-                    html,
-                    text: `Your staff password recovery code is: ${generatedToken}. Valid for 60 minutes.`,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `Password recovery code sent via ${channel === 'sms' ? 'SMS' : 'email'}. Please check your ${channel === 'sms' ? 'phone messages' : 'inbox'}.`,
+            message: 'Password recovery code and link sent via email. Please check your inbox.',
             channel,
             hasPhone: Boolean(staff.phone || staff.number),
             hasEmail: Boolean(staff.email),

@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET, DEVELOPER_TOKEN, SITE_NAME } from '../database/secret';
 import { query, queryDb } from '../database/db';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
-import { sendSms, maskPhoneNumber } from '../database/smsSender';
 import { recordDeveloperHttpActivity } from '../database/activity_logger';
 import {
   checkAccountLockout,
@@ -672,7 +671,7 @@ export async function authenticateDeveloper(identifier: string, password: string
 
   if (dev.two_factor_enabled) {
     if (!twoFactorCode) {
-      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+      const selectedChannel = 'email';
 
       const rateCheck = await checkOtpDispatchRateLimit({
         identifier: dev.email,
@@ -703,71 +702,48 @@ export async function authenticateDeveloper(identifier: string, password: string
         [secureOtp, dev.id]
       );
 
-      if (selectedChannel === 'sms') {
-        try {
-          await sendSms({
-            to: dev.phone,
-            message: `Your ${SITE_NAME} Developer 2FA verification code is: ${secureOtp}. Valid for 10 minutes.`,
-            purpose: '2fa',
-            userId: dev.id,
-            userType: 'developer',
-            ip
-          });
-          await recordOtpDispatch({
-            identifier: dev.phone,
-            phone: dev.phone,
-            email: dev.email,
-            channel: 'sms',
-            purpose: '2fa',
-            ip
-          });
-        } catch (smsErr: any) {
-          console.error('Developer 2FA SMS error:', smsErr.message);
-          const err: any = new Error(`Failed to dispatch SMS: ${smsErr.message || 'SMS delivery failed.'}`);
-          err.dispatchFailed = true;
-          err.status = 500;
-          throw err;
-        }
-      } else {
-        try {
-          const emailHtml = buildStyledEmail({
-            title: `${SITE_NAME} Security Verification`,
-            subtitle: 'Two-Factor Authentication Code',
-            recipientName: dev.name || 'Developer',
-            bodyParagraphs: [
-              'A login request was initiated for your administrator account.',
-              'Enter the 6-digit verification code below to authorize your session.'
-            ],
-            code: secureOtp,
-            codeLabel: 'Security Code',
-            footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
-          });
+      try {
+        const emailHtml = buildStyledEmail({
+          title: `${SITE_NAME} Security Verification`,
+          subtitle: 'Two-Factor Authentication Code',
+          recipientName: dev.name || 'Developer',
+          bodyParagraphs: [
+            'A login request was initiated for your administrator account.',
+            'Enter the 6-digit verification code below to authorize your session.'
+          ],
+          code: secureOtp,
+          codeLabel: 'Security Code',
+          footerNote: 'This code is valid for 10 minutes. If you did not initiate this login, please secure your password immediately.'
+        });
 
-          await sendEmail({
-            to: dev.email,
-            subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
-            html: emailHtml,
-            text: `Your ${SITE_NAME} two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
-          });
-          await recordOtpDispatch({
-            identifier: dev.email,
-            phone: dev.phone,
-            email: dev.email,
-            channel: 'email',
-            purpose: '2fa',
-            ip
-          });
-        } catch (mailErr: any) {
-          console.error('Developer 2FA email error:', mailErr.message);
-          const err: any = new Error(`Failed to send verification email: ${mailErr.message || 'Email delivery failed.'}`);
-          err.dispatchFailed = true;
-          err.status = 500;
-          throw err;
-        }
+        await sendEmail({
+          to: dev.email,
+          toName: dev.name || 'Developer',
+          subject: `Two-Factor Security Code: ${secureOtp} - ${SITE_NAME}`,
+          html: emailHtml,
+          text: `Your ${SITE_NAME} two-factor code is: ${secureOtp}. Valid for 10 minutes.`,
+          recipientType: 'developer',
+          recipientId: dev.id,
+          purpose: 'developer_2fa',
+          ip,
+        });
+        await recordOtpDispatch({
+          identifier: dev.email,
+          phone: dev.phone,
+          email: dev.email,
+          channel: 'email',
+          purpose: '2fa',
+          ip
+        });
+      } catch (mailErr: any) {
+        console.error('Developer 2FA email error:', mailErr.message);
+        const err: any = new Error(`Failed to send verification email: ${mailErr.message || 'Email delivery failed.'}`);
+        err.dispatchFailed = true;
+        err.status = 500;
+        throw err;
       }
 
-      const dest = selectedChannel === 'sms' ? 'registered mobile phone' : 'registered email address';
-      const err: any = new Error(`Two-factor verification code sent via ${selectedChannel === 'sms' ? 'SMS' : 'email'} to your ${dest}.`);
+      const err: any = new Error('Two-factor verification code sent via email to your registered email address.');
       err.requires2FA = true;
       err.twoFactorRequired = true;
       err.channel = selectedChannel;

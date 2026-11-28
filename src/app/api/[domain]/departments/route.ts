@@ -17,13 +17,6 @@ export async function GET(request: any, context: any) {
               di.summary,
               COALESCE(di.description, d.description) AS detailed_description,
               COALESCE(di.expected_cost, 0.00) AS expected_cost,
-              COALESCE((SELECT COUNT(*) FROM website_classes c WHERE c.department_id = d.id), 0)::int AS class_count,
-              COALESCE(
-                (SELECT json_agg(json_build_object('id', c.id, 'name', c.name, 'code', c.code) ORDER BY c.name ASC)
-                 FROM website_classes c
-                 WHERE c.department_id = d.id),
-                '[]'::json
-              ) AS classes,
               row_to_json(dh.*) AS dept_head
        FROM website_departments d
        LEFT JOIN website_department_information di ON di.department_id = d.id AND di.website_id = d.website_id

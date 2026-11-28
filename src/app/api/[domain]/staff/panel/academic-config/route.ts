@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { hasStaffModulePermission, verifyStaffModuleAccess } from 'src/lib/middleware/staff';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
+import { invalidateWebsiteModulesCache } from 'src/lib/redis/redisClient';
 const VALID_HIERARCHIES = ['DEPT_SESSION_SEC', 'CLASS_SEC', 'DEPT_CLASS_SEC', 'CUSTOM'];
 const DEFAULT_LABELS = {
     department: 'Department',
@@ -41,7 +43,7 @@ const PRESETS = {
     }
 };
 async function verifyStaffAccess(request: any, context: any, action: any = 'view') {
-    return verifyStaffModuleAccess(request, context, ['settings', 'routine', 'class-setup'], action);
+    return verifyStaffModuleAccess(request, context, ['system', 'settings', 'routine', 'class-setup'], action);
 }
 export async function GET(request: any, context: any) {
     try {
@@ -49,10 +51,12 @@ export async function GET(request: any, context: any) {
         if (auth.error)
             return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
         const websiteId = auth.website.id;
+        const canEdit = Boolean(auth.isCreator || hasStaffModulePermission(auth.staffSession, ['system', 'settings', 'routine', 'class-setup'], 'edit'));
         const existingRes = await queryDb(`SELECT * FROM website_academic_configs WHERE website_id = $1`, [websiteId]);
         if (existingRes.rows.length > 0) {
             return NextResponse.json({
                 success: true,
+                canEdit,
                 config: existingRes.rows[0]
             });
         }
@@ -166,6 +170,10 @@ export async function POST(request: any, context: any) {
             finalReqSection,
             JSON.stringify(mergedLabels)
         ]);
+        await Promise.all([
+            invalidateWebsiteCache(auth.website.id),
+            invalidateWebsiteModulesCache(auth.website.id),
+        ]).catch(() => { });
         return NextResponse.json({
             success: true,
             config: upsertRes.rows[0],

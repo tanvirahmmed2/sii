@@ -3,7 +3,6 @@ import { queryDb } from 'src/lib/database/db';
 import { resolveWebsiteFromRequest } from 'src/lib/middleware/creator';
 import { hashPassword, revokeAllStudentSessions } from 'src/lib/middleware/students';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { buildStudentRecoveryUrl } from 'src/lib/student/urls';
 import { inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, extractClientIp, } from 'src/lib/security/shield';
 export async function POST(request: any, context: any) {
@@ -33,7 +32,6 @@ export async function POST(request: any, context: any) {
         }
         const rawIdentifier = body.identifier || body.email || body.phone || body.registration_number || body.registration_no || '';
         const cleanId = String(rawIdentifier).trim();
-        const requestedChannel = String(body.channel || 'email').toLowerCase();
         if (!cleanId) {
             return NextResponse.json({ success: false, error: 'Registration number, email address, or phone number is required.' }, { status: 400 });
         }
@@ -64,8 +62,11 @@ export async function POST(request: any, context: any) {
             });
         }
         const student = studentRes.rows[0];
+        if (!student.email) {
+            return NextResponse.json({ success: false, error: 'No email address registered on your student profile. Please contact campus registrar.' }, { status: 400 });
+        }
         const targetPhone = student.phone || student.number;
-        const selectedChannel = requestedChannel === 'sms' && targetPhone ? 'sms' : 'email';
+        const selectedChannel = 'email';
         const dispatchLimitCheck = await checkOtpDispatchRateLimit({
             identifier: student.email || student.registration_no,
             phone: targetPhone,
@@ -91,56 +92,44 @@ export async function POST(request: any, context: any) {
             ip: clientIp,
         });
         const institutionName = website.name || 'Institutional Management Portal';
-        if (selectedChannel === 'sms') {
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${institutionName} student password recovery code is: ${sixDigitCode}. Valid for 1 hour.`,
-                    purpose: 'recovery',
-                    userId: student.id,
-                    userType: 'student',
-                    ip: clientIp,
-                    websiteId: website.id,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: smsErr.message || 'Failed to dispatch recovery SMS code.' }, { status: 500 });
-            }
+        const recoveryUrl = buildStudentRecoveryUrl(website, sixDigitCode, request);
+        try {
+            const emailHtml = buildStyledEmail({
+                title: 'Student Password Reset Request',
+                subtitle: `${institutionName} — Student Services Desk`,
+                institutionName,
+                recipientName: student.name || 'Student',
+                bodyParagraphs: [
+                    'We received a request to reset your student portal account password.',
+                    'Click the link below or enter the 6-digit verification code on the recovery screen to complete your password update. This security code is valid for 60 minutes.',
+                    'If you did not request a password reset, you can safely disregard this message.',
+                ],
+                actionUrl: recoveryUrl,
+                actionText: 'Reset Student Password',
+                code: sixDigitCode,
+                codeLabel: 'Recovery Passcode',
+                footerNote: 'This security code is valid for 60 minutes. Keep it confidential.',
+            });
+            await sendEmail({
+                to: student.email,
+                toName: student.name || 'Student',
+                fromName: institutionName,
+                subject: `${institutionName} - Student Account Verification Code [${sixDigitCode}]`,
+                html: emailHtml,
+                text: `Your student password recovery code is: ${sixDigitCode}.\nOr reset directly using this link: ${recoveryUrl}\nValid for 60 minutes.`,
+                websiteId: website.id,
+                recipientType: 'student',
+                recipientId: student.id,
+                purpose: 'student_recovery',
+                ip: clientIp,
+            });
         }
-        else {
-            if (!student.email) {
-                return NextResponse.json({ success: false, error: 'No email address registered on your student profile. Please use SMS recovery or contact campus registrar.' }, { status: 400 });
-            }
-            try {
-                const emailHtml = buildStyledEmail({
-                    title: 'Student Password Reset Request',
-                    subtitle: `${institutionName} — Student Services Desk`,
-                    recipientName: student.name || 'Student',
-                    bodyParagraphs: [
-                        'We received a request to reset your student portal account password.',
-                        'Enter the 6-digit verification code below on the recovery screen to complete your password update. This security code is valid for 60 minutes.',
-                        'If you did not request a password reset, you can safely disregard this message.',
-                    ],
-                    code: sixDigitCode,
-                    codeLabel: 'Recovery Passcode',
-                    footerNote: 'This security code is valid for 60 minutes. Keep it confidential.',
-                });
-                await sendEmail({
-                    to: student.email,
-                    toName: student.name || 'Student',
-                    subject: `${institutionName} - Student Account Verification Code [${sixDigitCode}]`,
-                    html: emailHtml,
-                    text: `Your student password recovery code is: ${sixDigitCode}. Valid for 60 minutes.`,
-                    websiteId: website.id,
-                });
-            }
-            catch (mailErr: any) {
-                return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
-            }
+        catch (mailErr: any) {
+            return NextResponse.json({ success: false, error: mailErr.message || 'Failed to dispatch recovery email.' }, { status: 500 });
         }
         return NextResponse.json({
             success: true,
-            message: `Verification code sent to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`,
+            message: 'Verification code and recovery link sent to your registered email address.',
             channel: selectedChannel,
         });
     }

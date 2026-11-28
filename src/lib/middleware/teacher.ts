@@ -8,7 +8,6 @@ import {
   invalidatePanelSessionsByTag,
 } from '../redis/redisClient';
 import { sendEmail, buildStyledEmail } from '../database/mailer';
-import { sendSms } from '../database/smsSender';
 import {
   checkAccountLockout,
   recordFailedLogin,
@@ -274,7 +273,7 @@ export async function authenticateTeacher({
 
   if (teacher.is_two_factor_enabled) {
     if (!twoFactorCode) {
-      const selectedChannel = String(channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
+      const selectedChannel = 'email';
 
       const rateCheck = await checkOtpDispatchRateLimit({
         identifier: teacher.email,
@@ -292,6 +291,12 @@ export async function authenticateTeacher({
         err.twoFactorRequired = true;
         err.email = teacher.email;
         err.phone = teacher.phone || teacher.number;
+        throw err;
+      }
+
+      if (!teacher.email) {
+        const err: any = new Error('No email address is registered for two-factor verification on this teacher account.');
+        err.status = 400;
         throw err;
       }
 
@@ -316,57 +321,40 @@ export async function authenticateTeacher({
 
       const institutionName = website?.name || 'Institution Teacher Portal';
 
-      if (selectedChannel === 'sms') {
-        const targetPhone = teacher.phone || teacher.number;
-        if (!targetPhone) {
-          const err: any = new Error('No phone number is registered for SMS verification on this teacher account.');
-          err.status = 400;
-          throw err;
-        }
-        try {
-          await sendSms({
-            to: targetPhone,
-            message: `Your ${institutionName} faculty 2FA security code is: ${secureOtp}. Valid for 10 minutes.`,
-            purpose: '2fa',
-            userId: teacher.id,
-            userType: 'teacher',
-            ip,
-            websiteId,
-          });
-        } catch (smsErr: any) {
-          const err: any = new Error(smsErr.message || 'Failed to dispatch 2FA SMS code.');
-          err.dispatchFailed = true;
-          throw err;
-        }
-      } else {
-        try {
-          const html = buildStyledEmail({
-            title: 'Teacher Security Verification',
-            subtitle: `${institutionName} — Faculty Operations Portal`,
-            recipientName: teacher.name,
-            bodyParagraphs: [
-              'A login request to your faculty dashboard was detected.',
-              'Please use the verification code below to complete your authentication. This security code will expire in 10 minutes.',
-            ],
-            code: secureOtp,
-            codeLabel: 'Two-Factor Authentication Code',
-          });
+      try {
+        const html = buildStyledEmail({
+          title: 'Teacher Security Verification',
+          subtitle: `${institutionName} — Faculty Operations Portal`,
+          institutionName,
+          recipientName: teacher.name,
+          bodyParagraphs: [
+            'A login request to your faculty dashboard was detected.',
+            'Please use the verification code below to complete your authentication. This security code will expire in 10 minutes.',
+          ],
+          code: secureOtp,
+          codeLabel: 'Two-Factor Authentication Code',
+        });
 
-          await sendEmail({
-            to: teacher.email,
-            toName: teacher.name,
-            subject: `${institutionName} - Teacher Portal Login Verification Code`,
-            html,
-            websiteId,
-          });
-        } catch (mailErr: any) {
-          const err: any = new Error(mailErr.message || 'Failed to dispatch 2FA email code.');
-          err.dispatchFailed = true;
-          throw err;
-        }
+        await sendEmail({
+          to: teacher.email,
+          toName: teacher.name,
+          fromName: institutionName,
+          subject: `${institutionName} - Teacher Portal Login Verification Code`,
+          html,
+          text: `Your ${institutionName} teacher two-factor verification code is: ${secureOtp}. Valid for 10 minutes.`,
+          websiteId,
+          recipientType: 'teacher',
+          recipientId: teacher.id,
+          purpose: 'teacher_2fa',
+          ip,
+        });
+      } catch (mailErr: any) {
+        const err: any = new Error(mailErr.message || 'Failed to dispatch 2FA email code.');
+        err.dispatchFailed = true;
+        throw err;
       }
 
-      const err: any = new Error(`Two-factor verification code sent to your registered ${selectedChannel === 'sms' ? 'phone number via SMS' : 'email address'}.`);
+      const err: any = new Error('Two-factor verification code sent to your registered email address.');
       err.requires2FA = true;
       err.twoFactorRequired = true;
       err.channel = selectedChannel;

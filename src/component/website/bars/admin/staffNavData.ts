@@ -762,21 +762,21 @@ export const staffNavData = [
     },
     {
         "title": "Posters",
-        "module": "website-builder,documents",
+        "module": "posters,poster-templates",
         "children": [
             {
                 "title": "Hub",
-                "module": "website-builder,documents",
+                "module": "posters",
                 "path": "/posters"
             },
             {
                 "title": "Studio",
-                "module": "website-builder,documents",
+                "module": "posters",
                 "path": "/posters/studio/new"
             },
             {
                 "title": "Templates",
-                "module": "website-builder,documents",
+                "module": "poster-templates",
                 "path": "/poster-templates"
             }
         ]
@@ -1185,46 +1185,46 @@ export const staffNavData = [
     },
     {
         "title": "Enterprise",
-        "module": null,
+        "module": "tenant-quotas,page-builder,cbt-exams,fee-accounting,academic-progression,lms-courses,parent-transport-inventory,security-audit",
         "children": [
             {
                 "title": "Quotas",
-                "module": null,
+                "module": "tenant-quotas",
                 "path": "/tenant-quotas"
             },
             {
                 "title": "CMS",
-                "module": null,
+                "module": "page-builder",
                 "path": "/page-builder"
             },
             {
                 "title": "CBT",
-                "module": null,
+                "module": "cbt-exams",
                 "path": "/cbt-exams"
             },
             {
                 "title": "Ledger",
-                "module": null,
+                "module": "fee-accounting",
                 "path": "/fee-accounting"
             },
             {
                 "title": "Progression",
-                "module": null,
+                "module": "academic-progression",
                 "path": "/academic-progression"
             },
             {
                 "title": "LMS",
-                "module": null,
+                "module": "lms-courses",
                 "path": "/lms-courses"
             },
             {
                 "title": "Operations",
-                "module": null,
+                "module": "parent-transport-inventory",
                 "path": "/parent-transport-inventory"
             },
             {
                 "title": "Security",
-                "module": null,
+                "module": "security-audit",
                 "path": "/security-audit"
             }
         ]
@@ -1235,29 +1235,24 @@ export const staffNavData = [
         "children": [
             {
                 "title": "Architecture",
-                "module": "settings",
+                "module": "system",
                 "path": "/system"
             },
             {
                 "title": "Payments",
-                "module": "settings",
+                "module": "configure-payments",
                 "path": "/configure-payments"
             },
             {
                 "title": "Meta",
-                "module": "settings",
+                "module": "configure-meta",
                 "path": "/configure-meta"
             }
         ]
     },
     {
-        "title": "Architecture",
-        "module": "settings",
-        "path": "/system"
-    },
-    {
         "title": "Directory",
-        "module": "settings",
+        "module": "modules",
         "path": "/modules"
     },
     {
@@ -1267,12 +1262,12 @@ export const staffNavData = [
     },
     {
         "title": "Profile",
-        "module": null,
+        "module": "staff-profile",
         "path": "/staff-profile"
     },
     {
         "title": "Preferences",
-        "module": null,
+        "module": "staff-settings",
         "path": "/staff-settings"
     }
 ];

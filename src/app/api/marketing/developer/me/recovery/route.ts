@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hashPassword } from 'src/lib/middleware/developer';
 import { sendEmail, buildStyledEmail } from 'src/lib/database/mailer';
-import { sendSms } from 'src/lib/database/smsSender';
 import { SITE_NAME, getBaseUrl } from 'src/lib/database/secret';
 import { getClientIp, inspectMalwareAndAttacks, checkRateLimit, checkOtpDispatchRateLimit, recordOtpDispatch, generateSecureOtp, } from 'src/lib/security/shield';
 export async function POST(request: any) {
@@ -108,43 +107,11 @@ export async function POST(request: any) {
         const admin = dbAdmin.rows[0];
         const targetEmail = admin.email;
         const targetPhone = admin.phone;
-        const channel = String(body.channel || 'email').toLowerCase() === 'sms' ? 'sms' : 'email';
         const generatedToken = generateSecureOtp(6);
         await queryDb(`UPDATE developers 
        SET recovery_token = $1, recovery_token_expires = CURRENT_TIMESTAMP + INTERVAL '1 hour', updated_at = CURRENT_TIMESTAMP 
        WHERE id = $2`, [generatedToken, admin.id]);
-        if (channel === 'sms') {
-            if (!targetPhone) {
-                return NextResponse.json({ success: false, error: 'No phone number is registered for this developer account.' }, { status: 400 });
-            }
-            try {
-                await sendSms({
-                    to: targetPhone,
-                    message: `Your ${SITE_NAME} Developer password recovery token is: ${generatedToken}. Valid for 60 minutes.`,
-                    purpose: 'recovery',
-                    userId: admin.id,
-                    userType: 'developer',
-                    ip,
-                });
-                await recordOtpDispatch({
-                    identifier: targetPhone,
-                    phone: targetPhone,
-                    email: targetEmail,
-                    channel: 'sms',
-                    purpose: 'recovery',
-                    ip,
-                });
-            }
-            catch (smsErr: any) {
-                return NextResponse.json({ success: false, error: `Failed to dispatch SMS: ${smsErr.message}` }, { status: 500 });
-            }
-            return NextResponse.json({
-                success: true,
-                message: 'A security recovery token has been sent via SMS to your registered mobile phone.',
-                channel: 'sms',
-                cooldownSeconds: 60,
-            });
-        }
+        const recoveryUrl = `${getBaseUrl(request)}/developer-auth/recovery?token=${encodeURIComponent(generatedToken)}&email=${encodeURIComponent(targetEmail)}`;
         try {
             const emailHtml = buildStyledEmail({
                 title: 'Developer Security Recovery Token',
@@ -152,17 +119,24 @@ export async function POST(request: any) {
                 recipientName: admin.name || 'Developer',
                 bodyParagraphs: [
                     'You requested a security recovery token for your administrator account.',
-                    'Please enter the 6-digit recovery token below on the recovery page to set your new password.'
+                    'Click the link below or enter the 6-digit recovery token on the recovery page to set your new password.'
                 ],
+                actionUrl: recoveryUrl,
+                actionText: 'Reset Developer Password',
                 code: generatedToken,
                 codeLabel: 'Recovery Token',
                 footerNote: 'This token is valid for 60 minutes. Keep it confidential and do not share it with anyone.'
             });
             await sendEmail({
                 to: targetEmail,
+                toName: admin.name || 'Developer',
                 subject: `Developer Security Recovery Token - ${SITE_NAME}`,
                 html: emailHtml,
-                text: `Your security recovery token is: ${generatedToken}.\nEnter this 6-digit token on the recovery page to set your new password.\nValid for 60 minutes.`,
+                text: `Your security recovery token is: ${generatedToken}.\nOr reset directly using this link: ${recoveryUrl}\nValid for 60 minutes.`,
+                recipientType: 'developer',
+                recipientId: admin.id,
+                purpose: 'developer_recovery',
+                ip,
             });
             await recordOtpDispatch({
                 identifier: targetEmail,

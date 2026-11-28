@@ -282,34 +282,14 @@ function CreatorRecoveryForm() {
                         {loading ? 'Resetting...' : 'Reset Password'}
                     </button>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
-                        {channel === 'email' ? (
-                            <button
-                                type="button"
-                                onClick={() => handleRequestCode(null, 'sms')}
-                                disabled={resending || loading || cooldown > 0}
-                                className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
-                            >
-                                Send to phone
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => handleRequestCode(null, 'email')}
-                                disabled={resending || loading || cooldown > 0}
-                                className="text-xs text-indigo-600 font-medium hover:underline disabled:opacity-50 cursor-pointer"
-                            >
-                                Send to email
-                            </button>
-                        )}
-
+                    <div className="flex items-center justify-end gap-2 text-xs pt-1">
                         <button
                             type="button"
                             disabled={resending || cooldown > 0}
-                            onClick={() => handleResend(channel)}
+                            onClick={() => handleResend('email')}
                             className="text-xs text-slate-500 hover:text-slate-800 disabled:opacity-50 cursor-pointer"
                         >
-                            {resending ? 'Sending...' : cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+                            {resending ? 'Sending...' : cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code to email'}
                         </button>
                     </div>
 
@@ -356,7 +336,7 @@ export default function CreatorRecoveryPage() {
     return (
         <CreatorAuthLayout
             headline="Account Recovery"
-            description="Reset your creator credentials securely via email or SMS verification code."
+            description="Reset your creator credentials securely via email verification code."
         >
             <Suspense fallback={<LoadingScreen fullScreen={false} size="sm" label="Loading recovery..." />}>
                 <CreatorRecoveryForm />

@@ -138,6 +138,33 @@ CROSS JOIN website_control_modules cm
 WHERE cm.slug = 'system'
 ON CONFLICT (package_id, control_module_id) DO NOTHING;
 
+INSERT INTO website_control_modules (name, slug, path, category, description, icon, is_active, display_order)
+VALUES
+    ('SMS Balance', 'sms-balance', '/staff-panel/sms-balance', 'Communications & Gateways', 'Monitor monthly SMS quota usage, delivery logs, and recipient analytics', 'BiMessageDetail', TRUE, 205),
+    ('Mail Balance', 'mail-balance', '/staff-panel/mail-balance', 'Communications & Gateways', 'Track transactional and institutional email dispatches and quota usage', 'BiEnvelope', TRUE, 206),
+    ('Transactions & Accounts', 'transactions', '/staff-panel/transactions', 'Fees & Accounting', 'Inspect payment gateway settlements, merchant accounts, and fee transactions', 'BiTransfer', TRUE, 207)
+ON CONFLICT (slug) DO UPDATE SET
+    name = EXCLUDED.name,
+    path = EXCLUDED.path,
+    category = EXCLUDED.category,
+    description = EXCLUDED.description,
+    icon = EXCLUDED.icon,
+    is_active = TRUE;
+
+INSERT INTO package_control_modules (package_id, control_module_id)
+SELECT DISTINCT pcm.package_id, cm.id
+FROM package_control_modules pcm
+JOIN website_control_modules ref ON ref.id = pcm.control_module_id AND ref.slug = 'contacts'
+JOIN website_control_modules cm ON cm.slug IN ('sms-balance', 'mail-balance')
+ON CONFLICT (package_id, control_module_id) DO NOTHING;
+
+INSERT INTO package_control_modules (package_id, control_module_id)
+SELECT DISTINCT pcm.package_id, cm.id
+FROM package_control_modules pcm
+JOIN website_control_modules ref ON ref.id = pcm.control_module_id AND ref.slug = 'fees-education-configure'
+JOIN website_control_modules cm ON cm.slug = 'transactions'
+ON CONFLICT (package_id, control_module_id) DO NOTHING;
+
 
 -- ============================================================================
 -- SECTION 2: STAFF TABLES
@@ -597,12 +624,11 @@ CREATE TRIGGER update_website_academic_configs_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ----------------------------------------------------------------------------
--- 13. WEBSITE CLASSES TABLE (Grades / Classes under Sessions & Optional Departments)
+-- 13. WEBSITE CLASSES TABLE (Independent Class / Grade Entity)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_classes (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     code VARCHAR(50) NOT NULL,
     max_seats INT DEFAULT 40,
@@ -612,7 +638,8 @@ CREATE TABLE IF NOT EXISTS website_classes (
     UNIQUE(website_id, name),
     UNIQUE(website_id, code)
 );
-CREATE INDEX IF NOT EXISTS idx_website_classes_dept ON website_classes(department_id);
+
+DROP INDEX IF EXISTS idx_website_classes_dept;
 
 DROP TRIGGER IF EXISTS update_website_classes_updated_at ON website_classes;
 CREATE TRIGGER update_website_classes_updated_at
@@ -623,28 +650,27 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'website_classes' AND column_name = 'department_id' AND is_nullable = 'NO'
+        WHERE table_name = 'website_classes' AND column_name = 'department_id'
     ) THEN
-        ALTER TABLE website_classes ALTER COLUMN department_id DROP NOT NULL;
+        ALTER TABLE website_classes DROP COLUMN department_id;
     END IF;
 END $$;
 
 -- ----------------------------------------------------------------------------
--- 14. WEBSITE SECTIONS TABLE (Class Sections / Batches)
+-- 14. WEBSITE SECTIONS TABLE (Independent Section / Batch Entity)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS website_sections (
     id BIGSERIAL PRIMARY KEY,
     website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
-    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
-    department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL,
-    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     capacity INT DEFAULT 40,
     room_number VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(website_id, name)
 );
-CREATE INDEX IF NOT EXISTS idx_ws_sections_hierarchy ON website_sections(website_id, department_id, session_id, class_id);
+
+DROP INDEX IF EXISTS idx_ws_sections_hierarchy;
 
 DROP TRIGGER IF EXISTS update_website_sections_updated_at ON website_sections;
 CREATE TRIGGER update_website_sections_updated_at
@@ -655,21 +681,21 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'website_sections' AND column_name = 'class_id' AND is_nullable = 'NO'
+        WHERE table_name = 'website_sections' AND column_name = 'class_id'
     ) THEN
-        ALTER TABLE website_sections ALTER COLUMN class_id DROP NOT NULL;
+        ALTER TABLE website_sections DROP COLUMN class_id;
     END IF;
-    IF NOT EXISTS (
+    IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'website_sections' AND column_name = 'department_id'
     ) THEN
-        ALTER TABLE website_sections ADD COLUMN department_id BIGINT REFERENCES website_departments(id) ON DELETE SET NULL;
+        ALTER TABLE website_sections DROP COLUMN department_id;
     END IF;
-    IF NOT EXISTS (
+    IF EXISTS (
         SELECT 1 FROM information_schema.columns 
         WHERE table_name = 'website_sections' AND column_name = 'session_id'
     ) THEN
-        ALTER TABLE website_sections ADD COLUMN session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL;
+        ALTER TABLE website_sections DROP COLUMN session_id;
     END IF;
 END $$;
 
@@ -1338,6 +1364,29 @@ CREATE TABLE IF NOT EXISTS website_teacher_class_periods (
 DROP TRIGGER IF EXISTS update_website_teacher_cp_updated_at ON website_teacher_class_periods;
 CREATE TRIGGER update_website_teacher_cp_updated_at
     BEFORE UPDATE ON website_teacher_class_periods
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ----------------------------------------------------------------------------
+-- 35B. WEBSITE CLASS TEACHERS (Primary & Co-Class Teacher Assignments)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS website_class_teachers (
+    id BIGSERIAL PRIMARY KEY,
+    website_id BIGINT NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    class_id BIGINT REFERENCES website_classes(id) ON DELETE CASCADE,
+    section_id BIGINT REFERENCES website_sections(id) ON DELETE SET NULL,
+    session_id BIGINT REFERENCES website_sessions(id) ON DELETE SET NULL,
+    teacher_id BIGINT NOT NULL REFERENCES website_teachers(id) ON DELETE CASCADE,
+    role VARCHAR(60) DEFAULT 'Class Teacher',
+    is_primary BOOLEAN DEFAULT TRUE,
+    remarks TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_website_class_teachers_web ON website_class_teachers(website_id);
+
+DROP TRIGGER IF EXISTS update_website_class_teachers_updated_at ON website_class_teachers;
+CREATE TRIGGER update_website_class_teachers_updated_at
+    BEFORE UPDATE ON website_class_teachers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TABLE IF NOT EXISTS website_teacher_settings (
