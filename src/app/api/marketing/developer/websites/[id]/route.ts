@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { purgeWebsite } from 'src/lib/database/websitePurge';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { ALL_SUBSCRIPTION_STATUSES, ensureLifecycleSynced, enforceSubscriptionMaintenanceForWebsite, scheduleWebsiteDeletion, cancelWebsiteDeletion } from 'src/lib/database/websiteLifecycle';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
 async function fetchFullWebsite(websiteId: any) {
     const res = await queryDb(`SELECT w.*,
             (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) THEN true ELSE false END) AS is_published,
@@ -67,6 +68,7 @@ export async function GET(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const websiteId = Number(resolvedParams?.id);
         if (!websiteId || isNaN(websiteId)) {
@@ -95,7 +97,9 @@ export async function GET(request: any, { params }: any) {
             queryDb(`SELECT id, name, slug, path, category, description, icon, is_active FROM website_control_modules WHERE is_active = TRUE ORDER BY category ASC, id ASC`).catch(() => ({ rows: [] })),
             queryDb(`SELECT id, name, slug, path, category, description, icon, is_active FROM website_home_modules WHERE is_active = TRUE ORDER BY category ASC, id ASC`).catch(() => ({ rows: [] })),
             queryDb(`SELECT id, name, slug, tagline, description,
-                monthly_price_usd, yearly_price_usd, monthly_price_bdt, yearly_price_bdt,
+                bdt_per_month, usd_per_month, eur_per_month, gbp_per_month, aud_per_month, cad_per_month,
+                COALESCE(usd_per_month, 0) AS monthly_price_usd, (COALESCE(usd_per_month, 0) * 12) AS yearly_price_usd,
+                COALESCE(bdt_per_month, 0) AS monthly_price_bdt, (COALESCE(bdt_per_month, 0) * 12) AS yearly_price_bdt,
                 max_students, max_teachers, max_staff, max_storage_mb, 1 AS max_websites,
                 features, is_active
          FROM packages
@@ -119,8 +123,10 @@ export async function GET(request: any, { params }: any) {
             queryDb(`SELECT s.*, 
                 p.name AS package_name, 
                 p.slug AS package_slug, 
-                p.monthly_price_usd, 
-                p.yearly_price_usd
+                COALESCE(p.usd_per_month, 0) AS monthly_price_usd, 
+                (COALESCE(p.usd_per_month, 0) * 12) AS yearly_price_usd,
+                COALESCE(p.bdt_per_month, 0) AS bdt_per_month,
+                COALESCE(p.usd_per_month, 0) AS usd_per_month
          FROM subscriptions s
          LEFT JOIN packages p ON s.package_id = p.id
          WHERE s.creator_id = $1 OR s.website_id = $2 OR s.id = $3
@@ -207,6 +213,7 @@ export async function PUT(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const websiteId = Number(resolvedParams?.id);
         if (!websiteId || isNaN(websiteId)) {
@@ -217,6 +224,31 @@ export async function PUT(request: any, { params }: any) {
             return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
         }
         const body = await request.json();
+        if (body.action === 'cancel_deletion') {
+            const cancelled = await cancelWebsiteDeletion(websiteId);
+            if (!cancelled)
+                return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
+            const refreshed = await fetchFullWebsite(websiteId);
+            return NextResponse.json({
+                success: true,
+                message: 'Scheduled deletion cancelled.',
+                record: refreshed,
+                website: refreshed,
+            });
+        }
+        if (body.action === 'schedule_deletion') {
+            const scheduled = await scheduleWebsiteDeletion(websiteId, 'developer');
+            if (!scheduled)
+                return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
+            const refreshed = await fetchFullWebsite(websiteId);
+            return NextResponse.json({
+                success: true,
+                scheduled: true,
+                message: `Website scheduled for deletion in 30 days (${new Date(scheduled.deletion_scheduled_at).toLocaleDateString()}).`,
+                record: refreshed,
+                website: refreshed,
+            });
+        }
         const rawData = body.data || body;
         const creatorPayload = rawData.creator_data || rawData.creator || null;
         let targetCreatorId = Number(rawData.creator_id || currentWebsite.creator_id);
@@ -314,6 +346,19 @@ export async function PUT(request: any, { params }: any) {
                 await queryDb(`UPDATE subscriptions SET website_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE website_id = $1`, [websiteId]);
             }
         }
+        const requestedSubStatus = rawData.subscription_status !== undefined ? String(rawData.subscription_status).toLowerCase().trim() : undefined;
+        if (requestedSubStatus && ALL_SUBSCRIPTION_STATUSES.includes(requestedSubStatus as any)) {
+            const targetSubIdForStatus = websiteData.subscription_id !== undefined
+                ? (websiteData.subscription_id ? Number(websiteData.subscription_id) : null)
+                : currentWebsite.subscription_id;
+            if (targetSubIdForStatus) {
+                await queryDb(`UPDATE subscriptions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [requestedSubStatus, targetSubIdForStatus]);
+                if (requestedSubStatus !== 'active') {
+                    websiteData.is_maintenance_mode = true;
+                }
+            }
+        }
+        delete websiteData.subscription_status;
         if (websiteData.is_published !== undefined) {
             const isPub = Boolean(websiteData.is_published);
             websiteData.is_maintenance_mode = !isPub;
@@ -364,6 +409,8 @@ export async function PUT(request: any, { params }: any) {
             values.push(websiteId);
             await queryDb(`UPDATE websites SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`, values);
         }
+        await enforceSubscriptionMaintenanceForWebsite(websiteId);
+        await invalidateWebsiteCache(websiteId).catch(() => { });
         const refreshed = await fetchFullWebsite(websiteId);
         return NextResponse.json({
             success: true,
@@ -389,8 +436,17 @@ export async function DELETE(request: any, { params }: any) {
         if (!websiteId || isNaN(websiteId)) {
             return NextResponse.json({ success: false, error: 'Invalid Website ID' }, { status: 400 });
         }
-        await purgeWebsite(null, { websiteId });
-        return NextResponse.json({ success: true, message: 'Website deleted successfully.' });
+        const scheduled = await scheduleWebsiteDeletion(websiteId, 'developer');
+        if (!scheduled) {
+            return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
+        }
+        return NextResponse.json({
+            success: true,
+            scheduled: true,
+            deletion_scheduled_at: scheduled.deletion_scheduled_at,
+            website: scheduled,
+            message: `Website scheduled for permanent deletion in 30 days (${new Date(scheduled.deletion_scheduled_at).toLocaleDateString()}).`,
+        });
     }
     catch (error: any) {
         console.error(error);

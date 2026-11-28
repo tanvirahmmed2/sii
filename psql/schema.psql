@@ -661,9 +661,17 @@ CREATE TABLE IF NOT EXISTS websites (
     storage_used_mb INT DEFAULT 0,
     is_maintenance_mode BOOLEAN DEFAULT FALSE,
     maintenance_message TEXT DEFAULT 'Our campus portal is temporarily under scheduled maintenance. Please check back shortly.',
+    deletion_requested_at TIMESTAMPTZ,
+    deletion_scheduled_at TIMESTAMPTZ,
+    deletion_requested_by VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE websites ADD COLUMN IF NOT EXISTS deletion_requested_at TIMESTAMPTZ;
+ALTER TABLE websites ADD COLUMN IF NOT EXISTS deletion_scheduled_at TIMESTAMPTZ;
+ALTER TABLE websites ADD COLUMN IF NOT EXISTS deletion_requested_by VARCHAR(50);
+CREATE INDEX IF NOT EXISTS idx_websites_deletion_scheduled ON websites(deletion_scheduled_at) WHERE deletion_scheduled_at IS NOT NULL;
 
 ALTER TABLE websites DROP COLUMN IF EXISTS subdomain CASCADE;
 ALTER TABLE websites DROP COLUMN IF EXISTS custom_domain CASCADE;
@@ -923,7 +931,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     package_id BIGINT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
     payment_id BIGINT REFERENCES payments(id) ON DELETE SET NULL,
     purchase_id BIGINT REFERENCES purchases(id) ON DELETE SET NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trailing', 'past_due', 'cancelled', 'expired')),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended', 'trailing', 'past_due', 'cancelled', 'expired')),
     billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'yearly', 'lifetime', 'custom')),
     current_period_start TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     current_period_end TIMESTAMPTZ,

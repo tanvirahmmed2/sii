@@ -233,7 +233,8 @@ export async function processSuccessfulPayment({
       ]
     );
 
-    if (pId) {
+    let effectivePurchaseId = pId ? Number(pId) : null;
+    if (effectivePurchaseId) {
       await queryDb(
         `UPDATE purchases
          SET status = 'completed',
@@ -241,8 +242,38 @@ export async function processSuccessfulPayment({
              period_end = CURRENT_TIMESTAMP + ($1 || ' days')::interval,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2`,
-        [durationDays, pId]
+        [durationDays, effectivePurchaseId]
       );
+    } else if (targetPackageId) {
+      const puCode = `PUR-${paymentId}-${Date.now().toString().slice(-5)}`;
+      const puIns = await queryDb(
+        `INSERT INTO purchases (
+           creator_id, package_id, promo_id, purchase_code, billing_cycle,
+           base_amount, discount_amount, tax_amount, total_amount, currency,
+           status, period_start, period_end, notes
+         ) VALUES (
+           $1, $2, $3, $4, $5,
+           $6, $7, 0.00, $8, $9,
+           'completed', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($10 || ' days')::interval, $11
+         ) RETURNING id`,
+        [
+          payment.creator_id,
+          targetPackageId,
+          payment.promo_id || null,
+          puCode,
+          billingCycle,
+          Number(payment.base_amount ?? payAmount),
+          Number(payment.discount_amount ?? 0),
+          payAmount,
+          payCurrency,
+          durationDays,
+          manualNotes || `Package payment (${paymentMethod})`,
+        ]
+      );
+      effectivePurchaseId = Number(puIns.rows[0]?.id || 0) || null;
+      if (effectivePurchaseId) {
+        await queryDb(`UPDATE payments SET purchase_id = $1 WHERE id = $2`, [effectivePurchaseId, paymentId]);
+      }
     }
 
     if (targetPackageId) {
@@ -256,13 +287,13 @@ export async function processSuccessfulPayment({
           `UPDATE subscriptions
            SET status = 'active',
                payment_id = $1,
-               purchase_id = $2,
+               purchase_id = COALESCE($2, purchase_id),
                billing_cycle = $3,
                current_period_start = CURRENT_TIMESTAMP,
                current_period_end = CURRENT_TIMESTAMP + ($4 || ' days')::interval,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $5`,
-          [paymentId, pId || null, billingCycle, durationDays, subCheck.rows[0].id]
+          [paymentId, effectivePurchaseId || null, billingCycle, durationDays, subCheck.rows[0].id]
         );
       } else {
         await queryDb(
@@ -270,7 +301,7 @@ export async function processSuccessfulPayment({
             creator_id, package_id, payment_id, purchase_id, status, billing_cycle,
             current_period_start, current_period_end
           ) VALUES ($1, $2, $3, $4, 'active', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + ($6 || ' days')::interval)`,
-          [payment.creator_id, targetPackageId, paymentId, pId || null, billingCycle, durationDays]
+          [payment.creator_id, targetPackageId, paymentId, effectivePurchaseId || null, billingCycle, durationDays]
         );
       }
     }

@@ -95,25 +95,50 @@ export async function POST(request: any) {
 
     const totalAmount = Math.max(0, Number((baseAmount - discountAmount).toFixed(2)));
     const invoiceNo = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const purchaseCode = `PUR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const tempTxId = `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const billingCycleClean = isYearly ? 'yearly' : 'monthly';
 
-    const payInsert = await client.query(
-      `INSERT INTO payments (
-         creator_id, package_id, promo_id, billing_cycle,
-         invoice_no, transaction_id, amount, base_amount, discount_amount,
-         currency, payment_method, payment_gateway, status,
-         payer_email, payer_phone
+    const purchaseInsert = await client.query(
+      `INSERT INTO purchases (
+         creator_id, package_id, promo_id, purchase_code, billing_cycle,
+         base_amount, discount_amount, tax_amount, total_amount, currency, status, notes
        ) VALUES (
-         $1, $2, $3, $4,
-         $5, $6, $7, $8, $9,
-         $10, 'sslcommerz', 'sslcommerz', 'unpaid',
-         $11, $12
+         $1, $2, $3, $4, $5,
+         $6, $7, 0.00, $8, $9, 'pending', 'Creator package checkout initiated'
        ) RETURNING *`,
       [
         creatorId,
         packageId,
         promoRecord ? promoRecord.id : null,
-        isYearly ? 'yearly' : 'monthly',
+        purchaseCode,
+        billingCycleClean,
+        baseAmount,
+        discountAmount,
+        totalAmount,
+        finalCurrency,
+      ]
+    );
+    const purchase = purchaseInsert.rows[0];
+
+    const payInsert = await client.query(
+      `INSERT INTO payments (
+         purchase_id, creator_id, package_id, promo_id, billing_cycle,
+         invoice_no, transaction_id, amount, base_amount, discount_amount,
+         currency, payment_method, payment_gateway, status,
+         payer_email, payer_phone
+       ) VALUES (
+         $1, $2, $3, $4, $5,
+         $6, $7, $8, $9, $10,
+         $11, 'sslcommerz', 'sslcommerz', 'unpaid',
+         $12, $13
+       ) RETURNING *`,
+      [
+        purchase.id,
+        creatorId,
+        packageId,
+        promoRecord ? promoRecord.id : null,
+        billingCycleClean,
         invoiceNo,
         tempTxId,
         totalAmount,
@@ -141,16 +166,19 @@ export async function POST(request: any) {
       return NextResponse.json({
         success: true,
         paymentId: paymentRowId,
+        purchaseId: purchase.id,
         invoiceNo: payment.invoice_no,
         creatorId,
         amount: totalAmount,
         currency: finalCurrency,
         status: 'unpaid',
         payment,
+        purchase,
       });
     }
 
     const sslSession = await initiateSslcommerzPayment({
+      purchaseId: purchase.id,
       paymentId: paymentRowId,
       creatorId,
       amount: totalAmount,

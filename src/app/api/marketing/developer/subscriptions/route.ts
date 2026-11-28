@@ -2,52 +2,62 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { generateToken } from 'src/lib/utils/random';
+import { ensureLifecycleSynced } from 'src/lib/database/websiteLifecycle';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, ['subscriptions', 'creators']);
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const res = await queryDb(`
-      SELECT pu.*,
-             pu.id,
-             pu.creator_id,
-             pu.package_id,
-             pu.status AS purchase_status,
-             pu.billing_cycle,
-             pu.total_amount,
-             pu.period_start AS current_period_start,
-             pu.period_end AS current_period_end,
+      SELECT s.id,
+             s.id AS subscription_id,
+             s.creator_id,
+             s.website_id,
+             s.package_id,
+             s.purchase_id,
+             s.payment_id,
+             s.status AS subscription_status,
+             s.billing_cycle,
+             s.current_period_start,
+             s.current_period_end,
+             s.cancel_at_period_end,
+             s.created_at,
+             pu.purchase_code,
+             COALESCE(pu.status, CASE WHEN s.status = 'active' THEN 'completed' ELSE 'pending' END) AS purchase_status,
+             COALESCE(pu.total_amount, pay.amount, 0) AS total_amount,
              c.name AS creator_name,
              c.email AS creator_email,
-             w.institution_name AS creator_institution,
+             w.name AS creator_institution,
+             w.name AS website_name,
+             w.slug AS website_slug,
              p.name AS package_name,
              p.slug AS package_slug,
              p.is_public AS package_is_public,
-             w.name AS website_name,
-             pay.id AS payment_id,
              pay.status AS payment_status,
              pay.payment_method,
              pay.transaction_id,
-             pay.currency AS payment_currency,
-             pay.amount AS payment_amount,
-             s.id AS subscription_id,
-             COALESCE(s.status, CASE WHEN pu.status = 'completed' THEN 'active' ELSE 'past_due' END) AS subscription_status
-      FROM purchases pu
-      LEFT JOIN creators c ON pu.creator_id = c.id
-      LEFT JOIN packages p ON pu.package_id = p.id
-      LEFT JOIN websites w ON pu.website_id = w.id
+             COALESCE(pay.currency, pu.currency, 'BDT') AS payment_currency,
+             COALESCE(pay.amount, pu.total_amount, 0) AS payment_amount
+      FROM subscriptions s
+      LEFT JOIN purchases pu ON s.purchase_id = pu.id
+      LEFT JOIN creators c ON s.creator_id = c.id
+      LEFT JOIN packages p ON s.package_id = p.id
+      LEFT JOIN websites w ON w.id = COALESCE(s.website_id, pu.website_id)
       LEFT JOIN LATERAL (
-        SELECT py.* FROM payments py WHERE py.purchase_id = pu.id ORDER BY py.id DESC LIMIT 1
+        SELECT py.* FROM payments py
+        WHERE py.id = s.payment_id OR (pu.id IS NOT NULL AND py.purchase_id = pu.id)
+        ORDER BY py.id DESC LIMIT 1
       ) pay ON true
-      LEFT JOIN LATERAL (
-        SELECT sub.* FROM subscriptions sub WHERE sub.purchase_id = pu.id ORDER BY sub.id DESC LIMIT 1
-      ) s ON true
-      ORDER BY pu.id DESC
-    `).catch(() => ({ rows: [] }));
+      ORDER BY s.id DESC
+    `).catch((err: any) => {
+            console.error('Developer subscriptions SQL error:', err);
+            return { rows: [] };
+        });
         return NextResponse.json({
             success: true,
-            table: 'purchases',
+            table: 'subscriptions',
             records: res.rows,
             subscriptions: res.rows,
         });
@@ -131,21 +141,13 @@ export async function POST(request: any) {
         else {
             const isYearlyPlan = durationType === 'yearly' || durationType === 'multiple_years';
             const yearCount = durationType === 'multiple_years' ? durationMultiplier : 1;
-            if (currency === 'BDT') {
-                if (isYearlyPlan) {
-                    calculatedAmount = Number(pkg.yearly_price_bdt || 0) * yearCount;
-                }
-                else {
-                    calculatedAmount = Number(pkg.monthly_price_bdt || 0) * monthsSpan;
-                }
+            const currKey = `${currency.toLowerCase()}_per_month`;
+            const monthlyRate = Number(pkg[currKey] ?? pkg.bdt_per_month ?? pkg.usd_per_month ?? 0);
+            if (isYearlyPlan) {
+                calculatedAmount = monthlyRate * 12 * yearCount;
             }
             else {
-                if (isYearlyPlan) {
-                    calculatedAmount = Number(pkg.yearly_price_usd || pkg.yearly_price || 0) * yearCount;
-                }
-                else {
-                    calculatedAmount = Number(pkg.monthly_price_usd || pkg.monthly_price || 0) * monthsSpan;
-                }
+                calculatedAmount = monthlyRate * monthsSpan;
             }
         }
         const purchaseCode = generateToken(12);

@@ -43,8 +43,8 @@ export async function GET(request: any, { params }: any) {
                 s.current_period_start, s.current_period_end, s.cancel_at_period_end,
                 s.created_at, s.updated_at,
                 p.name AS package_name, p.slug AS package_slug,
-                COALESCE(p.monthly_price_usd, p.monthly_price, 0) AS price,
-                (COALESCE(p.monthly_price_usd, p.monthly_price, 0) * 100)::bigint AS price_in_cents,
+                COALESCE(p.usd_per_month, p.bdt_per_month, 0) AS price,
+                (COALESCE(p.usd_per_month, p.bdt_per_month, 0) * 100)::bigint AS price_in_cents,
                 'USD' AS currency,
                 w.name AS website_name,
                 pu.purchase_code

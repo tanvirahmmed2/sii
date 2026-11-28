@@ -92,9 +92,11 @@ export default function AdminSubscriptionsPage() {
                 s.transaction_id?.toLowerCase().includes(q);
             const isPaid = s.payment_status === 'successful' || s.purchase_status === 'completed' || s.subscription_status === 'active';
             const isUnpaid = s.payment_status === 'pending' || s.purchase_status === 'pending' || s.subscription_status === 'past_due';
+            const isInactive = ['inactive', 'suspended', 'expired', 'cancelled'].includes(String(s.subscription_status || '').toLowerCase());
             const matchesStatus = statusFilter === 'ALL' ||
-                (statusFilter === 'PAID' && isPaid) ||
-                (statusFilter === 'UNPAID' && isUnpaid);
+                (statusFilter === 'PAID' && isPaid && !isInactive) ||
+                (statusFilter === 'UNPAID' && isUnpaid) ||
+                (statusFilter === 'INACTIVE' && isInactive);
             return matchesSearch && matchesStatus;
         });
     }, [subs, searchTerm, statusFilter]);
@@ -157,6 +159,11 @@ export default function AdminSubscriptionsPage() {
             ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900'
             : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
                 Unpaid / Invoices
+              </button>
+              <button type="button" onClick={() => setStatusFilter('INACTIVE')} className={`px-2.5 py-1 text-xs font-medium rounded border cursor-pointer transition-colors ${statusFilter === 'INACTIVE'
+            ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+                Inactive / Suspended
               </button>
             </div>
           </div>

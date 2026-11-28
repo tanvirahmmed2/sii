@@ -618,6 +618,17 @@ export default function WebsiteManagePage() {
     const handleToggleMaintenanceMode = async (targetMode: any) => {
         if (!website?.id)
             return;
+        const canGoLive = Boolean(website?.subscription_id &&
+            (website.subscription_is_active !== undefined
+                ? website.subscription_is_active
+                : (String(website.subscription_status || '').toLowerCase() === 'active' &&
+                    (!website.subscription_period_end || new Date(website.subscription_period_end) > new Date())))) &&
+            String(website?.status || '').toLowerCase() === 'active';
+        if (!targetMode && !canGoLive) {
+            setSaveError('Maintenance mode cannot be disabled while your subscription is inactive, suspended, or expired.');
+            return;
+        }
+        const prevMode = isMaintenanceMode;
         setIsMaintenanceMode(targetMode);
         try {
             setSaving(true);
@@ -631,7 +642,6 @@ export default function WebsiteManagePage() {
                     id: website.id,
                     creatorId: Number(creatorId),
                     is_maintenance_mode: targetMode,
-                    is_published: !targetMode,
                     maintenance_message: maintenanceMessage.trim(),
                 }),
             });
@@ -640,13 +650,17 @@ export default function WebsiteManagePage() {
                 if (data.website)
                     setWebsite(data.website);
                 setSaveSuccess(`Website switched to ${targetMode ? 'Maintenance Mode' : 'Live'}.`);
+                if (refetchCreator)
+                    refetchCreator();
                 setTimeout(() => setSaveSuccess(''), 3000);
             }
             else {
+                setIsMaintenanceMode(prevMode);
                 setSaveError(data.error || 'Failed to update maintenance mode.');
             }
         }
         catch {
+            setIsMaintenanceMode(prevMode);
             setSaveError('Network error while toggling maintenance mode.');
         }
         finally {
@@ -1460,16 +1474,54 @@ export default function WebsiteManagePage() {
             });
             const data = await res.json();
             if (data.success) {
+                setShowDeleteWebsiteModal(false);
+                if (data.website) {
+                    setWebsite((prev: any) => ({ ...prev, ...data.website }));
+                }
+                setSaveSuccess(data.message || 'Website scheduled for permanent deletion in 30 days.');
                 if (refetchCreator)
                     await refetchCreator();
-                router.push(`/creator/${creatorId}/workspace`);
             }
             else {
-                setDeleteWebsiteError(data.error || 'Failed to delete website');
+                setDeleteWebsiteError(data.error || 'Failed to schedule website deletion');
             }
         }
         catch {
-            setDeleteWebsiteError('Network error deleting website');
+            setDeleteWebsiteError('Network error scheduling website deletion');
+        }
+        finally {
+            setDeleting(false);
+        }
+    };
+    const handleCancelScheduledDeletion = async () => {
+        setDeleting(true);
+        setSaveError('');
+        setSaveSuccess('');
+        try {
+            const res = await fetch('/api/marketing/creator/websites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'cancel_delete_website',
+                    id: website.id,
+                    creatorId: Number(creatorId),
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (data.website) {
+                    setWebsite((prev: any) => ({ ...prev, ...data.website }));
+                }
+                setSaveSuccess(data.message || 'Scheduled deletion cancelled.');
+                if (refetchCreator)
+                    await refetchCreator();
+            }
+            else {
+                setSaveError(data.error || 'Failed to cancel scheduled deletion.');
+            }
+        }
+        catch {
+            setSaveError('Network error cancelling scheduled deletion.');
         }
         finally {
             setDeleting(false);
@@ -3814,14 +3866,31 @@ export default function WebsiteManagePage() {
           </div>
         </div>)}
 
-      {activeTab === 'danger' && (<div className="space-y-4">
+      {activeTab === 'danger' && (() => {
+            const isSubActive = Boolean(website?.subscription_id &&
+                (website.subscription_is_active !== undefined
+                    ? website.subscription_is_active
+                    : (String(website.subscription_status || '').toLowerCase() === 'active' &&
+                        (!website.subscription_period_end || new Date(website.subscription_period_end) > new Date())))) &&
+                String(website?.status || '').toLowerCase() === 'active';
+            const scheduledDelDate = website?.deletion_scheduled_at ? new Date(website.deletion_scheduled_at) : null;
+            return (<div className="space-y-4">
           <div className="bg-white border border-slate-200 rounded p-4 space-y-4">
-            <div className="border-b border-slate-100 pb-2">
-              <h2 className="text-sm font-semibold text-slate-900">Maintenance Mode & Public Notice</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                When maintenance mode is active, public visitors will see a branded maintenance screen. Staff and administrative panels remain fully accessible.
-              </p>
+            <div className="border-b border-slate-100 pb-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Maintenance Mode &amp; Public Notice</h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Toggle between Normal (Live) and Maintenance mode. If your subscription is not active, maintenance mode is automatically enforced and cannot be turned off.
+                </p>
+              </div>
+              <span className={`px-2 py-0.5 rounded border text-[10px] font-semibold uppercase ${isSubActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                Subscription: {website.subscription_status || 'Inactive'}
+              </span>
             </div>
+
+            {!isSubActive && (<div className="p-3 rounded border border-rose-200 bg-rose-50 text-rose-800 text-xs">
+                Your subscription is currently <span className="font-semibold uppercase">{website.subscription_status || 'inactive'}</span>. The website is locked in Maintenance Mode until an active subscription is restored.
+              </div>)}
 
             <div className="flex items-center justify-between p-3 rounded border bg-slate-50 border-slate-200">
               <div>
@@ -3830,11 +3899,11 @@ export default function WebsiteManagePage() {
                 </span>
                 <span className="text-[11px] text-slate-500">
                   {isMaintenanceMode
-                ? 'Public home routes redirect to the maintenance notice.'
+                ? 'Public routes show the maintenance notice.'
                 : 'All public circulars, admissions, and portals are live.'}
                 </span>
               </div>
-              <button type="button" onClick={() => handleToggleMaintenanceMode(!isMaintenanceMode)} disabled={saving} className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border transition-colors disabled:opacity-50 ${isMaintenanceMode
+              <button type="button" onClick={() => handleToggleMaintenanceMode(!isMaintenanceMode)} disabled={saving || (isMaintenanceMode && !isSubActive)} className={`px-3 py-1.5 rounded font-medium text-xs cursor-pointer border transition-colors disabled:opacity-50 ${isMaintenanceMode
                 ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
                 : 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600'}`}>
                 {isMaintenanceMode ? 'Switch to Live Mode' : 'Enable Maintenance Mode'}
@@ -3856,21 +3925,33 @@ export default function WebsiteManagePage() {
 
           <div className="bg-white border border-rose-200 rounded p-4 space-y-3">
             <div className="border-b border-rose-100 pb-2">
-              <h2 className="text-sm font-semibold text-rose-900">Permanently Delete Website</h2>
+              <h2 className="text-sm font-semibold text-rose-900">Schedule Website Deletion (30-Day Grace Period)</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Permanently delete this institution website, student records, notices, modules, and domain bindings. This action is irreversible.
+                Websites are never deleted instantly. Scheduling deletion sets a 30-day countdown before permanent removal of all student records, notices, modules, and domains.
               </p>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-600">Delete website {website.name} ({cleanSub})</span>
-              <button type="button" onClick={() => {
+            {scheduledDelDate ? (<div className="p-3 rounded border border-amber-300 bg-amber-50 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs font-semibold text-amber-950 block">
+                    Scheduled for Automatic Deletion on {scheduledDelDate.toLocaleDateString()}
+                  </span>
+                  <span className="text-[11px] text-amber-800">
+                    All records will be permanently purged after the 30-day schedule unless cancelled before then.
+                  </span>
+                </div>
+                <button type="button" onClick={handleCancelScheduledDeletion} disabled={deleting} className="px-3 py-1.5 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs cursor-pointer disabled:opacity-50">
+                  {deleting ? 'Cancelling...' : 'Cancel Scheduled Deletion'}
+                </button>
+              </div>) : (<div className="flex items-center justify-between">
+                <span className="text-xs text-slate-600">Schedule deletion for {website.name} ({cleanSub})</span>
+                <button type="button" onClick={() => {
                 setDeleteWebsiteError('');
                 setShowDeleteWebsiteModal(true);
             }} disabled={deleting} className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs cursor-pointer disabled:opacity-50">
-                Delete Website Permanently
-              </button>
-            </div>
+                  Schedule Deletion (30 Days)
+                </button>
+              </div>)}
           </div>
 
           {showDeleteWebsiteModal && (<div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
@@ -3883,10 +3964,10 @@ export default function WebsiteManagePage() {
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-semibold text-slate-900">
-                      Permanently Delete Website
+                      Schedule 30-Day Website Deletion
                     </h3>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Are you sure you want to permanently delete <strong className="text-slate-900">{website.name}</strong>? All student data, notices, academic records, and institutional files will be permanently erased. This cannot be undone.
+                      <span className="font-semibold text-slate-900">{website.name}</span> will be scheduled for automatic permanent deletion after 30 days. You can cancel the scheduled deletion at any time within those 30 days.
                     </p>
                   </div>
                 </div>
@@ -3903,17 +3984,12 @@ export default function WebsiteManagePage() {
                     Cancel
                   </button>
                   <button type="button" disabled={deleting} onClick={handleConfirmDeleteWebsite} className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
-                    {deleting ? (<>
-                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                        </svg>
-                        <span>Purging Data...</span>
-                      </>) : (<span>Delete Permanently</span>)}
+                    <span>{deleting ? 'Scheduling...' : 'Confirm 30-Day Schedule'}</span>
                   </button>
                 </div>
               </div>
             </div>)}
-        </div>)}
+        </div>);
+        })()}
     </div>);
 }

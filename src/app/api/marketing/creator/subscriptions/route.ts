@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { getCreatorSession } from 'src/lib/middleware/creator';
 import { generateToken } from 'src/lib/utils/random';
+import { ensureLifecycleSynced } from 'src/lib/database/websiteLifecycle';
 export async function GET(request: any) {
     try {
         const sessionCreator = await getCreatorSession(request);
@@ -14,6 +15,7 @@ export async function GET(request: any) {
         if (sessionCreator && Number(sessionCreator.id) !== creatorId) {
             return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
         }
+        await ensureLifecycleSynced();
         await queryDb(`INSERT INTO subscriptions (creator_id, package_id, purchase_id, status, billing_cycle, current_period_start, current_period_end)
        SELECT pu.creator_id, pu.package_id, pu.id, 'active', pu.billing_cycle, COALESCE(pu.period_start, pu.created_at), COALESCE(pu.period_end, pu.created_at + INTERVAL '30 days')
        FROM purchases pu
@@ -160,7 +162,7 @@ export async function handleSubscriptionsAction(body: any, sessionCreator: any) 
     if (action === 'renew' || action === 'renew_subscription') {
         const subId = Number(body.subscriptionId || body.id);
         const packageId = Number(body.packageId || 0);
-        let queryText = 'SELECT s.*, p.name AS package_name, p.slug AS package_slug, p.monthly_price_usd, p.yearly_price_usd, p.monthly_price_bdt, p.yearly_price_bdt, p.monthly_price, p.yearly_price, 1 AS max_websites FROM subscriptions s JOIN packages p ON s.package_id = p.id WHERE s.creator_id = $1';
+        let queryText = 'SELECT s.*, p.name AS package_name, p.slug AS package_slug, p.bdt_per_month, p.usd_per_month, p.eur_per_month, p.gbp_per_month, p.aud_per_month, p.cad_per_month, COALESCE(p.usd_per_month, 0) AS monthly_price_usd, (COALESCE(p.usd_per_month, 0) * 12) AS yearly_price_usd, COALESCE(p.bdt_per_month, 0) AS monthly_price_bdt, (COALESCE(p.bdt_per_month, 0) * 12) AS yearly_price_bdt, 1 AS max_websites FROM subscriptions s JOIN packages p ON s.package_id = p.id WHERE s.creator_id = $1';
         const params = [creatorId];
         if (subId) {
             queryText += ' AND s.id = $2 LIMIT 1';

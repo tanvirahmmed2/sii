@@ -17,6 +17,8 @@ export default function AdminWebsitesPage() {
     const [statusFilter, setStatusFilter] = useState<any>('ALL');
     const [modeFilter, setModeFilter] = useState<any>('ALL');
     const [deletingId, setDeletingId] = useState<any>(null);
+    const [scheduleTarget, setScheduleTarget] = useState<any>(null);
+    const [actionFeedback, setActionFeedback] = useState<any>(null);
     const fetchWebsites = async (showLoading: any = true) => {
         try {
             if (showLoading)
@@ -58,24 +60,52 @@ export default function AdminWebsitesPage() {
             ignore = true;
         };
     }, [canView]);
-    const handleDelete = async (id: any, name: any) => {
-        if (!true)
+    const handleDelete = async () => {
+        if (!scheduleTarget)
             return;
-        setDeletingId(id);
+        setDeletingId(scheduleTarget.id);
+        setActionFeedback(null);
         try {
-            const res = await fetch(`/api/marketing/developer/websites?id=${id}`, {
+            const res = await fetch(`/api/marketing/developer/websites?id=${scheduleTarget.id}`, {
                 method: 'DELETE',
             });
             const data = await res.json();
             if (data.success) {
+                setActionFeedback({ type: 'success', text: data.message || 'Website scheduled for deletion in 30 days.' });
+                setScheduleTarget(null);
                 fetchWebsites(false);
             }
             else if (data.error) {
-                console.warn(data.error);
+                setActionFeedback({ type: 'error', text: data.error });
             }
         }
-        catch (e: any) {
-            console.error(e);
+        catch {
+            setActionFeedback({ type: 'error', text: 'Network error scheduling deletion.' });
+        }
+        finally {
+            setDeletingId(null);
+        }
+    };
+    const handleCancelDeletion = async (id: any) => {
+        setDeletingId(id);
+        setActionFeedback(null);
+        try {
+            const res = await fetch('/api/marketing/developer/websites', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'cancel_deletion' }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setActionFeedback({ type: 'success', text: data.message || 'Scheduled deletion cancelled.' });
+                fetchWebsites(false);
+            }
+            else if (data.error) {
+                setActionFeedback({ type: 'error', text: data.error });
+            }
+        }
+        catch {
+            setActionFeedback({ type: 'error', text: 'Network error cancelling deletion.' });
         }
         finally {
             setDeletingId(null);
@@ -138,6 +168,11 @@ export default function AdminWebsitesPage() {
           </button>
         </div>
       </div>
+
+      {actionFeedback && (<div className={`p-3 rounded border text-xs flex items-center justify-between ${actionFeedback.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+          <span>{actionFeedback.text}</span>
+          <button type="button" onClick={() => setActionFeedback(null)} className="text-xs font-medium hover:underline cursor-pointer">Dismiss</button>
+        </div>)}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-3 shadow-xs">
@@ -287,6 +322,11 @@ export default function AdminWebsitesPage() {
                 : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900'}`}>
                         {w.is_published ? 'Online' : 'Maintenance'}
                       </span>
+                      {w.deletion_scheduled_at && (<div className="mt-1">
+                          <span className="px-1.5 py-0.5 rounded border text-[9px] font-semibold bg-rose-50 text-rose-700 border-rose-200 block w-fit">
+                            Del: {new Date(w.deletion_scheduled_at).toLocaleDateString()}
+                          </span>
+                        </div>)}
                     </td>
 
                     <td className="py-2.5 text-right whitespace-nowrap">
@@ -296,9 +336,11 @@ export default function AdminWebsitesPage() {
                           <span>Control &amp; Manage</span>
                         </Link>
 
-                        {canDelete && (<button type="button" disabled={deletingId === w.id} onClick={() => handleDelete(w.id, w.name)} className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/40 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer" title="Delete website container">
-                            <FiTrash2 className="text-[11px]"/>
-                          </button>)}
+                        {canDelete && (w.deletion_scheduled_at ? (<button type="button" disabled={deletingId === w.id} onClick={() => handleCancelDeletion(w.id)} className="px-2 py-1 rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer">
+                              Cancel Del
+                            </button>) : (<button type="button" disabled={deletingId === w.id} onClick={() => setScheduleTarget({ id: w.id, name: w.name })} className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/40 dark:hover:bg-rose-950/40 text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer" title="Schedule 30-day deletion">
+                              <FiTrash2 className="text-[11px]"/>
+                            </button>))}
                       </div>
                     </td>
                   </tr>)))}
@@ -306,5 +348,24 @@ export default function AdminWebsitesPage() {
           </table>
         </div>
       </div>
+
+      {scheduleTarget && (<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Schedule 30-Day Website Deletion
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Website &quot;{scheduleTarget.name}&quot; will not be deleted immediately. It will be scheduled for automatic permanent deletion after 30 days. You can cancel this anytime before the 30-day period ends.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onClick={() => setScheduleTarget(null)} className="px-3 py-1.5 rounded border border-slate-300 text-xs text-slate-700 cursor-pointer">
+                Cancel
+              </button>
+              <button type="button" disabled={deletingId !== null} onClick={handleDelete} className="px-3.5 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium cursor-pointer disabled:opacity-50">
+                {deletingId !== null ? 'Scheduling...' : 'Schedule Deletion (30 Days)'}
+              </button>
+            </div>
+          </div>
+        </div>)}
     </div>);
 }

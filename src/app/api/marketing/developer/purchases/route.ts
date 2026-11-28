@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { ensureLifecycleSynced } from 'src/lib/database/websiteLifecycle';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, ['purchases', 'payments']);
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
         if (id) {
@@ -15,15 +17,28 @@ export async function GET(request: any) {
                 c.email AS creator_email,
                 p.name AS package_name, 
                 p.slug AS package_slug,
+                w.name AS website_name,
+                s.id AS subscription_id,
+                s.status AS subscription_status,
+                pay.id AS payment_id,
                 pay.status AS payment_status,
                 pay.transaction_id,
                 pay.payment_method,
+                COALESCE(pu.billing_cycle, pay.billing_cycle, 'monthly') AS billing_interval,
+                COALESCE(pu.currency, pay.currency, 'BDT') AS currency,
+                (COALESCE(pu.total_amount, pay.amount, 0) * 100)::bigint AS amount_in_cents,
                 (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS payment_amount,
-                pay.amount AS payment_amount_usd
+                COALESCE(pay.amount, pu.total_amount, 0) AS payment_amount_usd
          FROM purchases pu
          LEFT JOIN creators c ON pu.creator_id = c.id
          LEFT JOIN packages p ON pu.package_id = p.id
-         LEFT JOIN payments pay ON pay.purchase_id = pu.id
+         LEFT JOIN LATERAL (
+           SELECT sub.* FROM subscriptions sub WHERE sub.purchase_id = pu.id OR (pu.website_id IS NOT NULL AND sub.website_id = pu.website_id) ORDER BY sub.id DESC LIMIT 1
+         ) s ON true
+         LEFT JOIN websites w ON w.id = COALESCE(pu.website_id, s.website_id)
+         LEFT JOIN LATERAL (
+           SELECT py.* FROM payments py WHERE py.purchase_id = pu.id OR py.id = s.payment_id ORDER BY py.id DESC LIMIT 1
+         ) pay ON true
          WHERE pu.id = $1
          LIMIT 1`, [Number(id)]);
             return NextResponse.json({ success: true, record: singleRes.rows[0] || null });
@@ -33,15 +48,28 @@ export async function GET(request: any) {
               c.email AS creator_email,
               p.name AS package_name, 
               p.slug AS package_slug,
+              w.name AS website_name,
+              s.id AS subscription_id,
+              s.status AS subscription_status,
+              pay.id AS payment_id,
               pay.status AS payment_status,
               pay.transaction_id,
               pay.payment_method,
+              COALESCE(pu.billing_cycle, pay.billing_cycle, 'monthly') AS billing_interval,
+              COALESCE(pu.currency, pay.currency, 'BDT') AS currency,
+              (COALESCE(pu.total_amount, pay.amount, 0) * 100)::bigint AS amount_in_cents,
               (COALESCE(pay.amount, pu.total_amount, 0) * 100)::bigint AS payment_amount,
-              pay.amount AS payment_amount_usd
+              COALESCE(pay.amount, pu.total_amount, 0) AS payment_amount_usd
        FROM purchases pu
        LEFT JOIN creators c ON pu.creator_id = c.id
        LEFT JOIN packages p ON pu.package_id = p.id
-       LEFT JOIN payments pay ON pay.purchase_id = pu.id
+       LEFT JOIN LATERAL (
+         SELECT sub.* FROM subscriptions sub WHERE sub.purchase_id = pu.id OR (pu.website_id IS NOT NULL AND sub.website_id = pu.website_id) ORDER BY sub.id DESC LIMIT 1
+       ) s ON true
+       LEFT JOIN websites w ON w.id = COALESCE(pu.website_id, s.website_id)
+       LEFT JOIN LATERAL (
+         SELECT py.* FROM payments py WHERE py.purchase_id = pu.id OR py.id = s.payment_id ORDER BY py.id DESC LIMIT 1
+       ) pay ON true
        ORDER BY pu.id DESC`).catch(() => ({ rows: [] }));
         return NextResponse.json({ success: true, table: 'purchases', records: res.rows });
     }

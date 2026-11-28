@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
 import { hasModulePermission } from 'src/lib/middleware/developer';
 import { generateToken } from 'src/lib/utils/random';
+import { ALL_SUBSCRIPTION_STATUSES, ensureLifecycleSynced, enforceSubscriptionMaintenanceForWebsite } from 'src/lib/database/websiteLifecycle';
+import { invalidateWebsiteCache } from 'src/lib/middleware/websiteResolver';
 async function fetchFullSubscription(idNum: any) {
     let subRes = await queryDb(`SELECT s.*,
             pu.id AS purchase_id,
@@ -31,10 +33,16 @@ async function fetchFullSubscription(idNum: any) {
             p.slug AS package_slug,
             p.tagline AS package_tagline,
             p.description AS package_description,
-            p.monthly_price_usd,
-            p.yearly_price_usd,
-            p.monthly_price_bdt,
-            p.yearly_price_bdt,
+            p.bdt_per_month,
+            p.usd_per_month,
+            p.eur_per_month,
+            p.gbp_per_month,
+            p.aud_per_month,
+            p.cad_per_month,
+            COALESCE(p.usd_per_month, 0) AS monthly_price_usd,
+            (COALESCE(p.usd_per_month, 0) * 12) AS yearly_price_usd,
+            COALESCE(p.bdt_per_month, 0) AS monthly_price_bdt,
+            (COALESCE(p.bdt_per_month, 0) * 12) AS yearly_price_bdt,
             p.discount_percentage,
             p.max_students,
             p.max_teachers,
@@ -160,7 +168,7 @@ async function fetchFullSubscription(idNum: any) {
        LEFT JOIN LATERAL (
          SELECT * FROM payments WHERE purchase_id = pu.id ORDER BY id DESC LIMIT 1
        ) pay ON true
-       WHERE pu.id = $1 OR s.purchase_id = $1
+       WHERE pu.id = $1 OR s.purchase_id = $1 OR s.id = $1
        LIMIT 1`, [idNum]).catch(() => ({ rows: [] }));
     }
     return subRes.rows[0] || null;
@@ -171,6 +179,7 @@ export async function GET(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const subId = Number(resolvedParams?.id);
         if (!subId || isNaN(subId)) {
@@ -307,6 +316,7 @@ export async function POST(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const subId = Number(resolvedParams?.id);
         if (!subId || isNaN(subId)) {
@@ -499,9 +509,8 @@ export async function POST(request: any, { params }: any) {
             });
         }
         if (action === 'update_status') {
-            const newStatus = (body.status || '').toLowerCase();
-            const validStatuses = ['active', 'trailing', 'past_due', 'cancelled', 'expired'];
-            if (!validStatuses.includes(newStatus)) {
+            const newStatus = String(body.status || '').toLowerCase().trim();
+            if (!ALL_SUBSCRIPTION_STATUSES.includes(newStatus as any)) {
                 return NextResponse.json({ success: false, error: 'Invalid subscription status value' }, { status: 400 });
             }
             const actualSubId = currentSub.subscription_table_id || currentSub.id;
@@ -509,13 +518,30 @@ export async function POST(request: any, { params }: any) {
          SET status = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          RETURNING *`, [newStatus, actualSubId]);
-            if (newStatus === 'expired' && currentSub.website_id) {
-                await queryDb(`UPDATE websites SET status = 'expired', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [currentSub.website_id]).catch(() => { });
+            const linkedWebsites = await queryDb(
+                `SELECT id FROM websites WHERE subscription_id = $1 OR ($2::bigint IS NOT NULL AND id = $2::bigint)`,
+                [actualSubId, currentSub.website_id || null]
+            );
+            for (const lw of linkedWebsites.rows || []) {
+                if (newStatus !== 'active') {
+                    const siteStatus = newStatus === 'expired' ? 'expired' : newStatus === 'suspended' ? 'suspended' : undefined;
+                    if (siteStatus) {
+                        await queryDb(`UPDATE websites SET status = $1, is_maintenance_mode = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [siteStatus, lw.id]).catch(() => { });
+                    }
+                    else {
+                        await queryDb(`UPDATE websites SET is_maintenance_mode = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [lw.id]).catch(() => { });
+                    }
+                }
+                else {
+                    await queryDb(`UPDATE websites SET status = CASE WHEN status IN ('expired', 'suspended') THEN 'active' ELSE status END, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [lw.id]).catch(() => { });
+                    await enforceSubscriptionMaintenanceForWebsite(Number(lw.id));
+                }
+                await invalidateWebsiteCache(lw.id).catch(() => { });
             }
             const refreshed = await fetchFullSubscription(subId);
             return NextResponse.json({
                 success: true,
-                message: `Subscription status updated to "${newStatus}".`,
+                message: `Subscription status updated to "${newStatus}".${newStatus !== 'active' ? ' Linked website placed in maintenance mode.' : ''}`,
                 subscription: refreshed || res.rows[0],
             });
         }
@@ -565,8 +591,9 @@ export async function POST(request: any, { params }: any) {
             if (updatedPu?.period_end) {
                 if (currentSub.website_id) {
                     await queryDb(`UPDATE websites
-             SET subscription_expires_at = $1, status = 'published', updated_at = CURRENT_TIMESTAMP
+             SET subscription_expires_at = $1, status = 'active', updated_at = CURRENT_TIMESTAMP
              WHERE id = $2`, [updatedPu.period_end, currentSub.website_id]).catch(() => { });
+                    await invalidateWebsiteCache(currentSub.website_id).catch(() => { });
                 }
             }
             const refreshed = await fetchFullSubscription(subId);
@@ -589,6 +616,7 @@ export async function PUT(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const subId = Number(resolvedParams?.id);
         if (!subId || isNaN(subId)) {
@@ -607,7 +635,10 @@ export async function PUT(request: any, { params }: any) {
         ];
         const keys = Object.keys(data).filter((k: any) => allowedSubKeys.includes(k));
         if (keys.length > 0) {
-            const values = keys.map((k: any) => data[k]);
+            if (data.status && !ALL_SUBSCRIPTION_STATUSES.includes(String(data.status).toLowerCase() as any)) {
+                return NextResponse.json({ success: false, error: 'Invalid subscription status value' }, { status: 400 });
+            }
+            const values = keys.map((k: any) => k === 'status' ? String(data[k]).toLowerCase() : data[k]);
             const setClauses = keys.map((k: any, i: any) => `"${k}" = $${i + 1}`);
             values.push(actualSubId);
             await queryDb(`UPDATE subscriptions SET ${setClauses.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${values.length}`, values);
@@ -618,15 +649,23 @@ export async function PUT(request: any, { params }: any) {
                 await queryDb(`UPDATE subscriptions SET website_id = NULL WHERE website_id = $1 AND id != $2`, [targetWebsiteId, actualSubId]).catch(() => { });
                 await queryDb(`UPDATE websites SET subscription_id = NULL WHERE subscription_id = $1 AND id != $2`, [actualSubId, targetWebsiteId]).catch(() => { });
                 await queryDb(`UPDATE websites SET subscription_id = $1, subscription_expires_at = COALESCE($2, subscription_expires_at), updated_at = CURRENT_TIMESTAMP WHERE id = $3`, [actualSubId, data.current_period_end || currentSub.current_period_end, targetWebsiteId]).catch(() => { });
+                await enforceSubscriptionMaintenanceForWebsite(targetWebsiteId);
             }
             else {
-                await queryDb(`UPDATE websites SET subscription_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE subscription_id = $1`, [actualSubId]).catch(() => { });
+                await queryDb(`UPDATE websites SET subscription_id = NULL, is_maintenance_mode = TRUE, updated_at = CURRENT_TIMESTAMP WHERE subscription_id = $1`, [actualSubId]).catch(() => { });
             }
         }
-        else if (data.current_period_end) {
-            const targetWebsiteId = currentSub.website_id;
-            if (targetWebsiteId) {
-                await queryDb(`UPDATE websites SET subscription_expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [data.current_period_end, targetWebsiteId]).catch(() => { });
+        else if (data.current_period_end || data.status) {
+            const linkedRows = await queryDb(
+                `SELECT id FROM websites WHERE subscription_id = $1 OR ($2::bigint IS NOT NULL AND id = $2::bigint)`,
+                [actualSubId, currentSub.website_id || null]
+            );
+            for (const lw of linkedRows.rows || []) {
+                if (data.current_period_end) {
+                    await queryDb(`UPDATE websites SET subscription_expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [data.current_period_end, lw.id]).catch(() => { });
+                }
+                await enforceSubscriptionMaintenanceForWebsite(Number(lw.id));
+                await invalidateWebsiteCache(lw.id).catch(() => { });
             }
         }
         const refreshed = await fetchFullSubscription(subId);
@@ -647,6 +686,7 @@ export async function DELETE(request: any, { params }: any) {
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status || 403 });
         }
+        await ensureLifecycleSynced();
         const resolvedParams = await params;
         const subId = Number(resolvedParams?.id);
         if (!subId || isNaN(subId)) {

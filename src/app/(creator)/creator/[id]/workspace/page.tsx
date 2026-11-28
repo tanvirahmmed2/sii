@@ -472,7 +472,7 @@ function WorkspaceContent() {
                 setDeleteTarget(null);
                 setDeleteBanner({
                     type: 'success',
-                    text: json.message || `Website "${targetName}" and all associated data have been permanently deleted.`
+                    text: json.message || `Website "${targetName}" has been scheduled for permanent deletion in 30 days.`
                 });
                 if (refetch)
                     await refetch();
@@ -480,15 +480,48 @@ function WorkspaceContent() {
             else {
                 setDeleteBanner({
                     type: 'error',
-                    text: json.error || 'Failed to delete website'
+                    text: json.error || 'Failed to schedule website deletion'
                 });
             }
         }
         catch {
             setDeleteBanner({
                 type: 'error',
-                text: 'Network error deleting website.'
+                text: 'Network error scheduling website deletion.'
             });
+        }
+        finally {
+            setDeletingId(null);
+        }
+    };
+    const handleCancelDeleteWebsite = async (websiteId: any, websiteName: any) => {
+        setDeletingId(websiteId);
+        setDeleteBanner(null);
+        try {
+            const res = await fetch('/api/marketing/creator/websites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'cancel_delete_website',
+                    id: websiteId,
+                    creatorId: Number(creatorId),
+                }),
+            });
+            const json = await res.json();
+            if (json.success) {
+                setDeleteBanner({
+                    type: 'success',
+                    text: json.message || `Scheduled deletion cancelled for "${websiteName}".`,
+                });
+                if (refetch)
+                    await refetch();
+            }
+            else {
+                setDeleteBanner({ type: 'error', text: json.error || 'Failed to cancel scheduled deletion.' });
+            }
+        }
+        catch {
+            setDeleteBanner({ type: 'error', text: 'Network error cancelling deletion.' });
         }
         finally {
             setDeletingId(null);
@@ -757,6 +790,11 @@ function WorkspaceContent() {
                           <span className={`w-1.5 h-1.5 rounded-full ${w.status === 'active' && !w.is_maintenance_mode ? 'bg-emerald-500' : 'bg-amber-500'}`}/>
                           {w.status === 'active' && !w.is_maintenance_mode ? 'Live' : 'Draft / Maint'}
                         </span>
+                        {w.deletion_scheduled_at && (<div className="mt-1">
+                            <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                              Del: {new Date(w.deletion_scheduled_at).toLocaleDateString()}
+                            </span>
+                          </div>)}
                       </td>
 
                       <td className="py-3 px-2 text-right space-x-2 whitespace-nowrap">
@@ -769,9 +807,11 @@ function WorkspaceContent() {
                         <button type="button" onClick={() => handleOpenEdit(w)} className="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium cursor-pointer transition-colors">
                           Quick Edit
                         </button>
-                        <button type="button" disabled={deletingId === w.id} onClick={() => handleDeleteWebsite(w.id, w.name)} className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium cursor-pointer transition-colors disabled:opacity-50">
-                          {deletingId === w.id ? 'Deleting...' : 'Delete'}
-                        </button>
+                        {w.deletion_scheduled_at ? (<button type="button" disabled={deletingId === w.id} onClick={() => handleCancelDeleteWebsite(w.id, w.name)} className="px-2 py-1 rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-medium cursor-pointer transition-colors disabled:opacity-50">
+                            {deletingId === w.id ? 'Updating...' : 'Cancel Deletion'}
+                          </button>) : (<button type="button" disabled={deletingId === w.id} onClick={() => handleDeleteWebsite(w.id, w.name)} className="px-2 py-1 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 font-medium cursor-pointer transition-colors disabled:opacity-50">
+                            {deletingId === w.id ? 'Scheduling...' : 'Delete'}
+                          </button>)}
                       </td>
                     </tr>);
             })}
@@ -993,14 +1033,16 @@ function WorkspaceContent() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => {
+                    <button type="button" disabled={Boolean(editingWebsite?.subscription_is_active === false || editingWebsite?.status !== 'active') && editIsMaintenanceMode} onClick={() => {
+                if ((editingWebsite?.subscription_is_active === false || editingWebsite?.status !== 'active') && editIsMaintenanceMode)
+                    return;
                 const nextPub = !editIsPublished;
                 setEditIsPublished(nextPub);
                 setEditIsMaintenanceMode(!nextPub);
-            }} className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${editIsPublished && !editIsMaintenanceMode
+            }} className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer disabled:opacity-50 ${editIsPublished && !editIsMaintenanceMode
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-amber-100 text-amber-800 border border-amber-300'}`}>
-                      {editIsPublished && !editIsMaintenanceMode ? '✓ Public Live' : '🛠 Maintenance Active'}
+                      {editIsPublished && !editIsMaintenanceMode ? 'Public Live' : 'Maintenance Active'}
                     </button>
                   </div>
                 </div>
@@ -1027,10 +1069,10 @@ function WorkspaceContent() {
               </div>
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold text-slate-900">
-                  Permanently Delete Website
+                  Schedule 30-Day Website Deletion
                 </h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Are you sure you want to permanently delete <strong className="text-slate-900">{deleteTarget.name}</strong>? All institutional data, students, notices, staff records, and files will be permanently erased. This action cannot be undone.
+                  <span className="font-semibold text-slate-900">{deleteTarget.name}</span> will not be deleted immediately. It will be scheduled for automatic permanent deletion in 30 days, and you can cancel anytime before then.
                 </p>
               </div>
             </div>
@@ -1047,13 +1089,7 @@ function WorkspaceContent() {
                 Cancel
               </button>
               <button type="button" disabled={deletingId !== null} onClick={confirmDeleteWebsite} className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
-                {deletingId ? (<>
-                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
-                    <span>Purging Data...</span>
-                  </>) : (<span>Delete Permanently</span>)}
+                <span>{deletingId ? 'Scheduling...' : 'Schedule Deletion (30 Days)'}</span>
               </button>
             </div>
           </div>

@@ -21,6 +21,7 @@ export default function WebsiteDetailsPage({ params }: any) {
     const [activeTab, setActiveTab] = useState<any>('overview');
     const [saving, setSaving] = useState<any>(false);
     const [quickStatusLoading, setQuickStatusLoading] = useState<any>(false);
+    const [showScheduleDeleteModal, setShowScheduleDeleteModal] = useState<any>(false);
     const [copiedKey, setCopiedKey] = useState<any>(null);
     const [feedback, setFeedback] = useState<any>(null);
     const [websiteForm, setWebsiteForm] = useState<any>({
@@ -33,6 +34,7 @@ export default function WebsiteDetailsPage({ params }: any) {
         eiin_number: '',
         currency: 'BDT',
         status: 'active',
+        subscription_status: 'active',
         is_published: true,
         is_maintenance_mode: false,
         maintenance_message: '',
@@ -107,6 +109,7 @@ export default function WebsiteDetailsPage({ params }: any) {
             eiin_number: w.eiin_number || '',
             currency: w.currency || 'BDT',
             status: w.status || 'active',
+            subscription_status: w.subscription_status || 'inactive',
             is_published: Boolean(w.is_published),
             is_maintenance_mode: Boolean(w.is_maintenance_mode),
             maintenance_message: w.maintenance_message || '',
@@ -423,29 +426,87 @@ export default function WebsiteDetailsPage({ params }: any) {
             setSaving(false);
         }
     };
+    const handleQuickSubStatusChange = async (newSubStatus: any) => {
+        if (!websiteForm.subscription_id && !data?.subscription?.id) {
+            showFeedback('No subscription linked to this website.', 'error');
+            return;
+        }
+        setQuickStatusLoading(true);
+        try {
+            const res = await fetch(`/api/marketing/developer/websites/${websiteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    data: {
+                        subscription_status: newSubStatus,
+                    },
+                }),
+            });
+            const json = await res.json();
+            if (json.success) {
+                showFeedback(`Subscription status updated to ${newSubStatus.toUpperCase()}`, 'success');
+                fetchWebsite();
+            }
+            else {
+                showFeedback(json.error || 'Failed to update subscription status', 'error');
+            }
+        }
+        catch {
+            showFeedback('Network error updating subscription status', 'error');
+        }
+        finally {
+            setQuickStatusLoading(false);
+        }
+    };
     const handleDeleteWebsite = async () => {
         if (!canDelete) {
-            console.warn('You do not have permission to delete websites.');
+            showFeedback('You do not have permission to schedule website deletion.', 'error');
             return;
         }
-        if (!true) {
-            return;
-        }
+        setQuickStatusLoading(true);
         try {
             const res = await fetch(`/api/marketing/developer/websites/${websiteId}`, {
                 method: 'DELETE',
             });
             const json = await res.json();
             if (json.success) {
-                console.warn('Website deleted successfully.');
-                router.push('/developer/websites');
+                setShowScheduleDeleteModal(false);
+                showFeedback(json.message || 'Website scheduled for permanent deletion in 30 days.', 'success');
+                fetchWebsite();
             }
             else {
-                console.warn(json.error || 'Failed to delete website.');
+                showFeedback(json.error || 'Failed to schedule website deletion.', 'error');
             }
         }
-        catch (err: any) {
-            console.warn('Error deleting website.');
+        catch {
+            showFeedback('Network error scheduling website deletion.', 'error');
+        }
+        finally {
+            setQuickStatusLoading(false);
+        }
+    };
+    const handleCancelScheduledDeletion = async () => {
+        setQuickStatusLoading(true);
+        try {
+            const res = await fetch(`/api/marketing/developer/websites/${websiteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'cancel_deletion' }),
+            });
+            const json = await res.json();
+            if (json.success) {
+                showFeedback(json.message || 'Scheduled deletion cancelled.', 'success');
+                fetchWebsite();
+            }
+            else {
+                showFeedback(json.error || 'Failed to cancel scheduled deletion.', 'error');
+            }
+        }
+        catch {
+            showFeedback('Network error cancelling deletion.', 'error');
+        }
+        finally {
+            setQuickStatusLoading(false);
         }
     };
     if (!isAuthorized && user) {
@@ -578,25 +639,47 @@ export default function WebsiteDetailsPage({ params }: any) {
               <FiExternalLink className="text-[11px]"/>
             </a>
 
-            {canDelete && (<button type="button" onClick={handleDeleteWebsite} className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors" title="Delete Website Container">
-                <FiTrash2 />
-              </button>)}
+            {canDelete && (website.deletion_scheduled_at ? (<button type="button" disabled={quickStatusLoading} onClick={handleCancelScheduledDeletion} className="px-2.5 py-1.5 rounded border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-medium cursor-pointer transition-colors">
+                  Cancel 30-Day Deletion
+                </button>) : (<button type="button" onClick={() => setShowScheduleDeleteModal(true)} className="p-1.5 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors" title="Schedule 30-Day Website Deletion">
+                  <FiTrash2 />
+                </button>))}
           </div>
         </div>
 
+        {website.deletion_scheduled_at && (<div className="p-3 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="text-rose-800 dark:text-rose-200">
+              <span className="font-semibold">Scheduled Deletion Active:</span> This website will be permanently deleted automatically on{' '}
+              <span className="font-mono font-semibold">{new Date(website.deletion_scheduled_at).toLocaleDateString()}</span>
+              {website.deletion_requested_by ? ` (requested by ${website.deletion_requested_by}).` : '.'}
+            </div>
+            {canDelete && (<button type="button" disabled={quickStatusLoading} onClick={handleCancelScheduledDeletion} className="px-3 py-1 rounded bg-slate-900 text-white hover:bg-slate-800 text-xs font-medium cursor-pointer">
+                Cancel Deletion
+              </button>)}
+          </div>)}
+
         <div className="p-3 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
               Quick Controls:
             </span>
             <div className="flex items-center gap-1.5">
               <select aria-label="Direct Status Selector" disabled={quickStatusLoading} value={website.status} onChange={(e: any) => handleQuickStatusChange(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none">
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="suspended">Suspended</option>
-                <option value="expired">Expired</option>
-                <option value="archived">Archived</option>
+                <option value="active">Site: Active</option>
+                <option value="pending">Site: Pending</option>
+                <option value="suspended">Site: Suspended</option>
+                <option value="expired">Site: Expired</option>
+                <option value="archived">Site: Archived</option>
               </select>
+
+              {subscription && (<select aria-label="Subscription Status Selector" disabled={quickStatusLoading} value={subscription.status || 'inactive'} onChange={(e: any) => handleQuickSubStatusChange(e.target.value)} className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none">
+                  <option value="active">Sub: Active</option>
+                  <option value="inactive">Sub: Inactive</option>
+                  <option value="suspended">Sub: Suspended</option>
+                  <option value="past_due">Sub: Past Due</option>
+                  <option value="expired">Sub: Expired</option>
+                  <option value="cancelled">Sub: Cancelled</option>
+                </select>)}
             </div>
           </div>
 
@@ -1080,6 +1163,17 @@ export default function WebsiteDetailsPage({ params }: any) {
                   <input type="date" value={websiteForm.subscription_expires_at} onChange={(e: any) => setWebsiteForm({ ...websiteForm, subscription_expires_at: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none"/>
                 </div>
               </div>
+              {websiteForm.subscription_id && (<div className="max-w-xs space-y-1 pt-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Subscription Status (Developer Control)</label>
+                  <select aria-label="Form Subscription Status" value={websiteForm.subscription_status} onChange={(e: any) => setWebsiteForm({ ...websiteForm, subscription_status: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none">
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="past_due">Past Due</option>
+                    <option value="expired">Expired</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>)}
             </div>
 
             <div className="space-y-3 pt-2">
@@ -1537,6 +1631,25 @@ export default function WebsiteDetailsPage({ params }: any) {
                     </tr>)))}
               </tbody>
             </table>
+          </div>
+        </div>)}
+
+      {showScheduleDeleteModal && (<div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg max-w-md w-full p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              Schedule 30-Day Website Deletion
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Website &quot;{website.name}&quot; will not be deleted immediately. It will be scheduled for automatic permanent deletion after 30 days. You can cancel this deletion schedule at any time before then.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button type="button" onClick={() => setShowScheduleDeleteModal(false)} className="px-3 py-1.5 rounded border border-slate-300 text-xs text-slate-700 cursor-pointer">
+                Cancel
+              </button>
+              <button type="button" disabled={quickStatusLoading} onClick={handleDeleteWebsite} className="px-3.5 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium cursor-pointer disabled:opacity-50">
+                {quickStatusLoading ? 'Scheduling...' : 'Schedule Deletion (30 Days)'}
+              </button>
+            </div>
           </div>
         </div>)}
     </div>);

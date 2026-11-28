@@ -12,7 +12,12 @@ import {
   JWT_SECRET,
 } from "../../../../../lib/database/secret";
 import { uploadImage, deleteImage, uploadPdf } from "../../../../../lib/database/cloudinary";
-import { purgeWebsite } from "../../../../../lib/database/websitePurge";
+import {
+  ensureLifecycleSynced,
+  isSubscriptionActiveRecord,
+  scheduleWebsiteDeletion,
+  cancelWebsiteDeletion,
+} from "../../../../../lib/database/websiteLifecycle";
 import { checkDomainAvailability, checkCustomDomainAvailability } from "./check-domain/route";
 
 export const dynamic = "force-dynamic";
@@ -295,6 +300,7 @@ function buildResolvedAcademicConfig(rawConfig: any) {
 
 export async function GET(request: any) {
   try {
+    await ensureLifecycleSynced();
     const sessionCreator = await getCreatorSession(request);
     const { searchParams } = new URL(request.url);
     const creatorIdParam = searchParams.get("creatorId");
@@ -379,7 +385,9 @@ export async function GET(request: any) {
                 s.status AS subscription_status,
                 s.billing_cycle AS subscription_billing_cycle,
                 s.current_period_end AS subscription_period_end,
-                (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
+                (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN TRUE ELSE FALSE END) AS subscription_is_active,
+                (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN COALESCE(w.is_maintenance_mode, FALSE) ELSE TRUE END) AS effective_maintenance_mode,
+                (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) AND LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN true ELSE false END) AS is_published,
                 COALESCE(
                   (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
                   (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
@@ -492,6 +500,8 @@ export async function GET(request: any) {
       site.is_available_student_panel = site.package.is_available_student_panel;
       site.is_available_teacher_panel = site.package.is_available_teacher_panel;
       site.is_available_custom_domain = site.package.is_available_custom_domain;
+      site.is_maintenance_mode = Boolean(site.effective_maintenance_mode ?? site.is_maintenance_mode);
+      delete site.effective_maintenance_mode;
 
       return NextResponse.json({
         success: true,
@@ -513,7 +523,9 @@ export async function GET(request: any) {
               s.status AS subscription_status,
               s.billing_cycle AS subscription_billing_cycle,
               s.current_period_end AS subscription_period_end,
-              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published,
+              (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN TRUE ELSE FALSE END) AS subscription_is_active,
+              (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN COALESCE(w.is_maintenance_mode, FALSE) ELSE TRUE END) AS is_maintenance_mode,
+              (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) AND LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN true ELSE false END) AS is_published,
               COALESCE(
                 (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
                 (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
@@ -1498,7 +1510,12 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
     }
 
     const ownershipCheck = await queryDb(
-      `SELECT id, logo_id, favicon_id FROM websites WHERE id = $1 AND creator_id = $2 LIMIT 1`,
+      `SELECT w.id, w.logo_id, w.favicon_id, w.status, w.subscription_id,
+              s.status AS sub_status, s.current_period_end AS sub_period_end
+       FROM websites w
+       LEFT JOIN subscriptions s ON s.id = w.subscription_id
+       WHERE w.id = $1 AND w.creator_id = $2
+       LIMIT 1`,
       [id, creatorId]
     );
     if (ownershipCheck.rows.length === 0) {
@@ -1808,22 +1825,34 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       values.push(String(body.maintenance_message).trim());
     }
 
-    let finalStatus = undefined;
-    if (body.status !== undefined) {
-      finalStatus = body.status;
-    } else if (body.is_published !== undefined) {
-      finalStatus = Boolean(body.is_published) ? "active" : "suspended";
-    }
-    if (finalStatus !== undefined) {
-      updates.push(`status = $${idx++}`);
-      values.push(finalStatus);
-    }
-
     let finalMaintenanceMode = undefined;
     if (body.is_maintenance_mode !== undefined) {
       finalMaintenanceMode = Boolean(body.is_maintenance_mode);
     } else if (body.is_published !== undefined) {
       finalMaintenanceMode = !Boolean(body.is_published);
+    }
+    if (finalMaintenanceMode === false) {
+      const subActive =
+        Boolean(currentSite.subscription_id) &&
+        isSubscriptionActiveRecord({ status: currentSite.sub_status, current_period_end: currentSite.sub_period_end });
+      if (!subActive) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Maintenance mode cannot be turned off while the website subscription is inactive, suspended, or expired.",
+          },
+          { status: 403 }
+        );
+      }
+      if (String(currentSite.status || "").toLowerCase() !== "active") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Website status is "${currentSite.status}". Maintenance mode cannot be disabled until activated.`,
+          },
+          { status: 403 }
+        );
+      }
     }
     if (finalMaintenanceMode !== undefined) {
       updates.push(`is_maintenance_mode = $${idx++}`);
@@ -2133,26 +2162,49 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
     });
   }
 
-  if (action === "delete_website") {
+  if (action === "delete_website" || action === "schedule_deletion") {
     const id = Number(body.id || body.websiteId);
     if (!id) {
       return NextResponse.json({ success: false, error: "Website ID required." }, { status: 400 });
     }
     try {
-      const purgeResult = await purgeWebsite(null, { websiteId: id, creatorId });
-      await invalidateWebsiteCache(id);
+      const scheduled = await scheduleWebsiteDeletion(id, "creator", creatorId);
+      if (!scheduled) {
+        return NextResponse.json({ success: false, error: "Website not found or unauthorized." }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        scheduled: true,
+        id,
+        name: scheduled.name,
+        deletion_scheduled_at: scheduled.deletion_scheduled_at,
+        website: scheduled,
+        message: `Website "${scheduled.name}" has been scheduled for permanent deletion in 30 days (${new Date(scheduled.deletion_scheduled_at).toLocaleDateString()}). You can cancel anytime before then.`,
+      });
+    } catch (err: any) {
+      return NextResponse.json({ success: false, error: err.message || "Failed to schedule deletion." }, { status: 500 });
+    }
+  }
+
+  if (action === "cancel_delete_website" || action === "cancel_deletion") {
+    const id = Number(body.id || body.websiteId);
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Website ID required." }, { status: 400 });
+    }
+    try {
+      const cancelled = await cancelWebsiteDeletion(id, creatorId);
+      if (!cancelled) {
+        return NextResponse.json({ success: false, error: "Website not found or unauthorized." }, { status: 404 });
+      }
       return NextResponse.json({
         success: true,
         id,
-        name: purgeResult.name,
-        message: "Website and all associated data have been permanently deleted.",
+        name: cancelled.name,
+        website: cancelled,
+        message: `Scheduled deletion for "${cancelled.name}" has been cancelled.`,
       });
     } catch (err: any) {
-      const isAuthOrNotFound = err.message?.includes("unauthorized") || err.message?.includes("not found");
-      return NextResponse.json(
-        { success: false, error: err.message || "Failed to delete website." },
-        { status: isAuthOrNotFound ? 404 : 500 }
-      );
+      return NextResponse.json({ success: false, error: err.message || "Failed to cancel deletion." }, { status: 500 });
     }
   }
 

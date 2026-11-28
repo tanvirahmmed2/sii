@@ -1,30 +1,32 @@
 import { NextResponse } from 'next/server';
 import { queryDb } from 'src/lib/database/db';
-import { purgeWebsite } from 'src/lib/database/websitePurge';
 import { hasModulePermission } from 'src/lib/middleware/developer';
+import { ensureLifecycleSynced, scheduleWebsiteDeletion, cancelWebsiteDeletion } from 'src/lib/database/websiteLifecycle';
 export async function GET(request: any) {
     try {
         const auth = await hasModulePermission(request, 'websites');
         if (!auth.success) {
             return NextResponse.json({ success: false, error: auth.message }, { status: auth.status });
         }
+        await ensureLifecycleSynced();
         const res = await queryDb(`
       SELECT w.*, 
-             (CASE WHEN w.status = 'active' AND NOT w.is_maintenance_mode THEN true ELSE false END) AS is_published,
+             (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) THEN true ELSE false END) AS is_published,
              COALESCE(
                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.is_primary = TRUE LIMIT 1),
                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
                w.slug
              ) AS subdomain,
-             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
-             (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+             (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain,
+             (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type IN ('custom_domain', 'custom') LIMIT 1) AS custom_domain_verified,
              (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
              c.name AS creator_name, 
              c.email AS creator_email,
              p.name AS package_name,
              p.slug AS package_slug,
              s.status AS subscription_status,
-             s.current_period_end AS subscription_period_end
+             s.current_period_end AS subscription_period_end,
+             (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN TRUE ELSE FALSE END) AS subscription_is_active
       FROM websites w
       LEFT JOIN creators c ON w.creator_id = c.id
       LEFT JOIN subscriptions s ON w.subscription_id = s.id
@@ -118,6 +120,12 @@ export async function PUT(request: any) {
         const id = body.id || body.data?.id;
         if (!id)
             return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
+        if (body.action === 'cancel_deletion') {
+            const cancelled = await cancelWebsiteDeletion(Number(id));
+            if (!cancelled)
+                return NextResponse.json({ success: false, error: 'Website not found.' }, { status: 404 });
+            return NextResponse.json({ success: true, record: cancelled, message: 'Scheduled deletion cancelled.' });
+        }
         const rawData = body.data || body;
         const data = { ...rawData };
         delete data.package_id;
@@ -199,8 +207,17 @@ export async function DELETE(request: any) {
         }
         if (!id)
             return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 });
-        await purgeWebsite(null, { websiteId: Number(id) });
-        return NextResponse.json({ success: true, message: 'Website deleted successfully.' });
+        const scheduled = await scheduleWebsiteDeletion(Number(id), 'developer');
+        if (!scheduled) {
+            return NextResponse.json({ success: false, error: 'Website not found' }, { status: 404 });
+        }
+        return NextResponse.json({
+            success: true,
+            scheduled: true,
+            deletion_scheduled_at: scheduled.deletion_scheduled_at,
+            record: scheduled,
+            message: `Website scheduled for permanent deletion in 30 days (${new Date(scheduled.deletion_scheduled_at).toLocaleDateString()}).`,
+        });
     }
     catch (error: any) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });

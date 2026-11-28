@@ -1,4 +1,5 @@
 import { query, queryDb } from '../database/db';
+import { ensureLifecycleSynced, isSubscriptionActiveRecord } from '../database/websiteLifecycle';
 import {
   getWebsiteDomain,
   DEFAULT_CACHE_TTL_MS,
@@ -370,6 +371,16 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
 
       if (pkgRes && pkgRes.rows && pkgRes.rows.length > 0) {
         const pRow = pkgRes.rows[0];
+        const subIsActive = isSubscriptionActiveRecord({
+          status: pRow.subscription_status,
+          current_period_end: pRow.subscription_period_end,
+        });
+        if (!subIsActive) {
+          website.is_maintenance_mode = true;
+          website.is_published = false;
+        }
+        website.subscription_status = pRow.subscription_status;
+        website.subscription_is_active = subIsActive;
         packageInfo = {
           id: pRow.package_id,
           name: pRow.package_name,
@@ -411,6 +422,10 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
         allowedHomeModulePaths = pRow.allowed_home_module_paths || [];
         allowedHomeModuleSlugs = pRow.allowed_home_module_slugs || [];
       } else {
+        website.is_maintenance_mode = true;
+        website.is_published = false;
+        website.subscription_status = 'inactive';
+        website.subscription_is_active = false;
         const [fallbackControl, fallbackHome]: [any, any] = await Promise.all([
           query(`SELECT id, name, path, category, description, icon FROM website_control_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] })),
           query(`SELECT id, name, path, category, description, icon FROM website_home_modules WHERE is_active = TRUE ORDER BY display_order ASC, id ASC`).catch(() => ({ rows: [] }))
@@ -434,6 +449,9 @@ async function fetchWebsiteFromDb(cleanId: string): Promise<any> {
     website.is_available_student_panel = packageInfo ? Boolean(packageInfo.is_available_student_panel) : true;
     website.is_available_teacher_panel = packageInfo ? Boolean(packageInfo.is_available_teacher_panel) : true;
     website.is_available_custom_domain = packageInfo ? Boolean(packageInfo.is_available_custom_domain) : false;
+
+    website.is_published = website.status === 'active' && !website.is_maintenance_mode;
+    ensureLifecycleSynced().catch(() => {});
 
     website.allowed_control_modules = allowedControlModules;
     website.allowed_control_module_paths = allowedControlModulePaths;

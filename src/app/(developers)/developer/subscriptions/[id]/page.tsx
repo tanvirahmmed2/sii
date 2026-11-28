@@ -467,10 +467,19 @@ export default function SubscriptionDetailsPage({ params }: any) {
               <FiRepeat className="text-sm"/> Renew Subscription
             </button>
 
-            {isActive ? (<button type="button" onClick={() => handleUpdateStatus('cancelled')} className="px-3 py-2 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors">
-                Cancel Plan
+            <select aria-label="Change Subscription Status" value={subscription.status || 'active'} onChange={(e: any) => handleUpdateStatus(e.target.value)} className="px-2.5 py-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 cursor-pointer">
+              <option value="active">Status: Active</option>
+              <option value="inactive">Status: Inactive</option>
+              <option value="suspended">Status: Suspended</option>
+              <option value="past_due">Status: Past Due</option>
+              <option value="expired">Status: Expired</option>
+              <option value="cancelled">Status: Cancelled</option>
+            </select>
+
+            {isActive ? (<button type="button" onClick={() => handleUpdateStatus('suspended')} className="px-3 py-2 rounded border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-medium cursor-pointer transition-colors">
+                Suspend
               </button>) : (<button type="button" onClick={() => handleUpdateStatus('active')} className="px-3 py-2 rounded border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-medium cursor-pointer transition-colors">
-                Mark Active
+                Activate
               </button>)}
 
             <button type="button" onClick={handleToggleAutoRenew} className={`px-3 py-2 rounded border text-xs font-medium cursor-pointer transition-colors ${subscription.cancel_at_period_end

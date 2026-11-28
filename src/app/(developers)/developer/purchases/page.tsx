@@ -114,7 +114,7 @@ export default function PurchasesPage() {
             pu.transaction_id?.toLowerCase().includes(q) ||
             pu.status?.toLowerCase().includes(q);
         const matchesStatus = statusFilter === 'ALL' ||
-            pu.status?.toUpperCase() === statusFilter.toUpperCase();
+            (statusFilter === 'UNPAID' ? ['unpaid', 'pending'].includes(String(pu.status || '').toLowerCase()) : pu.status?.toUpperCase() === statusFilter.toUpperCase());
         return matchesSearch && matchesStatus;
     });
     let totalUsd = 0;
@@ -231,8 +231,15 @@ export default function PurchasesPage() {
                     No purchase orders found matching current filter.
                   </td>
                 </tr>) : (filtered.map((pu: any) => {
-            const amount = (Number(pu.amount_in_cents || pu.price * 100 || 0) / 100).toFixed(2);
-            const curr = String(pu.currency || 'USD').toUpperCase();
+            const rawTotal = pu.total_amount !== undefined && pu.total_amount !== null
+                ? Number(pu.total_amount)
+                : pu.payment_amount_usd !== undefined && pu.payment_amount_usd !== null
+                    ? Number(pu.payment_amount_usd)
+                    : pu.amount_in_cents !== undefined
+                        ? Number(pu.amount_in_cents) / 100
+                        : Number(pu.price || 0);
+            const amount = rawTotal.toFixed(2);
+            const curr = String(pu.currency || 'BDT').toUpperCase();
             const sym = curr === 'BDT' ? '৳' : '$';
             const s = String(pu.status || '').toLowerCase();
             const isComp = s === 'completed' || s === 'active';
@@ -250,7 +257,7 @@ export default function PurchasesPage() {
                           {pu.package_name || `Package #${pu.package_id}`}
                         </div>
                         <span className="text-[10px] text-slate-400 uppercase font-medium">
-                          {pu.billing_interval || 'Monthly'}
+                          {pu.billing_cycle || pu.billing_interval || 'Monthly'}
                         </span>
                       </td>
 

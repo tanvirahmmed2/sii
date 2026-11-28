@@ -66,5 +66,10 @@ app.prepare().then(() => {
 
   server.listen(port, hostname, () => {
     console.log(`Ready on http://localhost:${port} (${dev ? 'dev' : 'production'}) with Socket.IO`);
+    const runLifecycleTick = () => {
+      fetch(`http://127.0.0.1:${port}/api/marketing/lifecycle`).catch(() => {});
+    };
+    setTimeout(runLifecycleTick, 15000);
+    setInterval(runLifecycleTick, 15 * 60 * 1000);
   });
 });
