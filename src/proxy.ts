@@ -175,8 +175,31 @@ export function proxy(request: any) {
       return response;
     }
 
+    const KNOWN_TENANT_API_SEGMENTS = new Set([
+      'abouts', 'admissions', 'announcements', 'authorities', 'awards', 'board-members',
+      'campus-data', 'class-subject-teachers', 'class-subjects', 'classes', 'club-news',
+      'clubs', 'collaborations', 'contact', 'departments', 'designations', 'events',
+      'exams', 'facilities', 'faqs', 'fees', 'gallery', 'histories', 'home', 'hostels',
+      'infrastructure', 'institutional', 'library', 'milestones', 'missions', 'modules',
+      'news', 'notices', 'officer', 'pay', 'policies', 'public', 'staff', 'stats',
+      'student', 'teacher', 'teachers', 'visions', 'website-settings'
+    ]);
+
     if (pathname.startsWith('/api')) {
       if (!pathname.startsWith('/api/marketing') && !pathname.startsWith('/api/auth') && !pathname.startsWith('/api/payment') && !pathname.startsWith('/api/seed')) {
+        const apiParts = pathname.split('/').filter(Boolean);
+        if (
+          apiParts.length >= 3 &&
+          KNOWN_TENANT_API_SEGMENTS.has(apiParts[2].toLowerCase()) &&
+          !KNOWN_TENANT_API_SEGMENTS.has(apiParts[1].toLowerCase()) &&
+          !PLATFORM_RESERVED.has(apiParts[1].toLowerCase())
+        ) {
+          const explicitHeaders = new Headers(request.headers);
+          explicitHeaders.set('x-website-domain', apiParts[1]);
+          explicitHeaders.set('x-domain', apiParts[1]);
+          return NextResponse.next({ request: { headers: explicitHeaders } });
+        }
+
         let previewTenant = request.headers.get('x-website-domain') || request.headers.get('x-domain');
         if (!previewTenant) {
           previewTenant = request.cookies.get('x-website-domain')?.value || request.cookies.get('x-domain')?.value;

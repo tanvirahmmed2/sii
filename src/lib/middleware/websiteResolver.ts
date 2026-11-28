@@ -113,6 +113,29 @@ async function removeWebsiteFromRedis(identifier?: string | number | null): Prom
   } catch { }
 }
 
+async function removeWebsiteAliasesFromRedis(aliases: string[], websiteId?: string | number | null): Promise<void> {
+  try {
+    const client = getRedisClient();
+    if (!client || !isRedisConnected()) return;
+    const keysToDelete = new Set<string>();
+    for (const a of aliases) {
+      if (a) keysToDelete.add(`website:resolve:${String(a).trim().toLowerCase()}`);
+    }
+    if (websiteId) {
+      const aliasSetKey = `website:aliases:${websiteId}`;
+      const members = await client.smembers(aliasSetKey).catch(() => []);
+      if (Array.isArray(members)) {
+        for (const m of members) keysToDelete.add(`website:resolve:${m}`);
+      }
+      keysToDelete.add(aliasSetKey);
+    }
+    const arr = Array.from(keysToDelete);
+    if (arr.length > 0) {
+      await client.del(...arr);
+    }
+  } catch { }
+}
+
 export async function extractWebsiteIdentifier(request: any, context?: any): Promise<string | null> {
   if (typeof context === 'string' && context.trim()) {
     const raw = context.trim().toLowerCase().split(':')[0];
@@ -609,9 +632,10 @@ export async function invalidateWebsiteCache(identifier?: string | number | null
     return;
   }
   const cleanId = String(identifier).trim().toLowerCase();
+  const aliases = new Set<string>([cleanId]);
   websiteCache.delete(cleanId);
 
-  let matchedWebsiteId: any = null;
+  let matchedWebsiteId: any = /^[0-9]+$/.test(cleanId) ? Number(cleanId) : null;
   for (const [key, entry] of websiteCache.entries()) {
     const w = entry?.website;
     if (
@@ -622,11 +646,44 @@ export async function invalidateWebsiteCache(identifier?: string | number | null
         String(w.custom_domain).toLowerCase() === cleanId)
     ) {
       matchedWebsiteId = w.id;
+      aliases.add(key);
+      if (w.id) aliases.add(String(w.id));
+      if (w.slug) aliases.add(String(w.slug).toLowerCase());
+      if (w.subdomain) aliases.add(String(w.subdomain).toLowerCase());
+      if (w.custom_domain) aliases.add(String(w.custom_domain).toLowerCase());
+      websiteCache.delete(key);
+    } else if (!w && key === cleanId) {
       websiteCache.delete(key);
     }
   }
 
+  try {
+    const isNum = /^[0-9]+$/.test(cleanId);
+    const dbAliases = await query(
+      `SELECT w.id, w.slug, wd.domain
+       FROM websites w
+       LEFT JOIN website_domains wd ON wd.website_id = w.id
+       WHERE ($1 = true AND w.id = $2::bigint)
+          OR LOWER(w.slug) = $3
+          OR EXISTS (SELECT 1 FROM website_domains wd2 WHERE wd2.website_id = w.id AND LOWER(wd2.domain) = $3)`,
+      [isNum, isNum ? Number(cleanId) : -1, cleanId]
+    );
+    for (const row of dbAliases.rows || []) {
+      if (row.id) {
+        matchedWebsiteId = row.id;
+        aliases.add(String(row.id));
+      }
+      if (row.slug) aliases.add(String(row.slug).toLowerCase());
+      if (row.domain) aliases.add(String(row.domain).toLowerCase());
+    }
+  } catch { }
+
+  for (const a of aliases) {
+    websiteCache.delete(a);
+  }
+
   await removeWebsiteFromRedis(matchedWebsiteId || cleanId);
+  await removeWebsiteAliasesFromRedis(Array.from(aliases), matchedWebsiteId);
 }
 
 export async function clearWebsiteCache(): Promise<void> {

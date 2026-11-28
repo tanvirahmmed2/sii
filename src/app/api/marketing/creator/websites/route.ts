@@ -348,12 +348,12 @@ export async function GET(request: any) {
       const singleRes = await queryDb(
         `SELECT w.*, 
                 w.name AS site_title,
-                ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
-                ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
-                '' AS mission,
-                '' AS vision,
-                '' AS history,
-                '' AS map_url,
+                COALESCE(NULLIF(wi.other_details->>'tagline', ''), 'Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+                COALESCE(NULLIF(wi.other_details->>'motto', ''), NULLIF(wi.other_details->>'tagline', ''), 'Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+                COALESCE(wi.other_details->>'mission', '') AS mission,
+                COALESCE(wi.other_details->>'vision', '') AS vision,
+                COALESCE(wi.other_details->>'history', '') AS history,
+                COALESCE(wi.other_details->>'map_url', '') AS map_url,
                 COALESCE(w.facebook_url, '') AS facebook_url,
                 COALESCE(w.twitter_url, '') AS twitter_url,
                 COALESCE(w.instagram_url, '') AS instagram_url,
@@ -400,6 +400,7 @@ export async function GET(request: any) {
                 (SELECT row_to_json(wac.*) FROM website_academic_configs wac WHERE wac.website_id = w.id LIMIT 1) AS academic_config,
                 (SELECT json_agg(wd.*) FROM website_domains wd WHERE wd.website_id = w.id) AS domains
          FROM websites w
+         LEFT JOIN website_information wi ON wi.website_id = w.id
          LEFT JOIN subscriptions s ON w.subscription_id = s.id
          LEFT JOIN packages p ON s.package_id = p.id
          WHERE w.creator_id = $1 
@@ -516,7 +517,7 @@ export async function GET(request: any) {
     const res = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
-              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+              COALESCE(NULLIF(wi.other_details->>'tagline', ''), 'Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
               p.name AS package_name,
               p.slug AS package_slug,
               s.id AS subscription_id,
@@ -537,6 +538,7 @@ export async function GET(request: any) {
               (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
               (SELECT row_to_json(wac.*) FROM website_academic_configs wac WHERE wac.website_id = w.id LIMIT 1) AS academic_config
        FROM websites w
+       LEFT JOIN website_information wi ON wi.website_id = w.id
        LEFT JOIN subscriptions s ON w.subscription_id = s.id
        LEFT JOIN packages p ON s.package_id = p.id
        WHERE w.creator_id = $1
@@ -1400,6 +1402,9 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
       client.release();
     }
 
+    await invalidateWebsiteCache(cleanSubdomain).catch(() => {});
+    await invalidateWebsiteCache(newWebsite.id).catch(() => {});
+
     return NextResponse.json({
       success: true,
       message: `Website "${newWebsite.name}" has been created successfully!`,
@@ -1510,7 +1515,7 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
     }
 
     const ownershipCheck = await queryDb(
-      `SELECT w.id, w.logo_id, w.favicon_id, w.status, w.subscription_id,
+      `SELECT w.id, w.slug, w.logo_id, w.favicon_id, w.status, w.subscription_id,
               s.status AS sub_status, s.current_period_end AS sub_period_end
        FROM websites w
        LEFT JOIN subscriptions s ON s.id = w.subscription_id
@@ -1613,70 +1618,178 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
         }
         updates.push(`slug = $${idx++}`);
         values.push(valRes.domain);
-        await queryDb(
-          `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
-           VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', $3)
-           ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
-          [id, valRes.domain, CUSTOM_DOMAIN_CNAME_TARGET]
-        ).catch(() => {});
+        const existingSubDomain = await queryDb(
+          `SELECT id FROM website_domains WHERE website_id = $1 AND domain_type = 'subdomain' LIMIT 1`,
+          [id]
+        );
+        if (existingSubDomain.rows.length > 0) {
+          await queryDb(
+            `UPDATE website_domains SET domain = $1, domain_name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+            [valRes.domain, existingSubDomain.rows[0].id]
+          ).catch(() => {});
+        } else {
+          await queryDb(
+            `INSERT INTO website_domains (website_id, domain_type, domain, domain_name, is_primary, is_verified, dns_record_type, dns_record_value)
+             VALUES ($1, 'subdomain', $2, $2, TRUE, TRUE, 'CNAME', $3)
+             ON CONFLICT (domain) DO UPDATE SET is_primary = TRUE, updated_at = CURRENT_TIMESTAMP`,
+            [id, valRes.domain, CUSTOM_DOMAIN_CNAME_TARGET]
+          ).catch(() => {});
+        }
+        if (currentSite.slug && currentSite.slug !== valRes.domain) {
+          await invalidateWebsiteCache(currentSite.slug).catch(() => {});
+        }
       }
     }
 
-    if (
+    const hasKycUpdate =
       body.creator_nid !== undefined ||
       body.creatorNid !== undefined ||
+      body.nid_front_file !== undefined ||
       body.creator_nid_front_image !== undefined ||
       body.creatorNidFrontImage !== undefined ||
+      body.creator_nid_url !== undefined ||
+      body.creatorNidUrl !== undefined ||
+      body.nid_back_file !== undefined ||
       body.creator_nid_back_image !== undefined ||
       body.creatorNidBackImage !== undefined ||
       body.eiin_certificate !== undefined ||
       body.eiinCertificate !== undefined ||
+      body.eiin_certificate_file !== undefined ||
       body.eiin_certificate_image !== undefined ||
       body.eiinCertificateImage !== undefined ||
+      body.eiin_certificate_url !== undefined ||
+      body.eiinCertificateUrl !== undefined ||
+      body.ugc_certificate_file !== undefined ||
       body.ugc_certificate !== undefined ||
       body.ugcCertificate !== undefined ||
+      body.additional_certificate_file !== undefined ||
       body.additional_certificate !== undefined ||
       body.additionalCertificate !== undefined ||
       body.verification_address !== undefined ||
       body.verificationAddress !== undefined ||
       body.other_details !== undefined ||
-      body.otherDetails !== undefined
-    ) {
+      body.otherDetails !== undefined ||
+      body.principal_name !== undefined ||
+      body.board_affiliation !== undefined ||
+      body.notes !== undefined;
+
+    const hasInfoOrNarrativeUpdate =
+      hasKycUpdate ||
+      body.tagline !== undefined ||
+      body.motto !== undefined ||
+      body.mission !== undefined ||
+      body.vision !== undefined ||
+      body.history !== undefined ||
+      body.map_url !== undefined ||
+      body.mapUrl !== undefined;
+
+    if (hasInfoOrNarrativeUpdate) {
+      const existingInfoRes = await queryDb(`SELECT * FROM website_information WHERE website_id = $1 LIMIT 1`, [id]);
+      const existingInfo = existingInfoRes.rows[0] || {};
+      if (hasKycUpdate && ["approved", "verified"].includes(String(existingInfo.verification_status || "").toLowerCase())) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Verification & KYC information has been approved by a platform developer and cannot be modified.",
+          },
+          { status: 403 }
+        );
+      }
+      const existingOther =
+        typeof existingInfo.other_details === "object" && existingInfo.other_details !== null
+          ? existingInfo.other_details
+          : {};
+      const incomingOther =
+        typeof (body.other_details ?? body.otherDetails) === "object" && (body.other_details ?? body.otherDetails) !== null
+          ? body.other_details ?? body.otherDetails
+          : {};
+      const mergedOther: Record<string, any> = { ...existingOther, ...incomingOther };
+      if (body.tagline !== undefined) mergedOther.tagline = String(body.tagline).trim();
+      if (body.motto !== undefined) mergedOther.motto = String(body.motto).trim();
+      if (body.mission !== undefined) mergedOther.mission = String(body.mission).trim();
+      if (body.vision !== undefined) mergedOther.vision = String(body.vision).trim();
+      if (body.history !== undefined) mergedOther.history = String(body.history).trim();
+      if (body.map_url !== undefined || body.mapUrl !== undefined) {
+        mergedOther.map_url = String(body.map_url ?? body.mapUrl ?? "").trim();
+      }
+      if (body.principal_name !== undefined) mergedOther.principal_name = String(body.principal_name).trim();
+      if (body.board_affiliation !== undefined) mergedOther.board_affiliation = String(body.board_affiliation).trim();
+      if (body.notes !== undefined) mergedOther.notes = String(body.notes).trim();
+
       const cNid = body.creator_nid ?? body.creatorNid;
       const fFolder = `school/verification/${creatorId}`;
-      const nidFrontUp = await resolveAssetUrlAndId(
-        body.creator_nid_front_image ?? body.creatorNidFrontImage ?? body.creator_nid_url ?? body.creatorNidUrl,
-        body.creator_nid_front_image_id ?? body.creatorNidFrontImageId,
-        `${fFolder}/nid_front`,
-        false
-      );
-      const nidBackUp = await resolveAssetUrlAndId(
-        body.creator_nid_back_image ?? body.creatorNidBackImage,
-        body.creator_nid_back_image_id ?? body.creatorNidBackImageId,
-        `${fFolder}/nid_back`,
-        false
-      );
+      const nidFrontInput = body.nid_front_file ?? body.creator_nid_front_image ?? body.creatorNidFrontImage ?? body.creator_nid_url ?? body.creatorNidUrl;
+      const nidFrontUp =
+        nidFrontInput !== undefined
+          ? await resolveAssetUrlAndId(
+              nidFrontInput,
+              body.creator_nid_front_image_id ?? body.creatorNidFrontImageId,
+              `${fFolder}/nid_front`,
+              false
+            )
+          : { url: null, publicId: null };
+      if (nidFrontUp.publicId && existingInfo.creator_nid_front_image_id && nidFrontUp.publicId !== existingInfo.creator_nid_front_image_id) {
+        await deleteImage(existingInfo.creator_nid_front_image_id).catch(() => {});
+      }
+
+      const nidBackInput = body.nid_back_file ?? body.creator_nid_back_image ?? body.creatorNidBackImage;
+      const nidBackUp =
+        nidBackInput !== undefined
+          ? await resolveAssetUrlAndId(
+              nidBackInput,
+              body.creator_nid_back_image_id ?? body.creatorNidBackImageId,
+              `${fFolder}/nid_back`,
+              false
+            )
+          : { url: null, publicId: null };
+      if (nidBackUp.publicId && existingInfo.creator_nid_back_image_id && nidBackUp.publicId !== existingInfo.creator_nid_back_image_id) {
+        await deleteImage(existingInfo.creator_nid_back_image_id).catch(() => {});
+      }
+
       const eCert = body.eiin_certificate ?? body.eiinCertificate;
-      const eiinUp = await resolveAssetUrlAndId(
-        body.eiin_certificate_image ?? body.eiinCertificateImage ?? body.eiin_certificate_url ?? body.eiinCertificateUrl,
-        body.eiin_certificate_image_id ?? body.eiinCertificateImageId,
-        `${fFolder}/eiin_certificate`,
-        true
-      );
-      const ugcUp = await resolveAssetUrlAndId(
-        body.ugc_certificate ?? body.ugcCertificate,
-        body.ugc_certificate_id ?? body.ugcCertificateId,
-        `${fFolder}/ugc_certificate`,
-        true
-      );
-      const addUp = await resolveAssetUrlAndId(
-        body.additional_certificate ?? body.additionalCertificate,
-        body.additional_certificate_id ?? body.additionalCertificateId,
-        `${fFolder}/additional_certificate`,
-        true
-      );
+      const eiinInput = body.eiin_certificate_file ?? body.eiin_certificate_image ?? body.eiinCertificateImage ?? body.eiin_certificate_url ?? body.eiinCertificateUrl;
+      const eiinUp =
+        eiinInput !== undefined
+          ? await resolveAssetUrlAndId(
+              eiinInput,
+              body.eiin_certificate_image_id ?? body.eiinCertificateImageId,
+              `${fFolder}/eiin_certificate`,
+              true
+            )
+          : { url: null, publicId: null };
+      if (eiinUp.publicId && existingInfo.eiin_certificate_image_id && eiinUp.publicId !== existingInfo.eiin_certificate_image_id) {
+        await deleteImage(existingInfo.eiin_certificate_image_id).catch(() => {});
+      }
+
+      const ugcInput = body.ugc_certificate_file ?? body.ugc_certificate ?? body.ugcCertificate;
+      const ugcUp =
+        ugcInput !== undefined
+          ? await resolveAssetUrlAndId(
+              ugcInput,
+              body.ugc_certificate_id ?? body.ugcCertificateId,
+              `${fFolder}/ugc_certificate`,
+              true
+            )
+          : { url: null, publicId: null };
+      if (ugcUp.publicId && existingInfo.ugc_certificate_id && ugcUp.publicId !== existingInfo.ugc_certificate_id) {
+        await deleteImage(existingInfo.ugc_certificate_id).catch(() => {});
+      }
+
+      const addInput = body.additional_certificate_file ?? body.additional_certificate ?? body.additionalCertificate;
+      const addUp =
+        addInput !== undefined
+          ? await resolveAssetUrlAndId(
+              addInput,
+              body.additional_certificate_id ?? body.additionalCertificateId,
+              `${fFolder}/additional_certificate`,
+              true
+            )
+          : { url: null, publicId: null };
+      if (addUp.publicId && existingInfo.additional_certificate_id && addUp.publicId !== existingInfo.additional_certificate_id) {
+        await deleteImage(existingInfo.additional_certificate_id).catch(() => {});
+      }
+
       const vAddr = body.verification_address ?? body.verificationAddress;
-      const oDetails = body.other_details ?? body.otherDetails;
 
       await queryDb(
         `INSERT INTO website_information (
@@ -1705,17 +1818,17 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
            additional_certificate = COALESCE(EXCLUDED.additional_certificate, website_information.additional_certificate),
            additional_certificate_id = COALESCE(EXCLUDED.additional_certificate_id, website_information.additional_certificate_id),
            address = COALESCE(EXCLUDED.address, website_information.address),
-           other_details = COALESCE(EXCLUDED.other_details, website_information.other_details),
+           other_details = EXCLUDED.other_details,
            updated_at = CURRENT_TIMESTAMP`,
         [
           id,
-          cNid || null,
+          cNid !== undefined ? (String(cNid).trim() || null) : null,
           nidFrontUp.url,
           nidFrontUp.url,
           nidFrontUp.publicId,
           nidBackUp.url,
           nidBackUp.publicId,
-          eCert || null,
+          eCert !== undefined ? (String(eCert).trim() || null) : null,
           eiinUp.url,
           eiinUp.url,
           eiinUp.publicId,
@@ -1723,8 +1836,8 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
           ugcUp.publicId,
           addUp.url,
           addUp.publicId,
-          vAddr || null,
-          typeof oDetails === "object" && oDetails !== null ? JSON.stringify(oDetails) : "{}",
+          vAddr !== undefined ? (String(vAddr).trim() || null) : null,
+          JSON.stringify(mergedOther),
         ]
       ).catch(() => {});
     }
@@ -1874,15 +1987,35 @@ export async function handleWebsitesAction(body: any, sessionCreator: any, reque
     const refreshed = await queryDb(
       `SELECT w.*, 
               w.name AS site_title,
-              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
-              ('Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+              COALESCE(NULLIF(wi.other_details->>'tagline', ''), 'Excellence in ' || COALESCE(w.institution_type, 'Education')) AS tagline,
+              COALESCE(NULLIF(wi.other_details->>'motto', ''), NULLIF(wi.other_details->>'tagline', ''), 'Excellence in ' || COALESCE(w.institution_type, 'Education')) AS motto,
+              COALESCE(wi.other_details->>'mission', '') AS mission,
+              COALESCE(wi.other_details->>'vision', '') AS vision,
+              COALESCE(wi.other_details->>'history', '') AS history,
+              COALESCE(wi.other_details->>'map_url', '') AS map_url,
               COALESCE(w.facebook_url, '') AS facebook_url,
               COALESCE(w.twitter_url, '') AS twitter_url,
               COALESCE(w.instagram_url, '') AS instagram_url,
               COALESCE(w.youtube_url, '') AS youtube_url,
               COALESCE(w.linkedin_url, '') AS linkedin_url,
-              (CASE WHEN w.status = 'active' AND w.is_maintenance_mode = false THEN true ELSE false END) AS is_published
+              s.status AS subscription_status,
+              s.billing_cycle AS subscription_billing_cycle,
+              s.current_period_end AS subscription_period_end,
+              (CASE WHEN LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN TRUE ELSE FALSE END) AS subscription_is_active,
+              COALESCE(
+                (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'subdomain' LIMIT 1),
+                w.slug
+              ) AS subdomain,
+              (SELECT wd.domain FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain,
+              (SELECT COALESCE(wd.is_verified, FALSE) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_verified,
+              (SELECT row_to_json(wd.*) FROM website_domains wd WHERE wd.website_id = w.id AND wd.domain_type = 'custom_domain' LIMIT 1) AS custom_domain_record,
+              (SELECT row_to_json(wi.*) FROM website_information wi WHERE wi.website_id = w.id LIMIT 1) AS website_information,
+              (SELECT row_to_json(wac.*) FROM website_academic_configs wac WHERE wac.website_id = w.id LIMIT 1) AS academic_config,
+              (SELECT json_agg(wd.*) FROM website_domains wd WHERE wd.website_id = w.id) AS domains,
+              (CASE WHEN w.status = 'active' AND NOT COALESCE(w.is_maintenance_mode, FALSE) AND LOWER(COALESCE(s.status, '')) = 'active' AND (s.current_period_end IS NULL OR s.current_period_end > CURRENT_TIMESTAMP) THEN true ELSE false END) AS is_published
        FROM websites w
+       LEFT JOIN website_information wi ON wi.website_id = w.id
+       LEFT JOIN subscriptions s ON s.id = w.subscription_id
        WHERE w.id = $1 AND w.creator_id = $2
        LIMIT 1`,
       [id, creatorId]
